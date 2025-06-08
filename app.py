@@ -140,8 +140,10 @@ def excluir_usuario():
     return render_template('excluir_usuario.html', usuarios=usuarios_atuais, mensagem=mensagem, erro=erro)
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    import os
+    port = os.environ['PORT']  # FORÇA o uso da porta correta do Render
+    app.run(host='0.0.0.0', port=int(port))
+
 
 
 
