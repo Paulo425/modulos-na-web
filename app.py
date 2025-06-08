@@ -18,15 +18,19 @@ os.makedirs(password_dir, exist_ok=True)
 os.makedirs(dir_log_projeto, exist_ok=True)
 
 
+from werkzeug.security import generate_password_hash
+
+# Criação garantida e atualizada do admin.json
 admin_path = os.path.join(password_dir, "admin.json")
 admin_data = {
   "usuario": "admin",
-  "senha_hash": "pbkdf2:sha256:600000$MUVq0v03EaDI0pRV$bb9a268b95b1baf86c6277ef1cdadcc3c7c443b2bc9608c48a574e8dc1de76c0"
+  "senha_hash": generate_password_hash("1234")
 }
 with open(admin_path, 'w', encoding='utf-8') as f:
   json.dump(admin_data, f, indent=2)
-with open(admin_path, 'r', encoding='utf-8') as f:
-    print("🟢 Conteúdo atual do admin.json:", f.read())
+
+print("🔁 admin.json recriado com nova hash para senha 1234")
+
 
         
 def carregar_usuarios():
