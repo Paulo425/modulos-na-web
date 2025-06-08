@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<h2>Bem-vindo!</h2>
+<p>Escolha um módulo para iniciar:</p>
+<ul>
+    <li><a href="{{ url_for('memoriais_descritivos') }}">Memoriais Descritivos</a></li>
+</ul>
+{% endblock %}
