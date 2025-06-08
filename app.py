@@ -25,6 +25,8 @@ admin_data = {
 }
 with open(admin_path, 'w', encoding='utf-8') as f:
   json.dump(admin_data, f, indent=2)
+with open(admin_path, 'r', encoding='utf-8') as f:
+    print("🟢 Conteúdo atual do admin.json:", f.read())
 
         
 def carregar_usuarios():
