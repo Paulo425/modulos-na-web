@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -11,11 +10,13 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 app.secret_key = 'sua_chave_secreta_aqui'
 
-# Diretórios fixos
-password_dir = r"C:\Users\Paulo\OneDrive\Documentos\MODULOS_NA_WEB\password"
-dir_log_projeto = r"C:\Users\Paulo\OneDrive\Documentos\MODULOS_NA_WEB\Log"
+# Caminhos compatíveis com Render (Linux) e Windows
+base_path = os.path.dirname(os.path.abspath(__file__))
+password_dir = os.path.join(base_path, "password")
+dir_log_projeto = os.path.join(base_path, "Log")
 os.makedirs(password_dir, exist_ok=True)
 os.makedirs(dir_log_projeto, exist_ok=True)
+
 
 def carregar_usuarios():
     usuarios = {}
