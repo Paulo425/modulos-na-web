@@ -1,7 +1,7 @@
+# app.py
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-import subprocess
 import os
 import tempfile
 import json
@@ -16,7 +16,6 @@ password_dir = os.path.join(base_path, "password")
 dir_log_projeto = os.path.join(base_path, "Log")
 os.makedirs(password_dir, exist_ok=True)
 os.makedirs(dir_log_projeto, exist_ok=True)
-
 
 def carregar_usuarios():
     usuarios = {}
@@ -78,41 +77,14 @@ def executar_decopa():
         arquivo_excel.save(caminho_excel)
         arquivo_dxf.save(caminho_dxf)
 
-        caminho_exe = os.path.abspath(r'.\executaveis\DECOPA.exe')
-        log_filename = datetime.now().strftime("log_execucao_%Y%m%d_%H%M%S.txt")
-        log_path = os.path.join(dir_log_projeto, log_filename)
+        # Substituindo a execução do .exe por mensagem informativa
+        resultado = "Executável DECOPA não está disponível nesta versão online (Render)."
 
-        if not os.path.exists(caminho_exe):
-            erro_execucao = f"O executável não foi encontrado: {caminho_exe}"
-
-        try:
-            with open(log_path, 'w', encoding='utf-8') as log_file:
-                processo = subprocess.run(
-                    [caminho_exe, '--diretorio', diretorio,
-                                  '--cidade', cidade,
-                                  '--excel', caminho_excel,
-                                  '--dxf', caminho_dxf],
-                    stdout=log_file,
-                    stderr=subprocess.STDOUT,
-                    encoding='utf-8'
-                )
-
-            if processo.returncode != 0:
-                erro_execucao = (f"Ocorreu um erro durante a execução. "
-                                 f"Verifique o log em: {log_path}")
-            else:
-                resultado = (f"PROCESSO CONCLUÍDO COM SUCESSO!!! "
-                             f"Arquivos no diretório: {diretorio}. "
-                             f"Log disponível em: {log_path}")
-
-        except Exception as e:
-            erro_execucao = f"Erro inesperado: {str(e)}"
-
-        finally:
-            if os.path.exists(caminho_excel):
-                os.remove(caminho_excel)
-            if os.path.exists(caminho_dxf):
-                os.remove(caminho_dxf)
+        # Limpar arquivos após a simulação
+        if os.path.exists(caminho_excel):
+            os.remove(caminho_excel)
+        if os.path.exists(caminho_dxf):
+            os.remove(caminho_dxf)
 
     return render_template('formulario_DECOPA.html', resultado=resultado, erro=erro_execucao)
 
@@ -167,12 +139,9 @@ def excluir_usuario():
 
     return render_template('excluir_usuario.html', usuarios=usuarios_atuais, mensagem=mensagem, erro=erro)
 
-
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-#atualização
 
 
 
