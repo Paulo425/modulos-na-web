@@ -1,1 +1,29 @@
-<!-- Template: login.html -->
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <h4 class="card-title text-center text-primary">Login</h4>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="usuario" class="form-label">Usuário:</label>
+                        <input type="text" class="form-control" name="usuario" id="usuario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="senha" class="form-label">Senha:</label>
+                        <input type="password" class="form-control" name="senha" id="senha" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Entrar</button>
+                    </div>
+                </form>
+                {% if erro %}
+                    <div class="alert alert-danger mt-3 text-center">{{ erro }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

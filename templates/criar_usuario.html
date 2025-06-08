@@ -1,1 +1,22 @@
-<!-- Template: criar_usuario.html -->
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<h2>Criar Novo Usuário</h2>
+
+<form method="POST" style="max-width:400px;">
+    <label for="usuario">Nome do novo usuário:</label>
+    <input type="text" name="usuario" id="usuario" class="form-control" required><br>
+
+    <label for="senha">Senha:</label>
+    <input type="password" name="senha" id="senha" class="form-control" required><br>
+
+    <button type="submit" class="btn btn-primary">Criar Usuário</button>
+</form>
+
+{% if mensagem %}
+    <div class="alert alert-success mt-3">{{ mensagem }}</div>
+{% endif %}
+{% if erro %}
+    <div class="alert alert-danger mt-3">{{ erro }}</div>
+{% endif %}
+{% endblock %}

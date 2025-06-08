@@ -1,1 +1,38 @@
-<!-- Template: excluir_usuario.html -->
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<h2>Excluir Usuário</h2>
+
+{% if mensagem %}
+    <div class="alert alert-success">{{ mensagem }}</div>
+{% endif %}
+{% if erro %}
+    <div class="alert alert-danger">{{ erro }}</div>
+{% endif %}
+
+<table class="table table-striped" style="max-width:500px;">
+    <thead>
+        <tr>
+            <th>Usuário</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for usuario in usuarios %}
+        <tr>
+            <td>{{ usuario }}</td>
+            <td>
+                {% if usuario != 'admin' %}
+                <form method="POST" style="margin: 0;">
+                    <input type="hidden" name="usuario" value="{{ usuario }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+                </form>
+                {% else %}
+                <span class="text-muted">Protegido</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
