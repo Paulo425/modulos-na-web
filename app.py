@@ -141,8 +141,10 @@ def excluir_usuario():
 
 if __name__ == '__main__':
     import os
-    port = os.environ['PORT']  # FORÇA o uso da porta correta do Render
+    port = os.environ['PORT']
+    print(f"🔵 Porta definida pela Render: {port}")
     app.run(host='0.0.0.0', port=int(port))
+
 
 
 
