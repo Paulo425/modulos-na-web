@@ -51,7 +51,8 @@ def login():
             return redirect(url_for('memoriais_descritivos'))
         else:
             erro = 'Usuário ou senha inválidos!'
-    return render_template('login.html', erro=erro)
+    return render_template('login.html', erro=erro, debug=usuarios)
+
 
 @app.route('/logout')
 def logout():

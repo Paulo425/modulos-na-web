@@ -19,8 +19,13 @@
                         <button type="submit" class="btn btn-primary">Entrar</button>
                     </div>
                 </form>
+
                 {% if erro %}
                     <div class="alert alert-danger mt-3 text-center">{{ erro }}</div>
+                {% endif %}
+
+                {% if debug %}
+                    <pre class="mt-3 text-muted small">[DEBUG] {{ debug }}</pre>
                 {% endif %}
             </div>
         </div>
