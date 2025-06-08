@@ -2,6 +2,5 @@ services:
   - type: web
     name: modulos-na-web
     env: python
-    plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python app.py"
+    startCommand: "gunicorn app:app"
