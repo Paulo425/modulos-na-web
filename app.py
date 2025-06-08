@@ -17,15 +17,14 @@ dir_log_projeto = os.path.join(base_path, "Log")
 os.makedirs(password_dir, exist_ok=True)
 os.makedirs(dir_log_projeto, exist_ok=True)
 
+
 admin_path = os.path.join(password_dir, "admin.json")
 admin_data = {
-    "usuario": "admin",
-    "senha_hash": "pbkdf2:sha256:600000$MUVq0v03EaDI0pRV$bb9a268b95b1baf86c6277ef1cdadcc3c7c443b2bc9608c48a574e8dc1de76c0"
+  "usuario": "admin",
+  "senha_hash": "pbkdf2:sha256:600000$MUVq0v03EaDI0pRV$bb9a268b95b1baf86c6277ef1cdadcc3c7c443b2bc9608c48a574e8dc1de76c0"
 }
 with open(admin_path, 'w', encoding='utf-8') as f:
-    json.dump(admin_data, f, indent=2)
-print("🛠️ admin.json recriado com senha 1234")
-
+  json.dump(admin_data, f, indent=2)
 
         
 def carregar_usuarios():
