@@ -145,7 +145,7 @@ if __name__ == '__main__':
     print(f"🔵 Porta definida pela Render: {port}")
     app.run(host='0.0.0.0', port=int(port))
 
-
+#atualiza
 
 
 
