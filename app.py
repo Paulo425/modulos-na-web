@@ -114,7 +114,7 @@ def excluir_usuario():
 def memoriais_descritivos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    return render_template('memoriais_descritivos.html')
+    return render_template('formulario_DECOPA.html')  # nome correto do arquivo
 
 # ⚙️ Executar DECOPA
 @app.route('/executar-decopa', methods=['GET', 'POST'])
