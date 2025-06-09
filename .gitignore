@@ -1,1 +1,4 @@
 password/
+# Ignorar arquivos executáveis grandes
+executaveis/DECOPA.exe
+
