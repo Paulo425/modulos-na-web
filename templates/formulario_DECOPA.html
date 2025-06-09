@@ -1,0 +1,36 @@
+
+{% extends 'base.html' %}
+{% block conteudo %}
+<h2 class="mb-4">Executar MEMORIAS DECOPA</h2>
+<form method="post" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label class="form-label">Diretório para salvar arquivos</label>
+        <input type="text" name="diretorio" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Nome da Cidade</label>
+        <input type="text" name="cidade" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Arquivo Excel</label>
+        <input type="file" name="excel" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Arquivo DXF</label>
+        <input type="file" name="dxf" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">Executar</button>
+</form>
+{% if resultado %}
+    <div class="alert alert-success mt-4">
+        <strong>Resultado:</strong>
+        <pre>{{ resultado }}</pre>
+    </div>
+{% endif %}
+{% if erro %}
+    <div class="alert alert-danger mt-4">
+        <strong>Erro:</strong>
+        <pre>{{ erro }}</pre>
+    </div>
+{% endif %}
+{% endblock %}
