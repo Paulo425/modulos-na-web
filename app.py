@@ -56,7 +56,7 @@ def login():
         senha = request.form['senha']
         if usuario in usuarios and check_password_hash(usuarios[usuario], senha):
             session['usuario'] = usuario
-            return redirect(url_for('memoriais_descritivos'))
+            return redirect(url_for('home'))
         else:
             erro = "Usuário ou senha inválidos!"
     return render_template('login.html', erro=erro)
