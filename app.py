@@ -40,9 +40,10 @@ def carregar_usuarios():
                 usuarios[dados['usuario']] = dados['senha_hash']
     return usuarios
 
-# Página inicial
 @app.route('/')
 def home():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
     return render_template('index.html')
 
 # Login
