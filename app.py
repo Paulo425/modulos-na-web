@@ -149,6 +149,22 @@ def executar_decopa():
 
     return render_template("formulario_DECOPA.html", resultado=resultado, erro=erro_execucao)
 
+@app.route('/memoriais-azimute-az')
+def memoriais_azimute_az():
+    return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_AZ")
+
+@app.route('/memoriais-azimute-p1-p2')
+def memoriais_azimute_p1_p2():
+    return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_P1_P2")
+
+@app.route('/memoriais-angulos-internos-az')
+def memoriais_angulos_internos_az():
+    return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_AZ")
+
+@app.route('/memoriais-angulos-internos-p1-p2')
+def memoriais_angulos_internos_p1_p2():
+    return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
+
 # ✅ Executar servidor (modo local)
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
