@@ -17,7 +17,7 @@ log_dir = os.path.join(BASE_DIR, "Log")
 os.makedirs(password_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 
-# Cria o admin.json se não existir
+# Criação do admin.json
 admin_path = os.path.join(password_dir, "admin.json")
 if not os.path.exists(admin_path):
     admin_user = {
@@ -30,7 +30,7 @@ if not os.path.exists(admin_path):
 else:
     print("🔹 admin.json já existe")
 
-# 🔐 Função para carregar usuários
+# Carregar usuários
 def carregar_usuarios():
     usuarios = {}
     for arquivo in os.listdir(password_dir):
@@ -40,16 +40,15 @@ def carregar_usuarios():
                 usuarios[dados['usuario']] = dados['senha_hash']
     return usuarios
 
-# 🏠 Página inicial
+# Página inicial
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# 🔐 Login
+# Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     erro = None
-    debug = None
     usuarios = carregar_usuarios()
     if request.method == 'POST':
         usuario = request.form['usuario']
@@ -59,15 +58,15 @@ def login():
             return redirect(url_for('memoriais_descritivos'))
         else:
             erro = "Usuário ou senha inválidos!"
-    return render_template('login.html', erro=erro, debug=debug)
+    return render_template('login.html', erro=erro)
 
-# 🚪 Logout
+# Logout
 @app.route('/logout')
 def logout():
     session.pop('usuario', None)
     return redirect(url_for('login'))
 
-# 🔐 Criar usuário (apenas admin)
+# Criar usuário
 @app.route('/criar-usuario', methods=['GET', 'POST'])
 def criar_usuario():
     if session.get('usuario') != 'admin':
@@ -89,7 +88,7 @@ def criar_usuario():
             mensagem = f"Usuário '{novo_usuario}' criado com sucesso!"
     return render_template('criar_usuario.html', mensagem=mensagem, erro=erro)
 
-# ❌ Excluir usuário (exceto admin)
+# Excluir usuário
 @app.route('/excluir-usuario', methods=['GET', 'POST'])
 def excluir_usuario():
     if session.get('usuario') != 'admin':
@@ -109,18 +108,12 @@ def excluir_usuario():
     usuarios = [f[:-5] for f in os.listdir(password_dir) if f.endswith('.json')]
     return render_template('excluir_usuario.html', usuarios=usuarios, mensagem=mensagem, erro=erro)
 
-# 🌐 Módulo: Memoriais Descritivos (DECOPA)
-@app.route('/memoriais-descritivos')
+# Módulo: Memoriais Descritivos (DECOPA)
+@app.route('/memoriais-descritivos', methods=['GET', 'POST'])
 def memoriais_descritivos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    return render_template('formulario_DECOPA.html')  # nome correto do arquivo
 
-# ⚙️ Executar DECOPA
-@app.route('/executar-decopa', methods=['GET', 'POST'])
-def executar_decopa():
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
     resultado = erro_execucao = None
 
     if request.method == 'POST':
@@ -134,18 +127,15 @@ def executar_decopa():
         arquivo_excel.save(caminho_excel)
         arquivo_dxf.save(caminho_dxf)
 
-        caminho_exe = os.path.abspath(r'executaveis/DECOPA.exe')
+        caminho_exe = os.path.abspath(os.path.join(BASE_DIR, 'executaveis', 'DECOPA.exe'))
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
         log_path = os.path.join(log_dir, log_filename)
 
         try:
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 processo = subprocess.run(
-                    [caminho_exe,
-                     '--diretorio', diretorio,
-                     '--cidade', cidade,
-                     '--excel', caminho_excel,
-                     '--dxf', caminho_dxf],
+                    [caminho_exe, '--diretorio', diretorio, '--cidade', cidade,
+                     '--excel', caminho_excel, '--dxf', caminho_dxf],
                     stdout=log_file,
                     stderr=subprocess.STDOUT,
                     encoding='utf-8'
@@ -160,8 +150,9 @@ def executar_decopa():
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
 
-    return render_template("formulario_DECOPA.html", resultado=resultado, erro=erro_execucao)
+    return render_template('formulario_DECOPA.html', resultado=resultado, erro=erro_execucao)
 
+# Módulos futuros
 @app.route('/memoriais-azimute-az')
 def memoriais_azimute_az():
     return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_AZ")
@@ -178,7 +169,7 @@ def memoriais_angulos_internos_az():
 def memoriais_angulos_internos_p1_p2():
     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
 
-# ✅ Executar servidor (modo local)
+# Roda o servidor local
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
