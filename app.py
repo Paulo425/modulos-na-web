@@ -17,6 +17,19 @@ log_dir = os.path.join(BASE_DIR, "Log")
 os.makedirs(password_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 
+# Cria o admin.json se não existir
+admin_path = os.path.join(password_dir, "admin.json")
+if not os.path.exists(admin_path):
+    admin_user = {
+        "usuario": "admin",
+        "senha_hash": generate_password_hash("1234")
+    }
+    with open(admin_path, 'w', encoding='utf-8') as f:
+        json.dump(admin_user, f, indent=2)
+    print("✅ admin.json criado com senha 1234")
+else:
+    print("🔹 admin.json já existe")
+
 # 🔐 Função para carregar usuários
 def carregar_usuarios():
     usuarios = {}
