@@ -9,6 +9,7 @@ import os
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print("\n🔷 Iniciando: Preparo inicial dos arquivos")
@@ -35,6 +36,7 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
 
     print("\n✅ Processo concluído com sucesso!")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Executar DECOPA diretamente com parâmetros.')
     parser.add_argument('--diretorio', help='Diretório onde salvar arquivos.')
@@ -44,17 +46,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Se algum parâmetro não foi fornecido, pedir interativamente:
-    if not (args.diretorio and args.cidade and args.excel and args.dxf):
-        print("\n🔶 Execução Interativa (via input):")
-        diretorio = input("Digite o diretório onde salvar arquivos: ")
-        cidade = input("Digite a cidade do memorial: ")
-        excel = input("Digite o caminho do arquivo Excel: ")
-        dxf = input("Digite o caminho do arquivo DXF: ")
-    else:
-        diretorio = args.diretorio
-        cidade = args.cidade
-        excel = args.excel
-        dxf = args.dxf
+    diretorio = args.diretorio
+    cidade = args.cidade
+    excel = args.excel
+    dxf = args.dxf
+
+    # 🔒 Proteção: redireciona diretório inválido do Windows para uma pasta segura no Render
+    if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
+        diretorio = os.path.join(BASE_DIR, '..', 'CONCLUIDO')
 
     executar_programa(diretorio, cidade, excel, dxf)
