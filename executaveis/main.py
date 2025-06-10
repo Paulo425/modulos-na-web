@@ -54,6 +54,6 @@ if __name__ == "__main__":
 
     # 🔒 Proteção: redireciona diretório inválido do Windows para uma pasta segura no Render
     if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
-        diretorio = os.path.join(BASE_DIR, '..', 'CONCLUIDO')
+        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
 
     executar_programa(diretorio, cidade, excel, dxf)
