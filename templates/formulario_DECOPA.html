@@ -1,45 +1,48 @@
-
 {% extends 'base.html' %}
+
 {% block conteudo %}
-<h2 class="mb-4">Executar MEMORIAS DECOPA</h2>
-<form method="post" enctype="multipart/form-data">
-    <div class="mb-3">
-        <label class="form-label">Diretório para salvar arquivos</label>
-        <input type="text" name="diretorio" class="form-control" required>
+<div class="container mt-5">
+    <h2 class="text-center text-primary mb-4">Gerar Memorial Descritivo</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="diretorio" class="form-label">Cidade:</label>
+            <input type="text" class="form-control" name="cidade" id="cidade" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="excel" class="form-label">Arquivo Excel:</label>
+            <input type="file" class="form-control" name="excel" id="excel" accept=".xlsx" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="dxf" class="form-label">Arquivo DXF:</label>
+            <input type="file" class="form-control" name="dxf" id="dxf" accept=".dxf" required>
+        </div>
+
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">Executar</button>
+        </div>
+    </form>
+
+    {% if resultado %}
+    <div class="alert alert-success mt-4 text-center">
+        {{ resultado | safe }}
     </div>
-    <div class="mb-3">
-        <label class="form-label">Nome da Cidade</label>
-        <input type="text" name="cidade" class="form-control" required>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Arquivo Excel</label>
-        <input type="file" name="excel" class="form-control" required>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Arquivo DXF</label>
-        <input type="file" name="dxf" class="form-control" required>
-    </div>
-    <button type="submit" class="btn btn-success">Executar</button>
-</form>
-{% if resultado %}
-    <div class="alert alert-success mt-4">
-        <strong>Resultado:</strong>
-        <pre>{{ resultado }}</pre>
-    </div>
-{% endif %}
-{% if erro %}
+    {% endif %}
+
+    {% if erro %}
     <div class="alert alert-danger mt-4">
-        <strong>Erro:</strong>
-        <pre>{{ erro }}</pre>
+        {{ erro | safe }}
     </div>
-{% endif %}
-{% endblock %}
+    {% endif %}
 
-{% if zip_download %}
-<div class="mt-4 text-center">
-    <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success">
-        📦 Baixar ZIP Gerado
-    </a>
+    {% if zip_download %}
+    <div class="mt-4 text-center">
+        <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
+            📦 Baixar ZIP Gerado
+        </a>
+    </div>
+    {% endif %}
 </div>
-{% endif %}
-
+{% endblock %}

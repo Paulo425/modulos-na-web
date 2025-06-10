@@ -130,14 +130,16 @@ def memoriais_descritivos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    resultado = erro_execucao = None
-    zip_download = None
+    resultado = erro_execucao = zip_download = None
 
     if request.method == 'POST':
-        diretorio = request.form['diretorio'].replace('"', '')
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
         cidade = request.form['cidade']
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
+
+        os.makedirs(diretorio, exist_ok=True)
 
         caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
         caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
@@ -145,6 +147,8 @@ def memoriais_descritivos():
         arquivo_dxf.save(caminho_dxf)
 
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
+        log_dir = os.path.join(BASE_DIR, 'Log')
+        os.makedirs(log_dir, exist_ok=True)
         log_path = os.path.join(log_dir, log_filename)
 
         try:
@@ -161,24 +165,9 @@ def memoriais_descritivos():
                     stderr=subprocess.STDOUT,
                     encoding='utf-8'
                 )
+
             if processo.returncode == 0:
-                # Após sucesso, executa compactação
-                subprocess.run(
-                    ["python", os.path.join(BASE_DIR, "executaveis", "compactar_arquivos.py"),
-                     "--diretorio", diretorio],
-                    stdout=log_file,
-                    stderr=subprocess.STDOUT,
-                    encoding='utf-8'
-                )
-
-                # Detecta arquivo ZIP gerado
-                arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith(".zip")]
-                if arquivos_zip:
-                    zip_download = arquivos_zip[-1]  # último zip gerado
-                    resultado = f"✅ Processamento concluído! Arquivos salvos em {diretorio}."
-                else:
-                    resultado = "✅ Processamento concluído, mas nenhum arquivo .zip foi encontrado."
-
+                resultado = "✅ Processamento concluído com sucesso!"
             else:
                 with open(log_path, 'r', encoding='utf-8') as log_file:
                     log_conteudo = log_file.read()
@@ -188,12 +177,20 @@ def memoriais_descritivos():
             try:
                 with open(log_path, 'r', encoding='utf-8') as log_file:
                     log_conteudo = log_file.read()
-                erro_execucao = f"❌ Erro na execução:<br><pre>{log_conteudo}</pre>"
+                erro_execucao = f"❌ Erro inesperado:<br><pre>{log_conteudo}</pre>"
             except Exception as leitura_erro:
-                erro_execucao = f"❌ Erro na execução e falhou ao ler o log: {leitura_erro}"
+                erro_execucao = f"❌ Erro inesperado e falha ao ler log: {leitura_erro}"
+
         finally:
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
+
+        # 🔍 Detectar último ZIP gerado para exibir botão de download
+        zip_download = None
+        concluido_dir = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        arquivos_zip = [f for f in os.listdir(concluido_dir) if f.lower().endswith('.zip')]
+        if arquivos_zip:
+            zip_download = sorted(arquivos_zip)[-1]  # último .zip criado
 
     return render_template(
         "formulario_DECOPA.html",
@@ -202,13 +199,16 @@ def memoriais_descritivos():
         zip_download=zip_download
     )
 
+
 @app.route('/download-zip/<filename>')
 def download_zip(filename):
-    caminho_zip = os.path.join(BASE_DIR, 'CONCLUIDO', filename)  # Ajuste se o diretório for outro
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    caminho_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', filename)
     if os.path.exists(caminho_zip):
         return send_file(caminho_zip, as_attachment=True)
     else:
         return f"Arquivo {filename} não encontrado.", 404
+
 
 # Módulos futuros
 @app.route('/memoriais-azimute-az')
@@ -227,6 +227,7 @@ def memoriais_angulos_internos_az():
 def memoriais_angulos_internos_p1_p2():
     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
 
+    
 # Roda o servidor local
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

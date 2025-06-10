@@ -46,12 +46,15 @@ def montar_pacote_zip(diretorio):
 def main_compactar_arquivos(diretorio_concluido):
     montar_pacote_zip(diretorio_concluido)
 
-# 🔽 Novo bloco para permitir uso via linha de comando
+# 🔽 Suporte para execução via linha de comando (opcional)
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Compacta arquivos gerados (DOCX, DXF, XLSX) em ZIP por matrícula.")
-    parser.add_argument('--diretorio', required=True, help="Diretório onde estão os arquivos gerados.")
-    
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    TMP_CONCLUIDO = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+
+    parser = argparse.ArgumentParser(description="Compacta arquivos gerados em ZIP.")
+    parser.add_argument('--diretorio', default=TMP_CONCLUIDO, help="Diretório com os arquivos a compactar.")
+
     args = parser.parse_args()
     main_compactar_arquivos(args.diretorio)

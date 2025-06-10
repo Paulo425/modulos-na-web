@@ -1103,19 +1103,18 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
             )
 
         if excel_output_path:
-            # Caminhos para o template e saída do documento
-            #template_path = r"C:\Users\Paulo\OneDrive\Documentos\SIGEF_RS\DECOPA\MD_DECOPA_PADRAO.docx"
-            template_path = caminho_template
-            output_path = os.path.normpath(os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.docx"))
+            # Define corretamente o caminho do template e de saída
+            BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
+            output_path = os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.docx")
 
-            # Criar o documento Word
             create_memorial_document(
                 proprietario=proprietario,
                 matricula=matricula,
                 descricao=descricao,
                 area_terreno=area_terreno,
                 excel_file_path=excel_output_path,
-                template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx'),
+                template_path=template_path,
                 output_path=output_path,
                 perimeter_dxf=perimeter_dxf,
                 area_dxf=area_dxf,
@@ -1128,6 +1127,9 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
                 RI=RI,
                 rua=rua
             )
+
+    print("Processamento concluído com sucesso.")
+
 
             # Aguardar após salvar
             import time
