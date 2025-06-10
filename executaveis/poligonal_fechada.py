@@ -1134,17 +1134,17 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
             time.sleep(2)
 
             # Verificar se o arquivo DOCX foi salvo
-            if os.path.exists(output_path):
-                pdf_file_path = os.path.normpath(os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.pdf"))
-                convert_docx_to_pdf(output_path, pdf_file_path)
-            else:
-                print(f"Erro: O arquivo DOCX '{output_path}' não foi encontrado.")
+            #if os.path.exists(output_path):
+            #    pdf_file_path = os.path.normpath(os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.pdf"))
+            #    convert_docx_to_pdf(output_path, pdf_file_path)
+            #else:
+            #    print(f"Erro: O arquivo DOCX '{output_path}' não foi encontrado.")
 
             # Converter o Word em PDF
-            if os.path.exists(output_path):
-                convert_docx_to_pdf(output_path, pdf_file_path)
-            else:
-                print(f"Erro: O arquivo DOCX '{output_path}' não foi encontrado. A conversão para PDF não pode ser realizada.")
+            #if os.path.exists(output_path):
+            #    convert_docx_to_pdf(output_path, pdf_file_path)
+            #else:
+            #    print(f"Erro: O arquivo DOCX '{output_path}' não foi encontrado. A conversão para PDF não pode ser realizada.")
 
             # Fechar o documento do AutoCAD
             
