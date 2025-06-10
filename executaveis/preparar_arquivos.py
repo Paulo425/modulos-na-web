@@ -20,17 +20,28 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
     nome_excel = os.path.basename(caminho_excel)
     nome_dxf = os.path.basename(caminho_dxf)
 
+    # Copiar os arquivos recebidos para RECEBIDO com proteção
+    nome_excel = os.path.basename(caminho_excel)
+    nome_dxf = os.path.basename(caminho_dxf)
+
     destino_excel = os.path.join(RECEBIDO, nome_excel)
     destino_dxf = os.path.join(RECEBIDO, nome_dxf)
 
-    shutil.copy(caminho_excel, destino_excel)
-    shutil.copy(caminho_dxf, destino_dxf)
+    try:
+        shutil.copy(caminho_excel, destino_excel)
+        print(f"✅ Excel copiado para: {destino_excel}")
+    except Exception as e:
+        print(f"❌ Erro ao copiar arquivo Excel: {e}")
+        return None
 
-    print(f"✅ Excel copiado para: {destino_excel}")
-    print(f"✅ DXF copiado para: {destino_dxf}")
+    try:
+        shutil.copy(caminho_dxf, destino_dxf)
+        print(f"✅ DXF copiado para: {destino_dxf}")
+    except Exception as e:
+        print(f"❌ Erro ao copiar arquivo DXF: {e}")
+        return None
 
-    # Aqui você pode processar o Excel e gerar arquivos em PREPARADO
-    # Exemplo: salvar uma planilha dividida em arquivos individuais
+    # Processar o Excel e salvar planilhas individualmente
     try:
         df = pd.read_excel(destino_excel, sheet_name=None)
         for nome_aba, tabela in df.items():
@@ -39,7 +50,18 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
             tabela.to_excel(caminho_saida, index=False)
             print(f"✅ Planilha '{nome_aba}' salva em: {caminho_saida}")
     except Exception as e:
-        print(f"⚠️ Erro ao processar planilhas: {e}")
+        print(f"⚠️ Erro ao processar planilhas do Excel: {e}")
+        return None  # impede o código de seguir quebrado
+
+    # DEBUG antes do return
+    print("🟢 [main_preparo_arquivos] Tudo pronto, retornando variáveis:")
+    print("  TMP_DIR:", TMP_DIR)
+    print("  PREPARADO:", PREPARADO)
+    print("  CONCLUIDO:", CONCLUIDO)
+    print("  Excel:", destino_excel)
+    print("  DXF:", destino_dxf)
+    print("  Template:", os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx'))
+
 
     # Retornar os caminhos úteis para as próximas fases
     return {

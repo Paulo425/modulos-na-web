@@ -26,6 +26,9 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
 
     print("\n🔷 Iniciando: Preparo inicial dos arquivos")
     variaveis = main_preparo_arquivos(diretorio_saida, cidade, caminho_excel, caminho_dxf)
+    if not isinstance(variaveis, dict):
+        print("❌ [main.py] ERRO: main_preparo_arquivos não retornou dicionário!")
+        return
 
     if not variaveis:
         print("❌ [main.py] Erro: O preparo inicial não retornou variáveis.")
