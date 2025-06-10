@@ -128,15 +128,19 @@ def memoriais_descritivos():
         arquivo_excel.save(caminho_excel)
         arquivo_dxf.save(caminho_dxf)
 
-        caminho_exe = os.path.abspath(os.path.join(BASE_DIR, 'executaveis', 'DECOPA.exe'))
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
         log_path = os.path.join(log_dir, log_filename)
 
         try:
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 processo = subprocess.run(
-                    [caminho_exe, '--diretorio', diretorio, '--cidade', cidade,
-                     '--excel', caminho_excel, '--dxf', caminho_dxf],
+                    [
+                        "python", os.path.join(BASE_DIR, "executaveis", "main.py"),
+                        "--diretorio", diretorio,
+                        "--cidade", cidade,
+                        "--excel", caminho_excel,
+                        "--dxf", caminho_dxf
+                    ],
                     stdout=log_file,
                     stderr=subprocess.STDOUT,
                     encoding='utf-8'

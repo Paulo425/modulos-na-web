@@ -1,6 +1,8 @@
 services:
   - type: web
-    name: modulos-na-web
+    name: decopa-backend
     env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app:app"
+    region: oregon  # ou "southamerica" se quiser latência menor no Brasil
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python app.py
+    autoDeploy: true
