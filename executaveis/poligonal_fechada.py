@@ -1095,6 +1095,19 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
                 RI=RI,
                 rua=rua
             )
+            # 🔎 DEBUG: Verificar os arquivos que foram realmente salvos
+            print("🧪 DEBUG: Listando arquivos salvos em caminho_salvar:")
+            try:
+                for fname in os.listdir(caminho_salvar):
+                    print(f"📂 Arquivo presente: {fname}")
+            except Exception as e:
+                print(f"⚠️ Erro ao listar arquivos em {caminho_salvar}: {e}")
+
+
+
+
+
+
 
         print("Processamento concluído com sucesso.")
     else:
