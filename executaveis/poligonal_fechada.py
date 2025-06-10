@@ -21,6 +21,7 @@ import traceback
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import sys
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 
