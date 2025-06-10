@@ -35,12 +35,21 @@ def montar_pacote_zip(diretorio):
 
             if arq_dxf and arq_docx and arq_excel:
                 nome_zip = os.path.join(diretorio, f"{tipo}_Memorial_MAT_{matricula}.zip")
+                # Salvar também na pasta publicamente acessível para debug
+                from shutil import copyfile
+                STATIC_ZIP_DIR = os.path.join(os.path.dirname(__file__), '..', 'static', 'zips')
+                os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
+                caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
+
                 print(f"📂 Criando ZIP: {nome_zip}")
                 print(f"🔍 Nome do ZIP final criado: {os.path.basename(nome_zip)}")
                 with zipfile.ZipFile(nome_zip, 'w') as zipf:
                     zipf.write(arq_dxf[0], os.path.basename(arq_dxf[0]))
                     zipf.write(arq_docx[0], os.path.basename(arq_docx[0]))
                     zipf.write(arq_excel[0], os.path.basename(arq_excel[0]))
+                    copyfile(nome_zip, caminho_debug_zip)
+                    print(f"🧪 ZIP também salvo para debug em: {caminho_debug_zip}")
+
 
                 print(f"✅ ZIP criado com sucesso: {nome_zip}")
                 print(f"🔍 Nome do ZIP final criado: {os.path.basename(nome_zip)}")

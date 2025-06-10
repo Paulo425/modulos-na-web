@@ -18,14 +18,15 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     variaveis = main_preparo_arquivos(
         diretorio_saida, cidade, caminho_excel, caminho_dxf)
 
+    if not variaveis:
+        print("❌ Erro: O preparo inicial não retornou variáveis.")
+        return
+    
     print("🧪 DEBUG: Caminhos internos retornados por main_preparo_arquivos():")
     print("  diretorio_final:", diretorio_final)
     print("  diretorio_preparado:", diretorio_preparado)
     print("  diretorio_concluido:", diretorio_concluido)
 
-    if not variaveis:
-        print("❌ Erro: O preparo inicial não retornou variáveis.")
-        return
 
     diretorio_final = variaveis["diretorio_final"]
     diretorio_preparado = variaveis["diretorio_preparado"]
