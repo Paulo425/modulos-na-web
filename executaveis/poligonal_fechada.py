@@ -20,6 +20,7 @@ from shapely.geometry import Polygon
 import traceback
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import sys
+import time
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -1132,7 +1133,7 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
 
 
             # Aguardar após salvar
-            import time
+            
             time.sleep(2)
 
             # Verificar se o arquivo DOCX foi salvo
