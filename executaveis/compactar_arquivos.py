@@ -36,13 +36,14 @@ def montar_pacote_zip(diretorio):
             if arq_dxf and arq_docx and arq_excel:
                 nome_zip = os.path.join(diretorio, f"{tipo}_Memorial_MAT_{matricula}.zip")
                 print(f"📂 Criando ZIP: {nome_zip}")
-
+                print(f"🔍 Nome do ZIP final criado: {os.path.basename(nome_zip)}")
                 with zipfile.ZipFile(nome_zip, 'w') as zipf:
                     zipf.write(arq_dxf[0], os.path.basename(arq_dxf[0]))
                     zipf.write(arq_docx[0], os.path.basename(arq_docx[0]))
                     zipf.write(arq_excel[0], os.path.basename(arq_excel[0]))
 
                 print(f"✅ ZIP criado com sucesso: {nome_zip}")
+                print(f"🔍 Nome do ZIP final criado: {os.path.basename(nome_zip)}")
             else:
                 print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
                 print(f"   - DXF: {bool(arq_dxf)} | DOCX: {bool(arq_docx)} | XLSX: {bool(arq_excel)}")
