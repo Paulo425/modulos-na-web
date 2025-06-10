@@ -4,6 +4,8 @@ import zipfile
 import re
 
 def montar_pacote_zip(diretorio):
+    print("🟨 Conteúdo da pasta antes da compactação:", os.listdir(diretorio))
+
     tipos = ["ETE", "REM", "SER", "ACE"]
 
     # Expressão regular para extrair matrícula
@@ -38,10 +40,11 @@ def montar_pacote_zip(diretorio):
                     zipf.write(arq_excel[0], os.path.basename(arq_excel[0]))
 
                 print(f"✅ Compactado com sucesso: {nome_zip}")
-            else:
-                print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
                 print(f"🔍 Nome do ZIP final criado: {os.path.basename(nome_zip)}")
 
+            else:
+                print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
+                
 def main_compactar_arquivos(diretorio_concluido):
     montar_pacote_zip(diretorio_concluido)
 
