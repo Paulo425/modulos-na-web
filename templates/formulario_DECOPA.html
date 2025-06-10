@@ -25,6 +25,15 @@
         </div>
     </form>
 
+<hr>
+<div style="margin-top: 20px;">
+    <h3>📁 Acessar arquivos gerados</h3>
+    <a href="{{ url_for('listar_arquivos') }}" target="_blank" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
+        📥 Ver arquivos disponíveis para download
+    </a>
+</div>
+
+
     {% if resultado %}
     <div class="alert alert-success mt-4 text-center">
         {{ resultado | safe }}
