@@ -1,7 +1,8 @@
+# preparar_arquivos.py
+
 import os
 import shutil
 import pandas as pd
-import tempfile
 
 def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -39,17 +40,6 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
             print(f"✅ Planilha '{nome_aba}' salva em: {caminho_saida}")
     except Exception as e:
         print(f"⚠️ Erro ao processar planilhas: {e}")
-
-    print("🔎 DEBUG FINAL DO PREPARO:")
-    print(f"  TMP_DIR: {TMP_DIR}")
-    print(f"  PREPARADO: {PREPARADO}")
-    print(f"  CONCLUIDO: {CONCLUIDO}")
-    print(f"  Excel recebido: {destino_excel}")
-    print(f"  DXF recebido: {destino_dxf}")
-    print(f"  Template: {os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')}")
-
-
-
 
     # Retornar os caminhos úteis para as próximas fases
     return {

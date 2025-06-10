@@ -1,32 +1,32 @@
 import argparse
 import sys
 import codecs
+import os
+import time
+
 from preparar_arquivos import main_preparo_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
-import time
-import os
 
 sys.stdout.reconfigure(encoding='utf-8')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
-    print("\n🔷 Iniciando: Preparo inicial dos arquivos")
-    print("🧪 DEBUG: Caminho final usado como 'diretorio':", diretorio)
+    print("🚀 [main.py] Início da execução principal")
 
-    variaveis = main_preparo_arquivos(
-        diretorio_saida, cidade, caminho_excel, caminho_dxf)
+    print("📁 Variáveis de entrada:")
+    print(f"   - diretorio_saida: {diretorio_saida}")
+    print(f"   - cidade: {cidade}")
+    print(f"   - excel: {caminho_excel}")
+    print(f"   - dxf: {caminho_dxf}")
+
+    print("\n🔷 Iniciando: Preparo inicial dos arquivos")
+    variaveis = main_preparo_arquivos(diretorio_saida, cidade, caminho_excel, caminho_dxf)
 
     if not variaveis:
-        print("❌ Erro: O preparo inicial não retornou variáveis.")
+        print("❌ [main.py] Erro: O preparo inicial não retornou variáveis.")
         return
-    
-    print("🧪 DEBUG: Caminhos internos retornados por main_preparo_arquivos():")
-    print("  diretorio_final:", diretorio_final)
-    print("  diretorio_preparado:", diretorio_preparado)
-    print("  diretorio_concluido:", diretorio_concluido)
-
 
     diretorio_final = variaveis["diretorio_final"]
     diretorio_preparado = variaveis["diretorio_preparado"]
@@ -35,17 +35,29 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     arquivo_dxf_recebido = variaveis["arquivo_dxf_recebido"]
     caminho_template = variaveis["caminho_template"]
 
+    print("✅ [main.py] Preparo concluído. Variáveis carregadas.")
+    print(f"   - diretorio_concluido: {diretorio_concluido}")
+    print(f"   - template: {caminho_template}")
+
     print("\n🔷 Processamento Poligonal Fechada")
-    main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, caminho_template)
+    main_poligonal_fechada(
+        arquivo_excel_recebido,
+        arquivo_dxf_recebido,
+        diretorio_preparado,
+        diretorio_concluido,
+        caminho_template
+    )
 
-    print(f"📦 [main.py] Chamando compactação no diretório: {diretorio_concluido}")
-    print("\n🔷 Compactação final dos arquivos")
+    print(f"\n📦 [main.py] Chamando compactação no diretório: {diretorio_concluido}")
     main_compactar_arquivos(diretorio_concluido)
+    print("✅ [main.py] Compactação finalizada com sucesso!")
 
-    print("\n✅ Processo concluído com sucesso!")
+    print("\n✅ [main.py] Processo geral concluído com sucesso!")
 
 
 if __name__ == "__main__":
+    print("⚙️ [main.py] Script chamado diretamente via linha de comando")
+
     parser = argparse.ArgumentParser(description='Executar DECOPA diretamente com parâmetros.')
     parser.add_argument('--diretorio', help='Diretório onde salvar arquivos.')
     parser.add_argument('--cidade', help='Cidade do memorial.')
@@ -59,10 +71,8 @@ if __name__ == "__main__":
     excel = args.excel
     dxf = args.dxf
 
-    # 🔒 Proteção: redireciona diretório inválido do Windows para uma pasta segura no Render
+    # 🔒 Proteção: redireciona diretório inválido do Windows para pasta segura no Render
     if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
-        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
-        
-
+        diretorio = os.path.join(BASE_DIR, '..', 'CONCLUIDO')
 
     executar_programa(diretorio, cidade, excel, dxf)
