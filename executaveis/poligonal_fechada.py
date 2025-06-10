@@ -761,7 +761,7 @@ def create_memorial_document(
         #doc_word = Document(template_path)
         #set_default_font(doc_word)  # Fonte Arial 12
 
-        template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
+        #template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
 
         doc_word = Document(template_path)
         set_default_font(doc_word)
@@ -1115,7 +1115,7 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
                 descricao=descricao,
                 area_terreno=area_terreno,
                 excel_file_path=excel_output_path,
-                template_path=template_path,
+                template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx'),
                 output_path=output_path,
                 perimeter_dxf=perimeter_dxf,
                 area_dxf=area_dxf,
