@@ -760,9 +760,7 @@ def create_memorial_document(
         #doc_word = Document(template_path)
         #set_default_font(doc_word)  # Fonte Arial 12
 
-        if hasattr(sys, '_MEIPASS'):
-            template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
-
+        template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
 
         doc_word = Document(template_path)
         set_default_font(doc_word)
