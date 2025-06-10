@@ -3,7 +3,6 @@ import glob
 import zipfile
 import re
 
-
 def montar_pacote_zip(diretorio):
     tipos = ["ETE", "REM", "SER", "ACE"]
 
@@ -46,3 +45,13 @@ def montar_pacote_zip(diretorio):
 
 def main_compactar_arquivos(diretorio_concluido):
     montar_pacote_zip(diretorio_concluido)
+
+# 🔽 Novo bloco para permitir uso via linha de comando
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Compacta arquivos gerados (DOCX, DXF, XLSX) em ZIP por matrícula.")
+    parser.add_argument('--diretorio', required=True, help="Diretório onde estão os arquivos gerados.")
+    
+    args = parser.parse_args()
+    main_compactar_arquivos(args.diretorio)
