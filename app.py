@@ -163,14 +163,22 @@ def memoriais_descritivos():
             if processo.returncode == 0:
                 resultado = f"✅ Processamento concluído! Arquivos salvos em {diretorio}."
             else:
-                erro_execucao = f"❌ Erro na execução. Veja o log: {log_path}"
+                with open(log_path, 'r', encoding='utf-8') as log_file:
+                    log_conteudo = log_file.read()
+                erro_execucao = f"❌ Erro na execução:<br><pre>{log_conteudo}</pre>"
         except Exception as e:
-            erro_execucao = f"Erro inesperado: {e}"
+            try:
+                with open(log_path, 'r', encoding='utf-8') as log_file:
+                    log_conteudo = log_file.read()
+                erro_execucao = f"❌ Erro na execução:<br><pre>{log_conteudo}</pre>"
+            except Exception as leitura_erro:
+                erro_execucao = f"❌ Erro na execução e também falhou ao ler o log: {leitura_erro}"
         finally:
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
 
     return render_template('formulario_DECOPA.html', resultado=resultado, erro=erro_execucao)
+
 
 # Módulos futuros
 @app.route('/memoriais-azimute-az')
