@@ -13,9 +13,15 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print("\n🔷 Iniciando: Preparo inicial dos arquivos")
+    print("🧪 DEBUG: Caminho final usado como 'diretorio':", diretorio)
 
     variaveis = main_preparo_arquivos(
         diretorio_saida, cidade, caminho_excel, caminho_dxf)
+
+    print("🧪 DEBUG: Caminhos internos retornados por main_preparo_arquivos():")
+    print("  diretorio_final:", diretorio_final)
+    print("  diretorio_preparado:", diretorio_preparado)
+    print("  diretorio_concluido:", diretorio_concluido)
 
     if not variaveis:
         print("❌ Erro: O preparo inicial não retornou variáveis.")
@@ -55,5 +61,7 @@ if __name__ == "__main__":
     # 🔒 Proteção: redireciona diretório inválido do Windows para uma pasta segura no Render
     if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
         diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        
+
 
     executar_programa(diretorio, cidade, excel, dxf)
