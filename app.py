@@ -187,11 +187,20 @@ def memoriais_descritivos():
 
         # 🔍 Detectar último ZIP gerado para exibir botão de download
         zip_download = None
-        concluido_dir = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
-        arquivos_zip = [f for f in os.listdir(concluido_dir) if f.lower().endswith('.zip')]
-        if arquivos_zip:
-            zip_download = sorted(arquivos_zip)[-1]  # último .zip criado
+        try:
+            concluido_dir = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+            arquivos_zip = [f for f in os.listdir(concluido_dir) if f.lower().endswith('.zip')]
 
+            print("📁 ZIPs encontrados:", arquivos_zip)
+
+            if arquivos_zip:
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(concluido_dir, x)), reverse=True)
+                zip_download = arquivos_zip[0]
+                print("🟢 Último ZIP definido para download:", zip_download)
+        except Exception as e:
+            print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
+
+        
     return render_template(
         "formulario_DECOPA.html",
         resultado=resultado,
