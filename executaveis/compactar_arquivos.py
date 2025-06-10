@@ -41,11 +41,14 @@ def montar_pacote_zip(diretorio):
 
                 print(f"✅ Compactado com sucesso: {nome_zip}")
                 print(f"🔍 Nome do ZIP final criado: {os.path.basename(nome_zip)}")
+                print(f"📁 Arquivos atualmente no diretório '{diretorio}':")
+                print(os.listdir(diretorio))
 
             else:
                 print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
                 
 def main_compactar_arquivos(diretorio_concluido):
+    print(f"📦 [compactar] Diretório recebido: {diretorio_concluido}")
     montar_pacote_zip(diretorio_concluido)
 
 # 🔽 Suporte para execução via linha de comando (opcional)

@@ -192,6 +192,8 @@ def memoriais_descritivos():
             arquivos_zip = [f for f in os.listdir(concluido_dir) if f.lower().endswith('.zip')]
 
             print("📁 ZIPs encontrados:", arquivos_zip)
+            print(f"📁 Arquivos encontrados em {concluido_dir}: {arquivos_zip}")
+            print("📁 Conteúdo real da pasta:", os.listdir(concluido_dir))
 
             if arquivos_zip:
                 arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(concluido_dir, x)), reverse=True)

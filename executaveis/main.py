@@ -31,6 +31,7 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print("\n🔷 Processamento Poligonal Fechada")
     main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, caminho_template)
 
+    print(f"📦 [main.py] Chamando compactação no diretório: {diretorio_concluido}")
     print("\n🔷 Compactação final dos arquivos")
     main_compactar_arquivos(diretorio_concluido)
 
