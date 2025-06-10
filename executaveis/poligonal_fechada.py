@@ -1082,8 +1082,7 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
 #     # (Opcional) Adicionar o arco do azimute (se necessário)
 #     add_azimuth_arc(doc,msp, ponto_az, v1, azimuth)
     
-    if doc and lines:
-
+        if doc and lines:
         print(f"Nome do documento: {doc}")
         print(f"Número de linhas: {len(lines)}")
         
@@ -1097,11 +1096,12 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
             matricula=matricula,
             caminho_salvar=caminho_salvar,
             excel_file_path=exc_file_path,
-            ponto_az=ponto_az,distance_az_v1=distance_az_v1,
+            ponto_az=ponto_az,
+            distance_az_v1=distance_az_v1,
             azimute_az_v1=azimute_az_v1,
             ponto_inicial_real=ponto_inicial_real,
             tipo=tipo
-            )
+        )
 
         if excel_output_path:
             # Define corretamente o caminho do template e de saída
@@ -1129,32 +1129,10 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
                 rua=rua
             )
 
-    print("Processamento concluído com sucesso.")
-
-
-            # Aguardar após salvar
-            
-            time.sleep(2)
-
-            # Verificar se o arquivo DOCX foi salvo
-            #if os.path.exists(output_path):
-            #    pdf_file_path = os.path.normpath(os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.pdf"))
-            #    convert_docx_to_pdf(output_path, pdf_file_path)
-            #else:
-            #    print(f"Erro: O arquivo DOCX '{output_path}' não foi encontrado.")
-
-            # Converter o Word em PDF
-            #if os.path.exists(output_path):
-            #    convert_docx_to_pdf(output_path, pdf_file_path)
-            #else:
-            #    print(f"Erro: O arquivo DOCX '{output_path}' não foi encontrado. A conversão para PDF não pode ser realizada.")
-
-            # Fechar o documento do AutoCAD
-            
-            print("Processamento concluído com sucesso.")
-
+        print("Processamento concluído com sucesso.")
     else:
         print("Erro ao processar o arquivo DXF.")
+
 
 
 
