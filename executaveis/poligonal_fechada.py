@@ -974,144 +974,106 @@ def create_memorial_document(
 
 
 # Função principal
-def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, caminho_template):
-    # Carrega arquivo Excel com os dados do imóvel
-    dados_imovel_excel_path = arquivo_excel_recebido
+def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_concluido, caminho_template):
+    print("\n🔹 Carregando dados do imóvel")
+    dados_df = pd.read_excel(caminho_excel, sheet_name='Dados_do_Imóvel', header=None)
+    dados_dict = dict(zip(dados_df.iloc[:, 0], dados_df.iloc[:, 1]))
 
-    # Ler especificamente a aba "Dados do Imóvel"
-    dados_imovel_df = pd.read_excel(dados_imovel_excel_path, sheet_name='Dados_do_Imóvel', header=None)
+    proprietario = dados_dict.get("NOME DO PROPRIETÁRIO", "").strip()
+    matricula = dados_dict.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip()
+    descricao = dados_dict.get("DESCRIÇÃO", "").strip()
+    area_terreno = dados_dict.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").strip()
+    comarca = dados_dict.get("COMARCA", "").strip()
+    RI = dados_dict.get("CRI", "").strip()
+    rua = dados_dict.get("ENDEREÇO/LOCAL", "").strip()
 
-    # Converter colunas em dicionário para extração direta dos dados
-    dados_imovel = dict(zip(dados_imovel_df.iloc[:, 0], dados_imovel_df.iloc[:, 1]))
+    nome_dxf = os.path.basename(caminho_dxf).upper()
+    tipo = next((t for t in ["ETE", "REM", "SER", "ACE"] if t in nome_dxf), None)
 
-    # Carregar variáveis conforme correspondência solicitada
-    proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
-    matricula = dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip()
-    matricula = sanitize_filename(matricula)
-    descricao = dados_imovel.get("DESCRIÇÃO", "").strip()
-    area_terreno = dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").strip()
-    comarca = dados_imovel.get("COMARCA", "").strip().strip('"')
-    RI = dados_imovel.get("CRI", "").strip().strip('"')
-    rua = dados_imovel.get("ENDEREÇO/LOCAL", "").strip().strip('"')
-
-    caminho_salvar = diretorio_concluido
-    os.makedirs(caminho_salvar, exist_ok=True)
-
-    dxf_file_path = arquivo_dxf_recebido
-    dxf_filename = os.path.basename(dxf_file_path).upper()
-
-    if "ETE" in dxf_filename:
-        tipo = "ETE"
-    elif "REM" in dxf_filename:
-        tipo = "REM"
-    elif "SER" in dxf_filename:
-        tipo = "SER"
-    elif "ACE" in dxf_filename:
-        tipo = "ACE"
-    else:
-        print("❌ Não foi possível determinar automaticamente o tipo (ETE, REM, SER ou ACE).")
+    if not tipo:
+        print("❌ Tipo do projeto (ETE, REM, SER, ACE) não identificado no nome do DXF.")
         return
 
-    diretorio_confrontantes = diretorio_preparado
-    padrao_busca = os.path.join(diretorio_confrontantes, f"FECHADA_*_{tipo}.xlsx")
-    arquivos_encontrados = glob.glob(padrao_busca)
+    print(f"📁 Tipo identificado: {tipo}")
 
-    if not arquivos_encontrados:
-        print(f"❌ Arquivo de confrontantes não encontrado com o padrão: {padrao_busca}")
+    padrao_excel = os.path.join(pasta_preparado, f"FECHADA_*_{tipo}.xlsx")
+    arquivos_excel = glob.glob(padrao_excel)
+    if not arquivos_excel:
+        print(f"❌ Nenhum arquivo de confrontantes encontrado para o padrão: {padrao_excel}")
         return
 
-    exc_file_path = arquivos_encontrados[0]
+    excel_confrontantes = arquivos_excel[0]
 
-    desc_ponto_Az = ""
-    dxf_file_path_original = dxf_file_path
-    dxf_file_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
-    dxf_file_path, ponto_az, ponto_inicial_real = limpar_dxf_e_inserir_ponto_az(dxf_file_path_original, dxf_file_path)
+    nome_limpo_dxf = f"DXF_LIMPO_{matricula}.dxf"
+    caminho_dxf_limpo = os.path.join(pasta_concluido, nome_limpo_dxf)
+    dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(caminho_dxf, caminho_dxf_limpo)
 
-    if ponto_az is None or ponto_inicial_real is None:
-        print("❌ Erro: A polilinha fechada não foi encontrada no DXF original.")
+    if not ponto_az or not ponto_inicial:
+        print("❌ Não foi possível identificar o ponto Az ou inicial.")
         return
 
-    doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_file_path)
-
-    try:
-        msp = doc.modelspace()
-    except Exception as e:
-        print(f"Erro ao abrir o arquivo DXF para edição: {e}")
-        return None
-
-    if not doc or not ponto_az:
-        print("Erro ao processar o arquivo DXF.")
+    doc, linhas, arcos, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_resultado)
+    if not doc or not linhas:
+        print("❌ Documento DXF inválido ou vazio.")
         return
 
-    print(f"Ponto Az identificado: {ponto_az}")
-
-    v1 = lines[0][0]
+    msp = doc.modelspace()
+    v1 = linhas[0][0]
     distance_az_v1 = calculate_distance(ponto_az, v1)
     azimute_az_v1 = calculate_azimuth(ponto_az, v1)
-    distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
     azimuth = calculate_azimuth(ponto_az, v1)
+    distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
 
-    if doc and lines:
-        print(f"Nome do documento: {doc}")
-        print(f"Número de linhas: {len(lines)}")
+    print(f"📏 Azimute: {azimuth:.2f}°, Distância Az-V1: {distance:.2f}m")
 
-        excel_output_path = create_memorial_descritivo(
-            doc=doc,
-            msp=msp,
-            lines=lines,
-            arcs=arcs,
+    excel_output = create_memorial_descritivo(
+        doc=doc,
+        msp=msp,
+        lines=linhas,
+        arcs=arcos,
+        proprietario=proprietario,
+        matricula=matricula,
+        caminho_salvar=pasta_concluido,
+        excel_file_path=excel_confrontantes,
+        ponto_az=ponto_az,
+        distance_az_v1=distance_az_v1,
+        azimute_az_v1=azimute_az_v1,
+        ponto_inicial_real=ponto_inicial,
+        tipo=tipo
+    )
+
+    if excel_output:
+        output_docx = os.path.join(pasta_concluido, f"{tipo}_Memorial_MAT_{matricula}.docx")
+        create_memorial_document(
             proprietario=proprietario,
             matricula=matricula,
-            caminho_salvar=caminho_salvar,
-            excel_file_path=exc_file_path,
-            ponto_az=ponto_az,
-            distance_az_v1=distance_az_v1,
-            azimute_az_v1=azimute_az_v1,
-            ponto_inicial_real=ponto_inicial_real,
-            tipo=tipo
+            descricao=descricao,
+            area_terreno=area_terreno,
+            excel_file_path=excel_output,
+            template_path=caminho_template,
+            output_path=output_docx,
+            perimeter_dxf=perimeter_dxf,
+            area_dxf=area_dxf,
+            desc_ponto_Az="",
+            Coorde_E_ponto_Az=ponto_az[0],
+            Coorde_N_ponto_Az=ponto_az[1],
+            azimuth=azimuth,
+            distance=distance,
+            comarca=comarca,
+            RI=RI,
+            rua=rua
         )
 
-        if excel_output_path:
-            BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
-            output_path = os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.docx")
+        print(f"📄 Memorial gerado com sucesso: {output_docx}")
 
-            create_memorial_document(
-                proprietario=proprietario,
-                matricula=matricula,
-                descricao=descricao,
-                area_terreno=area_terreno,
-                excel_file_path=excel_output_path,
-                template_path=template_path,
-                output_path=output_path,
-                perimeter_dxf=perimeter_dxf,
-                area_dxf=area_dxf,
-                desc_ponto_Az=desc_ponto_Az,
-                Coorde_E_ponto_Az=ponto_az[0],
-                Coorde_N_ponto_Az=ponto_az[1],
-                azimuth=azimuth,
-                distance=distance,
-                comarca=comarca,
-                RI=RI,
-                rua=rua
-            )
-            # 🔎 DEBUG: Verificar os arquivos que foram realmente salvos
-            print("🧪 DEBUG: Listando arquivos salvos em caminho_salvar:")
-            try:
-                for fname in os.listdir(caminho_salvar):
-                    print(f"📂 Arquivo presente: {fname}")
-            except Exception as e:
-                print(f"⚠️ Erro ao listar arquivos em {caminho_salvar}: {e}")
-
-
-
-
-
-
-
-        print("Processamento concluído com sucesso.")
+        # DEBUG EXTRA COM WALK: Lista todos os arquivos encontrados
+        print("🔍 Conteúdo completo da pasta de saída (walk):")
+        for root, dirs, files in os.walk(pasta_concluido):
+            for file in files:
+                caminho_completo = os.path.join(root, file)
+                print("🗂️", caminho_completo)
     else:
-        print("Erro ao processar o arquivo DXF.")
+        print("❌ Falha ao gerar o memorial descritivo.")
 
 
 
