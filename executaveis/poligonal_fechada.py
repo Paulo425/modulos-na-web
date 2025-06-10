@@ -974,43 +974,32 @@ def create_memorial_document(
 
 
 # Função principal
-def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido,caminho_template):
+def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, caminho_template):
     # Carrega arquivo Excel com os dados do imóvel
-    #dados_imovel_excel_path = input("Digite o caminho completo do arquivo Excel com Dados do Imóvel: ").strip('"')
-    dados_imovel_excel_path=arquivo_excel_recebido
-    # Depuração imediata para checar o nome exato da coluna lida:
-    
-    
+    dados_imovel_excel_path = arquivo_excel_recebido
+
     # Ler especificamente a aba "Dados do Imóvel"
     dados_imovel_df = pd.read_excel(dados_imovel_excel_path, sheet_name='Dados_do_Imóvel', header=None)
 
-    
-
-    
     # Converter colunas em dicionário para extração direta dos dados
     dados_imovel = dict(zip(dados_imovel_df.iloc[:, 0], dados_imovel_df.iloc[:, 1]))
-    
+
     # Carregar variáveis conforme correspondência solicitada
     proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
     matricula = dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip()
-    matricula = sanitize_filename(matricula)  # preserva lógica original
+    matricula = sanitize_filename(matricula)
     descricao = dados_imovel.get("DESCRIÇÃO", "").strip()
     area_terreno = dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").strip()
     comarca = dados_imovel.get("COMARCA", "").strip().strip('"')
     RI = dados_imovel.get("CRI", "").strip().strip('"')
     rua = dados_imovel.get("ENDEREÇO/LOCAL", "").strip().strip('"')
 
-    #caminho_salvar = input("Digite o caminho de salvamento: ").strip('"') # remove aspas
-    caminho_salvar=diretorio_concluido
+    caminho_salvar = diretorio_concluido
     os.makedirs(caminho_salvar, exist_ok=True)
 
-    
-    # Pedir o caminho do arquivo DXF
-    #dxf_file_path = input("Digite o caminho completo do arquivo DXF: ").strip('"')  # Remove aspas ao redor do caminho
     dxf_file_path = arquivo_dxf_recebido
-    # Extração automática do tipo (ETE, REM, SER, ACE) a partir do nome DXF
     dxf_filename = os.path.basename(dxf_file_path).upper()
-    
+
     if "ETE" in dxf_filename:
         tipo = "ETE"
     elif "REM" in dxf_filename:
@@ -1022,21 +1011,19 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
     else:
         print("❌ Não foi possível determinar automaticamente o tipo (ETE, REM, SER ou ACE).")
         return
-    
-    diretorio_confrontantes=diretorio_preparado
-    # Busca dinâmica do arquivo confrontante correto na pasta PREPARADO
+
+    diretorio_confrontantes = diretorio_preparado
     padrao_busca = os.path.join(diretorio_confrontantes, f"FECHADA_*_{tipo}.xlsx")
     arquivos_encontrados = glob.glob(padrao_busca)
-    
+
     if not arquivos_encontrados:
         print(f"❌ Arquivo de confrontantes não encontrado com o padrão: {padrao_busca}")
         return
-    
-    exc_file_path = arquivos_encontrados[0]  # Definido automaticamente!
-    
 
-    desc_ponto_Az = ""  # valor padrão para evitar erro
-    dxf_file_path_original = dxf_file_path  # Guarda original
+    exc_file_path = arquivos_encontrados[0]
+
+    desc_ponto_Az = ""
+    dxf_file_path_original = dxf_file_path
     dxf_file_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
     dxf_file_path, ponto_az, ponto_inicial_real = limpar_dxf_e_inserir_ponto_az(dxf_file_path_original, dxf_file_path)
 
@@ -1044,49 +1031,30 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
         print("❌ Erro: A polilinha fechada não foi encontrada no DXF original.")
         return
 
-
-    
     doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_file_path)
-
 
     try:
         msp = doc.modelspace()
-
     except Exception as e:
         print(f"Erro ao abrir o arquivo DXF para edição: {e}")
         return None
-    
+
     if not doc or not ponto_az:
         print("Erro ao processar o arquivo DXF.")
         return
-    if ponto_az is None:
-        print("Erro: O ponto Az não foi encontrado no arquivo DXF.")
-        return
-    else:
-        print(f"Ponto Az identificado: {ponto_az}")
 
-#     # Desenhar a linha entre ponto Az e V1
-    v1 = lines[0][0]  # Primeiro vértice da poligonal
-#     print(f"Valor de ponto_az antes de calcular distância: {ponto_az}")
+    print(f"Ponto Az identificado: {ponto_az}")
 
-   
-    
+    v1 = lines[0][0]
     distance_az_v1 = calculate_distance(ponto_az, v1)
     azimute_az_v1 = calculate_azimuth(ponto_az, v1)
     distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
-    
-#     # Calcular o azimute entre Az e V1 e adicionar arco do azimute
     azimuth = calculate_azimuth(ponto_az, v1)
-#     print(f"Azimute do ponto Az para V1: {azimuth:.2f}°")
 
-#     # (Opcional) Adicionar o arco do azimute (se necessário)
-#     add_azimuth_arc(doc,msp, ponto_az, v1, azimuth)
-    
-        if doc and lines:
+    if doc and lines:
         print(f"Nome do documento: {doc}")
         print(f"Número de linhas: {len(lines)}")
-        
-        # Criar o memorial descritivo diretamente (coleta de confrontantes interna)
+
         excel_output_path = create_memorial_descritivo(
             doc=doc,
             msp=msp,
@@ -1104,7 +1072,6 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
         )
 
         if excel_output_path:
-            # Define corretamente o caminho do template e de saída
             BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
             template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
             output_path = os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.docx")
@@ -1132,6 +1099,7 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
         print("Processamento concluído com sucesso.")
     else:
         print("Erro ao processar o arquivo DXF.")
+
 
 
 
