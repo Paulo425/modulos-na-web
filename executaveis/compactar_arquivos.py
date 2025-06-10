@@ -4,20 +4,22 @@ import zipfile
 import re
 
 def montar_pacote_zip(diretorio):
-    print("🟨 Conteúdo da pasta antes da compactação:", os.listdir(diretorio))
-
+    print("\n📦 [compactar] Iniciando montagem dos pacotes ZIP")
     tipos = ["ETE", "REM", "SER", "ACE"]
-
-    # Expressão regular para extrair matrícula
-    import re
     matricula_regex = re.compile(r"_([0-9]+\.[0-9]+)")
 
     for tipo in tipos:
+        print(f"🔍 [compactar] Buscando arquivos do tipo: {tipo}")
+
         arquivos_dxf = glob.glob(os.path.join(diretorio, f"{tipo}_Memorial_*.dxf"))
         arquivos_docx = glob.glob(os.path.join(diretorio, f"{tipo}_Memorial_*.docx"))
         arquivos_excel = glob.glob(os.path.join(diretorio, f"{tipo}_Memorial_*.xlsx"))
 
-        # Extrair todas as matrículas
+        print(f"   - DXF encontrados: {len(arquivos_dxf)}")
+        print(f"   - DOCX encontrados: {len(arquivos_docx)}")
+        print(f"   - XLSX encontrados: {len(arquivos_excel)}")
+
+        # Coletar todas as matrículas
         matriculas = set()
         for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
             match = matricula_regex.search(arq)
@@ -25,33 +27,30 @@ def montar_pacote_zip(diretorio):
                 matriculas.add(match.group(1))
 
         for matricula in matriculas:
+            print(f"\n🔢 Processando matrícula: {matricula}")
+
             arq_dxf = [a for a in arquivos_dxf if matricula in a]
             arq_docx = [a for a in arquivos_docx if matricula in a]
             arq_excel = [a for a in arquivos_excel if matricula in a]
 
             if arq_dxf and arq_docx and arq_excel:
                 nome_zip = os.path.join(diretorio, f"{tipo}_Memorial_MAT_{matricula}.zip")
-                print(f"📦 Compactando arquivos para {tipo}, matrícula {matricula}:")
-                print(f"📂 Zip será salvo como: {nome_zip}")
+                print(f"📂 Criando ZIP: {nome_zip}")
 
                 with zipfile.ZipFile(nome_zip, 'w') as zipf:
                     zipf.write(arq_dxf[0], os.path.basename(arq_dxf[0]))
                     zipf.write(arq_docx[0], os.path.basename(arq_docx[0]))
                     zipf.write(arq_excel[0], os.path.basename(arq_excel[0]))
 
-                print(f"✅ Compactado com sucesso: {nome_zip}")
-                print(f"🔍 Nome do ZIP final criado: {os.path.basename(nome_zip)}")
-                print(f"📁 Arquivos atualmente no diretório '{diretorio}':")
-                print(os.listdir(diretorio))
-
+                print(f"✅ ZIP criado com sucesso: {nome_zip}")
             else:
                 print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
-                
+                print(f"   - DXF: {bool(arq_dxf)} | DOCX: {bool(arq_docx)} | XLSX: {bool(arq_excel)}")
+
 def main_compactar_arquivos(diretorio_concluido):
-    print(f"📦 [compactar] Diretório recebido: {diretorio_concluido}")
+    print(f"\n📦 [compactar] Iniciando compactação no diretório: {diretorio_concluido}")
     montar_pacote_zip(diretorio_concluido)
 
-# 🔽 Suporte para execução via linha de comando (opcional)
 if __name__ == "__main__":
     import argparse
 
@@ -60,6 +59,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Compacta arquivos gerados em ZIP.")
     parser.add_argument('--diretorio', default=TMP_CONCLUIDO, help="Diretório com os arquivos a compactar.")
-
     args = parser.parse_args()
+
     main_compactar_arquivos(args.diretorio)
