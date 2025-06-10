@@ -237,6 +237,19 @@ def memoriais_angulos_internos_az():
 @app.route('/memoriais-angulos-internos-p1-p2')
 def memoriais_angulos_internos_p1_p2():
     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
+from flask import send_from_directory
+
+@app.route("/arquivos")
+def lista_arquivos():
+    caminho = os.path.join(BASE_DIR, 'static', 'arquivos')
+    arquivos = os.listdir(caminho)
+    arquivos.sort()
+    return render_template("lista_arquivos.html", arquivos=arquivos)
+
+@app.route("/arquivos/<path:filename>")
+def download_arquivo(filename):
+    caminho = os.path.join(BASE_DIR, 'static', 'arquivos')
+    return send_from_directory(caminho, filename, as_attachment=True)
 
     
 # Roda o servidor local

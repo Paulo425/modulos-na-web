@@ -10,7 +10,10 @@ from compactar_arquivos import main_compactar_arquivos
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 🔧 Caminho base e pasta pública para arquivos visíveis via web
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
+os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # Garante criação automática
 
 def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print("🚀 [main.py] Início da execução principal")

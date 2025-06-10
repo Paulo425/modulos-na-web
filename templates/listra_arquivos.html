@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Arquivos Gerados</title>
+</head>
+<body>
+    <h2>📁 Lista de Arquivos Gerados</h2>
+    {% if arquivos %}
+        <ul>
+            {% for arq in arquivos %}
+                <li><a href="{{ url_for('download_arquivo', filename=arq) }}">{{ arq }}</a></li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Nenhum arquivo encontrado.</p>
+    {% endif %}
+</body>
+</html>
