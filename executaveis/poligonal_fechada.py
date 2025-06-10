@@ -8,10 +8,8 @@ from docx import Document
 from docx.shared import Inches
 from datetime import datetime
 from decimal import Decimal, getcontext
-import pythoncom
 import pandas as pd
 import locale
-import comtypes.client
 import openpyxl
 from openpyxl.styles import Alignment, Font
 from docx.shared import Pt
@@ -945,32 +943,32 @@ def create_memorial_document(
 
 
         
-def convert_docx_to_pdf(output_path, pdf_file_path):
-    """
-    Converte um arquivo DOCX para PDF usando a biblioteca comtypes.
-    """
-    try:
-        # Verificar se o arquivo DOCX existe antes de abrir
-        if not os.path.exists(output_path):
-            raise FileNotFoundError(f"Arquivo DOCX não encontrado: {output_path}")
+#def convert_docx_to_pdf(output_path, pdf_file_path):
+#    """
+#    Converte um arquivo DOCX para PDF usando a biblioteca comtypes.
+#    """
+#    try:
+#        # Verificar se o arquivo DOCX existe antes de abrir
+#       if not os.path.exists(output_path):
+#           raise FileNotFoundError(f"Arquivo DOCX não encontrado: {output_path}")
            
         
-        word = comtypes.client.CreateObject("Word.Application")
-        word.Visible = False  # Ocultar a interface do Word
-        doc = word.Documents.Open(output_path)
-        doc.SaveAs(pdf_file_path, FileFormat=17)  # 17 corresponde ao formato PDF
-        doc.Close()
-        word.Quit()
-        print(f"Arquivo PDF salvo em: {pdf_file_path}")
-    except FileNotFoundError as fnf_error:
-        print(f"Erro: {fnf_error}")
-    except Exception as e:
-        print(f"Erro ao converter DOCX para PDF: {e}")
-    finally:
-        try:
-            word.Quit()
-        except:
-            pass  # Garantir que o Word seja fechado
+#       word = comtypes.client.CreateObject("Word.Application")
+#        word.Visible = False  # Ocultar a interface do Word
+#        doc = word.Documents.Open(output_path)
+#        doc.SaveAs(pdf_file_path, FileFormat=17)  # 17 corresponde ao formato PDF
+#        doc.Close()
+#        word.Quit()
+#        print(f"Arquivo PDF salvo em: {pdf_file_path}")
+#    except FileNotFoundError as fnf_error:
+#        print(f"Erro: {fnf_error}")
+#    except Exception as e:
+#       print(f"Erro ao converter DOCX para PDF: {e}")
+#    finally:
+#        try:
+#           word.Quit()
+#        except:
+#            pass  # Garantir que o Word seja fechado
 
 
 
