@@ -131,6 +131,7 @@ def memoriais_descritivos():
         return redirect(url_for('login'))
 
     resultado = erro_execucao = None
+    zip_download = None
 
     if request.method == 'POST':
         diretorio = request.form['diretorio'].replace('"', '')
@@ -161,24 +162,53 @@ def memoriais_descritivos():
                     encoding='utf-8'
                 )
             if processo.returncode == 0:
-                resultado = f"✅ Processamento concluído! Arquivos salvos em {diretorio}."
+                # Após sucesso, executa compactação
+                subprocess.run(
+                    ["python", os.path.join(BASE_DIR, "executaveis", "compactar_arquivos.py"),
+                     "--diretorio", diretorio],
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    encoding='utf-8'
+                )
+
+                # Detecta arquivo ZIP gerado
+                arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith(".zip")]
+                if arquivos_zip:
+                    zip_download = arquivos_zip[-1]  # último zip gerado
+                    resultado = f"✅ Processamento concluído! Arquivos salvos em {diretorio}."
+                else:
+                    resultado = "✅ Processamento concluído, mas nenhum arquivo .zip foi encontrado."
+
             else:
                 with open(log_path, 'r', encoding='utf-8') as log_file:
                     log_conteudo = log_file.read()
                 erro_execucao = f"❌ Erro na execução:<br><pre>{log_conteudo}</pre>"
+
         except Exception as e:
             try:
                 with open(log_path, 'r', encoding='utf-8') as log_file:
                     log_conteudo = log_file.read()
                 erro_execucao = f"❌ Erro na execução:<br><pre>{log_conteudo}</pre>"
             except Exception as leitura_erro:
-                erro_execucao = f"❌ Erro na execução e também falhou ao ler o log: {leitura_erro}"
+                erro_execucao = f"❌ Erro na execução e falhou ao ler o log: {leitura_erro}"
         finally:
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
 
-    return render_template('formulario_DECOPA.html', resultado=resultado, erro=erro_execucao)
+    return render_template(
+        "formulario_DECOPA.html",
+        resultado=resultado,
+        erro=erro_execucao,
+        zip_download=zip_download
+    )
 
+@app.route('/download-zip/<filename>')
+def download_zip(filename):
+    caminho_zip = os.path.join(BASE_DIR, 'CONCLUIDO', filename)  # Ajuste se o diretório for outro
+    if os.path.exists(caminho_zip):
+        return send_file(caminho_zip, as_attachment=True)
+    else:
+        return f"Arquivo {filename} não encontrado.", 404
 
 # Módulos futuros
 @app.route('/memoriais-azimute-az')
