@@ -50,16 +50,31 @@ def home():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     erro = None
-    usuarios = carregar_usuarios()
+    debug = None
+
+    try:
+        usuarios = carregar_usuarios()
+    except Exception as e:
+        erro = "Erro ao carregar usuários!"
+        debug = f"{type(e).__name__}: {str(e)}"
+        return render_template('login.html', erro=erro, debug=debug)
+
     if request.method == 'POST':
-        usuario = request.form['usuario']
-        senha = request.form['senha']
-        if usuario in usuarios and check_password_hash(usuarios[usuario], senha):
-            session['usuario'] = usuario
-            return redirect(url_for('home'))
-        else:
-            erro = "Usuário ou senha inválidos!"
+        try:
+            usuario = request.form['usuario']
+            senha = request.form['senha']
+            if usuario in usuarios and check_password_hash(usuarios[usuario], senha):
+                session['usuario'] = usuario
+                return redirect(url_for('home'))
+            else:
+                erro = "Usuário ou senha inválidos!"
+        except Exception as e:
+            erro = "Erro interno no processamento do login."
+            debug = f"{type(e).__name__}: {str(e)}"
+            return render_template('login.html', erro=erro, debug=debug)
+
     return render_template('login.html', erro=erro)
+
 
 # Logout
 @app.route('/logout')
@@ -177,4 +192,4 @@ def memoriais_angulos_internos_p1_p2():
 # Roda o servidor local
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
