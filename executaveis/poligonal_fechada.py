@@ -1075,6 +1075,10 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
     else:
         print("❌ Falha ao gerar o memorial descritivo.")
 
+    print("🔍 DEBUG: Explorando todas as subpastas do projeto com os.walk:")
+    for root, dirs, files in os.walk("/opt/render/project/src"):
+        for file in files:
+            print("🧾 Arquivo encontrado:", os.path.join(root, file))
 
 
 
