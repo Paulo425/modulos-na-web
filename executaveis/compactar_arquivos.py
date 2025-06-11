@@ -21,7 +21,7 @@ file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
 logger.addHandler(file_handler)
 
-def montar_pacote_zip(diretorio):
+def montar_pacote_zip(diretorio,cidade):
     print("\n📦 [compactar] Iniciando montagem dos pacotes ZIP")
     logger.info("Iniciando montagem dos pacotes ZIP")
 
@@ -58,7 +58,9 @@ def montar_pacote_zip(diretorio):
             arq_excel = [a for a in arquivos_excel if matricula in a]
 
             if arq_dxf and arq_docx and arq_excel:
-                nome_zip = os.path.join(diretorio, f"{tipo}_Memorial_MAT_{matricula}.zip")
+                cidade_sanitizada = cidade.replace(" ", "_")  # sanitize o nome da cidade
+                nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_Memorial_MAT_{matricula}.zip")
+
                 STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'zips')
                 os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
                 caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
@@ -79,7 +81,7 @@ def montar_pacote_zip(diretorio):
                 print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
                 logger.warning(f"Incompleto: {tipo} | matrícula {matricula} | DXF={bool(arq_dxf)}, DOCX={bool(arq_docx)}, XLSX={bool(arq_excel)}")
 
-def main_compactar_arquivos(diretorio_concluido):
+def main_compactar_arquivos(diretorio_concluido,cidade):
     print(f"\n📦 Iniciando compactação no diretório: {diretorio_concluido}")
     logger.info(f"Iniciando compactação no diretório: {diretorio_concluido}")
     montar_pacote_zip(diretorio_concluido)
