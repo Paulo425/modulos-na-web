@@ -147,7 +147,8 @@ def memoriais_descritivos():
         try:
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 processo = subprocess.run(
-                    ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
+                    #["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
+                     ["python", os.path.join(BASE_DIR, "executaveis", "teste.py"),
                      "--diretorio", diretorio,
                      "--cidade", cidade,
                      "--excel", caminho_excel,
