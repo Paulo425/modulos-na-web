@@ -2,11 +2,11 @@
 
 {% block conteudo %}
 <div class="container mt-5">
+
     <div class="d-flex justify-content-between align-items-center">
         <h2 class="text-primary">Gerar Memorial Descritivo</h2>
         {% if log_path %}
-        <a href="/{{ log_path }}" download>🧾 Baixar Log da Execução</a>
-
+        <a href="/{{ log_path }}" class="btn btn-outline-secondary" download>
             🧾 Baixar Log da Execução
         </a>
         {% endif %}
@@ -61,5 +61,6 @@
         </a>
     </div>
     {% endif %}
+
 </div>
 {% endblock %}
