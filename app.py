@@ -143,39 +143,56 @@ def memoriais_descritivos():
         arquivo_excel.save(caminho_excel)
         arquivo_dxf.save(caminho_dxf)
 
+        # Corrigido para salvar o log na pasta pública correta
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.log")
-        log_path = os.path.join(log_dir, log_filename)
+
+        # Garante que o log seja salvo em /static/logs no diretório RAIZ do projeto
+        log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
+        os.makedirs(log_dir_absoluto, exist_ok=True)
+
+        log_path = os.path.join(log_dir_absoluto, log_filename)
         log_relativo = f"static/logs/{log_filename}"
+
+        # DEBUG opcional
+        print(f"🧾 Salvando LOG em: {log_path}")
+
         
         try:
-            with open(log_path, 'w', encoding='utf-8') as log_file:
-                processo = Popen(
-                    ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
-                     "--diretorio", diretorio,
-                     "--cidade", cidade,
-                     "--excel", caminho_excel,
-                     "--dxf", caminho_dxf],
-                    stdout=PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True
-                )
+            log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.log")
+            log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
+            os.makedirs(log_dir_absoluto, exist_ok=True)
+            log_path = os.path.join(log_dir_absoluto, log_filename)
+            log_relativo = f"static/logs/{log_filename}"
 
-                log_lines = []
+            processo = Popen(
+                ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
+                 "--diretorio", diretorio,
+                 "--cidade", cidade,
+                 "--excel", caminho_excel,
+                 "--dxf", caminho_dxf],
+                stdout=PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+
+            log_lines = []
+
+            with open(log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
                     print("🖨️", linha.strip())
                     log_file.write(linha)
                     log_lines.append(linha)
 
-                processo.wait()
+            processo.wait()
 
-                if processo.returncode == 0:
-                    resultado = "✅ Processamento concluído com sucesso!"
-                    log_relativo = f"logs/{log_filename}"
-                else:
-                    erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+            if processo.returncode == 0:
+                resultado = "✅ Processamento concluído com sucesso!"
+            else:
+                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+
 
         finally:
             os.remove(caminho_excel)
