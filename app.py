@@ -158,12 +158,6 @@ def memoriais_descritivos():
 
         
         try:
-            log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.log")
-            log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
-            os.makedirs(log_dir_absoluto, exist_ok=True)
-            log_path = os.path.join(log_dir_absoluto, log_filename)
-            log_relativo = f"static/logs/{log_filename}"
-
             processo = Popen(
                 ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
                  "--diretorio", diretorio,
@@ -176,12 +170,12 @@ def memoriais_descritivos():
             )
 
             log_lines = []
-            for linha in processo.stdout:
-                if len(log_lines) < 60:
-                    log_file.write(linha)
-                    log_lines.append(linha)
-                print("🖨️", linha.strip())
-
+            with open(log_path, 'w', encoding='utf-8') as log_file:
+                for linha in processo.stdout:
+                    if len(log_lines) < 60:
+                        log_file.write(linha)
+                        log_lines.append(linha)
+                    print("🖨️", linha.strip())
 
             processo.wait()
 
