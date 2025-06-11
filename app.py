@@ -149,7 +149,7 @@ def memoriais_descritivos():
         try:
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 processo = Popen(
-                    ["python", os.path.join(BASE_DIR, "executaveis", "teste.py"),
+                    ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
                      "--diretorio", diretorio,
                      "--cidade", cidade,
                      "--excel", caminho_excel,
