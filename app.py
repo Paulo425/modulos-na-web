@@ -143,7 +143,7 @@ def memoriais_descritivos():
         arquivo_excel.save(caminho_excel)
         arquivo_dxf.save(caminho_dxf)
 
-        log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
+        log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.log")
         log_path = os.path.join(log_dir, log_filename)
         log_relativo = f"static/logs/{log_filename}"
         
