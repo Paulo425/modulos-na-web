@@ -3,24 +3,30 @@
 import os
 import shutil
 import pandas as pd
+import logging
+from datetime import datetime
+
+# Diretórios e logger
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+log_file = os.path.join(LOG_DIR, f'preparo_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+logger.addHandler(file_handler)
 
 def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
-    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     TMP_DIR = os.path.join(BASE_DIR, 'tmp')
     RECEBIDO = os.path.join(TMP_DIR, 'RECEBIDO')
     PREPARADO = os.path.join(TMP_DIR, 'PREPARADO')
     CONCLUIDO = os.path.join(TMP_DIR, 'CONCLUIDO')
 
-    # Criar subdiretórios se não existirem
-    os.makedirs(RECEBIDO, exist_ok=True)
-    os.makedirs(PREPARADO, exist_ok=True)
-    os.makedirs(CONCLUIDO, exist_ok=True)
+    for pasta in [RECEBIDO, PREPARADO, CONCLUIDO]:
+        os.makedirs(pasta, exist_ok=True)
 
-    # Copiar os arquivos recebidos para RECEBIDO
-    nome_excel = os.path.basename(caminho_excel)
-    nome_dxf = os.path.basename(caminho_dxf)
-
-    # Copiar os arquivos recebidos para RECEBIDO com proteção
     nome_excel = os.path.basename(caminho_excel)
     nome_dxf = os.path.basename(caminho_dxf)
 
@@ -30,18 +36,21 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
     try:
         shutil.copy(caminho_excel, destino_excel)
         print(f"✅ Excel copiado para: {destino_excel}")
+        logger.info(f"Excel copiado para: {destino_excel}")
     except Exception as e:
         print(f"❌ Erro ao copiar arquivo Excel: {e}")
+        logger.error(f"Erro ao copiar arquivo Excel: {e}")
         return None
 
     try:
         shutil.copy(caminho_dxf, destino_dxf)
         print(f"✅ DXF copiado para: {destino_dxf}")
+        logger.info(f"DXF copiado para: {destino_dxf}")
     except Exception as e:
         print(f"❌ Erro ao copiar arquivo DXF: {e}")
+        logger.error(f"Erro ao copiar arquivo DXF: {e}")
         return None
 
-    # Processar o Excel e salvar planilhas individualmente
     try:
         df = pd.read_excel(destino_excel, sheet_name=None)
         for nome_aba, tabela in df.items():
@@ -49,11 +58,12 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
             caminho_saida = os.path.join(PREPARADO, nome_arquivo)
             tabela.to_excel(caminho_saida, index=False)
             print(f"✅ Planilha '{nome_aba}' salva em: {caminho_saida}")
+            logger.info(f"Planilha '{nome_aba}' salva em: {caminho_saida}")
     except Exception as e:
         print(f"⚠️ Erro ao processar planilhas do Excel: {e}")
-        return None  # impede o código de seguir quebrado
+        logger.error(f"Erro ao processar planilhas do Excel: {e}")
+        return None
 
-    # DEBUG antes do return
     print("🟢 [main_preparo_arquivos] Tudo pronto, retornando variáveis:")
     print("  TMP_DIR:", TMP_DIR)
     print("  PREPARADO:", PREPARADO)
@@ -61,9 +71,8 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
     print("  Excel:", destino_excel)
     print("  DXF:", destino_dxf)
     print("  Template:", os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx'))
+    logger.info("Preparo concluído com sucesso")
 
-
-    # Retornar os caminhos úteis para as próximas fases
     return {
         "diretorio_final": TMP_DIR,
         "diretorio_preparado": PREPARADO,

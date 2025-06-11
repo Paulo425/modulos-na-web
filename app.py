@@ -14,7 +14,7 @@ app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 # Diretórios do projeto
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 password_dir = os.path.join(BASE_DIR, "password")
-log_dir = os.path.join(BASE_DIR, "logs")
+log_dir = os.path.join(BASE_DIR, "static", "logs")
 arquivos_dir = os.path.join(BASE_DIR, "static", "arquivos")
 os.makedirs(password_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
@@ -126,7 +126,7 @@ def memoriais_descritivos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    resultado = erro_execucao = zip_download = None
+    resultado = erro_execucao = zip_download = log_relativo = None
 
     if request.method == 'POST':
         diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
@@ -156,6 +156,7 @@ def memoriais_descritivos():
 
             if processo.returncode == 0:
                 resultado = "✅ Processamento concluído com sucesso!"
+                log_relativo = f"logs/{log_filename}"
             else:
                 with open(log_path, 'r', encoding='utf-8') as log_file:
                     erro_execucao = f"❌ Erro na execução:<br><pre>{log_file.read()}</pre>"
@@ -179,7 +180,7 @@ def memoriais_descritivos():
         except Exception as e:
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
 
-    return render_template("formulario_DECOPA.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download)
+    return render_template("formulario_DECOPA.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
 
 @app.route("/arquivos-gerados")
 def listar_arquivos_gerados():

@@ -1,9 +1,9 @@
 import argparse
 import sys
-import codecs
 import os
 import time
 import logging
+import shutil
 from datetime import datetime
 from preparar_arquivos import main_preparo_arquivos
 from poligonal_fechada import main_poligonal_fechada
@@ -29,20 +29,18 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
 )
 
-# ✅ 5. Habilita UTF-8 no console
-sys.stdout.reconfigure(encoding='utf-8')
+# ✅ 5. Habilita UTF-8 no console (com fallback para ambientes sem suporte)
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 
 def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print("🚀 [main.py] Início da execução principal")
     logging.info("🚀 Início da execução principal")
 
-    print("📁 Variáveis de entrada:")
-    print(f"   - diretorio_saida: {diretorio_saida}")
-    print(f"   - cidade: {cidade}")
-    print(f"   - excel: {caminho_excel}")
-    print(f"   - dxf: {caminho_dxf}")
-
-    logging.info(f"📁 Variáveis de entrada: diretorio_saida={diretorio_saida}, cidade={cidade}, excel={caminho_excel}, dxf={caminho_dxf}")
+    print(f"📁 Variáveis de entrada: {diretorio_saida=}, {cidade=}, {caminho_excel=}, {caminho_dxf=}")
+    logging.info(f"📁 Variáveis de entrada: {diretorio_saida=}, {cidade=}, {caminho_excel=}, {caminho_dxf=}")
 
     print("\n🔷 Iniciando: Preparo inicial dos arquivos")
     logging.info("🔷 Iniciando preparo inicial dos arquivos")
@@ -53,12 +51,6 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
         logging.error("❌ ERRO: main_preparo_arquivos não retornou dicionário!")
         return
 
-    if not variaveis:
-        print("❌ [main.py] Erro: O preparo inicial não retornou variáveis.")
-        logging.error("❌ Erro: O preparo inicial não retornou variáveis.")
-        return
-
-    diretorio_final = variaveis["diretorio_final"]
     diretorio_preparado = variaveis["diretorio_preparado"]
     diretorio_concluido = variaveis["diretorio_concluido"]
     arquivo_excel_recebido = variaveis["arquivo_excel_recebido"]
@@ -67,8 +59,6 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
 
     print("✅ [main.py] Preparo concluído. Variáveis carregadas.")
     logging.info("✅ Preparo concluído. Variáveis carregadas.")
-    logging.info(f"   - diretorio_concluido: {diretorio_concluido}")
-    logging.info(f"   - template: {caminho_template}")
 
     print("\n🔷 Processamento Poligonal Fechada")
     logging.info("🔷 Processamento Poligonal Fechada")
@@ -88,7 +78,6 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print("✅ [main.py] Compactação finalizada com sucesso!")
     logging.info("✅ Compactação finalizada com sucesso!")
 
-    # ✅ Copiar arquivos de saída para static/arquivos
     print("\n📤 Copiando arquivos finais para a pasta pública")
     logging.info("📤 Copiando arquivos finais para a pasta pública")
 
@@ -99,15 +88,13 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
             try:
                 shutil.copy2(origem, destino)
                 print(f"🗂️ Arquivo copiado: {destino}")
-                logging.info(f"🗂️ Arquivo copiado para pasta pública: {destino}")
+                logging.info(f"🗂️ Arquivo copiado: {destino}")
             except Exception as e:
                 print(f"❌ Falha ao copiar {fname}: {e}")
                 logging.error(f"❌ Erro ao copiar {fname}: {e}")
 
-
-    print("\n✅ [main.py] Processo geral concluído com sucesso!")
+    print("✅ [main.py] Processo geral concluído com sucesso!")
     logging.info("✅ Processo geral concluído com sucesso!")
-
     print(f"📝 Log salvo em: static/logs/{os.path.basename(log_path)}")
 
 

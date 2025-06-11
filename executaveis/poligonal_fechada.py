@@ -4,6 +4,7 @@ import csv
 import os
 import re
 import glob
+import logging
 from docx import Document
 from docx.shared import Inches
 from datetime import datetime
@@ -14,7 +15,6 @@ import openpyxl
 from openpyxl.styles import Alignment, Font
 from docx.shared import Pt
 from ezdxf.math import Vec3
-from ezdxf.math import bulge_to_arc
 from ezdxf.math import bulge_to_arc, ConstructionArc, Vec2
 from shapely.geometry import Polygon
 import traceback
@@ -42,6 +42,17 @@ except locale.Error as e:
 
 # Exemplo da data:
 data_atual = datetime.now().strftime("%d de %B de %Y")
+
+# Configuração de logger adicional
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+fh = logging.FileHandler(os.path.join(BASE_DIR, 'static', 'logs', f'poligonal_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'))
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
 
 
 def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
@@ -976,110 +987,131 @@ def create_memorial_document(
 # Função principal
 def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_concluido, caminho_template):
     print("\n🔹 Carregando dados do imóvel")
-    dados_df = pd.read_excel(caminho_excel, sheet_name='Dados_do_Imóvel', header=None)
-    dados_dict = dict(zip(dados_df.iloc[:, 0], dados_df.iloc[:, 1]))
+    logger.info("Iniciando processamento da poligonal fechada")
+    try:
+        dados_df = pd.read_excel(caminho_excel, sheet_name='Dados_do_Imóvel', header=None)
+        dados_dict = dict(zip(dados_df.iloc[:, 0], dados_df.iloc[:, 1]))
 
-    proprietario = dados_dict.get("NOME DO PROPRIETÁRIO", "").strip()
-    matricula = dados_dict.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip()
-    descricao = dados_dict.get("DESCRIÇÃO", "").strip()
-    area_terreno = dados_dict.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").strip()
-    comarca = dados_dict.get("COMARCA", "").strip()
-    RI = dados_dict.get("CRI", "").strip()
-    rua = dados_dict.get("ENDEREÇO/LOCAL", "").strip()
+        proprietario = dados_dict.get("NOME DO PROPRIETÁRIO", "").strip()
+        matricula = dados_dict.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip()
+        descricao = dados_dict.get("DESCRIÇÃO", "").strip()
+        area_terreno = dados_dict.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").strip()
+        comarca = dados_dict.get("COMARCA", "").strip()
+        RI = dados_dict.get("CRI", "").strip()
+        rua = dados_dict.get("ENDEREÇO/LOCAL", "").strip()
 
-    nome_dxf = os.path.basename(caminho_dxf).upper()
-    tipo = next((t for t in ["ETE", "REM", "SER", "ACE"] if t in nome_dxf), None)
+        nome_dxf = os.path.basename(caminho_dxf).upper()
+        tipo = next((t for t in ["ETE", "REM", "SER", "ACE"] if t in nome_dxf), None)
 
-    if not tipo:
-        print("❌ Tipo do projeto (ETE, REM, SER, ACE) não identificado no nome do DXF.")
-        return
+        if not tipo:
+            msg = "❌ Tipo do projeto não identificado no nome do DXF."
+            print(msg)
+            logger.warning(msg)
+            return
 
-    print(f"📁 Tipo identificado: {tipo}")
+        print(f"📁 Tipo identificado: {tipo}")
+        logger.info(f"Tipo identificado: {tipo}")
 
-    padrao_excel = os.path.join(pasta_preparado, f"FECHADA_*_{tipo}.xlsx")
-    arquivos_excel = glob.glob(padrao_excel)
-    if not arquivos_excel:
-        print(f"❌ Nenhum arquivo de confrontantes encontrado para o padrão: {padrao_excel}")
-        return
+        padrao_excel = os.path.join(pasta_preparado, f"FECHADA_*_{tipo}.xlsx")
+        arquivos_excel = glob.glob(padrao_excel)
+        if not arquivos_excel:
+            msg = f"❌ Nenhum arquivo de confrontantes encontrado: {padrao_excel}"
+            print(msg)
+            logger.error(msg)
+            return
 
-    excel_confrontantes = arquivos_excel[0]
+        excel_confrontantes = arquivos_excel[0]
+        logger.info(f"Planilha de confrontantes usada: {excel_confrontantes}")
 
-    nome_limpo_dxf = f"DXF_LIMPO_{matricula}.dxf"
-    caminho_dxf_limpo = os.path.join(pasta_concluido, nome_limpo_dxf)
-    dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(caminho_dxf, caminho_dxf_limpo)
+        nome_limpo_dxf = f"DXF_LIMPO_{matricula}.dxf"
+        caminho_dxf_limpo = os.path.join(pasta_concluido, nome_limpo_dxf)
 
-    if not ponto_az or not ponto_inicial:
-        print("❌ Não foi possível identificar o ponto Az ou inicial.")
-        return
+        dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(caminho_dxf, caminho_dxf_limpo)
+        logger.info(f"DXF limpo salvo em: {caminho_dxf_limpo}")
 
-    doc, linhas, arcos, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_resultado)
-    if not doc or not linhas:
-        print("❌ Documento DXF inválido ou vazio.")
-        return
+        if not ponto_az or not ponto_inicial:
+            msg = "❌ Não foi possível identificar o ponto Az ou inicial."
+            print(msg)
+            logger.error(msg)
+            return
 
-    msp = doc.modelspace()
-    v1 = linhas[0][0]
-    distance_az_v1 = calculate_distance(ponto_az, v1)
-    azimute_az_v1 = calculate_azimuth(ponto_az, v1)
-    azimuth = calculate_azimuth(ponto_az, v1)
-    distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
+        doc, linhas, arcos, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_resultado)
+        if not doc or not linhas:
+            msg = "❌ Documento DXF inválido ou vazio."
+            print(msg)
+            logger.error(msg)
+            return
 
-    print(f"📏 Azimute: {azimuth:.2f}°, Distância Az-V1: {distance:.2f}m")
+        msp = doc.modelspace()
+        v1 = linhas[0][0]
+        distance_az_v1 = calculate_distance(ponto_az, v1)
+        azimute_az_v1 = calculate_azimuth(ponto_az, v1)
+        azimuth = calculate_azimuth(ponto_az, v1)
+        distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
 
-    excel_output = create_memorial_descritivo(
-        doc=doc,
-        msp=msp,
-        lines=linhas,
-        arcs=arcos,
-        proprietario=proprietario,
-        matricula=matricula,
-        caminho_salvar=pasta_concluido,
-        excel_file_path=excel_confrontantes,
-        ponto_az=ponto_az,
-        distance_az_v1=distance_az_v1,
-        azimute_az_v1=azimute_az_v1,
-        ponto_inicial_real=ponto_inicial,
-        tipo=tipo
-    )
+        print(f"📏 Azimute: {azimuth:.2f}°, Distância Az-V1: {distance:.2f}m")
+        logger.info(f"Azimute: {azimuth:.2f}°, Distância Az-V1: {distance:.2f}m")
 
-    if excel_output:
-        output_docx = os.path.join(pasta_concluido, f"{tipo}_Memorial_MAT_{matricula}.docx")
-        create_memorial_document(
+        excel_output = create_memorial_descritivo(
+            doc=doc,
+            msp=msp,
+            lines=linhas,
+            arcs=arcos,
             proprietario=proprietario,
             matricula=matricula,
-            descricao=descricao,
-            area_terreno=area_terreno,
-            excel_file_path=excel_output,
-            template_path=caminho_template,
-            output_path=output_docx,
-            perimeter_dxf=perimeter_dxf,
-            area_dxf=area_dxf,
-            desc_ponto_Az="",
-            Coorde_E_ponto_Az=ponto_az[0],
-            Coorde_N_ponto_Az=ponto_az[1],
-            azimuth=azimuth,
-            distance=distance,
-            comarca=comarca,
-            RI=RI,
-            rua=rua
+            caminho_salvar=pasta_concluido,
+            excel_file_path=excel_confrontantes,
+            ponto_az=ponto_az,
+            distance_az_v1=distance_az_v1,
+            azimute_az_v1=azimute_az_v1,
+            ponto_inicial_real=ponto_inicial,
+            tipo=tipo
         )
 
-        print(f"📄 Memorial gerado com sucesso: {output_docx}")
+        if excel_output:
+            output_docx = os.path.join(pasta_concluido, f"{tipo}_Memorial_MAT_{matricula}.docx")
+            create_memorial_document(
+                proprietario=proprietario,
+                matricula=matricula,
+                descricao=descricao,
+                area_terreno=area_terreno,
+                excel_file_path=excel_output,
+                template_path=caminho_template,
+                output_path=output_docx,
+                perimeter_dxf=perimeter_dxf,
+                area_dxf=area_dxf,
+                desc_ponto_Az="",
+                Coorde_E_ponto_Az=ponto_az[0],
+                Coorde_N_ponto_Az=ponto_az[1],
+                azimuth=azimuth,
+                distance=distance,
+                comarca=comarca,
+                RI=RI,
+                rua=rua
+            )
 
-        # DEBUG EXTRA COM WALK: Lista todos os arquivos encontrados
-        print("🔍 Conteúdo completo da pasta de saída (walk):")
-        for root, dirs, files in os.walk(pasta_concluido):
+            print(f"📄 Memorial gerado com sucesso: {output_docx}")
+            logger.info(f"Memorial gerado com sucesso: {output_docx}")
+
+            print("🔍 Conteúdo completo da pasta de saída (walk):")
+            for root, dirs, files in os.walk(pasta_concluido):
+                for file in files:
+                    caminho_completo = os.path.join(root, file)
+                    print("🗂️", caminho_completo)
+                    logger.info(f"🗂️ Arquivo gerado: {caminho_completo}")
+        else:
+            msg = "❌ Falha ao gerar o memorial descritivo."
+            print(msg)
+            logger.error(msg)
+
+        print("🔍 DEBUG: Explorando todas as subpastas do projeto com os.walk:")
+        for root, dirs, files in os.walk("/opt/render/project/src"):
             for file in files:
-                caminho_completo = os.path.join(root, file)
-                print("🗂️", caminho_completo)
-    else:
-        print("❌ Falha ao gerar o memorial descritivo.")
+                print("🧾 Arquivo encontrado:", os.path.join(root, file))
+                logger.debug(f"🧾 Arquivo encontrado: {os.path.join(root, file)}")
 
-    print("🔍 DEBUG: Explorando todas as subpastas do projeto com os.walk:")
-    for root, dirs, files in os.walk("/opt/render/project/src"):
-        for file in files:
-            print("🧾 Arquivo encontrado:", os.path.join(root, file))
-
+    except Exception as e:
+        logger.exception("Erro inesperado durante a execução da poligonal fechada")
 
 
 
