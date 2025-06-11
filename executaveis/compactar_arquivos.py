@@ -84,7 +84,7 @@ def montar_pacote_zip(diretorio,cidade):
 def main_compactar_arquivos(diretorio_concluido,cidade):
     print(f"\n📦 Iniciando compactação no diretório: {diretorio_concluido}")
     logger.info(f"Iniciando compactação no diretório: {diretorio_concluido}")
-    montar_pacote_zip(diretorio_concluido)
+    montar_pacote_zip(diretorio_concluido, cidade)
     print("✅ Compactação finalizada")
     logger.info("Compactação finalizada")
 
