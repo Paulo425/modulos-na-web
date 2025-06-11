@@ -14,7 +14,7 @@ app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 # Diretórios do projeto
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 password_dir = os.path.join(BASE_DIR, "password")
-log_dir = os.path.join(BASE_DIR, "Log")
+log_dir = os.path.join(BASE_DIR, "logs")
 arquivos_dir = os.path.join(BASE_DIR, "static", "arquivos")
 os.makedirs(password_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
