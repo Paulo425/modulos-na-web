@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<div class="container mt-5">
+    <h3 class="text-primary mb-4">Aprovação de Novos Usuários</h3>
+    {% if pendentes %}
+    <form method="POST">
+        <ul class="list-group mb-3">
+            {% for usuario in pendentes %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ usuario }}
+                <input type="checkbox" name="aprovar" value="{{ usuario }}">
+            </li>
+            {% endfor %}
+        </ul>
+        <button type="submit" class="btn btn-success">✅ Aprovar Selecionados</button>
+    </form>
+    {% else %}
+    <div class="alert alert-info">Nenhuma conta pendente de aprovação.</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,27 +1,55 @@
 {% extends 'base.html' %}
 
 {% block conteudo %}
-<div class="container mt-5">
+<div class="container-fluid p-0">
+    <!-- Barra superior -->
+    <nav class="navbar navbar-dark bg-primary px-4">
+        <div class="d-flex align-items-center">
+            <img src="/static/img/logo.png" alt="Logo" style="height: 60px; margin-right: 15px;">
+            <span class="navbar-brand mb-0 h1 text-white">MODULOS NA WEB</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-white me-2">👤 {{ session['usuario'] }}</span>
+            {% if session['usuario'] == 'admin' %}
+            <a href="{{ url_for('criar_usuario') }}" class="btn btn-light btn-sm">➕ Novo Usuário</a>
+            <a href="{{ url_for('excluir_usuario') }}" class="btn btn-light btn-sm">🗑️ Gerenciar Usuários</a>
+            <a href="{{ url_for('pendentes') }}" class="btn btn-light btn-sm">
+                📋 Aprovar Contas
+                {% set pendentes = namespace(count=0) %}
+                {% for arquivo in os.listdir('password') if arquivo.endswith('.json') %}
+                    {% set dados = json.load(open('password/' ~ arquivo)) %}
+                    {% if not dados.get('aprovado', True) %}
+                        {% set pendentes.count = pendentes.count + 1 %}
+                    {% endif %}
+                {% endfor %}
+                {% if pendentes.count > 0 %}
+                    <span class="badge bg-danger">{{ pendentes.count }}</span>
+                {% endif %}
+            </a>
+            {% endif %}
+            <a href="{{ url_for('alterar_senha') }}" class="btn btn-warning btn-sm">🔑 Alterar Senha</a>
+            <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+        </div>
+    </nav>
 
-    <div class="text-center mt-4">
-        <h2 class="text-primary">Bem-vindo ao Sistema de Memoriais</h2>
-        <p class="mb-4">Escolha um módulo para iniciar:</p>
-    </div>
+    <div class="container mt-5">
+        <div class="text-center">
+            <h2 class="text-primary">Bem-vindo ao Sistema de Memoriais</h2>
+            <p class="mb-4">Escolha um módulo para iniciar:</p>
+        </div>
 
-    <div class="d-grid gap-3 col-6 mx-auto">
-        <a href="{{ url_for('memoriais_descritivos') }}" class="btn btn-primary">MEMORIAS DECOPA</a>
-        <a href="{{ url_for('memoriais_azimute_az') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_AZ</a>
-        <a href="{{ url_for('memoriais_azimute_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_P1_P2</a>
-        <a href="{{ url_for('memoriais_angulos_internos_az') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_AZ</a>
-        <a href="{{ url_for('memoriais_angulos_internos_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_P1_P2</a>
-    </div>
+        <div class="d-grid gap-3 col-6 mx-auto mt-4">
+            <a href="{{ url_for('memoriais_descritivos') }}" class="btn btn-primary">MEMORIAS DECOPA</a>
+            <a href="{{ url_for('memoriais_azimute_az') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_AZ</a>
+            <a href="{{ url_for('memoriais_azimute_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_P1_P2</a>
+            <a href="{{ url_for('memoriais_angulos_internos_az') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_AZ</a>
+            <a href="{{ url_for('memoriais_angulos_internos_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_P1_P2</a>
+        </div>
 
-    {% if session.get('usuario') == 'admin' %}
-    <hr>
-    <div class="d-grid gap-2 col-6 mx-auto mt-4">
-        <a href="{{ url_for('criar_usuario') }}" class="btn btn-success">➕ Criar Novo Usuário</a>
-        <a href="{{ url_for('excluir_usuario') }}" class="btn btn-danger">🗑️ Excluir Usuário</a>
+        <div class="text-center mt-5">
+            <p class="text-muted">Ainda não tem uma conta?</p>
+            <a href="{{ url_for('registrar') }}" class="btn btn-outline-primary">Criar Conta</a>
+        </div>
     </div>
-    {% endif %}
 </div>
 {% endblock %}

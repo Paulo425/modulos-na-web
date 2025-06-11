@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<div class="container mt-5" style="max-width: 500px;">
+    <h3 class="text-center mb-4">Solicitar Acesso</h3>
+
+    {% if mensagem %}
+    <div class="alert alert-success text-center">{{ mensagem }}</div>
+    {% endif %}
+    {% if erro %}
+    <div class="alert alert-danger text-center">{{ erro }}</div>
+    {% endif %}
+
+    <form method="POST">
+        <div class="mb-3">
+            <label for="usuario" class="form-label">Nome de Usuário</label>
+            <input type="text" class="form-control" name="usuario" id="usuario" required>
+        </div>
+        <div class="mb-3">
+            <label for="senha" class="form-label">Senha</label>
+            <input type="password" class="form-control" name="senha" id="senha" required>
+        </div>
+        <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Solicitar Acesso</button>
+        </div>
+    </form>
+
+    <div class="text-center mt-3">
+        <a href="{{ url_for('login') }}" class="text-decoration-none">🔙 Voltar ao Login</a>
+    </div>
+</div>
+{% endblock %}

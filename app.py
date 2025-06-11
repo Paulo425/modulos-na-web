@@ -55,28 +55,34 @@ def home():
 def login():
     erro = None
     debug = None
-    try:
-        usuarios = carregar_usuarios()
-    except Exception as e:
-        erro = "Erro ao carregar usuários!"
-        debug = f"{type(e).__name__}: {str(e)}"
-        return render_template('login.html', erro=erro, debug=debug)
 
     if request.method == 'POST':
-        try:
-            usuario = request.form['usuario']
-            senha = request.form['senha']
-            if usuario in usuarios and check_password_hash(usuarios[usuario], senha):
-                session['usuario'] = usuario
-                return redirect(url_for('home'))
-            else:
-                erro = "Usuário ou senha inválidos!"
-        except Exception as e:
-            erro = "Erro interno no processamento do login."
-            debug = f"{type(e).__name__}: {str(e)}"
-            return render_template('login.html', erro=erro, debug=debug)
+        usuario = request.form['usuario']
+        senha = request.form['senha']
+        caminho = os.path.join(password_dir, f"{usuario}.json")
 
-    return render_template('login.html', erro=erro)
+        try:
+            if os.path.exists(caminho):
+                with open(caminho, 'r', encoding='utf-8') as f:
+                    dados = json.load(f)
+                    senha_hash = dados.get("senha_hash")
+                    aprovado = dados.get("aprovado", True)  # admin e versões antigas
+
+                    if not aprovado:
+                        erro = "Conta ainda não aprovada. Aguarde a autorização do administrador."
+                    elif check_password_hash(senha_hash, senha):
+                        session['usuario'] = usuario
+                        return redirect(url_for('home'))
+                    else:
+                        erro = "Usuário ou senha inválidos."
+            else:
+                erro = "Usuário ou senha inválidos."
+        except Exception as e:
+            erro = "Erro ao processar login."
+            debug = f"{type(e).__name__}: {str(e)}"
+
+    return render_template('login.html', erro=erro, debug=debug)
+
 
 @app.route('/logout')
 def logout():
@@ -220,6 +226,57 @@ def download_zip(filename):
         return send_file(caminho_zip, as_attachment=True)
     else:
         return f"Arquivo {filename} não encontrado.", 404
+
+@app.route('/registrar', methods=['GET', 'POST'])
+def registrar():
+    mensagem = erro = None
+    if request.method == 'POST':
+        usuario = request.form['usuario']
+        senha = request.form['senha']
+        caminho = os.path.join(password_dir, f"{usuario}.json")
+
+        if os.path.exists(caminho):
+            erro = "Usuário já existe ou está aguardando aprovação."
+        else:
+            dados = {
+                "usuario": usuario,
+                "senha_hash": generate_password_hash(senha),
+                "aprovado": False  # ⚠️ ainda não autorizado
+            }
+            with open(caminho, 'w', encoding='utf-8') as f:
+                json.dump(dados, f, indent=2)
+            mensagem = "Conta criada com sucesso! Aguarde autorização do administrador."
+    
+    return render_template('registrar.html', mensagem=mensagem, erro=erro)
+@app.route('/pendentes', methods=['GET', 'POST'])
+def pendentes():
+    if session.get('usuario') != 'admin':
+        return redirect(url_for('login'))
+
+    usuarios_pendentes = []
+
+    for arquivo in os.listdir(password_dir):
+        if arquivo.endswith('.json'):
+            caminho = os.path.join(password_dir, arquivo)
+            with open(caminho, 'r', encoding='utf-8') as f:
+                dados = json.load(f)
+                if dados.get("aprovado") is False:
+                    usuarios_pendentes.append(dados['usuario'])
+
+    if request.method == 'POST':
+        aprovado = request.form.getlist('aprovar')
+        for usuario in aprovado:
+            caminho = os.path.join(password_dir, f"{usuario}.json")
+            with open(caminho, 'r+', encoding='utf-8') as f:
+                dados = json.load(f)
+                dados["aprovado"] = True
+                f.seek(0)
+                json.dump(dados, f, indent=2)
+                f.truncate()
+
+        return redirect(url_for('pendentes'))
+
+    return render_template('pendentes.html', pendentes=usuarios_pendentes)
 
 @app.route("/downloads")
 def listar_arquivos():
