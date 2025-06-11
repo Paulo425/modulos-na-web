@@ -1,23 +1,27 @@
-
 {% extends 'base.html' %}
+
 {% block conteudo %}
-<h2 class="text-center">Bem-vindo ao Sistema de Memoriais</h2>
-<p class="text-center">Escolha um módulo para iniciar:</p>
+<div class="container mt-5">
 
-<div class="d-grid gap-3 col-6 mx-auto">
-    <a href="{{ url_for('memoriais_descritivos') }}" class="btn btn-primary">MEMORIAS DECOPA</a>
-    <a href="{{ url_for('memoriais_azimute_az') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_AZ</a>
-    <a href="{{ url_for('memoriais_azimute_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_P1_P2</a>
-    <a href="{{ url_for('memoriais_angulos_internos_az') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_AZ</a>
-    <a href="{{ url_for('memoriais_angulos_internos_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_P1_P2</a>
+    <div class="text-center mt-4">
+        <h2 class="text-primary">Bem-vindo ao Sistema de Memoriais</h2>
+        <p class="mb-4">Escolha um módulo para iniciar:</p>
+    </div>
+
+    <div class="d-grid gap-3 col-6 mx-auto">
+        <a href="{{ url_for('memoriais_descritivos') }}" class="btn btn-primary">MEMORIAS DECOPA</a>
+        <a href="{{ url_for('memoriais_azimute_az') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_AZ</a>
+        <a href="{{ url_for('memoriais_azimute_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_P1_P2</a>
+        <a href="{{ url_for('memoriais_angulos_internos_az') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_AZ</a>
+        <a href="{{ url_for('memoriais_angulos_internos_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_P1_P2</a>
+    </div>
+
+    {% if session.get('usuario') == 'admin' %}
+    <hr>
+    <div class="d-grid gap-2 col-6 mx-auto mt-4">
+        <a href="{{ url_for('criar_usuario') }}" class="btn btn-success">➕ Criar Novo Usuário</a>
+        <a href="{{ url_for('excluir_usuario') }}" class="btn btn-danger">🗑️ Excluir Usuário</a>
+    </div>
+    {% endif %}
 </div>
-
-{% if session.get('usuario') == 'admin' %}
-<hr>
-<div class="d-grid gap-2 col-6 mx-auto mt-4">
-    <a href="{{ url_for('criar_usuario') }}" class="btn btn-success">➕ Criar Novo Usuário</a>
-    <a href="{{ url_for('excluir_usuario') }}" class="btn btn-danger">🗑️ Excluir Usuário</a>
-</div>
-{% endif %}
-
 {% endblock %}
