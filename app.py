@@ -146,14 +146,24 @@ def memoriais_descritivos():
 
         try:
             with open(log_path, 'w', encoding='utf-8') as log_file:
-                processo = subprocess.run(
-                    #["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
-                     ["python", os.path.join(BASE_DIR, "executaveis", "teste.py"),
-                     "--diretorio", diretorio,
-                     "--cidade", cidade,
-                     "--excel", caminho_excel,
-                     "--dxf", caminho_dxf],
-                    stdout=log_file, stderr=subprocess.STDOUT, encoding='utf-8')
+                try:
+                    log_file.write("✅ Simulação de execução!\n")
+                    log_file.write(f"Cidade: {cidade}\n")
+                    log_file.write(f"Excel: {caminho_excel}\n")
+                    log_file.write(f"DXF: {caminho_dxf}\n")
+
+                    # Criar arquivo simulado visível
+                    simulacao_path = os.path.join(arquivos_dir, "simulacao.txt")
+                    with open(simulacao_path, "w", encoding="utf-8") as f:
+                        f.write("📄 Arquivo gerado via simulação no app.py\n")
+
+                    log_file.write("📦 Arquivo simulacao.txt criado com sucesso.\n")
+                    resultado = "✅ Execução simulada com sucesso! Arquivo gerado."
+                    log_relativo = f"logs/{log_filename}"
+
+    except Exception as e:
+        erro_execucao = f"❌ Erro na simulação:<br><pre>{type(e).__name__}: {e}</pre>"
+
 
             if processo.returncode == 0:
                 resultado = "✅ Processamento concluído com sucesso!"
