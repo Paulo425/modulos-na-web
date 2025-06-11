@@ -10,19 +10,19 @@ from preparar_arquivos import main_preparo_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
 
-# 🔧 Caminho base e pasta pública para arquivos visíveis via web
+# ✅ 1. Caminho base
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
-os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # Garante criação automática
 
-# Caminho onde salvar o log (vai em /static/logs/)
+# ✅ 2. Pastas públicas
+CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
+os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
+
+# ✅ 3. Pasta de logs
 LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
-
-# Nome do arquivo de log com data e hora
 log_path = os.path.join(LOG_DIR, f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 
-# Configura o logger
+# ✅ 4. Configura logger
 logging.basicConfig(
     filename=log_path,
     filemode='w',
@@ -30,6 +30,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
 )
 
+# ✅ 5. Habilita UTF-8 no console
 sys.stdout.reconfigure(encoding='utf-8')
 
 def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
