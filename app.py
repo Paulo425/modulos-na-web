@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from flask import send_from_directory
+
 import os
 import json
 import subprocess
@@ -210,6 +212,29 @@ def memoriais_descritivos():
         zip_download=zip_download
     )
 
+
+@app.route("/arquivos-gerados")
+def listar_arquivos_gerados():
+    from pathlib import Path
+
+    diretorio_publico = os.path.join(BASE_DIR, 'static', 'arquivos')
+    if not os.path.exists(diretorio_publico):
+        return "<h3>⚠️ Nenhum diretório 'static/arquivos' encontrado.</h3>"
+
+    arquivos = list(Path(diretorio_publico).glob("*.*"))
+    if not arquivos:
+        return "<h3>📭 Nenhum arquivo foi gerado ainda.</h3>"
+
+    links_html = ""
+    for arq in arquivos:
+        nome = arq.name
+        links_html += f'<li><a href="/static/arquivos/{nome}" download>{nome}</a></li>'
+
+    return f"""
+    <h2>📂 Arquivos Gerados:</h2>
+    <ul>{links_html}</ul>
+    <p><a href="/">🔙 Voltar para o início</a></p>
+    """
 
 @app.route('/download-zip/<filename>')
 def download_zip(filename):
