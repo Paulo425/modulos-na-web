@@ -1,12 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-from flask import send_from_directory
-
 import os
 import json
 import subprocess
 import tempfile
+from pathlib import Path
 
 app = Flask(__name__)
 app.secret_key = 'chave_super_secreta'
@@ -16,8 +15,10 @@ app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 password_dir = os.path.join(BASE_DIR, "password")
 log_dir = os.path.join(BASE_DIR, "Log")
+arquivos_dir = os.path.join(BASE_DIR, "static", "arquivos")
 os.makedirs(password_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
+os.makedirs(arquivos_dir, exist_ok=True)
 
 # Criação do admin.json
 admin_path = os.path.join(password_dir, "admin.json")
@@ -48,12 +49,10 @@ def home():
         return redirect(url_for('login'))
     return render_template('index.html')
 
-# Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     erro = None
     debug = None
-
     try:
         usuarios = carregar_usuarios()
     except Exception as e:
@@ -77,14 +76,11 @@ def login():
 
     return render_template('login.html', erro=erro)
 
-
-# Logout
 @app.route('/logout')
 def logout():
     session.pop('usuario', None)
     return redirect(url_for('login'))
 
-# Criar usuário
 @app.route('/criar-usuario', methods=['GET', 'POST'])
 def criar_usuario():
     if session.get('usuario') != 'admin':
@@ -106,7 +102,6 @@ def criar_usuario():
             mensagem = f"Usuário '{novo_usuario}' criado com sucesso!"
     return render_template('criar_usuario.html', mensagem=mensagem, erro=erro)
 
-# Excluir usuário
 @app.route('/excluir-usuario', methods=['GET', 'POST'])
 def excluir_usuario():
     if session.get('usuario') != 'admin':
@@ -126,7 +121,6 @@ def excluir_usuario():
     usuarios = [f[:-5] for f in os.listdir(password_dir) if f.endswith('.json')]
     return render_template('excluir_usuario.html', usuarios=usuarios, mensagem=mensagem, erro=erro)
 
-# Módulo: Memoriais Descritivos (DECOPA)
 @app.route('/memoriais-descritivos', methods=['GET', 'POST'])
 def memoriais_descritivos():
     if 'usuario' not in session:
@@ -135,7 +129,6 @@ def memoriais_descritivos():
     resultado = erro_execucao = zip_download = None
 
     if request.method == 'POST':
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
         cidade = request.form['cidade']
         arquivo_excel = request.files['excel']
@@ -149,37 +142,28 @@ def memoriais_descritivos():
         arquivo_dxf.save(caminho_dxf)
 
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
-        log_dir = os.path.join(BASE_DIR, 'Log')
-        os.makedirs(log_dir, exist_ok=True)
         log_path = os.path.join(log_dir, log_filename)
 
         try:
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 processo = subprocess.run(
-                    [
-                        "python", os.path.join(BASE_DIR, "executaveis", "main.py"),
-                        "--diretorio", diretorio,
-                        "--cidade", cidade,
-                        "--excel", caminho_excel,
-                        "--dxf", caminho_dxf
-                    ],
-                    stdout=log_file,
-                    stderr=subprocess.STDOUT,
-                    encoding='utf-8'
-                )
+                    ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
+                     "--diretorio", diretorio,
+                     "--cidade", cidade,
+                     "--excel", caminho_excel,
+                     "--dxf", caminho_dxf],
+                    stdout=log_file, stderr=subprocess.STDOUT, encoding='utf-8')
 
             if processo.returncode == 0:
                 resultado = "✅ Processamento concluído com sucesso!"
             else:
                 with open(log_path, 'r', encoding='utf-8') as log_file:
-                    log_conteudo = log_file.read()
-                erro_execucao = f"❌ Erro na execução:<br><pre>{log_conteudo}</pre>"
+                    erro_execucao = f"❌ Erro na execução:<br><pre>{log_file.read()}</pre>"
 
         except Exception as e:
             try:
                 with open(log_path, 'r', encoding='utf-8') as log_file:
-                    log_conteudo = log_file.read()
-                erro_execucao = f"❌ Erro inesperado:<br><pre>{log_conteudo}</pre>"
+                    erro_execucao = f"❌ Erro inesperado:<br><pre>{log_file.read()}</pre>"
             except Exception as leitura_erro:
                 erro_execucao = f"❌ Erro inesperado e falha ao ler log: {leitura_erro}"
 
@@ -187,66 +171,44 @@ def memoriais_descritivos():
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
 
-        # 🔍 Detectar último ZIP gerado para exibir botão de download
-        zip_download = None
         try:
-            concluido_dir = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
-            arquivos_zip = [f for f in os.listdir(concluido_dir) if f.lower().endswith('.zip')]
-
-            print("📁 ZIPs encontrados:", arquivos_zip)
-            print(f"📁 Arquivos encontrados em {concluido_dir}: {arquivos_zip}")
-            print("📁 Conteúdo real da pasta:", os.listdir(concluido_dir))
-
+            arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(concluido_dir, x)), reverse=True)
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
                 zip_download = arquivos_zip[0]
-                print("🟢 Último ZIP definido para download:", zip_download)
         except Exception as e:
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
 
-        
-    return render_template(
-        "formulario_DECOPA.html",
-        resultado=resultado,
-        erro=erro_execucao,
-        zip_download=zip_download
-    )
-
+    return render_template("formulario_DECOPA.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download)
 
 @app.route("/arquivos-gerados")
 def listar_arquivos_gerados():
-    from pathlib import Path
-
-    diretorio_publico = os.path.join(BASE_DIR, 'static', 'arquivos')
-    if not os.path.exists(diretorio_publico):
+    if not os.path.exists(arquivos_dir):
         return "<h3>⚠️ Nenhum diretório 'static/arquivos' encontrado.</h3>"
-
-    arquivos = list(Path(diretorio_publico).glob("*.*"))
+    arquivos = list(Path(arquivos_dir).glob("*.*"))
     if not arquivos:
         return "<h3>📭 Nenhum arquivo foi gerado ainda.</h3>"
-
-    links_html = ""
-    for arq in arquivos:
-        nome = arq.name
-        links_html += f'<li><a href="/static/arquivos/{nome}" download>{nome}</a></li>'
-
-    return f"""
-    <h2>📂 Arquivos Gerados:</h2>
-    <ul>{links_html}</ul>
-    <p><a href="/">🔙 Voltar para o início</a></p>
-    """
+    links_html = "".join(f'<li><a href="/static/arquivos/{a.name}" download>{a.name}</a></li>' for a in arquivos)
+    return f"<h2>📂 Arquivos Gerados:</h2><ul>{links_html}</ul><p><a href='/'>🔙 Voltar para o início</a></p>"
 
 @app.route('/download-zip/<filename>')
 def download_zip(filename):
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     caminho_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', filename)
     if os.path.exists(caminho_zip):
         return send_file(caminho_zip, as_attachment=True)
     else:
         return f"Arquivo {filename} não encontrado.", 404
 
+@app.route("/downloads")
+def listar_arquivos():
+    os.makedirs(arquivos_dir, exist_ok=True)
+    arquivos = os.listdir(arquivos_dir)
+    return render_template("listar_arquivos.html", arquivos=arquivos)
 
-# Módulos futuros
+@app.route("/download/<nome_arquivo>")
+def download_arquivo(nome_arquivo):
+    return send_from_directory(arquivos_dir, nome_arquivo, as_attachment=True)
+
 @app.route('/memoriais-azimute-az')
 def memoriais_azimute_az():
     return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_AZ")
@@ -262,23 +224,7 @@ def memoriais_angulos_internos_az():
 @app.route('/memoriais-angulos-internos-p1-p2')
 def memoriais_angulos_internos_p1_p2():
     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
-from flask import send_from_directory
 
-from flask import send_from_directory
-
-@app.route("/downloads")
-def listar_arquivos():
-    caminho = os.path.join(BASE_DIR, 'static', 'arquivos')
-    arquivos = os.listdir(caminho)
-    return render_template("listar_arquivos.html", arquivos=arquivos)
-
-@app.route("/download/<nome_arquivo>")
-def download_arquivo(nome_arquivo):
-    caminho = os.path.join(BASE_DIR, 'static', 'arquivos')
-    return send_from_directory(caminho, nome_arquivo, as_attachment=True)
-
-    
-# Roda o servidor local
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
