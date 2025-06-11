@@ -6,6 +6,8 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
+from subprocess import Popen, PIPE
+
 
 app = Flask(__name__)
 app.secret_key = 'chave_super_secreta'
@@ -145,21 +147,26 @@ def memoriais_descritivos():
         log_path = os.path.join(log_dir, log_filename)
 
         try:
-            with open(log_path, 'w', encoding='utf-8') as log_file:
-                try:
-                    log_file.write("✅ Simulação de execução!\n")
-                    log_file.write(f"Cidade: {cidade}\n")
-                    log_file.write(f"Excel: {caminho_excel}\n")
-                    log_file.write(f"DXF: {caminho_dxf}\n")
+            
+            processo = Popen(
+                ["python", os.path.join(BASE_DIR, "executaveis", "teste.py"),
+                 "--diretorio", diretorio,
+                 "--cidade", cidade,
+                 "--excel", caminho_excel,
+                 "--dxf", caminho_dxf],
+                stdout=PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
 
-                    # Criar arquivo simulado visível
-                    simulacao_path = os.path.join(arquivos_dir, "simulacao.txt")
-                    with open(simulacao_path, "w", encoding="utf-8") as f:
-                        f.write("📄 Arquivo gerado via simulação no app.py\n")
+            log_lines = []
+            for linha in processo.stdout:
+                print("🖨️", linha.strip())  # exibe no log do Render
+                log_file.write(linha)       # salva no arquivo .txt também
+                log_lines.append(linha)
 
-                    log_file.write("📦 Arquivo simulacao.txt criado com sucesso.\n")
-                    resultado = "✅ Execução simulada com sucesso! Arquivo gerado."
-                    log_relativo = f"logs/{log_filename}"
+            processo.wait()
+
 
     except Exception as e:
         erro_execucao = f"❌ Erro na simulação:<br><pre>{type(e).__name__}: {e}</pre>"
