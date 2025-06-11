@@ -146,36 +146,35 @@ def memoriais_descritivos():
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
         log_path = os.path.join(log_dir, log_filename)
 
-                try:
-                    with open(log_path, 'w', encoding='utf-8') as log_file:
-                        processo = Popen(
-                            ["python", os.path.join(BASE_DIR, "executaveis", "teste.py"),
-                             "--diretorio", diretorio,
-                             "--cidade", cidade,
-                             "--excel", caminho_excel,
-                             "--dxf", caminho_dxf],
-                            stdout=PIPE,
-                            stderr=subprocess.STDOUT,
-                            text=True
-                        )
+        try:
+            with open(log_path, 'w', encoding='utf-8') as log_file:
+                processo = Popen(
+                    ["python", os.path.join(BASE_DIR, "executaveis", "teste.py"),
+                     "--diretorio", diretorio,
+                     "--cidade", cidade,
+                     "--excel", caminho_excel,
+                     "--dxf", caminho_dxf],
+                    stdout=PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True
+                )
 
-                        log_lines = []
-                        for linha in processo.stdout:
-                            print("🖨️", linha.strip())  # exibe no log do Render
-                            log_file.write(linha)       # salva no arquivo .txt também
-                            log_lines.append(linha)
+                log_lines = []
+                for linha in processo.stdout:
+                    print("🖨️", linha.strip())
+                    log_file.write(linha)
+                    log_lines.append(linha)
 
-                        processo.wait()
+                processo.wait()
 
-                        if processo.returncode == 0:
-                            resultado = "✅ Processamento concluído com sucesso!"
-                            log_relativo = f"logs/{log_filename}"
-                        else:
-                            erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+                if processo.returncode == 0:
+                    resultado = "✅ Processamento concluído com sucesso!"
+                    log_relativo = f"logs/{log_filename}"
+                else:
+                    erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
 
-                except Exception as e:
-                    erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
-
+        except Exception as e:
+            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
         finally:
             os.remove(caminho_excel)
@@ -190,6 +189,7 @@ def memoriais_descritivos():
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
 
     return render_template("formulario_DECOPA.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
+
 
 @app.route("/arquivos-gerados")
 def listar_arquivos_gerados():
