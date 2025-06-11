@@ -5,7 +5,6 @@ import os
 import time
 import logging
 from datetime import datetime
-
 from preparar_arquivos import main_preparo_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
@@ -88,6 +87,23 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     main_compactar_arquivos(diretorio_concluido)
     print("✅ [main.py] Compactação finalizada com sucesso!")
     logging.info("✅ Compactação finalizada com sucesso!")
+
+    # ✅ Copiar arquivos de saída para static/arquivos
+    print("\n📤 Copiando arquivos finais para a pasta pública")
+    logging.info("📤 Copiando arquivos finais para a pasta pública")
+
+    for fname in os.listdir(diretorio_concluido):
+        origem = os.path.join(diretorio_concluido, fname)
+        destino = os.path.join(CAMINHO_PUBLICO, fname)
+        if os.path.isfile(origem):
+            try:
+                shutil.copy2(origem, destino)
+                print(f"🗂️ Arquivo copiado: {destino}")
+                logging.info(f"🗂️ Arquivo copiado para pasta pública: {destino}")
+            except Exception as e:
+                print(f"❌ Falha ao copiar {fname}: {e}")
+                logging.error(f"❌ Erro ao copiar {fname}: {e}")
+
 
     print("\n✅ [main.py] Processo geral concluído com sucesso!")
     logging.info("✅ Processo geral concluído com sucesso!")
