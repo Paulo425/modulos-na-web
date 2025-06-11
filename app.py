@@ -145,7 +145,8 @@ def memoriais_descritivos():
 
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.txt")
         log_path = os.path.join(log_dir, log_filename)
-
+        log_relativo = f"static/logs/{log_filename}"
+        
         try:
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 processo = Popen(
