@@ -4,7 +4,7 @@
 <div class="container mt-5">
     <h2 class="text-center text-primary mb-4">Gerar Memorial Descritivo</h2>
 
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('spinner').style.display='block'">
         <div class="mb-3">
             <label for="diretorio" class="form-label">Cidade:</label>
             <input type="text" class="form-control" name="cidade" id="cidade" required>
@@ -24,6 +24,13 @@
             <button type="submit" class="btn btn-primary btn-lg">Executar</button>
         </div>
     </form>
+
+    <div id="spinner" class="text-center mt-3" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Processando...</span>
+        </div>
+        <p class="mt-2">Aguarde. Gerando arquivos...</p>
+    </div>
 
     <hr>
 
