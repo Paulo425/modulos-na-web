@@ -25,14 +25,7 @@
         </div>
     </form>
 
-<hr>
-<div style="margin-top: 20px;">
-    <h3>📁 Acessar arquivos gerados</h3>
-    <a href="{{ url_for('listar_arquivos') }}" target="_blank" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
-        📥 Ver arquivos disponíveis para download
-    </a>
-</div>
-
+    <hr>
 
     {% if resultado %}
     <div class="alert alert-success mt-4 text-center">
@@ -55,12 +48,3 @@
     {% endif %}
 </div>
 {% endblock %}
-
-{% if log_path %}
-    <div class="mt-3 text-center">
-        <a href="{{ url_for('static', filename=log_path) }}" class="btn btn-secondary" target="_blank">
-            📜 Ver Log da Execução
-        </a>
-    </div>
-{% endif %}
-
