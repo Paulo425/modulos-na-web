@@ -176,12 +176,12 @@ def memoriais_descritivos():
             )
 
             log_lines = []
-
-            with open(log_path, 'w', encoding='utf-8') as log_file:
-                for linha in processo.stdout:
-                    print("🖨️", linha.strip())
+            for linha in processo.stdout:
+                if len(log_lines) < 60:
                     log_file.write(linha)
                     log_lines.append(linha)
+                print("🖨️", linha.strip())
+
 
             processo.wait()
 

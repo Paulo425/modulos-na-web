@@ -20,12 +20,35 @@
 
         <div class="mb-3">
             <label for="excel" class="form-label">Arquivo Excel:</label>
-            <input type="file" class="form-control" name="excel" id="excel" accept=".xlsx" required>
+            <div class="input-group">
+                <input type="file" class="form-control" name="excel" id="excel" accept=".xlsx" required>
+                <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#infoExcel">
+                    ℹ️
+                </button>
+            </div>
+            <div class="collapse mt-1" id="infoExcel">
+                <div class="alert alert-secondary">
+                    No nome do arquivo tem que ter o número da matrícula (Ex: <code>Porto_Alegre_Mat_33333.xlsx</code>).<br>
+                    As abas devem se chamar: <strong>Dados_do_Imóvel</strong>, <strong>ETE</strong>, <strong>Confrontantes_Remanescente</strong>, <strong>Confrontantes_Servidão</strong>, <strong>Confrontantes_Acesso</strong>.<br>
+                    Cada aba deve ter as colunas <strong>Código</strong> e <strong>Confrontante</strong>, com os valores <code>V1, V2, ..., Vn</code> e o nome dos confrontantes.
+                </div>
+            </div>
         </div>
 
         <div class="mb-3">
             <label for="dxf" class="form-label">Arquivo DXF:</label>
-            <input type="file" class="form-control" name="dxf" id="dxf" accept=".dxf" required>
+            <div class="input-group">
+                <input type="file" class="form-control" name="dxf" id="dxf" accept=".dxf" required>
+                <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#infoDxf">
+                    ℹ️
+                </button>
+            </div>
+            <div class="collapse mt-1" id="infoDxf">
+                <div class="alert alert-secondary">
+                    O nome deve conter o tipo e matrícula (Ex: <code>ETE_Mat_33333.dxf</code> ou <code>REM_Mat_33333.dxf</code>).<br>
+                    O DXF deve estar no formato 2010, contendo apenas o desenho geométrico da poligonal alvo, sem rótulos ou textos.
+                </div>
+            </div>
         </div>
 
         <div class="d-grid mt-4">
