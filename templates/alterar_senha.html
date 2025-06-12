@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block conteudo %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <h4 class="text-center text-primary">Alterar Senha</h4>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="senha_atual" class="form-label">Senha Atual:</label>
+                        <input type="password" class="form-control" name="senha_atual" id="senha_atual" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nova_senha" class="form-label">Nova Senha:</label>
+                        <input type="password" class="form-control" name="nova_senha" id="nova_senha" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning">Salvar Nova Senha</button>
+                    </div>
+                </form>
+                {% if mensagem %}
+                    <div class="alert alert-success mt-3 text-center">{{ mensagem }}</div>
+                {% endif %}
+                {% if erro %}
+                    <div class="alert alert-danger mt-3 text-center">{{ erro }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

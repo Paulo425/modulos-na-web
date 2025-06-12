@@ -289,6 +289,32 @@ def pendentes():
         return redirect(url_for('pendentes'))
 
     return render_template('pendentes.html', pendentes=usuarios_pendentes)
+@app.route('/alterar-senha', methods=['GET', 'POST'])
+def alterar_senha():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    mensagem = erro = None
+    if request.method == 'POST':
+        atual = request.form['senha_atual']
+        nova = request.form['nova_senha']
+        usuario = session['usuario']
+        caminho = os.path.join(password_dir, f"{usuario}.json")
+
+        if os.path.exists(caminho):
+            with open(caminho, 'r', encoding='utf-8') as f:
+                dados = json.load(f)
+            if check_password_hash(dados['senha_hash'], atual):
+                dados['senha_hash'] = generate_password_hash(nova)
+                with open(caminho, 'w', encoding='utf-8') as f:
+                    json.dump(dados, f, indent=2)
+                mensagem = "Senha alterada com sucesso!"
+            else:
+                erro = "Senha atual incorreta."
+        else:
+            erro = "Usuário não encontrado."
+
+    return render_template('alterar_senha.html', mensagem=mensagem, erro=erro)
 
 @app.route("/downloads")
 def listar_arquivos():
