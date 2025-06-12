@@ -22,7 +22,7 @@
                 <a href="{{ url_for('excluir_usuario') }}" class="btn btn-light btn-sm">🗑️ Gerenciar Usuários</a>
                 <a href="{{ url_for('pendentes') }}" class="btn btn-light btn-sm">
                     📋 Aprovar Contas
-                    {% if pendentes_count|default(0) > 0 %
+                    {% if pendentes_count|default(0) > 0 %}
                         <span class="badge bg-danger">{{ pendentes_count }}</span>
                     {% endif %}
                 </a>
