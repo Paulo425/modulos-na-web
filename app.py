@@ -326,9 +326,41 @@ def listar_arquivos():
 def download_arquivo(nome_arquivo):
     return send_from_directory(arquivos_dir, nome_arquivo, as_attachment=True)
 
-@app.route('/memoriais-azimute-az')
+
+@app.route('/memorial_azimute_az', methods=['POST'])
+def gerar_memorial_azimute_az():
+    import subprocess
+    import tempfile
+    import shutil
+
+    # Criar diretório temporário
+    temp_dir = tempfile.mkdtemp()
+
+    try:
+        # Caminho absoluto para o script main.py do AZIMUTE_AZ
+        caminho_main = os.path.join(os.getcwd(), 'main.py')  # ajuste se estiver em subpasta
+
+        # Executar o script principal como subprocesso com diretório temporário
+        subprocess.run(["python", caminho_main], cwd=temp_dir, check=True)
+
+        # Procurar o arquivo .zip dentro do diretório temporário
+        zip_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".zip")]
+        if not zip_files:
+            return "Nenhum arquivo ZIP foi gerado.", 400
+
+        zip_path = os.path.join(temp_dir, zip_files[0])
+        return send_file(zip_path, as_attachment=True)
+
+    except subprocess.CalledProcessError as e:
+        return f"Ocorreu um erro ao gerar o memorial: {str(e)}", 500
+    except Exception as e:
+        return f"Erro inesperado: {str(e)}", 500
+    finally:
+        shutil.rmtree(temp_dir)
+        
+@app.route('/formulario_AZIMUTE_AZ')
 def memoriais_azimute_az():
-    return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_AZ")
+    return render_template('formulario_AZIMUTE_AZ.html')
 
 @app.route('/memoriais-azimute-p1-p2')
 def memoriais_azimute_p1_p2():
