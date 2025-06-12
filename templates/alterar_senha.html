@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+
 {% block conteudo %}
 <div class="row justify-content-center mt-5">
     <div class="col-md-6">
@@ -18,20 +19,21 @@
                         <button type="submit" class="btn btn-warning">Salvar Nova Senha</button>
                     </div>
                 </form>
+
                 {% if mensagem %}
                     <div class="alert alert-success mt-3 text-center">{{ mensagem }}</div>
                 {% endif %}
                 {% if erro %}
                     <div class="alert alert-danger mt-3 text-center">{{ erro }}</div>
                 {% endif %}
+
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('home') }}" class="btn btn-outline-primary">
+                        🔙 Voltar ao Menu Principal
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
-<div class="text-center mt-4">
-    <a href="{{ url_for('home') }}" class="btn btn-outline-primary">
-        🔙 Voltar ao Menu Principal
-    </a>
-</div>
-

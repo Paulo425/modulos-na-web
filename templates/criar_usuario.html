@@ -1,27 +1,37 @@
 {% extends 'base.html' %}
 
 {% block conteudo %}
-<h2>Criar Novo Usuário</h2>
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <h4 class="text-center text-primary">Criar Novo Usuário</h4>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="usuario" class="form-label">Usuário:</label>
+                        <input type="text" class="form-control" name="usuario" id="usuario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="senha" class="form-label">Senha:</label>
+                        <input type="password" class="form-control" name="senha" id="senha" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">Criar Usuário</button>
+                    </div>
+                </form>
 
-<form method="POST" style="max-width:400px;">
-    <label for="usuario">Nome do novo usuário:</label>
-    <input type="text" name="usuario" id="usuario" class="form-control" required><br>
+                {% if mensagem %}
+                    <div class="alert alert-success mt-3 text-center">{{ mensagem }}</div>
+                {% endif %}
+                {% if erro %}
+                    <div class="alert alert-danger mt-3 text-center">{{ erro }}</div>
+                {% endif %}
 
-    <label for="senha">Senha:</label>
-    <input type="password" name="senha" id="senha" class="form-control" required><br>
-
-    <button type="submit" class="btn btn-primary">Criar Usuário</button>
-</form>
-
-{% if mensagem %}
-    <div class="alert alert-success mt-3">{{ mensagem }}</div>
-{% endif %}
-{% if erro %}
-    <div class="alert alert-danger mt-3">{{ erro }}</div> 
-{% endif %}
-{% endblock %}
-<div class="text-center mt-4">
-    <a href="{{ url_for('home') }}" class="btn btn-outline-primary">
-        🔙 Voltar ao Menu Principal
-    </a>
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('home') }}" class="btn btn-outline-primary">🔙 Voltar ao Menu Principal</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}

@@ -1,28 +1,41 @@
 {% extends 'base.html' %}
 
 {% block conteudo %}
-<div class="container mt-5">
-    <h3 class="text-primary mb-4">Aprovação de Novos Usuários</h3>
-    {% if pendentes %}
-    <form method="POST">
-        <ul class="list-group mb-3">
-            {% for usuario in pendentes %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                {{ usuario }}
-                <input type="checkbox" name="aprovar" value="{{ usuario }}">
-            </li>
-            {% endfor %}
-        </ul>
-        <button type="submit" class="btn btn-success">✅ Aprovar Selecionados</button>
-    </form>
-    {% else %}
-    <div class="alert alert-info">Nenhuma conta pendente de aprovação.</div>
-    {% endif %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-body">
+                <h4 class="text-center text-primary">Contas Pendentes de Aprovação</h4>
+
+                {% if pendentes %}
+                    <form method="POST">
+                        <ul class="list-group">
+                            {% for usuario in pendentes %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ usuario }}
+                                <button name="aprovar" value="{{ usuario }}" class="btn btn-success btn-sm">Aprovar</button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </form>
+                {% else %}
+                    <p class="text-center text-muted mt-3">Nenhuma conta pendente no momento.</p>
+                {% endif %}
+
+                {% if mensagem %}
+                    <div class="alert alert-success mt-3 text-center">{{ mensagem }}</div>
+                {% endif %}
+                {% if erro %}
+                    <div class="alert alert-danger mt-3 text-center">{{ erro }}</div>
+                {% endif %}
+
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('home') }}" class="btn btn-outline-primary">
+                        🔙 Voltar ao Menu Principal
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
-<div class="text-center mt-4">
-    <a href="{{ url_for('home') }}" class="btn btn-outline-primary">
-        🔙 Voltar ao Menu Principal
-    </a>
-</div>
-

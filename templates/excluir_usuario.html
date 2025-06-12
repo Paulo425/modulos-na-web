@@ -1,44 +1,37 @@
 {% extends 'base.html' %}
 
 {% block conteudo %}
-<h2>Excluir Usuário</h2>
-
-{% if mensagem %}
-    <div class="alert alert-success">{{ mensagem }}</div>
-{% endif %}
-{% if erro %}
-    <div class="alert alert-danger">{{ erro }}</div>
-{% endif %}
-
-<table class="table table-striped" style="max-width:500px;">
-    <thead>
-        <tr>
-            <th>Usuário</th>
-            <th>Ação</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for usuario in usuarios %}
-        <tr>
-            <td>{{ usuario }}</td>
-            <td>
-                {% if usuario != 'admin' %}
-                <form method="POST" style="margin: 0;">
-                    <input type="hidden" name="usuario" value="{{ usuario }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <h4 class="text-center text-danger">Excluir Usuário</h4>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="usuario" class="form-label">Selecione um usuário:</label>
+                        <select name="usuario" id="usuario" class="form-select" required>
+                            {% for usuario in usuarios %}
+                            <option value="{{ usuario }}">{{ usuario }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-danger">Excluir</button>
+                    </div>
                 </form>
-                {% else %}
-                <span class="text-muted">Protegido</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% endblock %}
 
-<div class="text-center mt-4">
-    <a href="{{ url_for('home') }}" class="btn btn-outline-primary">
-        🔙 Voltar ao Menu Principal
-    </a>
+                {% if mensagem %}
+                    <div class="alert alert-success mt-3 text-center">{{ mensagem }}</div>
+                {% endif %}
+                {% if erro %}
+                    <div class="alert alert-danger mt-3 text-center">{{ erro }}</div>
+                {% endif %}
+
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('home') }}" class="btn btn-outline-primary">🔙 Voltar ao Menu Principal</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
