@@ -5,15 +5,15 @@
     <div class="col-md-6">
         <div class="card shadow">
             <div class="card-body">
-                <h4 class="text-center text-primary">Criar Conta</h4>
-                <form method="POST">
+                <h4 class="card-title text-center text-primary">Criar Nova Conta</h4>
+                <form method="POST" autocomplete="off">
                     <div class="mb-3">
-                        <label for="usuario" class="form-label">Usuário:</label>
-                        <input type="text" class="form-control" name="usuario" id="usuario" required>
+                        <label for="usuario" class="form-label">Nome de Usuário:</label>
+                        <input type="text" class="form-control" name="usuario" id="usuario" required autocomplete="off">
                     </div>
                     <div class="mb-3">
                         <label for="senha" class="form-label">Senha:</label>
-                        <input type="password" class="form-control" name="senha" id="senha" required>
+                        <input type="password" class="form-control" name="senha" id="senha" required autocomplete="new-password">
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-success">Criar Conta</button>
@@ -26,12 +26,6 @@
                 {% if erro %}
                     <div class="alert alert-danger mt-3 text-center">{{ erro }}</div>
                 {% endif %}
-
-                <div class="text-center mt-4">
-                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
-                        🔙 Voltar para o Login
-                    </a>
-                </div>
             </div>
         </div>
     </div>
