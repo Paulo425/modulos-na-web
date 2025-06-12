@@ -15,15 +15,8 @@
             <a href="{{ url_for('excluir_usuario') }}" class="btn btn-light btn-sm">🗑️ Gerenciar Usuários</a>
             <a href="{{ url_for('pendentes') }}" class="btn btn-light btn-sm">
                 📋 Aprovar Contas
-                {% set pendentes = namespace(count=0) %}
-                {% for arquivo in os.listdir('password') if arquivo.endswith('.json') %}
-                    {% set dados = json.load(open('password/' ~ arquivo)) %}
-                    {% if not dados.get('aprovado', True) %}
-                        {% set pendentes.count = pendentes.count + 1 %}
-                    {% endif %}
-                {% endfor %}
-                {% if pendentes.count > 0 %}
-                    <span class="badge bg-danger">{{ pendentes.count }}</span>
+                {% if pendentes_count > 0 %}
+                    <span class="badge bg-danger">{{ pendentes_count }}</span>
                 {% endif %}
             </a>
             {% endif %}

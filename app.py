@@ -49,7 +49,19 @@ def carregar_usuarios():
 def home():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    return render_template('index.html')
+
+    pendentes_count = 0
+    if session.get('usuario') == 'admin':
+        for arquivo in os.listdir(password_dir):
+            if arquivo.endswith('.json'):
+                with open(os.path.join(password_dir, arquivo), 'r', encoding='utf-8') as f:
+                    dados = json.load(f)
+                    if not dados.get("aprovado", True):
+                        pendentes_count += 1
+
+    return render_template('index.html', pendentes_count=pendentes_count)
+
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
