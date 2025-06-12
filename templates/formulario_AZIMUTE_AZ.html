@@ -1,18 +1,32 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>MEMORIAIS_AZIMUTE_AZ</title>
-</head>
-<body>
-    <h2>MEMORIAL AZIMUTE AZ</h2>
+{% extends 'base.html' %}
 
-    <form method="post" action="/memorial_azimute_az">
-        <label for="botao">Clique no botão abaixo para gerar o memorial:</label><br><br>
-        <button type="submit">Gerar Memorial</button>
+{% block conteudo %}
+<div class="container mt-5">
+    <h2 class="text-primary">Gerar Memorial AZIMUTE AZ</h2>
+
+    <form method="post" action="/memorial_azimute_az" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="cidade" class="form-label">Cidade:</label>
+            <input type="text" class="form-control" id="cidade" name="cidade" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="excel" class="form-label">Arquivo Excel:</label>
+            <input type="file" class="form-control" id="excel" name="excel" accept=".xlsx" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="dxf" class="form-label">Arquivo DXF:</label>
+            <input type="file" class="form-control" id="dxf" name="dxf" accept=".dxf" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100">Executar</button>
     </form>
 
-    <br>
-    <a href="/menu_memoriais">Voltar ao Menu</a>
-</body>
-</html>
+    <div class="text-center mt-4">
+        <a href="/" class="btn btn-outline-primary">
+            <img src="{{ url_for('static', filename='back.png') }}" alt="Voltar" width="20"> Voltar ao Menu Principal
+        </a>
+    </div>
+</div>
+{% endblock %}
