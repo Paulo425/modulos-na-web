@@ -35,6 +35,12 @@
 
     <!-- Bloco dinâmico de conteúdo -->
     <div class="container py-4">
+        {% if "onrender.com" in request.host and "teste" in request.host %}
+        <div style="background-color: #ffc107; color: black; text-align: center; padding: 8px; font-weight: bold;">
+        ⚠️ AMBIENTE DE TESTES – Não utilizar para produção
+        </div>
+        {% endif %}
+
         {% block conteudo %}{% endblock %}
 
         <div class="text-center mt-4">
