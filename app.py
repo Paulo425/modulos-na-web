@@ -400,26 +400,8 @@ def gerar_memorial_azimute_az():
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
 
     return render_template("formulario_AZIMUTE_AZ.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
+    
 
-
-
-
-        
-@app.route('/formulario_AZIMUTE_AZ')
-def memoriais_azimute_az():
-    return render_template('formulario_AZIMUTE_AZ.html')
-
-@app.route('/memoriais-azimute-p1-p2')
-def memoriais_azimute_p1_p2():
-    return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_P1_P2")
-
-@app.route('/memoriais-angulos-internos-az')
-def memoriais_angulos_internos_az():
-    return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_AZ")
-
-@app.route('/memoriais-angulos-internos-p1-p2')
-def memoriais_angulos_internos_p1_p2():
-    return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
