@@ -349,7 +349,11 @@ def gerar_memorial_azimute_az():
         caminho_main = os.path.join(os.getcwd(), 'executaveis_azimute_az', 'main.py')
         subprocess.run(["python", caminho_main, cidade, caminho_excel, caminho_dxf], cwd=temp_dir, check=True)
 
-        zip_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".zip")]
+        # Caminho para a subpasta "CONCLUIDO" onde o zip é salvo
+        concluido_dir = os.path.join(temp_dir, cidade, "CONCLUIDO")
+
+        # Buscar ZIP lá dentro
+        zip_files = [f for f in os.listdir(concluido_dir) if f.lower().endswith(".zip")]
         if not zip_files:
             return "Nenhum arquivo ZIP foi gerado.", 400
 
