@@ -332,33 +332,37 @@ def gerar_memorial_azimute_az():
     import subprocess
     import tempfile
     import shutil
+    from flask import request, send_file
     import os
-    from flask import send_file
 
-    # Criar diretório temporário
+    cidade = request.form['cidade']
+    excel = request.files['excel']
+    dxf = request.files['dxf']
+
     temp_dir = tempfile.mkdtemp()
-
     try:
-        # Caminho absoluto para o main.py específico do AZIMUTE_AZ
+        caminho_excel = os.path.join(temp_dir, excel.filename)
+        caminho_dxf = os.path.join(temp_dir, dxf.filename)
+        excel.save(caminho_excel)
+        dxf.save(caminho_dxf)
+
         caminho_main = os.path.join(os.getcwd(), 'executaveis_azimute_az', 'main.py')
+        subprocess.run(["python", caminho_main, cidade, caminho_excel, caminho_dxf], cwd=temp_dir, check=True)
 
-        # Executar o script principal como subprocesso com o diretório temporário
-        subprocess.run(["python", caminho_main], cwd=temp_dir, check=True)
-
-        # Procurar o arquivo .zip gerado no diretório temporário
         zip_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".zip")]
         if not zip_files:
-            return "Nenhum arquivo ZIP foi gerado durante o processo.", 400
+            return "Nenhum arquivo ZIP foi gerado.", 400
 
         zip_path = os.path.join(temp_dir, zip_files[0])
         return send_file(zip_path, as_attachment=True)
 
     except subprocess.CalledProcessError as e:
-        return f"Erro na execução do processo: {str(e)}", 500
+        return f"Erro na execução: {str(e)}", 500
     except Exception as e:
         return f"Erro inesperado: {str(e)}", 500
     finally:
         shutil.rmtree(temp_dir)
+
 
         
 @app.route('/formulario_AZIMUTE_AZ')
