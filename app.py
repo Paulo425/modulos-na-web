@@ -404,7 +404,7 @@ def gerar_memorial_azimute_az():
         except Exception as e:
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
             print(f"🔍 ZIP a ser baixado: {zip_download}")
-            <p>DEBUG ZIP: {{ zip_download }}</p>
+            
 
 
 
