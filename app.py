@@ -389,8 +389,16 @@ def gerar_memorial_azimute_az():
             if arquivos_zip:
                 arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
                 zip_download = arquivos_zip[0]
+
+                # ✅ Cópia para a pasta tmp/CONCLUIDO onde o botão de download acessa
+                origem = os.path.join(diretorio, zip_download)
+                destino = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', zip_download)
+                os.makedirs(os.path.dirname(destino), exist_ok=True)
+                if not os.path.exists(destino):
+                    shutil.copy2(origem, destino)
+                    print(f"🗜️ ZIP copiado para pasta pública: {destino}")
         except Exception as e:
-            print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
+            print(f"⚠️ Erro ao localizar ou copiar ZIP: {e}")
             print(f"🧪 [DEBUG zip_download]: {zip_download}")
 
     return render_template("formulario_AZIMUTE_AZ.html",
