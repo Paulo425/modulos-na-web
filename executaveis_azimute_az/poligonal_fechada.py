@@ -16,6 +16,7 @@ from openpyxl.styles import Alignment, Font
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
