@@ -12,7 +12,7 @@ def main():
     cidade = sys.argv[1].replace(" ", "_")
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
-    base_dir = os.getcwd()
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     caminho_template = os.path.join(base_dir, "Memorial_modelo_padrao.docx")
 
     if not os.path.exists(caminho_template):
