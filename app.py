@@ -328,22 +328,20 @@ def listar_arquivos():
 def download_arquivo(nome_arquivo):
     return send_from_directory(arquivos_dir, nome_arquivo, as_attachment=True)
 
-
 @app.route('/memorial_azimute_az', methods=['GET', 'POST'])
 def gerar_memorial_azimute_az():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    if request.method == 'POST':
-        cidade = request.form['cidade']
-        temp_dir = tempfile.mkdtemp()
-        diretorio_base = os.path.join(temp_dir, cidade.replace(" ", "_"))
-        diretorio_concluido = os.path.join(diretorio_base, 'CONCLUIDO')
-        arquivo_excel = request.files['excel']
-        arquivo_dxf = request.files['dxf']
+    resultado = erro_execucao = zip_download = log_relativo = None
 
+    if request.method == 'POST':
+        cidade = request.form['cidade'].strip()
+        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
         os.makedirs(diretorio, exist_ok=True)
 
+        arquivo_excel = request.files['excel']
+        arquivo_dxf = request.files['dxf']
         caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
         caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
         arquivo_excel.save(caminho_excel)
@@ -352,7 +350,6 @@ def gerar_memorial_azimute_az():
         log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
         log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
         os.makedirs(log_dir_absoluto, exist_ok=True)
-
         log_path = os.path.join(log_dir_absoluto, log_filename)
         log_relativo = f"static/logs/{log_filename}"
 
@@ -368,7 +365,7 @@ def gerar_memorial_azimute_az():
             log_lines = []
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
-                    if len(log_lines) < 60:
+                    if len(log_lines) < 100:
                         log_file.write(linha)
                         log_lines.append(linha)
                     print("🖨️", linha.strip())
@@ -376,12 +373,12 @@ def gerar_memorial_azimute_az():
             processo.wait()
 
             if processo.returncode == 0:
-                session['resultado'] = "✅ Processamento concluído com sucesso!"
+                resultado = "✅ Processamento concluído com sucesso!"
             else:
-                session['erro_execucao'] = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
 
         except Exception as e:
-            session['erro_execucao'] = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
         finally:
             os.remove(caminho_excel)
@@ -392,29 +389,15 @@ def gerar_memorial_azimute_az():
             if arquivos_zip:
                 arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
                 zip_download = arquivos_zip[0]
-
-                origem_zip = os.path.join(diretorio, zip_download)
-                destino_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', zip_download)
-                shutil.copy(origem_zip, destino_zip)
-
-                session['zip_download'] = zip_download
         except Exception as e:
-            print(f"⚠️ Erro ao localizar ou copiar arquivo ZIP: {e}")
-
-        session['log_path'] = log_relativo
-        return redirect(url_for('gerar_memorial_azimute_az'))
-
-    # GET: carrega os dados armazenados em sessão
-    resultado = session.pop('resultado', None)
-    erro_execucao = session.pop('erro_execucao', None)
-    zip_download = session.pop('zip_download', None)
-    log_relativo = session.pop('log_path', None)
+            print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
 
     return render_template("formulario_AZIMUTE_AZ.html",
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
                            log_path=log_relativo)
+
 
 
 
