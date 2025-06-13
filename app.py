@@ -403,6 +403,10 @@ def gerar_memorial_azimute_az():
 
         except Exception as e:
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
+            print(f"🔍 ZIP a ser baixado: {zip_download}")
+            <p>DEBUG ZIP: {{ zip_download }}</p>
+
+
 
     return render_template("formulario_AZIMUTE_AZ.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
 
