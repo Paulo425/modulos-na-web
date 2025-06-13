@@ -37,16 +37,18 @@ def main():
         print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf>")
         sys.exit(1)
 
-    cidade = sys.argv[1].replace(" ", "_")
+    cidade = sys.argv[1]
+    cidade_formatada = cidade.replace(" ", "_")  # 🔧 Adicione esta linha
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
-    caminho_template = os.path.join(BASE_DIR, "Memorial_modelo_padrao.docx")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    caminho_template = os.path.join(base_dir, "Memorial_modelo_padrao.docx")
 
     if not os.path.exists(caminho_template):
         print(f"Template '{caminho_template}' não encontrado.")
         sys.exit(1)
 
-    variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, BASE_DIR)
+    variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir)
 
     main_poligonal_fechada(
         variaveis["arquivo_excel_recebido"],
