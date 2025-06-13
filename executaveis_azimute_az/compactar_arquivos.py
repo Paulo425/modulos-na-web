@@ -23,6 +23,7 @@ def montar_pacote_zip(diretorio):
                 zipf.write(arquivo_excel[0], os.path.basename(arquivo_excel[0]))
 
             print(f"✅ Arquivos do tipo {tipo} compactados com sucesso!")
+            print(f"🗜️ ZIP salvo em: {nome_zip}")
         else:
             print(f"⚠️ Arquivos incompletos ou não encontrados para o tipo {tipo}")
 
