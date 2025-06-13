@@ -32,18 +32,14 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
 
 def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir):
     try:
-        cidade_formatada = cidade.replace(" ", "_")
-        cidade_dir = os.path.join(base_dir, cidade_formatada)
-
-        # Criar diretórios temporários
-        diretorio_temp = tempfile.mkdtemp()
-        diretorio_base = os.path.join(diretorio_temp, cidade_formatada)
+        # Criar diretórios temporários (sem cidade no nome)
+        diretorio_base = tempfile.mkdtemp()
         diretorio_preparado = os.path.join(diretorio_base, "PREPARADO")
         diretorio_concluido = os.path.join(diretorio_base, "CONCLUIDO")
         os.makedirs(diretorio_preparado, exist_ok=True)
         os.makedirs(diretorio_concluido, exist_ok=True)
 
-        # Copiar arquivos
+        # Copiar arquivos para a pasta base
         arquivo_excel_recebido = os.path.join(diretorio_base, os.path.basename(caminho_excel))
         arquivo_dxf_recebido = os.path.join(diretorio_base, os.path.basename(caminho_dxf))
         shutil.copy(caminho_excel, arquivo_excel_recebido)
@@ -52,7 +48,7 @@ def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir):
         print(f"✅ Arquivo Excel copiado para: {arquivo_excel_recebido}")
         print(f"✅ Arquivo DXF copiado para: {arquivo_dxf_recebido}")
 
-        # Chamada obrigatória para gerar FECHADA_*_*.xlsx
+        # Processar planilhas (gera arquivos na pasta PREPARADO)
         preparar_planilhas(arquivo_excel_recebido, diretorio_preparado)
 
         return {
