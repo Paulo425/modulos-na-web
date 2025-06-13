@@ -56,7 +56,8 @@ def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir):
             "arquivo_dxf_recebido": arquivo_dxf_recebido,
             "diretorio_base": diretorio_base,
             "diretorio_preparado": diretorio_preparado,
-            "diretorio_concluido": diretorio_concluido
+            "diretorio_concluido": diretorio_concluido,
+            "cidade_formatada": cidade_formatada
         }
 
     except Exception as e:
