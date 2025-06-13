@@ -396,6 +396,11 @@ def gerar_memorial_azimute_az():
             if arquivos_zip:
                 arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
                 zip_download = arquivos_zip[0]
+                # Copia o ZIP gerado para a pasta tmp/CONCLUIDO para que o botão funcione
+                origem_zip = os.path.join(diretorio, zip_download)
+                destino_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', zip_download)
+                shutil.copy(origem_zip, destino_zip)
+
         except Exception as e:
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
 
