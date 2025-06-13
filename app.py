@@ -349,15 +349,16 @@ def gerar_memorial_azimute_az():
         caminho_main = os.path.join(os.getcwd(), 'executaveis_azimute_az', 'main.py')
         subprocess.run(["python", caminho_main, cidade, caminho_excel, caminho_dxf], cwd=temp_dir, check=True)
 
-        # Caminho para a subpasta "CONCLUIDO" onde o zip é salvo
-        concluido_dir = os.path.join(temp_dir, cidade, "CONCLUIDO")
+        # Caminho correto da pasta CONCLUIDO
+        concluido_dir = os.path.join(temp_dir, cidade.replace(" ", "_"), "CONCLUIDO")
 
-        # Buscar ZIP lá dentro
+        # Buscar ZIP dentro da pasta correta
         zip_files = [f for f in os.listdir(concluido_dir) if f.lower().endswith(".zip")]
         if not zip_files:
             return "Nenhum arquivo ZIP foi gerado.", 400
 
-        zip_path = os.path.join(temp_dir, zip_files[0])
+        # ✅ Caminho corrigido
+        zip_path = os.path.join(concluido_dir, zip_files[0])
         return send_file(zip_path, as_attachment=True)
 
     except subprocess.CalledProcessError as e:
@@ -366,6 +367,7 @@ def gerar_memorial_azimute_az():
         return f"Erro inesperado: {str(e)}", 500
     finally:
         shutil.rmtree(temp_dir)
+
 
 
         
