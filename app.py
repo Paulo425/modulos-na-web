@@ -231,13 +231,15 @@ def listar_arquivos_gerados():
     links_html = "".join(f'<li><a href="/static/arquivos/{a.name}" download>{a.name}</a></li>' for a in arquivos)
     return f"<h2>📂 Arquivos Gerados:</h2><ul>{links_html}</ul><p><a href='/'>🔙 Voltar para o início</a></p>"
 
-@app.route('/download-zip/<filename>')
+@app.route('/download/<filename>')
 def download_zip(filename):
     caminho_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', filename)
     if os.path.exists(caminho_zip):
         return send_file(caminho_zip, as_attachment=True)
     else:
         return f"Arquivo {filename} não encontrado.", 404
+
+  
 
 @app.route('/registrar', methods=['GET', 'POST'])
 def registrar():
