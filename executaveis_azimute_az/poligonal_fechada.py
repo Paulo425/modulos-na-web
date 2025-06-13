@@ -4,6 +4,7 @@ import csv
 import os
 import re
 import glob
+import locale
 from docx import Document
 from docx.shared import Inches
 from datetime import datetime
@@ -18,11 +19,15 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
-# Configurar locale para português do Brasil
-locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # Para sistemas Linux ou Mac
-# locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')  # Para Windows, caso necessário
+try:
+    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # Para Render (Linux)
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')  # Para Windows
+    except locale.Error:
+        locale.setlocale(locale.LC_TIME, 'C')  # Fallback universal
 
-# Obter data atual formatada em português
+# Obter data atual formatada
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
 def limpar_dxf(original_path, saida_path):

@@ -35,10 +35,12 @@ getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
 # Correção definitiva do locale para Windows:
 try:
-    locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')
-except locale.Error as e:
-    print(f"Erro ao definir locale: {e}")
-    locale.setlocale(locale.LC_TIME, '')  # fallback para padrão
+    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # para Render (Linux)
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')  # para Windows
+    except locale.Error:
+        locale.setlocale(locale.LC_TIME, 'C')  # fallback neutro
 
 # Exemplo da data:
 data_atual = datetime.now().strftime("%d de %B de %Y")
