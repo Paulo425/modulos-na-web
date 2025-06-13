@@ -81,10 +81,10 @@ def montar_pacote_zip(diretorio,cidade):
                 print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
                 logger.warning(f"Incompleto: {tipo} | matrícula {matricula} | DXF={bool(arq_dxf)}, DOCX={bool(arq_docx)}, XLSX={bool(arq_excel)}")
 
-def main_compactar_arquivos(diretorio_concluido,cidade):
+def main_compactar_arquivos(diretorio_concluido,cidade_formatada):
     print(f"\n📦 Iniciando compactação no diretório: {diretorio_concluido}")
     logger.info(f"Iniciando compactação no diretório: {diretorio_concluido}")
-    montar_pacote_zip(diretorio_concluido, cidade)
+    montar_pacote_zip(diretorio_concluido, cidade_formatada)
     print("✅ Compactação finalizada")
     logger.info("Compactação finalizada")
 

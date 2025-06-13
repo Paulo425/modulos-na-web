@@ -1,6 +1,23 @@
 import os
 import glob
 import zipfile
+import re
+import logging
+from datetime import datetime
+from shutil import copyfile
+
+# Diretórios e setup de log
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+log_file = os.path.join(LOG_DIR, f"zip_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+
+# Configurar logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+logger.addHandler(file_handler)
 
 def montar_pacote_zip(diretorio, cidade_formatada):
     tipos = ["ETE", "REM", "SER", "ACE"]
