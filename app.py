@@ -335,8 +335,10 @@ def gerar_memorial_azimute_az():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
         cidade = request.form['cidade']
+        temp_dir = tempfile.mkdtemp()
+        diretorio_base = os.path.join(temp_dir, cidade.replace(" ", "_"))
+        diretorio_concluido = os.path.join(diretorio_base, 'CONCLUIDO')
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
 
