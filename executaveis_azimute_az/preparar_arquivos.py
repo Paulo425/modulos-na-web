@@ -3,9 +3,10 @@ import shutil
 import tempfile
 import logging
 import pandas as pd
-# Configura o logger para funcionar no ambiente Render
+
+# Configura o logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 def preparar_planilhas(arquivo_recebido, diretorio_preparado):
     def processar_planilha(df, coluna_codigo, identificador, diretorio_destino):
@@ -32,31 +33,34 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
 
 def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir):
     try:
-        # Criar diretórios temporários (sem cidade no nome)
-        diretorio_base = tempfile.mkdtemp()
-        diretorio_preparado = os.path.join(diretorio_base, "PREPARADO")
-        diretorio_concluido = os.path.join(diretorio_base, "CONCLUIDO")
-        os.makedirs(diretorio_preparado, exist_ok=True)
-        os.makedirs(diretorio_concluido, exist_ok=True)
+        cidade_formatada = cidade.replace(" ", "_")
 
-        # Copiar arquivos para a pasta base
-        arquivo_excel_recebido = os.path.join(diretorio_base, os.path.basename(caminho_excel))
-        arquivo_dxf_recebido = os.path.join(diretorio_base, os.path.basename(caminho_dxf))
-        shutil.copy(caminho_excel, arquivo_excel_recebido)
-        shutil.copy(caminho_dxf, arquivo_dxf_recebido)
+        TMP_DIR = tempfile.mkdtemp()
+        RECEBIDO = os.path.join(TMP_DIR, "RECEBIDO")
+        PREPARADO = os.path.join(TMP_DIR, "PREPARADO")
+        CONCLUIDO = os.path.join(TMP_DIR, "CONCLUIDO")
 
-        print(f"✅ Arquivo Excel copiado para: {arquivo_excel_recebido}")
-        print(f"✅ Arquivo DXF copiado para: {arquivo_dxf_recebido}")
+        for pasta in [RECEBIDO, PREPARADO, CONCLUIDO]:
+            os.makedirs(pasta, exist_ok=True)
 
-        # Processar planilhas (gera arquivos na pasta PREPARADO)
-        preparar_planilhas(arquivo_excel_recebido, diretorio_preparado)
+        nome_excel = os.path.basename(caminho_excel)
+        nome_dxf = os.path.basename(caminho_dxf)
+
+        destino_excel = os.path.join(RECEBIDO, nome_excel)
+        destino_dxf = os.path.join(RECEBIDO, nome_dxf)
+
+        shutil.copy(caminho_excel, destino_excel)
+        print(f"✅ Arquivo Excel copiado para: {destino_excel}")
+        shutil.copy(caminho_dxf, destino_dxf)
+        print(f"✅ Arquivo DXF copiado para: {destino_dxf}")
+
+        preparar_planilhas(destino_excel, PREPARADO)
 
         return {
-            "arquivo_excel_recebido": arquivo_excel_recebido,
-            "arquivo_dxf_recebido": arquivo_dxf_recebido,
-            "diretorio_base": diretorio_base,
-            "diretorio_preparado": diretorio_preparado,
-            "diretorio_concluido": diretorio_concluido,
+            "arquivo_excel_recebido": destino_excel,
+            "arquivo_dxf_recebido": destino_dxf,
+            "diretorio_preparado": PREPARADO,
+            "diretorio_concluido": CONCLUIDO,
             "cidade_formatada": cidade_formatada
         }
 
