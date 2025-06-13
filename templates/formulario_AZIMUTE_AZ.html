@@ -1,91 +1,77 @@
-{% extends 'base.html' %}
+@app.route('/memorial_azimute_az', methods=['GET', 'POST'])
+def gerar_memorial_azimute_az():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
 
-{% block conteudo %}
-<div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-center">
-        <h2 class="text-primary">Gerar Memorial AZIMUTE AZ</h2>
-        <div class="d-flex gap-2 align-items-center">
-            <span class="text-muted me-2">👤 {{ session['usuario'] }}</span>
-            {% if log_path %}
-            <a href="/{{ log_path }}" class="btn btn-outline-secondary" download>
-                🧾 Baixar Log da Execução
-            </a>
-            {% endif %}
-            <a href="/logout" class="btn btn-outline-danger">🔒 Logout</a>
-        </div>
-    </div>
+    if request.method == 'POST':
+        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        cidade = request.form['cidade']
+        arquivo_excel = request.files['excel']
+        arquivo_dxf = request.files['dxf']
 
-    <form method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('spinner').style.display='block'">
-        <div class="mb-3">
-            <label for="cidade" class="form-label">Cidade:</label>
-            <input type="text" class="form-control" id="cidade" name="cidade" required>
-        </div>
+        os.makedirs(diretorio, exist_ok=True)
 
-        <div class="mb-3">
-            <label for="excel" class="form-label">Arquivo Excel:</label>
-            <div class="input-group">
-                <input type="file" class="form-control" name="excel" id="excel" accept=".xlsx" required>
-                <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#infoExcel">
-                    ℹ️
-                </button>
-            </div>
-            <div class="collapse mt-1" id="infoExcel">
-                <div class="alert alert-secondary">
-                    Deve conter a aba <strong>Dados_do_Imóvel</strong> e uma aba com os confrontantes como <strong>Confrontantes_Servidao</strong>.<br>
-                    As colunas devem ser: <strong>Código</strong> e <strong>Confrontante</strong> com valores do tipo <code>V1, V2, ..., Vn</code>.
-                </div>
-            </div>
-        </div>
+        caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
+        caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
+        arquivo_excel.save(caminho_excel)
+        arquivo_dxf.save(caminho_dxf)
 
-        <div class="mb-3">
-            <label for="dxf" class="form-label">Arquivo DXF:</label>
-            <div class="input-group">
-                <input type="file" class="form-control" name="dxf" id="dxf" accept=".dxf" required>
-                <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#infoDxf">
-                    ℹ️
-                </button>
-            </div>
-            <div class="collapse mt-1" id="infoDxf">
-                <div class="alert alert-secondary">
-                    O nome deve conter o tipo e matrícula (Ex: <code>SER_Mat_12345.dxf</code>).<br>
-                    O DXF deve estar no formato 2010 e conter uma única polilinha fechada com o ponto Az inserido.
-                </div>
-            </div>
-        </div>
+        log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
+        log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
+        os.makedirs(log_dir_absoluto, exist_ok=True)
 
-        <div class="d-grid mt-4">
-            <button type="submit" class="btn btn-primary btn-lg">Executar</button>
-        </div>
-    </form>
+        log_path = os.path.join(log_dir_absoluto, log_filename)
+        log_relativo = f"static/logs/{log_filename}"
 
-    <div id="spinner" class="text-center mt-3" style="display: none;">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Processando...</span>
-        </div>
-        <p class="mt-2">Aguarde. Gerando arquivos...</p>
-    </div>
+        try:
+            processo = Popen(
+                ["python", os.path.join(BASE_DIR, "executaveis_azimute_az", "main.py"), cidade, caminho_excel, caminho_dxf],
+                stdout=PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
 
-    <hr>
+            log_lines = []
+            with open(log_path, 'w', encoding='utf-8') as log_file:
+                for linha in processo.stdout:
+                    if len(log_lines) < 60:
+                        log_file.write(linha)
+                        log_lines.append(linha)
+                    print("🖨️", linha.strip())
 
-    {% if resultado %}
-    <div class="alert alert-success mt-4 text-center">
-        {{ resultado | safe }}
-    </div>
-    {% endif %}
+            processo.wait()
 
-    {% if erro %}
-    <div class="alert alert-danger mt-4">
-        {{ erro | safe }}
-    </div>
-    {% endif %}
+            if processo.returncode == 0:
+                session['resultado'] = "✅ Processamento concluído com sucesso!"
+            else:
+                session['erro_execucao'] = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
 
-    {% if zip_download %}
-    <p class="text-muted text-center">DEBUG ZIP: {{ zip_download }}</p>
-    <div class="mt-4 text-center">
-        <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
-            📦 Baixar ZIP Gerado
-        </a>
-    </div>
-    {% endif %}
-</div>
-{% endblock %}
+        except Exception as e:
+            session['erro_execucao'] = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+
+        finally:
+            os.remove(caminho_excel)
+            os.remove(caminho_dxf)
+
+        try:
+            arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
+            if arquivos_zip:
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
+                zip_download = arquivos_zip[0]
+                origem_zip = os.path.join(diretorio, zip_download)
+                destino_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', zip_download)
+                shutil.copy(origem_zip, destino_zip)
+                session['zip_download'] = zip_download
+        except Exception as e:
+            print(f"⚠️ Erro ao localizar ou copiar arquivo ZIP: {e}")
+
+        session['log_path'] = log_relativo
+        return redirect(url_for('memoriais_azimute_az'))
+
+    # GET request - recupera dados da sessão
+    resultado = session.pop('resultado', None)
+    erro_execucao = session.pop('erro_execucao', None)
+    zip_download = session.pop('zip_download', None)
+    log_relativo = session.pop('log_path', None)
+
+    return render_template("formulario_AZIMUTE_AZ.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
