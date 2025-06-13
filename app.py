@@ -404,7 +404,6 @@ def gerar_memorial_azimute_az():
 
 
 
-
         
 @app.route('/formulario_AZIMUTE_AZ')
 def memoriais_azimute_az():
