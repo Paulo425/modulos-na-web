@@ -329,101 +329,84 @@ def download_arquivo(nome_arquivo):
 
 @app.route('/memorial_azimute_az', methods=['GET', 'POST'])
 def gerar_memorial_azimute_az():
-    from flask import request, render_template, redirect, url_for, session
+    from flask import request, render_template
     from subprocess import Popen, PIPE
     from datetime import datetime
     import os
+    import json
     import shutil
 
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    # 🔄 Se for GET, recupera as variáveis salvas na sessão
-    if request.method == 'GET':
-        resultado = session.pop('resultado', None)
-        erro_execucao = session.pop('erro_execucao', None)
-        zip_download = session.pop('zip_download', None)
-        log_relativo = session.pop('log_path', None)
+    resultado = erro_execucao = zip_download = log_relativo = None
 
-        return render_template("formulario_AZIMUTE_AZ.html",
-                               resultado=resultado,
-                               erro=erro_execucao,
-                               zip_download=zip_download,
-                               log_path=log_relativo)
+    if request.method == 'POST':
+        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        cidade = request.form['cidade']
+        arquivo_excel = request.files['excel']
+        arquivo_dxf = request.files['dxf']
 
-    # Se for POST, processa os arquivos
-    diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
-    cidade = request.form['cidade']
-    arquivo_excel = request.files['excel']
-    arquivo_dxf = request.files['dxf']
+        os.makedirs(diretorio, exist_ok=True)
 
-    os.makedirs(diretorio, exist_ok=True)
+        caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
+        caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
+        arquivo_excel.save(caminho_excel)
+        arquivo_dxf.save(caminho_dxf)
 
-    caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
-    caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
-    arquivo_excel.save(caminho_excel)
-    arquivo_dxf.save(caminho_dxf)
+        log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
+        log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
+        os.makedirs(log_dir_absoluto, exist_ok=True)
 
-    log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
-    log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
-    os.makedirs(log_dir_absoluto, exist_ok=True)
-    log_path = os.path.join(log_dir_absoluto, log_filename)
-    log_relativo = f"static/logs/{log_filename}"
+        log_path = os.path.join(log_dir_absoluto, log_filename)
+        log_relativo = f"static/logs/{log_filename}"
 
-    resultado = erro_execucao = zip_download = None
+        try:
+            processo = Popen(
+                ["python", os.path.join(BASE_DIR, "executaveis_azimute_az", "main.py"),
+                 cidade, caminho_excel, caminho_dxf],
+                stdout=PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
 
-    try:
-        processo = Popen(
-            ["python", os.path.join(BASE_DIR, "executaveis_azimute_az", "main.py"),
-             cidade, caminho_excel, caminho_dxf],
-            stdout=PIPE,
-            stderr=subprocess.STDOUT,
-            text=True
-        )
+            log_lines = []
+            with open(log_path, 'w', encoding='utf-8') as log_file:
+                for linha in processo.stdout:
+                    if len(log_lines) < 100:  # limite opcional de linhas no log
+                        log_file.write(linha)
+                        log_lines.append(linha)
+                    print("🖨️", linha.strip())
 
-        log_lines = []
-        with open(log_path, 'w', encoding='utf-8') as log_file:
-            for linha in processo.stdout:
-                if len(log_lines) < 60:
-                    log_file.write(linha)
-                    log_lines.append(linha)
-                print("🖨️", linha.strip())
+            processo.wait()
 
-        processo.wait()
+            if processo.returncode == 0:
+                resultado = "✅ Processamento concluído com sucesso!"
+            else:
+                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
 
-        if processo.returncode == 0:
-            resultado = "✅ Processamento concluído com sucesso!"
-        else:
-            erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+        except Exception as e:
+            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
-    except Exception as e:
-        erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+        finally:
+            os.remove(caminho_excel)
+            os.remove(caminho_dxf)
 
-    finally:
-        os.remove(caminho_excel)
-        os.remove(caminho_dxf)
+        try:
+            arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
+            if arquivos_zip:
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
+                zip_download = arquivos_zip[0]
 
-    try:
-        arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
-        if arquivos_zip:
-            arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
-            zip_download = arquivos_zip[0]
+                origem_zip = os.path.join(diretorio, zip_download)
+                destino_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', zip_download)
+                shutil.copy(origem_zip, destino_zip)
 
-            # Copia o ZIP para a pasta CONCLUIDO (por segurança)
-            origem_zip = os.path.join(diretorio, zip_download)
-            destino_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', zip_download)
-            shutil.copy(origem_zip, destino_zip)
+        except Exception as e:
+            print(f"⚠️ Erro ao localizar ou copiar arquivo ZIP: {e}")
 
-    except Exception as e:
-        print(f"⚠️ Erro ao localizar ou copiar arquivo ZIP: {e}")
+    return render_template("formulario_AZIMUTE_AZ.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
 
-    # 💾 Armazena os resultados na sessão e redireciona para o GET
-    session['resultado'] = resultado
-    session['erro_execucao'] = erro_execucao
-    session['zip_download'] = zip_download
-    session['log_path'] = log_relativo
-
-    return redirect(url_for('gerar_memorial_azimute_az'))
 
 
 @app.route('/memoriais-azimute-p1-p2')
