@@ -329,17 +329,8 @@ def download_arquivo(nome_arquivo):
 
 @app.route('/memorial_azimute_az', methods=['GET', 'POST'])
 def gerar_memorial_azimute_az():
-    from flask import request, render_template
-    from subprocess import Popen, PIPE
-    from datetime import datetime
-    import os
-    import json
-    import shutil
-
     if 'usuario' not in session:
         return redirect(url_for('login'))
-
-    resultado = erro_execucao = zip_download = log_relativo = None
 
     if request.method == 'POST':
         diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
@@ -373,7 +364,7 @@ def gerar_memorial_azimute_az():
             log_lines = []
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
-                    if len(log_lines) < 100:  # limite opcional de linhas no log
+                    if len(log_lines) < 60:
                         log_file.write(linha)
                         log_lines.append(linha)
                     print("🖨️", linha.strip())
@@ -381,12 +372,12 @@ def gerar_memorial_azimute_az():
             processo.wait()
 
             if processo.returncode == 0:
-                resultado = "✅ Processamento concluído com sucesso!"
+                session['resultado'] = "✅ Processamento concluído com sucesso!"
             else:
-                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+                session['erro_execucao'] = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
 
         except Exception as e:
-            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+            session['erro_execucao'] = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
         finally:
             os.remove(caminho_excel)
@@ -402,10 +393,25 @@ def gerar_memorial_azimute_az():
                 destino_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', zip_download)
                 shutil.copy(origem_zip, destino_zip)
 
+                session['zip_download'] = zip_download
         except Exception as e:
             print(f"⚠️ Erro ao localizar ou copiar arquivo ZIP: {e}")
 
-    return render_template("formulario_AZIMUTE_AZ.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
+        session['log_path'] = log_relativo
+        return redirect(url_for('gerar_memorial_azimute_az'))
+
+    # GET: carrega os dados armazenados em sessão
+    resultado = session.pop('resultado', None)
+    erro_execucao = session.pop('erro_execucao', None)
+    zip_download = session.pop('zip_download', None)
+    log_relativo = session.pop('log_path', None)
+
+    return render_template("formulario_AZIMUTE_AZ.html",
+                           resultado=resultado,
+                           erro=erro_execucao,
+                           zip_download=zip_download,
+                           log_path=log_relativo)
+
 
 
 
