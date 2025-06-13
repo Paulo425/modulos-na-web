@@ -73,6 +73,16 @@
     </div>
     {% endif %}
 
+    {% if zip_download %}
+        <p style="text-align: center; color: darkgreen;">
+            🧪 DEBUG: Nome do ZIP → <strong>{{ zip_download }}</strong>
+        </p>
+    {% else %}
+        <p style="text-align: center; color: red;">
+            ❌ DEBUG: Nenhum ZIP detectado
+        </p>
+    {% endif %}
+
     {% if erro %}
     <div class="alert alert-danger mt-4">
         {{ erro | safe }}
