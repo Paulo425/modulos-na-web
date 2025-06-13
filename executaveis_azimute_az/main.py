@@ -56,7 +56,7 @@ def main():
         caminho_template
     )
 
-    main_compactar_arquivos(variaveis["diretorio_concluido"])
+    main_compactar_arquivos(variaveis["diretorio_concluido"], cidade_formatada)
 
 if __name__ == "__main__":
     main()
