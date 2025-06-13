@@ -332,31 +332,34 @@ def gerar_memorial_azimute_az():
     import subprocess
     import tempfile
     import shutil
+    import os
+    from flask import send_file
 
     # Criar diretório temporário
     temp_dir = tempfile.mkdtemp()
 
     try:
-        # Caminho absoluto para o script main.py do AZIMUTE_AZ
-        caminho_main = os.path.join(os.getcwd(), 'main.py')  # ajuste se estiver em subpasta
+        # Caminho absoluto para o main.py específico do AZIMUTE_AZ
+        caminho_main = os.path.join(os.getcwd(), 'executaveis_azimute_az', 'main.py')
 
-        # Executar o script principal como subprocesso com diretório temporário
+        # Executar o script principal como subprocesso com o diretório temporário
         subprocess.run(["python", caminho_main], cwd=temp_dir, check=True)
 
-        # Procurar o arquivo .zip dentro do diretório temporário
+        # Procurar o arquivo .zip gerado no diretório temporário
         zip_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".zip")]
         if not zip_files:
-            return "Nenhum arquivo ZIP foi gerado.", 400
+            return "Nenhum arquivo ZIP foi gerado durante o processo.", 400
 
         zip_path = os.path.join(temp_dir, zip_files[0])
         return send_file(zip_path, as_attachment=True)
 
     except subprocess.CalledProcessError as e:
-        return f"Ocorreu um erro ao gerar o memorial: {str(e)}", 500
+        return f"Erro na execução do processo: {str(e)}", 500
     except Exception as e:
         return f"Erro inesperado: {str(e)}", 500
     finally:
         shutil.rmtree(temp_dir)
+
         
 @app.route('/formulario_AZIMUTE_AZ')
 def memoriais_azimute_az():
