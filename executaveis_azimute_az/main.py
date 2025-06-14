@@ -5,6 +5,7 @@ from datetime import datetime
 from preparar_arquivos import preparar_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
+import shutil
 
 # ✅ 1. Caminho base
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
