@@ -10,7 +10,7 @@ from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
 
 # ✅ 1. Caminho base
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # ✅ 2. Pastas públicas
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')

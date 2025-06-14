@@ -88,8 +88,9 @@
         {{ erro | safe }}
     </div>
     {% endif %}
-
-    <p class="text-muted text-center">Arquivo ZIP: {{ zip_download }}</p>
+    <p class="text-center text-primary">
+        🔍 Valor de zip_download: <strong>{{ zip_download }}</strong>
+    </p>
 
     {% if zip_download %}
     <div class="mt-4 text-center">

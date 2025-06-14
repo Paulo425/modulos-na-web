@@ -341,9 +341,11 @@ def gerar_memorial_azimute_az():
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
         diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        diretorio_final = os.path.join(BASE_DIR, 'static', 'arquivos')
         os.makedirs(diretorio_tmp, exist_ok=True)
+        os.makedirs(diretorio_final, exist_ok=True)
 
-
+        # Salva os arquivos recebidos
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
         caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
@@ -351,10 +353,10 @@ def gerar_memorial_azimute_az():
         arquivo_excel.save(caminho_excel)
         arquivo_dxf.save(caminho_dxf)
 
+        # Log da execução
         log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
-        log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
-        os.makedirs(log_dir_absoluto, exist_ok=True)
-        log_path = os.path.join(log_dir_absoluto, log_filename)
+        log_path = os.path.join(BASE_DIR, "static", "logs", log_filename)
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
         log_relativo = f"static/logs/{log_filename}"
 
         try:
@@ -369,17 +371,13 @@ def gerar_memorial_azimute_az():
             log_lines = []
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
-                    if len(log_lines) < 500:
-                        log_file.write(linha)
-                        log_lines.append(linha)
+                    log_file.write(linha)
+                    log_lines.append(linha)
                     print("🖨️", linha.strip())
 
             processo.wait()
-
-            if processo.returncode == 0:
-                resultado = "✅ Processamento concluído com sucesso!"
-            else:
-                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+            resultado = "✅ Processamento concluído com sucesso!" if processo.returncode == 0 \
+                        else f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
@@ -388,7 +386,7 @@ def gerar_memorial_azimute_az():
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
 
-        # ✅ Esse try DEVE estar FORA do finally
+        # Localiza o ZIP e copia para static/arquivos
         try:
             arquivos_zip = [f for f in os.listdir(diretorio_tmp) if f.lower().endswith('.zip')]
             if arquivos_zip:
@@ -396,10 +394,13 @@ def gerar_memorial_azimute_az():
                 zip_download = arquivos_zip[0]
 
                 origem = os.path.join(diretorio_tmp, zip_download)
-                destino = os.path.join(BASE_DIR, 'static', 'arquivos', zip_download)
-                shutil.copy2(origem, destino)
+                destino = os.path.join(diretorio_final, zip_download)
 
-                print(f"📦 ZIP detectado e copiado: {zip_download}")
+                if not os.path.exists(destino):
+                    with open(origem, 'rb') as f_in, open(destino, 'wb') as f_out:
+                        f_out.write(f_in.read())
+
+                print(f"📦 ZIP detectado: {zip_download}")
         except Exception as e:
             print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
 
