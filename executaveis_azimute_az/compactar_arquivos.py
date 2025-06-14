@@ -19,64 +19,52 @@ file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
 logger.addHandler(file_handler)
 
-def montar_pacote_zip(diretorio, cidade):
-    print("\n📦 [AZIMUTE_AZ] Iniciando montagem dos pacotes ZIP")
-    logger.info("Iniciando montagem dos pacotes ZIP")
+def montar_pacote_zip(diretorio, cidade_formatada):
+    print(f"\n📦 Compactando arquivos no diretório: {diretorio}")
+    logger.info(f"[AZIMUTE_AZ] Iniciando montagem dos pacotes ZIP")
 
     tipos = ["ETE", "REM", "SER", "ACE"]
-    matricula_regex = re.compile(r"_([0-9]+\.[0-9]+)")
 
     for tipo in tipos:
         print(f"🔍 Buscando arquivos do tipo: {tipo}")
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
-        arquivos_dxf = glob.glob(os.path.join(diretorio, f"{tipo}_Memorial_*.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"{tipo}_Memorial_MAT_*.docx"))
-        arquivos_excel = glob.glob(os.path.join(diretorio, f"{tipo}_Memorial_*.xlsx"))
+        padrao_dxf = os.path.join(diretorio, f"{tipo}_Memorial_*.dxf")
+        padrao_docx = os.path.join(diretorio, f"{tipo}_Memorial_MAT_*.docx")
+        padrao_excel = os.path.join(diretorio, f"{tipo}_Memorial_*.xlsx")
 
-        print(f"   - DXF encontrados: {len(arquivos_dxf)}")
-        print(f"   - DOCX encontrados: {len(arquivos_docx)}")
-        print(f"   - XLSX encontrados: {len(arquivos_excel)}")
-        logger.info(f"DXF={len(arquivos_dxf)} | DOCX={len(arquivos_docx)} | XLSX={len(arquivos_excel)}")
+        arquivo_dxf = glob.glob(padrao_dxf)
+        arquivo_docx = glob.glob(padrao_docx)
+        arquivo_excel = glob.glob(padrao_excel)
 
-        # Extrair todas as matrículas encontradas
-        matriculas = set()
-        for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
-            match = matricula_regex.search(arq)
-            if match:
-                matriculas.add(match.group(1))
+        print(f"   - DXF encontrados: {len(arquivo_dxf)}")
+        print(f"   - DOCX encontrados: {len(arquivo_docx)}")
+        print(f"   - XLSX encontrados: {len(arquivo_excel)}")
 
-        for matricula in matriculas:
-            print(f"\n🔢 Processando matrícula: {matricula}")
-            logger.info(f"Processando matrícula: {matricula}")
+        if arquivo_dxf and arquivo_docx and arquivo_excel:
+            base_nome = os.path.splitext(os.path.basename(arquivo_dxf[0]))[0]
+            partes = base_nome.split("_", 1)
+            sufixo_identificador = partes[1] if len(partes) > 1 else partes[0]
 
-            arq_dxf = [a for a in arquivos_dxf if matricula in a]
-            arq_docx = [a for a in arquivos_docx if matricula in a]
-            arq_excel = [a for a in arquivos_excel if matricula in a]
+            nome_zip = f"{cidade_formatada}_{tipo}_{sufixo_identificador}.zip"
+            caminho_zip = os.path.join(diretorio, nome_zip)
 
-            if arq_dxf and arq_docx and arq_excel:
-                cidade_sanitizada = cidade.replace(" ", "_")
-                nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_Memorial_MAT_{matricula}.zip")
+            try:
+                with zipfile.ZipFile(caminho_zip, 'w') as zipf:
+                    zipf.write(arquivo_dxf[0], os.path.basename(arquivo_dxf[0]))
+                    zipf.write(arquivo_docx[0], os.path.basename(arquivo_docx[0]))
+                    zipf.write(arquivo_excel[0], os.path.basename(arquivo_excel[0]))
 
-                STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'arquivos')
-                os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
-                caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
+                print(f"🗜️ ZIP salvo em: {caminho_zip}")
+                logger.info(f"ZIP criado: {caminho_zip}")
 
-                try:
-                    with zipfile.ZipFile(nome_zip, 'w') as zipf:
-                        zipf.write(arq_dxf[0], os.path.basename(arq_dxf[0]))
-                        zipf.write(arq_docx[0], os.path.basename(arq_docx[0]))
-                        zipf.write(arq_excel[0], os.path.basename(arq_excel[0]))
+            except Exception as e:
+                print(f"❌ Erro ao criar ZIP: {e}")
+                logger.error(f"Erro ao criar ZIP {caminho_zip}: {e}")
+        else:
+            print(f"⚠️ Arquivos incompletos ou não encontrados para o tipo {tipo}")
+            logger.warning(f"Incompleto: {tipo} - DXF={bool(arquivo_dxf)}, DOCX={bool(arquivo_docx)}, XLSX={bool(arquivo_excel)}")
 
-                    copyfile(nome_zip, caminho_debug_zip)
-                    print(f"✅ ZIP criado: {nome_zip}")
-                    logger.info(f"ZIP criado e copiado para: {caminho_debug_zip}")
-                except Exception as e:
-                    print(f"❌ Erro ao criar ZIP: {e}")
-                    logger.error(f"Erro ao criar ZIP: {e}")
-            else:
-                print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
-                logger.warning(f"Incompleto: {tipo}, matrícula {matricula}")
 
 def main_compactar_arquivos(diretorio_concluido, cidade):
     print(f"\n📦 Compactando arquivos no diretório: {diretorio_concluido}")
