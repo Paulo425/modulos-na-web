@@ -244,8 +244,6 @@ def download_zip(filename):
     return send_from_directory(caminho, filename, as_attachment=True)
 
 
-  
-
 @app.route('/registrar', methods=['GET', 'POST'])
 def registrar():
     mensagem = erro = None
@@ -343,7 +341,6 @@ def gerar_memorial_azimute_az():
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
         diretorio = os.path.join(BASE_DIR, 'static', 'arquivos')
-
         os.makedirs(diretorio, exist_ok=True)
 
         arquivo_excel = request.files['excel']
@@ -390,22 +387,19 @@ def gerar_memorial_azimute_az():
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
 
+        # ✅ Esse try DEVE estar FORA do finally
         try:
             arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
             if arquivos_zip:
                 arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
                 zip_download = arquivos_zip[0]
-                print(f"🧪 Verificando ZIP na pasta: {diretorio}")
-                print(f"🧪 Encontrado ZIP: {zip_download}")
-                print(f"🧪 Destino do ZIP: {destino}")
 
-                # ✅ Cópia para a pasta tmp/CONCLUIDO onde o botão de download acessa
                 origem = os.path.join(diretorio, zip_download)
-                destino = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', zip_download)
-                os.makedirs(os.path.dirname(destino), exist_ok=True)
-                if not os.path.exists(destino):
-                    shutil.copy2(origem, destino)
-                    print(f"🗜️ ZIP copiado para pasta pública: {destino}")
+                destino = os.path.join(BASE_DIR, 'static', 'arquivos', zip_download)
+                shutil.copy2(origem, destino)
+
+                print(f"🧪 ZIP detectado: {zip_download}")
+                print(f"📦 ZIP copiado para pasta pública: {destino}")
         except Exception as e:
             print(f"⚠️ Erro ao localizar ou copiar ZIP: {e}")
             print(f"🧪 [DEBUG zip_download]: {zip_download}")
@@ -415,6 +409,7 @@ def gerar_memorial_azimute_az():
                            erro=erro_execucao,
                            zip_download=zip_download,
                            log_path=log_relativo)
+
 
 
 
