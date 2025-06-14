@@ -388,18 +388,13 @@ def gerar_memorial_azimute_az():
 
         # 🔍 Verificação do ZIP após o processamento
         try:
-            arquivos_zip = [f for f in os.listdir(diretorio_tmp) if f.lower().endswith('.zip')]
+            arquivos_zip = [f for f in os.listdir(os.path.join(BASE_DIR, 'static', 'arquivos')) if f.lower().endswith('.zip')]
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio_tmp, x)), reverse=True)
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(BASE_DIR, 'static', 'arquivos', x)), reverse=True)
                 zip_download = arquivos_zip[0]
-                origem = os.path.join(diretorio_tmp, zip_download)
-                destino = os.path.join(BASE_DIR, 'static', 'arquivos', zip_download)
-                shutil.copy2(origem, destino)
-                print(f"📦 ZIP detectado e copiado: {zip_download}")
-            else:
-                print("⚠️ Nenhum ZIP encontrado no diretório temporário.")
+                print(f"📦 ZIP detectado para download: {zip_download}")
         except Exception as e:
-            print(f"❌ Falha ao detectar ou copiar ZIP: {e}")
+            print(f"⚠️ Erro ao localizar/capturar ZIP: {e}")
             zip_download = None
 
     print(f"🔎 Valor final de zip_download: {zip_download}")
