@@ -9,10 +9,16 @@
 
     <div class="d-grid gap-3 col-6 mx-auto mt-4">
         <!-- Módulo DECOPA -->
-        <a href="{{ url_for('memoriais_descritivos') }}" class="btn {% if request.path == '/memoriais-descritivos' %}btn-primary{% else %}btn-secondary{% endif %}">MEMORIAS DECOPA</a>
+        <a href="{{ url_for('memoriais_descritivos') }}"
+           class="btn {% if request.path.startswith('/memoriais-descritivos') %}btn-primary{% else %}btn-secondary{% endif %}">
+            MEMORIAS DECOPA
+        </a>
 
         <!-- Módulo AZIMUTE_AZ -->
-        <a href="{{ url_for('gerar_memorial_azimute_az') }}" class="btn {% if request.path == '/formulario_AZIMUTE_AZ' %}btn-primary{% else %}btn-secondary{% endif %}">MEMORIAIS_AZIMUTE_AZ</a>
+        <a href="{{ url_for('gerar_memorial_azimute_az') }}"
+           class="btn {% if request.path.startswith('/memorial_azimute_az') %}btn-primary{% else %}btn-secondary{% endif %}">
+            MEMORIAIS_AZIMUTE_AZ
+        </a>
 
         <!-- Módulos ainda não implementados (fixos em cinza) -->
         <a href="{{ url_for('memoriais_azimute_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_P1_P2</a>
