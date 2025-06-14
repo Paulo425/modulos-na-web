@@ -89,6 +89,8 @@
     </div>
     {% endif %}
 
+    <p class="text-muted text-center">Arquivo ZIP: {{ zip_download }}</p>
+
     {% if zip_download %}
     <div class="mt-4 text-center">
         <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
