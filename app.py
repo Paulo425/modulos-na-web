@@ -392,6 +392,9 @@ def gerar_memorial_azimute_az():
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+            print(f"🔍 DEBUG FINAL - zip_download = {zip_download}")
+            logging.info(f"🔍 DEBUG FINAL - zip_download = {zip_download}")
+            zip_download = "Rio_de_Janeiro_SER_Memorial_Transcrição 43.192.zip"
 
     # ✅ Aqui é o RETORNO FINAL (sempre presente, mesmo em GET ou erro)
     return render_template("formulario_AZIMUTE_AZ.html",
