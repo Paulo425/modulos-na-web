@@ -64,20 +64,26 @@ def main():
     print("✅ [main.py] Compactação finalizada com sucesso!")
 
     # 🔁 Copiar ZIPs para static/arquivos e exibir debug
+    # ✅ Copiar todos os ZIPs que realmente existem
     try:
-        zip_encontrado = False
-        for arquivo in os.listdir(variaveis["diretorio_concluido"]):
+        zips_copiados = 0
+        pasta_origem = variaveis["diretorio_concluido"]
+        pasta_destino = CAMINHO_PUBLICO
+        os.makedirs(pasta_destino, exist_ok=True)
+
+        for arquivo in os.listdir(pasta_origem):
             if arquivo.lower().endswith(".zip"):
-                origem = os.path.join(variaveis["diretorio_concluido"], arquivo)
-                destino = os.path.join(CAMINHO_PUBLICO, arquivo)
-                os.makedirs(os.path.dirname(destino), exist_ok=True)
+                origem = os.path.join(pasta_origem, arquivo)
+                destino = os.path.join(pasta_destino, arquivo)
                 shutil.copy2(origem, destino)
-                print(f"📦 ZIP copiado para pasta pública: {destino}")
-                zip_encontrado = True
-        if not zip_encontrado:
-            print("⚠️ Nenhum ZIP foi copiado para pasta pública.")
+                print(f"📦 ZIP copiado: {arquivo}")
+                zips_copiados += 1
+
+        if zips_copiados == 0:
+            print("⚠️ Nenhum ZIP encontrado para copiar.")
     except Exception as e:
-        print(f"❌ Erro ao copiar ZIP: {e}")
+        print(f"❌ Erro ao copiar ZIPs: {e}")
+
 
 
 
