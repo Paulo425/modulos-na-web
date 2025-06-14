@@ -8,6 +8,9 @@ import tempfile
 from pathlib import Path
 from subprocess import Popen, PIPE
 
+CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
+os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
+
 
 app = Flask(__name__)
 app.secret_key = 'chave_super_secreta'
@@ -337,7 +340,8 @@ def gerar_memorial_azimute_az():
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
-        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        diretorio = os.path.join(BASE_DIR, 'static', 'arquivos')
+
         os.makedirs(diretorio, exist_ok=True)
 
         arquivo_excel = request.files['excel']

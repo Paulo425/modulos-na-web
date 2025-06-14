@@ -59,6 +59,20 @@ def main():
     )
 
     main_compactar_arquivos(variaveis["diretorio_concluido"], variaveis["cidade_formatada"])
+    print("✅ [main.py] Compactação finalizada com sucesso!")
+
+    # 🔁 Copiar ZIPs para static/arquivos
+    try:
+        for arquivo in os.listdir(variaveis["diretorio_concluido"]):
+            if arquivo.lower().endswith(".zip"):
+                origem = os.path.join(variaveis["diretorio_concluido"], arquivo)
+                destino = os.path.join(BASE_DIR, "static", "arquivos", arquivo)
+                os.makedirs(os.path.dirname(destino), exist_ok=True)
+                shutil.copy2(origem, destino)
+                print(f"📦 ZIP copiado para pasta pública: {destino}")
+    except Exception as e:
+        print(f"⚠️ Erro ao copiar ZIP: {e}")
+
 
 if __name__ == "__main__":
     main()
