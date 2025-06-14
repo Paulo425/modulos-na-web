@@ -240,11 +240,9 @@ def listar_arquivos_gerados():
 
 @app.route('/download/<filename>')
 def download_zip(filename):
-    caminho_zip = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', filename)
-    if os.path.exists(caminho_zip):
-        return send_file(caminho_zip, as_attachment=True)
-    else:
-        return f"Arquivo {filename} não encontrado.", 404
+    caminho = os.path.join(BASE_DIR, 'static', 'arquivos')
+    return send_from_directory(caminho, filename, as_attachment=True)
+
 
   
 
