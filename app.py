@@ -387,28 +387,30 @@ def gerar_memorial_azimute_az():
             os.remove(caminho_dxf)
 
         # Localiza o ZIP e copia para static/arquivos
+        # ✅ Etapa final – verificação de ZIP gerado
+        zip_download = None
         try:
-            arquivos_zip = [f for f in os.listdir(diretorio_tmp) if f.lower().endswith('.zip')]
+            caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos')
+            arquivos_zip = [f for f in os.listdir(caminho_zip) if f.lower().endswith('.zip')]
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio_tmp, x)), reverse=True)
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(caminho_zip, x)), reverse=True)
                 zip_download = arquivos_zip[0]
-
-                origem = os.path.join(diretorio_tmp, zip_download)
-                destino = os.path.join(diretorio_final, zip_download)
-
-                if not os.path.exists(destino):
-                    with open(origem, 'rb') as f_in, open(destino, 'wb') as f_out:
-                        f_out.write(f_in.read())
-
-                print(f"📦 ZIP detectado: {zip_download}")
+                print(f"✅ Último ZIP encontrado em static/arquivos/: {zip_download}")
+            else:
+                print("⚠️ Nenhum ZIP encontrado em static/arquivos/")
         except Exception as e:
-            print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
+            print(f"⚠️ Erro ao localizar ZIP na pasta pública: {e}")
 
-    return render_template("formulario_AZIMUTE_AZ.html",
-                           resultado=resultado,
-                           erro=erro_execucao,
-                           zip_download=zip_download,
-                           log_path=log_relativo)
+        # ✅ Log para garantir que está indo ao HTML
+        print(f"📢 Enviando zip_download para o template: {zip_download}")
+
+        # ✅ Renderiza a página com o botão de download se o ZIP existir
+        return render_template("formulario_AZIMUTE_AZ.html",
+                               resultado=resultado,
+                               erro=erro_execucao,
+                               zip_download=zip_download,
+                               log_path=log_relativo)
+
 
 
 
