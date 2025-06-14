@@ -389,6 +389,9 @@ def gerar_memorial_azimute_az():
             if arquivos_zip:
                 arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
                 zip_download = arquivos_zip[0]
+                print(f"🧪 Verificando ZIP na pasta: {diretorio}")
+                print(f"🧪 Encontrado ZIP: {zip_download}")
+                print(f"🧪 Destino do ZIP: {destino}")
 
                 # ✅ Cópia para a pasta tmp/CONCLUIDO onde o botão de download acessa
                 origem = os.path.join(diretorio, zip_download)
