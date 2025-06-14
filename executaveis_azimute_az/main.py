@@ -60,20 +60,25 @@ def main():
         caminho_template
     )
 
-    main_compactar_arquivos(variaveis["diretorio_concluido"], cidade)
+        main_compactar_arquivos(variaveis["diretorio_concluido"], cidade_formatada)
     print("✅ [main.py] Compactação finalizada com sucesso!")
 
-    # 🔁 Copiar ZIPs para static/arquivos
+    # 🔁 Copiar ZIPs para static/arquivos e exibir debug
     try:
+        zip_encontrado = False
         for arquivo in os.listdir(variaveis["diretorio_concluido"]):
             if arquivo.lower().endswith(".zip"):
                 origem = os.path.join(variaveis["diretorio_concluido"], arquivo)
-                destino = os.path.join(BASE_DIR, "static", "arquivos", arquivo)
+                destino = os.path.join(CAMINHO_PUBLICO, arquivo)
                 os.makedirs(os.path.dirname(destino), exist_ok=True)
                 shutil.copy2(origem, destino)
                 print(f"📦 ZIP copiado para pasta pública: {destino}")
+                zip_encontrado = True
+        if not zip_encontrado:
+            print("⚠️ Nenhum ZIP foi copiado para pasta pública.")
     except Exception as e:
-        print(f"⚠️ Erro ao copiar ZIP: {e}")
+        print(f"❌ Erro ao copiar ZIP: {e}")
+
 
 
 if __name__ == "__main__":

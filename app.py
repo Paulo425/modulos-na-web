@@ -388,16 +388,17 @@ def gerar_memorial_azimute_az():
 
         # 🔍 Verificação do ZIP após o processamento
         try:
-            arquivos_zip = [f for f in os.listdir(os.path.join(BASE_DIR, 'static', 'arquivos')) if f.lower().endswith('.zip')]
+            zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
+            arquivos_zip = [f for f in os.listdir(zip_dir) if f.lower().endswith('.zip')]
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(BASE_DIR, 'static', 'arquivos', x)), reverse=True)
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(zip_dir, x)), reverse=True)
                 zip_download = arquivos_zip[0]
-                print(f"📦 ZIP detectado para download: {zip_download}")
+                print(f"✅ ZIP disponível para download: {zip_download}")
+            else:
+                print("⚠️ Nenhum ZIP encontrado no diretório público.")
         except Exception as e:
-            print(f"⚠️ Erro ao localizar/capturar ZIP: {e}")
+            print(f"❌ Erro ao verificar ZIP: {e}")
             zip_download = None
-
-    print(f"🔎 Valor final de zip_download: {zip_download}")
     return render_template("formulario_AZIMUTE_AZ.html",
                            resultado=resultado,
                            erro=erro_execucao,
