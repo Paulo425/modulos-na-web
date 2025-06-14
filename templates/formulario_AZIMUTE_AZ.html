@@ -72,7 +72,7 @@
         {{ resultado | safe }}
     </div>
     {% endif %}
-
+    {#
     {% if zip_download %}
         <p style="text-align: center; color: darkgreen;">
             🧪 DEBUG: Nome do ZIP → <strong>{{ zip_download }}</strong>
@@ -82,7 +82,7 @@
             ❌ DEBUG: Nenhum ZIP detectado
         </p>
     {% endif %}
-
+    #}
     {% if erro %}
     <div class="alert alert-danger mt-4">
         {{ erro | safe }}
@@ -91,10 +91,14 @@
 
     {% if zip_download %}
     <div class="mt-4 text-center">
-        <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
+        <a href="{{ url_for('static', filename='arquivos/' ~ zip_download) }}" class="btn btn-success btn-lg">
             📦 Baixar ZIP Gerado
         </a>
     </div>
-    {% endif %}
+{% endif %}
+
 </div>
 {% endblock %}
+
+
+
