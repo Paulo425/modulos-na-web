@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from subprocess import Popen, PIPE
-
+import shutil
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
