@@ -339,27 +339,23 @@ def gerar_memorial_azimute_az():
     resultado = erro_execucao = zip_download = log_relativo = None
 
     if request.method == 'POST':
-        cidade = request.form['cidade'].strip()
-        diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
-        diretorio_final = os.path.join(BASE_DIR, 'static', 'arquivos')
-        os.makedirs(diretorio_tmp, exist_ok=True)
-        os.makedirs(diretorio_final, exist_ok=True)
-
-        # Salva os arquivos recebidos
-        arquivo_excel = request.files['excel']
-        arquivo_dxf = request.files['dxf']
-        caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
-        caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
-        arquivo_excel.save(caminho_excel)
-        arquivo_dxf.save(caminho_dxf)
-
-        # Log da execução
-        log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
-        log_path = os.path.join(BASE_DIR, "static", "logs", log_filename)
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
-        log_relativo = f"static/logs/{log_filename}"
-
         try:
+            cidade = request.form['cidade'].strip()
+            diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+            os.makedirs(diretorio_tmp, exist_ok=True)
+
+            arquivo_excel = request.files['excel']
+            arquivo_dxf = request.files['dxf']
+            caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
+            caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
+            arquivo_excel.save(caminho_excel)
+            arquivo_dxf.save(caminho_dxf)
+
+            # Criação do log
+            log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
+            log_path = os.path.join(BASE_DIR, "static", "logs", log_filename)
+            log_relativo = f"static/logs/{log_filename}"
+
             processo = Popen(
                 ["python", os.path.join(BASE_DIR, "executaveis_azimute_az", "main.py"),
                  cidade, caminho_excel, caminho_dxf],
@@ -371,46 +367,38 @@ def gerar_memorial_azimute_az():
             log_lines = []
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
-                    log_file.write(linha)
-                    log_lines.append(linha)
+                    if len(log_lines) < 500:
+                        log_file.write(linha)
+                        log_lines.append(linha)
                     print("🖨️", linha.strip())
 
             processo.wait()
-            resultado = "✅ Processamento concluído com sucesso!" if processo.returncode == 0 \
-                        else f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+
+            if processo.returncode == 0:
+                resultado = "✅ Processamento concluído com sucesso!"
+            else:
+                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+
+            # Verifica ZIP
+            arquivos_zip = [f for f in os.listdir(diretorio_tmp) if f.lower().endswith('.zip')]
+            if arquivos_zip:
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio_tmp, x)), reverse=True)
+                zip_download = arquivos_zip[0]
+
+                origem = os.path.join(diretorio_tmp, zip_download)
+                destino = os.path.join(BASE_DIR, 'static', 'arquivos', zip_download)
+                os.makedirs(os.path.dirname(destino), exist_ok=True)
+                shutil.copy2(origem, destino)
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
-        finally:
-            os.remove(caminho_excel)
-            os.remove(caminho_dxf)
-
-        # Localiza o ZIP e copia para static/arquivos
-        # ✅ Etapa final – verificação de ZIP gerado
-        zip_download = None
-        try:
-            caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(caminho_zip) if f.lower().endswith('.zip')]
-            if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(caminho_zip, x)), reverse=True)
-                zip_download = arquivos_zip[0]
-                print(f"✅ Último ZIP encontrado em static/arquivos/: {zip_download}")
-            else:
-                print("⚠️ Nenhum ZIP encontrado em static/arquivos/")
-        except Exception as e:
-            print(f"⚠️ Erro ao localizar ZIP na pasta pública: {e}")
-
-        # ✅ Log para garantir que está indo ao HTML
-        print(f"📢 Enviando zip_download para o template: {zip_download}")
-
-        # ✅ Renderiza a página com o botão de download se o ZIP existir
-        return render_template("formulario_AZIMUTE_AZ.html",
-                               resultado=resultado,
-                               erro=erro_execucao,
-                               zip_download=zip_download,
-                               log_path=log_relativo)
-
+    # ✅ Aqui é o RETORNO FINAL (sempre presente, mesmo em GET ou erro)
+    return render_template("formulario_AZIMUTE_AZ.html",
+                           resultado=resultado,
+                           erro=erro_execucao,
+                           zip_download=zip_download,
+                           log_path=log_relativo)
 
 
 
