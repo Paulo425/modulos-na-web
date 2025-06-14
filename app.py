@@ -8,8 +8,12 @@ import tempfile
 from pathlib import Path
 from subprocess import Popen, PIPE
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
-os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
+os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
+
 
 
 app = Flask(__name__)
