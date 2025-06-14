@@ -340,8 +340,9 @@ def gerar_memorial_azimute_az():
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
-        diretorio = os.path.join(BASE_DIR, 'static', 'arquivos')
-        os.makedirs(diretorio, exist_ok=True)
+        diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        os.makedirs(diretorio_tmp, exist_ok=True)
+
 
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
@@ -368,7 +369,7 @@ def gerar_memorial_azimute_az():
             log_lines = []
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
-                    if len(log_lines) < 100:
+                    if len(log_lines) < 500:
                         log_file.write(linha)
                         log_lines.append(linha)
                     print("🖨️", linha.strip())
@@ -389,20 +390,18 @@ def gerar_memorial_azimute_az():
 
         # ✅ Esse try DEVE estar FORA do finally
         try:
-            arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
+            arquivos_zip = [f for f in os.listdir(diretorio_tmp) if f.lower().endswith('.zip')]
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio_tmp, x)), reverse=True)
                 zip_download = arquivos_zip[0]
 
-                origem = os.path.join(diretorio, zip_download)
+                origem = os.path.join(diretorio_tmp, zip_download)
                 destino = os.path.join(BASE_DIR, 'static', 'arquivos', zip_download)
                 shutil.copy2(origem, destino)
 
-                print(f"🧪 ZIP detectado: {zip_download}")
-                print(f"📦 ZIP copiado para pasta pública: {destino}")
+                print(f"📦 ZIP detectado e copiado: {zip_download}")
         except Exception as e:
-            print(f"⚠️ Erro ao localizar ou copiar ZIP: {e}")
-            print(f"🧪 [DEBUG zip_download]: {zip_download}")
+            print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
 
     return render_template("formulario_AZIMUTE_AZ.html",
                            resultado=resultado,

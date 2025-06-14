@@ -90,12 +90,15 @@
     {% endif %}
 
     {% if zip_download %}
+    <p class="text-muted text-center">🔎 DEBUG ZIP: {{ zip_download }}</p>
     <div class="mt-4 text-center">
         <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
             📦 Baixar ZIP Gerado
         </a>
     </div>
-    {% endif %} 
+{% else %}
+    <p class="text-danger text-center">⚠️ Nenhum ZIP detectado para download.</p>
+{% endif %}
 
 
 </div>
