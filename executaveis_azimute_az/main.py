@@ -60,7 +60,7 @@ def main():
         caminho_template
     )
 
-    main_compactar_arquivos(variaveis["diretorio_concluido"], variaveis["cidade_formatada"])
+    main_compactar_arquivos(variaveis["diretorio_concluido"], cidade)
     print("✅ [main.py] Compactação finalizada com sucesso!")
 
     # 🔁 Copiar ZIPs para static/arquivos
