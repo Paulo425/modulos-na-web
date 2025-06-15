@@ -8,17 +8,11 @@
     </div>
 
     <div class="d-grid gap-3 col-6 mx-auto mt-4">
-        <!-- Módulo DECOPA (ativo, azul) -->
-        <a href="{{ url_for('memoriais_descritivos') }}" class="btn btn-primary">
-            MEMORIAIS DECOPA
-        </a>
+        <!-- Módulos implementados -->
+        <a href="{{ url_for('memoriais_descritivos') }}" class="btn btn-primary">MEMORIAIS DECOPA</a>
+        <a href="{{ url_for('gerar_memorial_azimute_az') }}" class="btn btn-primary">MEMORIAIS_AZIMUTE_AZ</a>
 
-        <!-- Módulo AZIMUTE_AZ (ativo, azul) -->
-        <a href="{{ url_for('gerar_memorial_azimute_az') }}" class="btn btn-primary">
-            MEMORIAIS_AZIMUTE_AZ
-        </a>
-
-        <!-- Módulos ainda não implementados (cinza e desativados) -->
+        <!-- Módulos futuros -->
         <a href="#" class="btn btn-secondary disabled">MEMORIAIS_AZIMUTE_P1_P2</a>
         <a href="#" class="btn btn-secondary disabled">MEMORIAIS_ANGULOS_INTERNOS_AZ</a>
         <a href="#" class="btn btn-secondary disabled">MEMORIAIS_ANGULOS_INTERNOS_P1_P2</a>
