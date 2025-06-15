@@ -427,4 +427,9 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
 
-#final
+@app.route('/debug_rotas')
+def debug_rotas():
+    from flask import Response
+    rotas = [str(rule) for rule in app.url_map.iter_rules()]
+    return Response('<br>'.join(rotas), mimetype='text/html')
+
