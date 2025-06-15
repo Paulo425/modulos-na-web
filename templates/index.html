@@ -8,11 +8,17 @@
     </div>
 
     <div class="d-grid gap-3 col-6 mx-auto mt-4">
-        <!-- Módulo DECOPA -->
-        <a href="{{ url_for('memoriais_descritivos') }}" class="btn {% if request.endpoint == 'memoriais_descritivos' %}btn-primary{% else %}btn-secondary{% endif %}">MEMORIAS DECOPA</a>
+    <!-- Módulo DECOPA -->
+    <a href="{{ url_for('memoriais_descritivos') }}"
+       class="btn {{ 'btn-primary' if request.path == url_for('memoriais_descritivos') else 'btn-secondary' }}">
+        MEMORIAIS DECOPA
+    </a>
 
-        <!-- Módulo AZIMUTE_AZ -->
-        <a href="{{ url_for('gerar_memorial_azimute_az') }}" class="btn {% if request.endpoint == 'gerar_memorial_azimute_az' %}btn-primary{% else %}btn-secondary{% endif %}">MEMORIAIS_AZIMUTE_AZ</a>
+    <!-- Módulo AZIMUTE_AZ -->
+    <a href="{{ url_for('gerar_memorial_azimute_az') }}"
+       class="btn {{ 'btn-primary' if request.path == url_for('gerar_memorial_azimute_az') else 'btn-secondary' }}">
+        MEMORIAIS_AZIMUTE_AZ
+    </a>
 
         <!-- Módulos ainda não implementados (fixos em cinza) -->
         <a href="{{ url_for('memoriais_azimute_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_P1_P2</a>
