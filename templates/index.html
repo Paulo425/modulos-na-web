@@ -7,6 +7,13 @@
         <p class="mb-4">Escolha um módulo para iniciar:</p>
     </div>
 
+    {% if session['usuario'] == 'admin' and pendentes_count > 0 %}
+    <div class="alert alert-info text-center">
+        👥 Contas pendentes de aprovação: <strong>{{ pendentes_count }}</strong><br>
+        <a href="{{ url_for('pendentes') }}" class="btn btn-sm btn-outline-primary mt-2">Gerenciar Pendências</a>
+    </div>
+    {% endif %}
+
     <div class="d-grid gap-3 col-6 mx-auto mt-4">
         <!-- Módulos implementados -->
         <a href="{{ url_for('memoriais_descritivos') }}" class="btn btn-primary">MEMORIAS DECOPA</a>
@@ -16,7 +23,6 @@
         <a href="{{ url_for('memoriais_azimute_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_AZIMUTE_P1_P2</a>
         <a href="{{ url_for('memoriais_angulos_internos_az') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_AZ</a>
         <a href="{{ url_for('memoriais_angulos_internos_p1_p2') }}" class="btn btn-secondary">MEMORIAIS_ANGULOS_INTERNOS_P1_P2</a>
-
     </div>
 
     <div class="text-center mt-5">
@@ -25,5 +31,3 @@
     </div>
 </div>
 {% endblock %}
-<!-- commit leve: atualização silenciosa -->
-

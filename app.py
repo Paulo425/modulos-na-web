@@ -9,26 +9,40 @@ from pathlib import Path
 from subprocess import Popen, PIPE
 import shutil
 import os
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from usuarios_mysql import (
+    salvar_usuario_mysql,
+    buscar_usuario_mysql,
+    aprovar_usuario_mysql,
+    excluir_usuario_mysql,
+    listar_pendentes_mysql,
+    listar_usuarios_mysql,
+    atualizar_senha_mysql
+)
+
+
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
 os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
 
-def gravar_usuario_json(usuario, dados_dict):
-    """
-    Versão de teste: grava o JSON em /tmp/password/ no ambiente Render.
-    """
-    caminho_base = '/tmp/password'
-    os.makedirs(caminho_base, exist_ok=True)
-    caminho_arquivo = os.path.join(caminho_base, f"{usuario}.json")
-    with open(caminho_arquivo, "w", encoding="utf-8") as f:
-        json.dump(dados_dict, f, indent=4, ensure_ascii=False)
-    print(f"✅ Gravado no caminho: {caminho_arquivo}")
+def listar_usuarios_mysql():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT usuario FROM usuarios ORDER BY usuario")
+    resultado = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return resultado
 
-
-
-
-
+def atualizar_senha_mysql(usuario, nova_senha_hash):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    sql = "UPDATE usuarios SET senha_hash = %s WHERE usuario = %s"
+    cursor.execute(sql, (nova_senha_hash, usuario))
+    conn.commit()
+    conn.close()
 
 app = Flask(__name__)
 app.secret_key = 'chave_super_secreta'
@@ -36,51 +50,32 @@ app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
 # Diretórios do projeto
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-password_dir = os.path.join(BASE_DIR, "password")
 log_dir = os.path.join(BASE_DIR, "static", "logs")
 arquivos_dir = os.path.join(BASE_DIR, "static", "arquivos")
-os.makedirs(password_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 os.makedirs(arquivos_dir, exist_ok=True)
 
-# Criação do admin.json
-admin_path = os.path.join(password_dir, "admin.json")
-if not os.path.exists(admin_path):
-    admin_user = {
-        "usuario": "admin",
-        "senha_hash": generate_password_hash("1234")
-    }
-    with open(admin_path, 'w', encoding='utf-8') as f:
-        json.dump(admin_user, f, indent=2)
-    print("✅ admin.json criado com senha 1234")
-else:
-    print("🔹 admin.json já existe")
+@app.context_processor
+def inject_pendentes_count():
+    if session.get('usuario') == 'admin':
+        try:
+            return dict(pendentes_count=len(listar_pendentes_mysql()))
+        except:
+            return dict(pendentes_count=0)
+    return dict(pendentes_count=0)
 
-# Carregar usuários
-def carregar_usuarios():
-    usuarios = {}
-    for arquivo in os.listdir(password_dir):
-        if arquivo.endswith('.json'):
-            with open(os.path.join(password_dir, arquivo), 'r', encoding='utf-8') as f:
-                dados = json.load(f)
-                usuarios[dados['usuario']] = dados['senha_hash']
-    return usuarios
 
-@app.route('/')
+@@app.route('/')
 def home():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
     pendentes_count = 0
     if session.get('usuario') == 'admin':
-        for arquivo in os.listdir(password_dir):
-            if arquivo.endswith('.json'):
-                with open(os.path.join(password_dir, arquivo), 'r', encoding='utf-8') as f:
-                    dados = json.load(f)
-                    if not dados.get("aprovado", True):
-                        pendentes_count += 1
+        pendentes_count = len(listar_pendentes_mysql())
 
     return render_template('index.html', pendentes_count=pendentes_count)
+
 
 
 
@@ -92,24 +87,24 @@ def login():
     if request.method == 'POST':
         usuario = request.form['usuario']
         senha = request.form['senha']
-        caminho = os.path.join(password_dir, f"{usuario}.json")
 
         try:
-            if os.path.exists(caminho):
-                with open(caminho, 'r', encoding='utf-8') as f:
-                    dados = json.load(f)
-                    senha_hash = dados.get("senha_hash")
-                    aprovado = dados.get("aprovado", True)  # admin e versões antigas
+            dados = buscar_usuario_mysql(usuario)
 
-                    if not aprovado:
-                        erro = "Conta ainda não aprovada. Aguarde a autorização do administrador."
-                    elif check_password_hash(senha_hash, senha):
-                        session['usuario'] = usuario
-                        return redirect(url_for('home'))
-                    else:
-                        erro = "Usuário ou senha inválidos."
-            else:
+            if not dados:
                 erro = "Usuário ou senha inválidos."
+            else:
+                senha_hash = dados.get("senha_hash")
+                aprovado = dados.get("aprovado", True)
+
+                if not aprovado:
+                    erro = "Conta ainda não aprovada. Aguarde a autorização do administrador."
+                elif check_password_hash(senha_hash, senha):
+                    session['usuario'] = usuario
+                    return redirect(url_for('home'))
+                else:
+                    erro = "Usuário ou senha inválidos."
+
         except Exception as e:
             erro = "Erro ao processar login."
             debug = f"{type(e).__name__}: {str(e)}"
@@ -126,50 +121,46 @@ def logout():
 def criar_usuario():
     if session.get('usuario') != 'admin':
         return redirect(url_for('login'))
+
     mensagem = erro = None
+
     if request.method == 'POST':
         novo_usuario = request.form['usuario']
         nova_senha = request.form['senha']
-        caminho = os.path.join(password_dir, f"{novo_usuario}.json")
-        if os.path.exists(caminho):
+
+        existente = buscar_usuario_mysql(novo_usuario)
+        if existente:
             erro = f"Usuário '{novo_usuario}' já existe."
         else:
-            # Dados do novo usuário
-            dados = {
-                "usuario": novo_usuario,
-                "senha_hash": generate_password_hash(nova_senha),
-                "nivel": "tecnico"
-            }
-
-            # Salva diretamente no arquivo como sempre
-            with open(caminho, 'w', encoding='utf-8') as f:
-                json.dump(dados, f, indent=2)
-
-            # Reforço de gravação (mesmo arquivo), agora via função segura
-            gravar_usuario_json(novo_usuario, dados)
-
+            senha_hash = generate_password_hash(nova_senha)
+            salvar_usuario_mysql(novo_usuario, senha_hash, nivel='tecnico', aprovado=True)
             mensagem = f"Usuário '{novo_usuario}' criado com sucesso!"
 
     return render_template('criar_usuario.html', mensagem=mensagem, erro=erro)
+
 
 @app.route('/excluir-usuario', methods=['GET', 'POST'])
 def excluir_usuario():
     if session.get('usuario') != 'admin':
         return redirect(url_for('login'))
+
     mensagem = erro = None
+
     if request.method == 'POST':
         usuario = request.form['usuario']
         if usuario == 'admin':
             erro = "Não é permitido excluir o usuário 'admin'."
         else:
-            caminho = os.path.join(password_dir, f"{usuario}.json")
-            if os.path.exists(caminho):
-                os.remove(caminho)
+            existente = buscar_usuario_mysql(usuario)
+            if existente:
+                excluir_usuario_mysql(usuario)
                 mensagem = f"Usuário '{usuario}' excluído com sucesso."
             else:
                 erro = f"Usuário '{usuario}' não encontrado."
-    usuarios = [f[:-5] for f in os.listdir(password_dir) if f.endswith('.json')]
+
+    usuarios = listar_usuarios_mysql()
     return render_template('excluir_usuario.html', usuarios=usuarios, mensagem=mensagem, erro=erro)
+
 
 @app.route('/memoriais-descritivos', methods=['GET', 'POST'])
 def memoriais_descritivos():
@@ -273,21 +264,14 @@ def registrar():
     if request.method == 'POST':
         usuario = request.form['usuario']
         senha = request.form['senha']
-        caminho = os.path.join(password_dir, f"{usuario}.json")
 
-        if os.path.exists(caminho):
+        # Verifica se o usuário já existe no banco
+        existente = buscar_usuario_mysql(usuario)
+        if existente:
             erro = "Usuário já existe ou está aguardando aprovação."
         else:
-            dados = {
-                "usuario": usuario,
-                "senha_hash": generate_password_hash(senha),
-                "aprovado": False,
-                "nivel": "tecnico"
-            }
-
-            # Grava direto e de forma segura
-            gravar_usuario_json(usuario, dados)
-
+            senha_hash = generate_password_hash(senha)
+            salvar_usuario_mysql(usuario, senha_hash, nivel="tecnico", aprovado=False)
             mensagem = "Conta criada com sucesso! Aguarde autorização do administrador."
 
     return render_template('registrar.html', mensagem=mensagem, erro=erro)
@@ -298,56 +282,42 @@ def pendentes():
     if session.get('usuario') != 'admin':
         return redirect(url_for('login'))
 
-    usuarios_pendentes = []
-
-    for arquivo in os.listdir(password_dir):
-        if arquivo.endswith('.json'):
-            caminho = os.path.join(password_dir, arquivo)
-            with open(caminho, 'r', encoding='utf-8') as f:
-                dados = json.load(f)
-                if dados.get("aprovado") is False:
-                    usuarios_pendentes.append(dados['usuario'])
-
     if request.method == 'POST':
-        aprovado = request.form.getlist('aprovar')
-        for usuario in aprovado:
-            caminho = os.path.join(password_dir, f"{usuario}.json")
-            with open(caminho, 'r+', encoding='utf-8') as f:
-                dados = json.load(f)
-                dados["aprovado"] = True
-                f.seek(0)
-                json.dump(dados, f, indent=2)
-                f.truncate()
-
+        aprovados = request.form.getlist('aprovar')
+        for usuario in aprovados:
+            aprovar_usuario_mysql(usuario)
         return redirect(url_for('pendentes'))
 
+    usuarios_pendentes = listar_pendentes_mysql()
     return render_template('pendentes.html', pendentes=usuarios_pendentes)
+
+
+
 @app.route('/alterar-senha', methods=['GET', 'POST'])
 def alterar_senha():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
     mensagem = erro = None
+
     if request.method == 'POST':
         atual = request.form['senha_atual']
         nova = request.form['nova_senha']
         usuario = session['usuario']
-        caminho = os.path.join(password_dir, f"{usuario}.json")
 
-        if os.path.exists(caminho):
-            with open(caminho, 'r', encoding='utf-8') as f:
-                dados = json.load(f)
-            if check_password_hash(dados['senha_hash'], atual):
-                dados['senha_hash'] = generate_password_hash(nova)
-                with open(caminho, 'w', encoding='utf-8') as f:
-                    json.dump(dados, f, indent=2)
-                mensagem = "Senha alterada com sucesso!"
-            else:
-                erro = "Senha atual incorreta."
-        else:
+        dados = buscar_usuario_mysql(usuario)
+
+        if not dados:
             erro = "Usuário não encontrado."
+        elif check_password_hash(dados['senha_hash'], atual):
+            nova_hash = generate_password_hash(nova)
+            atualizar_senha_mysql(usuario, nova_hash)
+            mensagem = "Senha alterada com sucesso!"
+        else:
+            erro = "Senha atual incorreta."
 
     return render_template('alterar_senha.html', mensagem=mensagem, erro=erro)
+
 
 @app.route("/downloads")
 def listar_arquivos():
