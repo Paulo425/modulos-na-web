@@ -28,21 +28,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
 os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
 
-def listar_usuarios_mysql():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT usuario FROM usuarios ORDER BY usuario")
-    resultado = [row[0] for row in cursor.fetchall()]
-    conn.close()
-    return resultado
-
-def atualizar_senha_mysql(usuario, nova_senha_hash):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    sql = "UPDATE usuarios SET senha_hash = %s WHERE usuario = %s"
-    cursor.execute(sql, (nova_senha_hash, usuario))
-    conn.commit()
-    conn.close()
 
 app = Flask(__name__)
 app.secret_key = 'chave_super_secreta'
