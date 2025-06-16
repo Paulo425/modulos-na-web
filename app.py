@@ -427,4 +427,6 @@ def debug_rotas():
     rotas = [str(rule) for rule in app.url_map.iter_rules()]
     return Response('<br>'.join(rotas), mimetype='text/html')
 
+#finalizando#
+
 
