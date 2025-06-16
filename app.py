@@ -10,6 +10,10 @@ from subprocess import Popen, PIPE
 import shutil
 import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
+os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
+
 def gravar_usuario_json(usuario, dados_dict):
     """
     Salva os dados do usuário no formato JSON na pasta 'password/' ao lado do app.py.
@@ -22,9 +26,7 @@ def gravar_usuario_json(usuario, dados_dict):
         json.dump(dados_dict, f, indent=4, ensure_ascii=False)
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
-os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
+
 
 
 
