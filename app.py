@@ -74,30 +74,36 @@ def login():
             dados = buscar_usuario_mysql(usuario)
 
             if not dados:
-                erro = "Usuário ou senha inválidos."
+                erro = "Usuário ou senha inválidos. (usuário não encontrado)"
             else:
                 senha_hash = dados.get("senha_hash")
+                aprovado_raw = dados.get("aprovado", True)
 
-                # Tratamento robusto do campo 'aprovado'
-                aprovado = dados.get("aprovado", True)
-                aprovado_bool = (
-                    bool(aprovado) if isinstance(aprovado, bool)
-                    else str(aprovado).strip().lower() in ['1', 'true', 'yes']
-                )
+                # Converte qualquer valor para booleano real com debug
+                if isinstance(aprovado_raw, bool):
+                    aprovado = aprovado_raw
+                elif isinstance(aprovado_raw, int):
+                    aprovado = aprovado_raw != 0
+                elif isinstance(aprovado_raw, str):
+                    aprovado = aprovado_raw.strip().lower() in ['1', 'true', 'yes']
+                else:
+                    aprovado = False  # fallback defensivo
 
-                if not aprovado_bool:
+                if not aprovado:
                     erro = "Conta ainda não aprovada. Aguarde a autorização do administrador."
+                    debug = f"⚠️ Campo 'aprovado' tem valor bruto: {aprovado_raw}"
                 elif check_password_hash(senha_hash, senha):
                     session['usuario'] = usuario
                     return redirect(url_for('home'))
                 else:
-                    erro = "Usuário ou senha inválidos."
+                    erro = "Usuário ou senha inválidos. (senha incorreta)"
 
         except Exception as e:
             erro = "Erro ao processar login."
             debug = f"{type(e).__name__}: {str(e)}"
 
     return render_template('login.html', erro=erro, debug=debug)
+
 
 
 
