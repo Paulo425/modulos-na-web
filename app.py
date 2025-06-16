@@ -71,35 +71,38 @@ def login():
         senha = request.form['senha']
 
         try:
-            # Busca no banco
             dados = buscar_usuario_mysql(usuario)
 
             if not dados:
                 erro = "Usuário ou senha inválidos."
+                print("🔴 Usuário não encontrado no banco.")
             else:
                 senha_hash = dados.get("senha_hash")
                 aprovado = dados.get("aprovado", True)
 
-                # DEBUG TEMPORÁRIO — imprime no console para diagnóstico
-                print("🔍 DADOS OBTIDOS DO BANCO:")
-                print(f"Usuário: {usuario}")
-                print(f"Hash armazenado: {senha_hash} ({type(senha_hash)})")
-                print(f"Aprovado: {aprovado} ({type(aprovado)})")
-                print(f"Senha recebida: {senha}")
+                print("🔍 DEBUG LOGIN:")
+                print(f"Usuário digitado: {usuario}")
+                print(f"Senha digitada : {senha}")
+                print(f"Hash no banco   : {senha_hash}")
+                print(f"Aprovado        : {aprovado} ({type(aprovado)})")
 
                 if not aprovado or str(aprovado).lower() in ["false", "0"]:
                     erro = "Conta ainda não aprovada. Aguarde a autorização do administrador."
                 elif not check_password_hash(senha_hash, senha):
                     erro = "Usuário ou senha inválidos."
+                    print("🔴 Senha incorreta para esse hash.")
                 else:
+                    print("✅ Login autorizado. Redirecionando...")
                     session['usuario'] = usuario
                     return redirect(url_for('home'))
 
         except Exception as e:
             erro = "Erro ao processar login."
             debug = f"{type(e).__name__}: {str(e)}"
+            print(f"❌ Erro durante login: {debug}")
 
     return render_template('login.html', erro=erro, debug=debug)
+
 
 
 
