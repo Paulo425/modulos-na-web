@@ -14,5 +14,7 @@ pyproj==3.7.1
 tqdm==4.66.2
 gunicorn==21.2.0
 sqlalchemy==2.0.30
+mysql-connector-python==8.3.0
+
 
 
