@@ -10,6 +10,19 @@ from subprocess import Popen, PIPE
 import shutil
 import os
 
+def gravar_usuario_json(usuario, dados_dict):
+    """
+    Salva os dados do usuário no formato JSON na pasta 'password/' ao lado do app.py.
+    Esse método é seguro e não interfere no controle atual do sistema.
+    """
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    pasta_password = os.path.join(base_dir, "password")
+    os.makedirs(pasta_password, exist_ok=True)
+
+    caminho_arquivo = os.path.join(pasta_password, f"{usuario}.json")
+    with open(caminho_arquivo, "w", encoding="utf-8") as f:
+        json.dump(dados_dict, f, indent=4, ensure_ascii=False)
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
 os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
@@ -120,13 +133,22 @@ def criar_usuario():
         if os.path.exists(caminho):
             erro = f"Usuário '{novo_usuario}' já existe."
         else:
+            # Dados do novo usuário
             dados = {
                 "usuario": novo_usuario,
-                "senha_hash": generate_password_hash(nova_senha)
+                "senha_hash": generate_password_hash(nova_senha),
+                "nivel": "tecnico"
             }
+
+            # Salva diretamente no arquivo como sempre
             with open(caminho, 'w', encoding='utf-8') as f:
                 json.dump(dados, f, indent=2)
+
+            # Reforço de gravação (mesmo arquivo), agora via função segura
+            gravar_usuario_json(novo_usuario, dados)
+
             mensagem = f"Usuário '{novo_usuario}' criado com sucesso!"
+
     return render_template('criar_usuario.html', mensagem=mensagem, erro=erro)
 
 @app.route('/excluir-usuario', methods=['GET', 'POST'])
@@ -258,13 +280,21 @@ def registrar():
             dados = {
                 "usuario": usuario,
                 "senha_hash": generate_password_hash(senha),
-                "aprovado": False  # ⚠️ ainda não autorizado
+                "aprovado": False,
+                "nivel": "tecnico"
             }
+
+            # Salva diretamente
             with open(caminho, 'w', encoding='utf-8') as f:
                 json.dump(dados, f, indent=2)
+
+            # Reforço (opcional, pode manter ou substituir o bloco acima)
+            gravar_usuario_json(usuario, dados)
+
             mensagem = "Conta criada com sucesso! Aguarde autorização do administrador."
-    
+
     return render_template('registrar.html', mensagem=mensagem, erro=erro)
+
 @app.route('/pendentes', methods=['GET', 'POST'])
 def pendentes():
     if session.get('usuario') != 'admin':
