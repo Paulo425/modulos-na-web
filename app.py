@@ -15,13 +15,12 @@ def gravar_usuario_json(usuario, dados_dict):
     Salva os dados do usuário no formato JSON na pasta 'password/' ao lado do app.py.
     Esse método é seguro e não interfere no controle atual do sistema.
     """
-    base_dir = os.path.abspath(os.path.dirname(__file__))
-    pasta_password = os.path.join(base_dir, "password")
-    os.makedirs(pasta_password, exist_ok=True)
+    os.makedirs(password_dir, exist_ok=True)  # Garante que a pasta existe
 
-    caminho_arquivo = os.path.join(pasta_password, f"{usuario}.json")
+    caminho_arquivo = os.path.join(password_dir, f"{usuario}.json")
     with open(caminho_arquivo, "w", encoding="utf-8") as f:
         json.dump(dados_dict, f, indent=4, ensure_ascii=False)
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
@@ -284,16 +283,13 @@ def registrar():
                 "nivel": "tecnico"
             }
 
-            # Salva diretamente
-            with open(caminho, 'w', encoding='utf-8') as f:
-                json.dump(dados, f, indent=2)
-
-            # Reforço (opcional, pode manter ou substituir o bloco acima)
+            # Grava direto e de forma segura
             gravar_usuario_json(usuario, dados)
 
             mensagem = "Conta criada com sucesso! Aguarde autorização do administrador."
 
     return render_template('registrar.html', mensagem=mensagem, erro=erro)
+
 
 @app.route('/pendentes', methods=['GET', 'POST'])
 def pendentes():
