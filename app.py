@@ -65,7 +65,7 @@ def inject_pendentes_count():
     return dict(pendentes_count=0)
 
 
-@@app.route('/')
+@app.route('/')
 def home():
     if 'usuario' not in session:
         return redirect(url_for('login'))
