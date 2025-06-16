@@ -16,14 +16,14 @@ os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execu�
 
 def gravar_usuario_json(usuario, dados_dict):
     """
-    Salva os dados do usuário no formato JSON na pasta 'password/' ao lado do app.py.
-    Esse método é seguro e não interfere no controle atual do sistema.
+    Versão de teste: grava o JSON em /tmp/password/ no ambiente Render.
     """
-    os.makedirs(password_dir, exist_ok=True)  # Garante que a pasta existe
-
-    caminho_arquivo = os.path.join(password_dir, f"{usuario}.json")
+    caminho_base = '/tmp/password'
+    os.makedirs(caminho_base, exist_ok=True)
+    caminho_arquivo = os.path.join(caminho_base, f"{usuario}.json")
     with open(caminho_arquivo, "w", encoding="utf-8") as f:
         json.dump(dados_dict, f, indent=4, ensure_ascii=False)
+    print(f"✅ Gravado no caminho: {caminho_arquivo}")
 
 
 
