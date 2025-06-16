@@ -63,47 +63,7 @@ def home():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    erro = None
-    debug = None
-
-    if request.method == 'POST':
-        usuario = request.form['usuario']
-        senha = request.form['senha']
-
-        try:
-            dados = buscar_usuario_mysql(usuario)
-
-            if not dados:
-                erro = "Usuário ou senha inválidos."
-                print("🔴 Usuário não encontrado no banco.")
-            else:
-                senha_hash = dados.get("senha_hash")
-                aprovado = dados.get("aprovado", True)
-
-                print("🔍 DEBUG LOGIN:")
-                print(f"Usuário digitado: {usuario}")
-                print(f"Senha digitada : {senha}")
-                print(f"Hash no banco   : {senha_hash}")
-                print(f"Aprovado        : {aprovado} ({type(aprovado)})")
-
-                if not aprovado or str(aprovado).lower() in ["false", "0"]:
-                    erro = "Conta ainda não aprovada. Aguarde a autorização do administrador."
-                elif not check_password_hash(senha_hash, senha):
-                    erro = "Usuário ou senha inválidos."
-                    print("🔴 Senha incorreta para esse hash.")
-                else:
-                    print("✅ Login autorizado. Redirecionando...")
-                    session['usuario'] = usuario
-                    return redirect(url_for('home'))
-
-        except Exception as e:
-            erro = "Erro ao processar login."
-            debug = f"{type(e).__name__}: {str(e)}"
-            print(f"❌ Erro durante login: {debug}")
-
-    return render_template('login.html', erro=erro, debug=debug)
-
-
+    raise Exception("🚨 Forçando crash no login para confirmar deploy")
 
 
 
