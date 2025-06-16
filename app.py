@@ -46,14 +46,14 @@ arquivos_dir = os.path.join(BASE_DIR, "static", "arquivos")
 os.makedirs(log_dir, exist_ok=True)
 os.makedirs(arquivos_dir, exist_ok=True)
 
-@app.context_processor
-def inject_pendentes_count():
-    if session.get('usuario') == 'admin':
-        try:
-            return dict(pendentes_count=len(listar_pendentes_mysql()))
-        except:
-            return dict(pendentes_count=0)
-    return dict(pendentes_count=0)
+# @app.context_processor
+# def inject_pendentes_count():
+#     if session.get('usuario') == 'admin':
+#         try:
+#             return dict(pendentes_count=len(listar_pendentes_mysql()))
+#         except:
+#             return dict(pendentes_count=0)
+#     return dict(pendentes_count=0)
 
 
 @app.route('/')
