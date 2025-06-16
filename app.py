@@ -21,9 +21,6 @@ from usuarios_mysql import (
     atualizar_senha_mysql
 )
 
-
-
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
 os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
@@ -80,9 +77,15 @@ def login():
                 erro = "Usuário ou senha inválidos."
             else:
                 senha_hash = dados.get("senha_hash")
-                aprovado = dados.get("aprovado", True)
 
-                if not aprovado:
+                # Tratamento robusto do campo 'aprovado'
+                aprovado = dados.get("aprovado", True)
+                aprovado_bool = (
+                    bool(aprovado) if isinstance(aprovado, bool)
+                    else str(aprovado).strip().lower() in ['1', 'true', 'yes']
+                )
+
+                if not aprovado_bool:
                     erro = "Conta ainda não aprovada. Aguarde a autorização do administrador."
                 elif check_password_hash(senha_hash, senha):
                     session['usuario'] = usuario
@@ -95,6 +98,7 @@ def login():
             debug = f"{type(e).__name__}: {str(e)}"
 
     return render_template('login.html', erro=erro, debug=debug)
+
 
 
 @app.route('/logout')
