@@ -80,11 +80,11 @@ def login():
                 senha_hash = dados.get("senha_hash")
                 aprovado = dados.get("aprovado", True)
 
-                print("🔍 DEBUG LOGIN:")
-                print(f"Usuário digitado: {usuario}")
-                print(f"Senha digitada : {senha}")
-                print(f"Hash no banco   : {senha_hash}")
-                print(f"Aprovado        : {aprovado} ({type(aprovado)})")
+                logging.info("🔍 DEBUG LOGIN:")
+                logging.info(f"Usuário digitado: {usuario}")
+                logging.info(f"Senha digitada : {senha}")
+                logging.info(f"Hash no banco   : {senha_hash}")
+                logging.info(f"Aprovado        : {aprovado} ({type(aprovado)})")
 
                 # Interpretação segura de 'aprovado'
                 aprovado_bool = (
