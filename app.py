@@ -71,32 +71,29 @@ def login():
         senha = request.form['senha']
 
         try:
+            # Busca no banco
             dados = buscar_usuario_mysql(usuario)
 
             if not dados:
-                erro = "Usuário ou senha inválidos. (usuário não encontrado)"
+                erro = "Usuário ou senha inválidos."
             else:
                 senha_hash = dados.get("senha_hash")
-                aprovado_raw = dados.get("aprovado", True)
+                aprovado = dados.get("aprovado", True)
 
-                # Converte qualquer valor para booleano real com debug
-                if isinstance(aprovado_raw, bool):
-                    aprovado = aprovado_raw
-                elif isinstance(aprovado_raw, int):
-                    aprovado = aprovado_raw != 0
-                elif isinstance(aprovado_raw, str):
-                    aprovado = aprovado_raw.strip().lower() in ['1', 'true', 'yes']
-                else:
-                    aprovado = False  # fallback defensivo
+                # DEBUG TEMPORÁRIO — imprime no console para diagnóstico
+                print("🔍 DADOS OBTIDOS DO BANCO:")
+                print(f"Usuário: {usuario}")
+                print(f"Hash armazenado: {senha_hash} ({type(senha_hash)})")
+                print(f"Aprovado: {aprovado} ({type(aprovado)})")
+                print(f"Senha recebida: {senha}")
 
-                if not aprovado:
+                if not aprovado or str(aprovado).lower() in ["false", "0"]:
                     erro = "Conta ainda não aprovada. Aguarde a autorização do administrador."
-                    debug = f"⚠️ Campo 'aprovado' tem valor bruto: {aprovado_raw}"
-                elif check_password_hash(senha_hash, senha):
+                elif not check_password_hash(senha_hash, senha):
+                    erro = "Usuário ou senha inválidos."
+                else:
                     session['usuario'] = usuario
                     return redirect(url_for('home'))
-                else:
-                    erro = "Usuário ou senha inválidos. (senha incorreta)"
 
         except Exception as e:
             erro = "Erro ao processar login."
