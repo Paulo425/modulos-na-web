@@ -479,7 +479,7 @@ def memorial_azimute_jl():
                            erro=erro_execucao,
                            zip_download=zip_download,
                            log_path=log_relativo,
-                           pasta_execucao=pasta_execucao)
+                           pasta_execucao=os.path.basename(pasta_temp))
 
 
 #atualizado
