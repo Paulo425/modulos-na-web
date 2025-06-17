@@ -427,7 +427,7 @@ def memorial_azimute_jl():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    resultado = erro_execucao = log_relativo = zip_download = None
+    resultado = erro_execucao = log_relativo = zip_download = pasta_execucao = None
 
     if request.method == 'POST':
         try:
@@ -471,6 +471,7 @@ def memorial_azimute_jl():
             resultado = "✅ Processamento concluído com sucesso!"
             zip_download = zip_name
             log_relativo = os.path.relpath(log_path, start='static')
+            pasta_execucao = os.path.basename(pasta_temp)
 
         except Exception as e:
             erro_execucao = f"❌ Erro na execução: {e}"
@@ -480,7 +481,8 @@ def memorial_azimute_jl():
                            erro=erro_execucao,
                            zip_download=zip_download,
                            log_path=log_relativo,
-                           pasta_execucao=os.path.basename(pasta_temp))
+                           pasta_execucao=pasta_execucao)
+
 
 #atualizado
 
