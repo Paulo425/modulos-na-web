@@ -60,3 +60,4 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
             traceback.print_exc(file=log)
             log.write(f"\nErro: {e}\n")
             return log_path, []
+#atualizando
