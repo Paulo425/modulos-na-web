@@ -28,6 +28,7 @@ try:
     locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')
 except locale.Error as e:
     print(f"Erro ao definir locale: {e}")
+    log.write(f"✅ DXF limpo salvo em: {saida_path}\n")
     locale.setlocale(locale.LC_TIME, '')  # fallback para padrão
 
 # Exemplo da data:
@@ -75,11 +76,13 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
 
         doc_novo.saveas(saida_path)
         print(f"✅ DXF limpo salvo em: {saida_path}")
+        log.write(f"✅ DXF limpo salvo em: {saida_path}\n")
         
         return saida_path, ponto_az  # Importante retornar o ponto V1 aqui!
 
     except Exception as e:
         print(f"❌ Erro ao limpar DXF: {e}")
+        log.write(f"❌ Erro ao limpar DXF: {e}\n")
         return original_path, None
 
 
@@ -277,6 +280,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
         if not lines and not arcs:
             print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
+            log.write("Nenhuma polilinha fechada encontrada no arquivo DXF.\n")
             return None, [], [], 0, 0, None
 
 #         for entity in msp.query('TEXT'):
@@ -302,6 +306,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
     except Exception as e:
         print(f"Erro ao obter informações do documento: {e}")
+        log.write(f"Erro ao obter informações do documento: {e}\n")
         traceback.print_exc()
         return None, [], [], 0, 0, None
 
@@ -342,9 +347,11 @@ def add_arc_labels(doc, msp, start_point, end_point, radius, length, label):
         )
 
         print(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.")
+        log.write(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.\n")
 
     except Exception as e:
         print(f"❌ Erro ao adicionar rótulos dos arcos: {e}")
+        log.write(f"❌ Erro ao adicionar rótulos dos arcos: {e}\n")
 
 
 def calculate_point_on_line(start, end, distance):
@@ -433,9 +440,11 @@ def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth):
         )
 
         print(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}")
+        log.write(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}\n")
 
     except Exception as e:
         print(f"Erro ao adicionar arco do azimute: {e}")
+        log.write(f"Erro ao adicionar arco do azimute: {e}\n")
 
 
 # Função para converter graus decimais para DMS
@@ -522,8 +531,10 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
         )
 
         print(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°")
+        log.write(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°\n")
 
     except Exception as e:
+        print(f"❌ ERRO GRAVE ao adicionar rótulo '{label}' e distância: {e}")
         print(f"❌ ERRO GRAVE ao adicionar rótulo '{label}' e distância: {e}")
 
 
@@ -558,12 +569,14 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
         except Exception as e:
             print(f"Erro ao carregar arquivo de confrontantes: {e}")
+            log.write(f"Erro ao carregar arquivo de confrontantes: {e}\n")
             confrontantes_dict = {}
     else:
         confrontantes_dict = {}
 
     if not lines:
         print("Nenhuma linha disponível para criar o memorial descritivo.")
+        log.write("Nenhuma linha disponível para criar o memorial descritivo.\n")
         return None
 
     # Dentro da função create_memorial_descritivo logo após criação de combined_segments
@@ -625,6 +638,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         area = abs(area)
 
     print(f"Área da poligonal ajustada: {area:.4f} m²")
+    log.write(f"Área da poligonal ajustada: {area:.4f} m²\n")
 
 
 
@@ -689,6 +703,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     wb.save(excel_output_path)
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
+    log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
 #     try:
 #         v1 = segments[0]["start_point"]
@@ -707,8 +722,10 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
+        log.write(f"Arquivo DXF salvo em: {dxf_output_path}\n")
     except Exception as e:
         print(f"Erro ao salvar DXF: {e}")
+        log.write(f"Erro ao salvar DXF: {e}\n")
 
     return excel_output_path
 
@@ -868,9 +885,11 @@ def create_memorial_document(
         # Salvar o documento
         doc_word.save(output_path)
         print(f"Memorial descritivo salvo em: {output_path}")
+        log.write(f"Memorial descritivo salvo em: {output_path}\n")
 
     except Exception as e:
         print(f"Erro ao criar o documento memorial: {e}")
+        log.write(f"Erro ao criar o documento memorial: {e}\n")
 
 
         
