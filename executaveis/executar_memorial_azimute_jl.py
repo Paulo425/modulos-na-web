@@ -1,27 +1,29 @@
-import os
-import traceback
-import math
-from executaveis.memoriais_JL import (
-    limpar_dxf_e_inserir_ponto_az,
-    get_document_info_from_dxf,
-    create_memorial_descritivo,
-    create_memorial_document
-)
+# executaveis/executar_memorial_azimute_jl.py
 
-def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf_path, excel_path):
-    log_path = os.path.join(caminho_salvar, 'execucao.log')
+def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf_path, excel_path, log_path):
+    import os
+    import math
+    import traceback
+    from memoriais_JL import (
+        limpar_dxf_e_inserir_ponto_az,
+        get_document_info_from_dxf,
+        create_memorial_descritivo,
+        create_memorial_document
+    )
+
     with open(log_path, 'w', encoding='utf-8') as log:
+        log.write(f"🟢 LOG iniciado em: {datetime.now()}\n")
         try:
-            # 🔹 Gerar DXF limpo e obter ponto Az
+            # 🔹 Limpar DXF e obter ponto Az
             dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
             dxf_limpo_path, ponto_az = limpar_dxf_e_inserir_ponto_az(dxf_path, dxf_limpo_path)
 
-            # 🔹 Extrair informações do DXF
+            # 🔹 Extrair info do DXF
             doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_limpo_path, log=log)
             if not doc or not ponto_az:
                 raise ValueError("Erro ao processar o DXF ou ponto Az não encontrado.")
 
-            # 🔹 Calcular azimute e distância do ponto Az ao V1
+            # 🔹 Cálculo do azimute e distância do ponto Az até V1
             v1 = lines[0][0]
             distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
             azimuth = math.degrees(math.atan2(v1[0] - ponto_az[0], v1[1] - ponto_az[1]))
@@ -30,7 +32,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
 
             msp = doc.modelspace()
 
-            # 🔹 Criar Excel
+            # 🔹 Gerar Excel
             excel_output = create_memorial_descritivo(
                 doc=doc, msp=msp, lines=lines, arcs=arcs,
                 proprietario=proprietario, matricula=matricula,
@@ -39,7 +41,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                 azimute_az_v1=azimuth, log=log
             )
 
-            # 🔹 Criar DOCX
+            # 🔹 Gerar DOCX
             docx_path = os.path.join(caminho_salvar, f"Memorial_MAT_{matricula}.docx")
             template_path = os.path.join("templates_doc", "MODELO_TEMPLATE_DOC_JL_CORRETO.docx")
 
@@ -57,10 +59,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                 log=log
             )
 
-            # 🔹 Copia final do DXF com anotações
             final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
-
-            # ✅ Retorna o log e a lista dos arquivos de saída
             return log_path, [excel_output, final_dxf_path, docx_path]
 
         except Exception as e:
