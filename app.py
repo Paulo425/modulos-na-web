@@ -427,54 +427,62 @@ def memorial_azimute_jl():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    resultado = erro_execucao = zip_download = log_path_relativo = pasta_execucao = None
+    resultado = erro_execucao = zip_download = log_relativo = None
 
     if request.method == 'POST':
         try:
+            from executaveis.executar_memorial_azimute_jl import executar_memorial_jl
+            import uuid, zipfile
+
+            # 1. Inputs do formulário
             proprietario = request.form['proprietario']
             matricula = request.form['matricula']
             descricao = request.form['descricao']
             excel_file = request.files['excel_file']
             dxf_file = request.files['dxf_file']
 
-            import uuid
-            import zipfile
-            from executaveis.executar_memorial_azimute_jl import executar_memorial_jl
-
+            # 2. Preparar diretórios
             id_execucao = str(uuid.uuid4())[:8]
             pasta_execucao = f'memorial_jl_{id_execucao}'
-            pasta_temp = os.path.join('static', 'arquivos', pasta_execucao)
+            pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
             os.makedirs(pasta_temp, exist_ok=True)
 
+            # 3. Salvar arquivos enviados
             excel_path = os.path.join(pasta_temp, 'confrontantes.xlsx')
             dxf_path = os.path.join(pasta_temp, 'original.dxf')
             excel_file.save(excel_path)
             dxf_file.save(dxf_path)
 
-            # 🚀 Executar o processamento
+            # 4. Criar caminho do LOG no mesmo padrão do DECOPA
+            log_filename = f"log_JL_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+            log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
+            os.makedirs(log_dir_absoluto, exist_ok=True)
+            log_path = os.path.join(log_dir_absoluto, log_filename)
+            log_relativo = f"static/logs/{log_filename}"
+
+            # 5. Executar processo principal
             log_path_gerado, arquivos_gerados = executar_memorial_jl(
                 proprietario=proprietario,
                 matricula=matricula,
                 descricao=descricao,
                 caminho_salvar=pasta_temp,
                 dxf_path=dxf_path,
-                excel_path=excel_path
+                excel_path=excel_path,
+                log_path=log_path  # passa explicitamente
             )
 
-            # 📦 Criar o ZIP com os arquivos de saída (sem o log!)
+            # 6. Gerar ZIP com os arquivos de saída (sem o LOG)
             zip_name = f"memorial_{matricula}.zip"
             zip_path = os.path.join(pasta_temp, zip_name)
 
             with zipfile.ZipFile(zip_path, 'w') as zipf:
                 for arquivo in arquivos_gerados:
-                    if not arquivo.endswith('execucao.log'):
+                    if os.path.exists(arquivo) and not arquivo.endswith('.log'):
                         zipf.write(arquivo, arcname=os.path.basename(arquivo))
 
-            # ✅ Resultado
             resultado = "✅ Processamento concluído com sucesso!"
             zip_download = zip_name
-            log_path_relativo = os.path.relpath(log_path_gerado, start='static')
-            
+
         except Exception as e:
             erro_execucao = f"❌ Erro na execução: {e}"
 
@@ -482,8 +490,8 @@ def memorial_azimute_jl():
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
-                           log_path=log_path_relativo,
-                           pasta_execucao=pasta_execucao)
+                           log_path=log_relativo)
+
 
 
 

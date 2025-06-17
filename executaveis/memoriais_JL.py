@@ -901,8 +901,7 @@ def convert_docx_to_pdf(output_path, pdf_file_path):
         except:
             pass  # Garantir que o Word seja fechado
 
-def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf_path, excel_path):
-    log_path = os.path.join(caminho_salvar, 'execucao.log')
+def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf_path, excel_path, log_path):
     with open(log_path, 'w', encoding='utf-8') as log:
         try:
             dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
@@ -951,3 +950,4 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
             traceback.print_exc(file=log)
             log.write(f"\nErro: {e}\n")
             return log_path, []
+       
