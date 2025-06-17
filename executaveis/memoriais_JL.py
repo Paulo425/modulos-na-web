@@ -169,7 +169,7 @@ def bulge_to_arc_length(start_point, end_point, bulge):
     arc_length = radius * angle
     return arc_length, radius, angle
 
-def get_document_info_from_dxf(dxf_file_path):
+def get_document_info_from_dxf(dxf_file_path, log=None):
     try:
         doc = ezdxf.readfile(dxf_file_path)
         msp = doc.modelspace()
