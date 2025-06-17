@@ -451,9 +451,6 @@ def memorial_azimute_jl():
             excel_file.save(excel_path)
             dxf_file.save(dxf_path)
 
-            # 🔍 Criação do log
-            log_path = os.path.join(pasta_temp, 'execucao.log')
-
             # 🚀 Executar o processamento
             log_path_gerado, arquivos_gerados = executar_memorial_jl(
                 proprietario=proprietario,
@@ -476,8 +473,8 @@ def memorial_azimute_jl():
             # ✅ Resultado
             resultado = "✅ Processamento concluído com sucesso!"
             zip_download = zip_name
-            log_path_relativo = f"{pasta_temp}/execucao.log"
-
+            log_path_relativo = os.path.relpath(log_path_gerado, start='static')
+            
         except Exception as e:
             erro_execucao = f"❌ Erro na execução: {e}"
 
