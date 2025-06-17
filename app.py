@@ -413,7 +413,73 @@ def gerar_memorial_azimute_az():
                            zip_download=zip_download,
                            log_path=log_relativo)
 
+@app.route('/memorial_azimute_jl/download/<nome_arquivo>/<pasta_execucao>')
+def baixar_arquivo_jl(nome_arquivo, pasta_execucao):
+    caminho = os.path.join('outputs', pasta_execucao, nome_arquivo)
+    if os.path.exists(caminho):
+        return send_file(caminho, as_attachment=True)
+    else:
+        return f"Arquivo não encontrado: {caminho}", 404
 
+
+@app.route('/memorial_azimute_jl', methods=['GET', 'POST'])
+def memorial_azimute_jl():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    resultado = erro_execucao = log_relativo = zip_download = None
+
+    if request.method == 'POST':
+        try:
+            proprietario = request.form['proprietario']
+            matricula = request.form['matricula']
+            descricao = request.form['descricao']
+            excel_file = request.files['excel_file']
+            dxf_file = request.files['dxf_file']
+
+            import uuid
+            import zipfile
+            from executaveis.executar_memorial_azimute_jl import executar_memorial_jl
+
+            id_execucao = str(uuid.uuid4())[:8]
+            pasta_temp = os.path.join('static', 'arquivos', f'memorial_jl_{id_execucao}')
+            os.makedirs(pasta_temp, exist_ok=True)
+
+            excel_path = os.path.join(pasta_temp, 'confrontantes.xlsx')
+            dxf_path = os.path.join(pasta_temp, 'original.dxf')
+            excel_file.save(excel_path)
+            dxf_file.save(dxf_path)
+
+            log_path, arquivos_gerados = executar_memorial_jl(
+                proprietario=proprietario,
+                matricula=matricula,
+                descricao=descricao,
+                caminho_salvar=pasta_temp,
+                dxf_path=dxf_path,
+                excel_path=excel_path
+            )
+
+            zip_name = f"memorial_{matricula}.zip"
+            zip_path = os.path.join(pasta_temp, zip_name)
+
+            with zipfile.ZipFile(zip_path, 'w') as zipf:
+                for arquivo in arquivos_gerados:
+                    zipf.write(arquivo, arcname=os.path.basename(arquivo))
+                if os.path.exists(log_path):
+                    zipf.write(log_path, arcname='execucao.log')
+
+            resultado = "✅ Processamento concluído com sucesso!"
+            zip_download = zip_name
+            log_relativo = os.path.relpath(log_path, start='static')
+
+        except Exception as e:
+            erro_execucao = f"❌ Erro na execução: {e}"
+
+    return render_template("formulario_memorial_azimute_jl.html",
+                           resultado=resultado,
+                           erro=erro_execucao,
+                           zip_download=zip_download,
+                           log_path=log_relativo)
 
 
 
