@@ -909,8 +909,8 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
             dxf_limpo_path, ponto_az = limpar_dxf_e_inserir_ponto_az(dxf_path, dxf_limpo_path)
 
             doc, lines, arcs, perimeter, area = get_document_info_from_dxf(dxf_limpo_path)
-            if not doc or not ponto_az:
-                raise ValueError("Erro ao processar o DXF ou ponto Az não encontrado.")
+            if not doc:
+                raise ValueError("Erro ao processar o DXF ")
 
             v1 = lines[0][0]
             distance = ((v1[0] - ponto_az[0])**2 + (v1[1] - ponto_az[1])**2)**0.5
