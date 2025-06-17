@@ -290,10 +290,12 @@ def get_document_info_from_dxf(dxf_file_path):
 #             print("Ponto Az não encontrado no arquivo DXF.")
 #             return None, lines, arcs, perimeter_dxf, area_dxf
 
-        print(f"Linhas processadas: {len(lines)}")
-        print(f"Arcos processados: {len(arcs)}")
-        print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
-        print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
+        if log:
+            log.write(f"Linhas processadas: {len(lines)}\n")
+            log.write(f"Arcos processados: {len(arcs)}\n")
+            log.write(f"Perímetro do DXF: {perimeter_dxf:.2f} metros\n")
+            log.write(f"Área do DXF: {area_dxf:.2f} metros quadrados\n")
+
 #         print(f"Ponto Az: {ponto_az}")
 
         return doc, lines, arcs, perimeter_dxf, area_dxf
@@ -545,7 +547,7 @@ def sanitize_filename(filename):
 # Função para criar memorial descritivo
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, encoding='ISO-8859-1'):
+                               azimute_az_v1=None, encoding='ISO-8859-1',log=None):
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
@@ -941,7 +943,9 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                 distance=distance
             )
 
-            return log_path, [excel_output, dxf_limpo_path, docx_path]
+            final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
+            return log_path, [excel_output, final_dxf_path, docx_path]
+
 
         except Exception as e:
             traceback.print_exc(file=log)

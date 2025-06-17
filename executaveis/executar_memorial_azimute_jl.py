@@ -31,7 +31,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                 doc=doc, msp=msp, lines=lines, arcs=arcs,
                 proprietario=proprietario, matricula=matricula,
                 caminho_salvar=caminho_salvar, excel_file_path=excel_path,
-                ponto_az=ponto_az, distance_az_v1=distance, azimute_az_v1=azimuth
+                ponto_az=ponto_az, distance_az_v1=distance, azimute_az_v1=azimuth, log=log
             )
 
             docx_path = os.path.join(caminho_salvar, f"Memorial_MAT_{matricula}.docx")
@@ -51,7 +51,9 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                 log=log
             )
 
-            return log_path, [excel_output, dxf_limpo_path, docx_path]
+            final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
+            return log_path, [excel_output, final_dxf_path, docx_path]
+
 
         except Exception as e:
             traceback.print_exc(file=log)
