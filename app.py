@@ -475,7 +475,7 @@ def memorial_azimute_jl():
         except Exception as e:
             erro_execucao = f"❌ Erro na execução: {e}"
 
-    return render_template("formulario_memorial_azimute_jl.html",
+    return render_template("formulario_azimute_jl.html",
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
