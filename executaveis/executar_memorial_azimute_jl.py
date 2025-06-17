@@ -14,8 +14,18 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
         try:
             dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
             dxf_limpo_path, ponto_az = limpar_dxf_e_inserir_ponto_az(dxf_path, dxf_limpo_path)
+            # 🔍 INSIRA AQUI O CÓDIGO DE DEBUG
+            result = get_document_info_from_dxf(dxf_limpo_path)
+            log.write(f"🔍 Resultado bruto do get_document_info_from_dxf: {len(result)} elementos\n")
 
-            doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_limpo_path)
+#            doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_limpo_path)
+
+            # Em vez disso, use o result manualmente para debug:
+            doc = result[0]
+            lines = result[1]
+            arcs = result[2]
+            perimeter_dxf = result[3]
+            area_dxf = result[4]
 
             if not doc or not ponto_az:
                 raise ValueError("Erro ao processar o DXF ou ponto Az não encontrado.")
