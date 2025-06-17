@@ -35,7 +35,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
             )
 
             docx_path = os.path.join(caminho_salvar, f"Memorial_MAT_{matricula}.docx")
-            template_path = os.path.join("templates_doc", "MODELO_TEMPLATE_COD_JL_CORRETO.docx")
+            template_path = os.path.join("templates_doc", "MODELO_TEMPLATE_DOC_JL_CORRETO.docx")
 
             create_memorial_document(
                 proprietario, matricula, descricao,
