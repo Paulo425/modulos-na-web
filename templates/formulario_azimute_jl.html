@@ -4,7 +4,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2 class="mb-0 text-primary">Módulo: MEMORIAL_AZIMUTE_JL</h2>
   {% if log_path %}
-    <a href="{{ '/' + log_path }}" class="btn btn-secondary">📄 Baixar Log da Execução</a>
+    <a href="{{ url_for('static', filename=log_path) }}" class="btn btn-outline-secondary btn-sm" download>
+      📄 Baixar Log da Execução
+    </a>
   {% endif %}
 </div>
 
@@ -62,10 +64,12 @@
   </div>
 </form>
 
-{% if log_path %}
-<a href="/{{ log_path }}" class="btn btn-outline-secondary" download>
-    📄 Baixar Log da Execução
-</a>
+{% if zip_download %}
+  <div class="mt-4 text-center">
+    <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
+      📦 Baixar ZIP Gerado
+    </a>
+  </div>
 {% endif %}
 
 {% if resultado %}

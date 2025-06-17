@@ -200,7 +200,7 @@ def memoriais_descritivos():
         os.makedirs(log_dir_absoluto, exist_ok=True)
 
         log_path = os.path.join(log_dir_absoluto, log_filename)
-        log_relativo = f"static/logs/{log_filename}"
+        log_relativo = f"logs/{log_filename}"
 
         # DEBUG opcional
         print(f"🧾 Salvando LOG em: {log_path}")
@@ -413,13 +413,14 @@ def gerar_memorial_azimute_az():
                            zip_download=zip_download,
                            log_path=log_relativo)
 
-@app.route('/memorial_azimute_jl/download/<nome_arquivo>/<pasta_execucao>')
-def baixar_arquivo_jl(nome_arquivo, pasta_execucao):
-    caminho = os.path.join('static', 'arquivos', pasta_execucao, nome_arquivo)
-    if os.path.exists(caminho):
-        return send_file(caminho, as_attachment=True)
-    else:
-        return f"Arquivo não encontrado: {caminho}", 404
+{% if zip_download %}
+  <div class="mt-4 text-center">
+    <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
+      📦 Baixar ZIP Gerado
+    </a>
+  </div>
+{% endif %}
+
 
 
 @app.route('/memorial_azimute_jl', methods=['GET', 'POST'])
@@ -458,7 +459,7 @@ def memorial_azimute_jl():
             log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
             os.makedirs(log_dir_absoluto, exist_ok=True)
             log_path = os.path.join(log_dir_absoluto, log_filename)
-            log_relativo = f"static/logs/{log_filename}"
+            log_relativo = f"logs/{log_filename}"
 
             # 5. Executar processo principal
             log_path_gerado, arquivos_gerados = executar_memorial_jl(
