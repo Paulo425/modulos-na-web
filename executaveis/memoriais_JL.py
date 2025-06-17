@@ -1,12 +1,19 @@
 import os
 import math
 import traceback
-from executaveis.memoriais_JL import (
-    limpar_dxf_e_inserir_ponto_az,
-    get_document_info_from_dxf,
-    create_memorial_descritivo,
-    create_memorial_document
-)
+from datetime import datetime
+from decimal import Decimal, getcontext
+import locale
+import re
+import pandas as pd
+import openpyxl
+from openpyxl.styles import Alignment, Font
+from docx.shared import Pt, Inches
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx import Document
+import ezdxf
+from shapely.geometry import Polygon
+
 
 
 try:
