@@ -1,12 +1,13 @@
 import os
 import math
 import traceback
-from memoriais_JL import (
+from executaveis.memoriais_JL import (
     limpar_dxf_e_inserir_ponto_az,
     get_document_info_from_dxf,
     create_memorial_descritivo,
     create_memorial_document
 )
+
 
 try:
     from ezdxf.math import Vec3 as Vector
