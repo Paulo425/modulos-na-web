@@ -496,6 +496,12 @@ def memoriais_angulos_internos_az():
 def memoriais_angulos_internos_p1_p2():
     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
    
+@app.route('/memorial_azimute_jl/log/<pasta_execucao>')
+def baixar_log_jl(pasta_execucao):
+    caminho_log = os.path.join('static', 'arquivos', pasta_execucao, 'execucao.log')
+    if os.path.exists(caminho_log):
+        return send_file(caminho_log, as_attachment=True)
+    return f"Log não encontrado: {caminho_log}", 404
 
 
 if __name__ == '__main__':

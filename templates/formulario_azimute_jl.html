@@ -62,11 +62,12 @@
   </div>
 </form>
 
-{% if zip_download %}
-  <div class="mt-4">
-    <a href="{{ url_for('baixar_arquivo_jl', nome_arquivo=zip_download, pasta_execucao=pasta_execucao) }}" class="btn btn-success">📦 Baixar Arquivo ZIP</a>
-  </div>
+{% if pasta_execucao %}
+  <a href="{{ url_for('baixar_log_jl', pasta_execucao=pasta_execucao) }}"
+     class="btn btn-outline-secondary btn-sm"
+     download>📄 Log de Execução</a>
 {% endif %}
+
 
 {% if resultado %}
   <div class="alert alert-success mt-4">{{ resultado }}</div>
