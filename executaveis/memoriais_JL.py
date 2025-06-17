@@ -718,13 +718,30 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 def create_memorial_document(
     proprietario, matricula, descricao, excel_file_path=None, template_path=None, output_path=None,
     perimeter_dxf=None, area_dxf=None, desc_ponto_Az=None, Coorde_E_ponto_Az=None, Coorde_N_ponto_Az=None,
-    azimuth=None, distance=None
+    azimuth=None, distance=None, log=None
 ):
     try:
+        # 🔍 Verificação do template
+        print(f"🔎 Caminho do template: {template_path}")
+        if log:
+            log.write(f"🔎 Template path: {template_path}\n")
+        if not os.path.exists(template_path):
+            raise FileNotFoundError(f"❌ Template não encontrado: {template_path}")
+
+        # 🔍 Verificação do diretório de saída
+        output_dir = os.path.dirname(output_path)
+        print(f"📁 Caminho de saída do DOCX: {output_path}")
+        if log:
+            log.write(f"📁 Output DOCX path: {output_path}\n")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+
         # Função para pular linhas
         def pular_linhas(doc, n_linhas):
             for _ in range(n_linhas):
                 doc.add_paragraph("")
+
+        
 
         # Ler o arquivo Excel se for informado
         if excel_file_path:

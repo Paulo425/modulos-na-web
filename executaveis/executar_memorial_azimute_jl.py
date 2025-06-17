@@ -47,7 +47,8 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                 Coorde_E_ponto_Az=ponto_az[0],
                 Coorde_N_ponto_Az=ponto_az[1],
                 azimuth=azimuth,
-                distance=distance
+                distance=distance,
+                log=log
             )
 
             return log_path, [excel_output, dxf_limpo_path, docx_path]
