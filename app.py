@@ -407,7 +407,7 @@ def gerar_memorial_azimute_az():
         except Exception as e:
             print(f"❌ Erro ao verificar ZIP: {e}")
             zip_download = None
-    return render_template("formulario_AZIMUTE_AZ.html",
+    return render_template("formulario_azimute_jl.html",
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
