@@ -4,82 +4,75 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2 class="mb-0 text-primary">Módulo: MEMORIAL_AZIMUTE_JL</h2>
   {% if log_path %}
-  <a href="{{ '/' + log_path }}" class="btn btn-outline-secondary btn-sm" download>📄 Log de Execução</a>
+    <a href="{{ '/' + log_path }}" class="btn btn-secondary">📄 Baixar Log da Execução</a>
   {% endif %}
 </div>
 
+<style>
+  #spinner {
+    display: none;
+    text-align: center;
+    margin-top: 20px;
+  }
+</style>
 
-  <style>
-    #spinner {
-      display: none;
-      text-align: center;
-      margin-top: 20px;
-    }
-  </style>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      document.querySelector('form').addEventListener('submit', function () {
-        document.getElementById('spinner').style.display = 'block';
-      });
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelector('form').addEventListener('submit', function () {
+      document.getElementById('spinner').style.display = 'block';
     });
-  </script>
+  });
+</script>
 
-  <form method="POST" enctype="multipart/form-data">
-    <div id="spinner">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Processando...</span>
-      </div>
-      <p>Aguarde, processando o memorial...</p>
+<form method="POST" enctype="multipart/form-data">
+  <div id="spinner">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Processando...</span>
     </div>
+    <p>Aguarde, processando o memorial...</p>
+  </div>
 
-    <div class="mb-3">
-      <label for="proprietario" class="form-label">Nome do Proprietário:</label>
-      <input type="text" class="form-control" name="proprietario" required>
-    </div>
+  <div class="mb-3">
+    <label for="proprietario" class="form-label">Nome do Proprietário:</label>
+    <input type="text" class="form-control" name="proprietario" required>
+  </div>
 
-    <div class="mb-3">
-      <label for="matricula" class="form-label">Número da Matrícula:</label>
-      <input type="text" class="form-control" name="matricula" required>
-    </div>
+  <div class="mb-3">
+    <label for="matricula" class="form-label">Número da Matrícula:</label>
+    <input type="text" class="form-control" name="matricula" required>
+  </div>
 
-    <div class="mb-3">
-      <label for="descricao" class="form-label">Descrição:</label>
-      <textarea class="form-control" name="descricao" required></textarea>
-    </div>
+  <div class="mb-3">
+    <label for="descricao" class="form-label">Descrição:</label>
+    <textarea class="form-control" name="descricao" required></textarea>
+  </div>
 
-    <div class="mb-3">
-      <label for="excel_file" class="form-label">Arquivo Excel com Confrontantes:</label>
-      <input type="file" class="form-control" name="excel_file" accept=".xlsx" required>
-    </div>
+  <div class="mb-3">
+    <label for="excel_file" class="form-label">Arquivo Excel com Confrontantes:</label>
+    <input type="file" class="form-control" name="excel_file" accept=".xlsx" required>
+  </div>
 
-    <div class="mb-3">
-      <label for="dxf_file" class="form-label">Arquivo DXF:</label>
-      <input type="file" class="form-control" name="dxf_file" accept=".dxf" required>
-    </div>
+  <div class="mb-3">
+    <label for="dxf_file" class="form-label">Arquivo DXF:</label>
+    <input type="file" class="form-control" name="dxf_file" accept=".dxf" required>
+  </div>
 
-    <div class="text-center mt-4">
-      <button type="submit" class="btn btn-primary">Executar</button>
-    </div>
-  </form>
-  {% if zip_download %}
+  <div class="text-center mt-4">
+    <button type="submit" class="btn btn-primary">Executar</button>
+  </div>
+</form>
+
+{% if zip_download %}
   <div class="mt-4">
     <a href="{{ url_for('baixar_arquivo_jl', nome_arquivo=zip_download, pasta_execucao=pasta_execucao) }}" class="btn btn-success">📦 Baixar Arquivo ZIP</a>
   </div>
-  {% endif %}
+{% endif %}
 
-  {% if resultado %}
+{% if resultado %}
   <div class="alert alert-success mt-4">{{ resultado }}</div>
-  {% endif %}
+{% endif %}
 
-  {% if erro %}
+{% if erro %}
   <div class="alert alert-danger mt-4">{{ erro|safe }}</div>
-  {% endif %}
-
-  {% if log_path %}
-  <div class="mt-2">
-      <a href="{{ '/' + log_path }}" class="btn btn-secondary" download>📄 Baixar Log da Execução</a>
-  </div>
-  {% endif %}
-</div>
+{% endif %}
 {% endblock %}

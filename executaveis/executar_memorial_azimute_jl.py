@@ -7,10 +7,13 @@ from executaveis.memoriais_JL import (
 import os
 import traceback
 import math
+import sys
 
 def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf_path, excel_path):
     log_path = os.path.join(caminho_salvar, 'execucao.log')
     with open(log_path, 'w', encoding='utf-8') as log:
+        sys.stdout = log
+        sys.stderr = log
         try:
             dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
             dxf_limpo_path, ponto_az = limpar_dxf_e_inserir_ponto_az(dxf_path, dxf_limpo_path)
@@ -18,7 +21,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
             result = get_document_info_from_dxf(dxf_limpo_path)
             log.write(f"🔍 Resultado bruto do get_document_info_from_dxf: {len(result)} elementos\n")
 
-#            doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_limpo_path)
+#            doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_limpo_path, log=log)
 
             # Em vez disso, use o result manualmente para debug:
             doc = result[0]
