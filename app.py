@@ -427,7 +427,7 @@ def memorial_azimute_jl():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    resultado = erro_execucao = log_relativo = zip_download = pasta_execucao = None
+    resultado = erro_execucao = zip_download = log_path_relativo = pasta_execucao = None
 
     if request.method == 'POST':
         try:
@@ -442,7 +442,8 @@ def memorial_azimute_jl():
             from executaveis.executar_memorial_azimute_jl import executar_memorial_jl
 
             id_execucao = str(uuid.uuid4())[:8]
-            pasta_temp = os.path.join('static', 'arquivos', f'memorial_jl_{id_execucao}')
+            pasta_execucao = f'memorial_jl_{id_execucao}'
+            pasta_temp = os.path.join('static', 'arquivos', pasta_execucao)
             os.makedirs(pasta_temp, exist_ok=True)
 
             excel_path = os.path.join(pasta_temp, 'confrontantes.xlsx')
@@ -450,7 +451,11 @@ def memorial_azimute_jl():
             excel_file.save(excel_path)
             dxf_file.save(dxf_path)
 
-            log_path, arquivos_gerados = executar_memorial_jl(
+            # 🔍 Criação do log
+            log_path = os.path.join(pasta_temp, 'execucao.log')
+
+            # 🚀 Executar o processamento
+            log_path_gerado, arquivos_gerados = executar_memorial_jl(
                 proprietario=proprietario,
                 matricula=matricula,
                 descricao=descricao,
@@ -459,17 +464,19 @@ def memorial_azimute_jl():
                 excel_path=excel_path
             )
 
+            # 📦 Criar o ZIP com os arquivos de saída (sem o log!)
             zip_name = f"memorial_{matricula}.zip"
             zip_path = os.path.join(pasta_temp, zip_name)
 
             with zipfile.ZipFile(zip_path, 'w') as zipf:
                 for arquivo in arquivos_gerados:
-                    zipf.write(arquivo, arcname=os.path.basename(arquivo))
-                
+                    if not arquivo.endswith('execucao.log'):
+                        zipf.write(arquivo, arcname=os.path.basename(arquivo))
+
+            # ✅ Resultado
             resultado = "✅ Processamento concluído com sucesso!"
             zip_download = zip_name
-            log_relativo = os.path.relpath(log_path, start='static')
-            pasta_execucao = os.path.basename(pasta_temp)
+            log_path_relativo = f"{pasta_temp}/execucao.log"
 
         except Exception as e:
             erro_execucao = f"❌ Erro na execução: {e}"
@@ -478,8 +485,9 @@ def memorial_azimute_jl():
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
-                           log_path=log_relativo,
-                           pasta_execucao=os.path.basename(pasta_temp) if zip_download else None)
+                           log_path=log_path_relativo,
+                           pasta_execucao=pasta_execucao)
+
 
 
 #atualizado
