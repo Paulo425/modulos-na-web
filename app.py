@@ -415,7 +415,7 @@ def gerar_memorial_azimute_az():
 
 @app.route('/memorial_azimute_jl/download/<nome_arquivo>/<pasta_execucao>')
 def baixar_arquivo_jl(nome_arquivo, pasta_execucao):
-    caminho = os.path.join('outputs', pasta_execucao, nome_arquivo)
+    caminho = os.path.join('static', 'arquivos', pasta_execucao, nome_arquivo)
     if os.path.exists(caminho):
         return send_file(caminho, as_attachment=True)
     else:
@@ -479,7 +479,8 @@ def memorial_azimute_jl():
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
-                           log_path=log_relativo)
+                           log_path=log_relativo,
+                           pasta_execucao=os.path.basename(pasta_temp))
 
 #atualizado
 
