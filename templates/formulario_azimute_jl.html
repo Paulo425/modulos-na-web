@@ -3,7 +3,31 @@
 {% block conteudo %}
 <div class="container mt-5">
   <h2 class="mb-4">Módulo: MEMORIAL_AZIMUTE_JL</h2>
+
+  <style>
+    #spinner {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelector('form').addEventListener('submit', function () {
+        document.getElementById('spinner').style.display = 'block';
+      });
+    });
+  </script>
+
   <form method="POST" enctype="multipart/form-data">
+    <div id="spinner">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Processando...</span>
+      </div>
+      <p>Aguarde, processando o memorial...</p>
+    </div>
+
     <div class="mb-3">
       <label for="proprietario" class="form-label">Nome do Proprietário:</label>
       <input type="text" class="form-control" name="proprietario" required>
@@ -32,7 +56,7 @@
     <div class="text-center mt-4">
       <button type="submit" class="btn btn-primary">Executar</button>
     </div>
-
+  </form>
 
   {% if resultado %}
   <div class="alert alert-success mt-4">{{ resultado }}</div>
