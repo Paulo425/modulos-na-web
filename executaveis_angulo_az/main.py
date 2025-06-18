@@ -44,7 +44,7 @@ def main():
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    caminho_template = os.path.join(BASE_DIR, "template_docs", "Memorial_modelo_padrao.docx")
+    caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
 
 
     if not os.path.exists(caminho_template):
