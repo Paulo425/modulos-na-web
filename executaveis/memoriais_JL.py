@@ -28,7 +28,7 @@ try:
     locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')
 except locale.Error as e:
     print(f"Erro ao definir locale: {e}")
-    if log
+    if log:
         log.write(f"✅ DXF limpo salvo em: {saida_path}\n")
     locale.setlocale(locale.LC_TIME, '')  # fallback para padrão
 
@@ -77,7 +77,7 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
 
         doc_novo.saveas(saida_path)
         print(f"✅ DXF limpo salvo em: {saida_path}")
-        if log
+        if log:
             log.write(f"✅ DXF limpo salvo em: {saida_path}\n")
         
         return saida_path, ponto_az  # Importante retornar o ponto V1 aqui!
@@ -282,7 +282,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
         if not lines and not arcs:
             print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
-            if log
+            if log:
                 log.write("Nenhuma polilinha fechada encontrada no arquivo DXF.\n")
             return None, [], [], 0, 0, None
 
@@ -297,7 +297,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 #             print("Ponto Az não encontrado no arquivo DXF.")
 #             return None, lines, arcs, perimeter_dxf, area_dxf
 
-        if log:
+        if log::
             log.write(f"Linhas processadas: {len(lines)}\n")
             log.write(f"Arcos processados: {len(arcs)}\n")
             log.write(f"Perímetro do DXF: {perimeter_dxf:.2f} metros\n")
@@ -309,7 +309,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
     except Exception as e:
         print(f"Erro ao obter informações do documento: {e}")
-        if log
+        if log:
             log.write(f"Erro ao obter informações do documento: {e}\n")
         traceback.print_exc()
         return None, [], [], 0, 0, None
@@ -351,12 +351,12 @@ def add_arc_labels(doc, msp, start_point, end_point, radius, length, label):
         )
 
         print(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.")
-        if log
+        if log:
             log.write(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.\n")
 
     except Exception as e:
         print(f"❌ Erro ao adicionar rótulos dos arcos: {e}")
-        if log
+        if log:
             log.write(f"❌ Erro ao adicionar rótulos dos arcos: {e}\n")
 
 
@@ -446,7 +446,7 @@ def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth):
         )
 
         print(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}")
-        if log
+        if log:
             log.write(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}\n")
 
     except Exception as e:
@@ -538,7 +538,7 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
         )
 
         print(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°")
-        if log
+        if log:
             log.write(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°\n")
 
     except Exception as e:
@@ -577,7 +577,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
         except Exception as e:
             print(f"Erro ao carregar arquivo de confrontantes: {e}")
-            if log
+            if log:
                 log.write(f"Erro ao carregar arquivo de confrontantes: {e}\n")
             confrontantes_dict = {}
     else:
@@ -585,7 +585,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     if not lines:
         print("Nenhuma linha disponível para criar o memorial descritivo.")
-        if log
+        if log:
             log.write("Nenhuma linha disponível para criar o memorial descritivo.\n")
         return None
 
@@ -648,7 +648,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         area = abs(area)
 
     print(f"Área da poligonal ajustada: {area:.4f} m²")
-    if log
+    if log:
         log.write(f"Área da poligonal ajustada: {area:.4f} m²\n")
 
 
@@ -714,7 +714,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     wb.save(excel_output_path)
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
-    if log
+    if log:
         log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
 #     try:
@@ -734,11 +734,11 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
-        if log
+        if log:
             log.write(f"Arquivo DXF salvo em: {dxf_output_path}\n")
     except Exception as e:
         print(f"Erro ao salvar DXF: {e}")
-        if log
+        if log:
             log.write(f"Erro ao salvar DXF: {e}\n")
 
     return excel_output_path
@@ -756,7 +756,7 @@ def create_memorial_document(
     try:
         # 🔍 Verificação do template
         print(f"🔎 Caminho do template: {template_path}")
-        if log:
+        if log::
             log.write(f"🔎 Template path: {template_path}\n")
         if not os.path.exists(template_path):
             raise FileNotFoundError(f"❌ Template não encontrado: {template_path}")
@@ -764,7 +764,7 @@ def create_memorial_document(
         # 🔍 Verificação do diretório de saída
         output_dir = os.path.dirname(output_path)
         print(f"📁 Caminho de saída do DOCX: {output_path}")
-        if log:
+        if log::
             log.write(f"📁 Output DOCX path: {output_path}\n")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
@@ -903,7 +903,7 @@ def create_memorial_document(
 
     except Exception as e:
         print(f"Erro ao criar o documento memorial: {e}")
-        if log:
+        if log::
             log.write(f"Erro ao criar o documento memorial: {e}\n")
 
 
