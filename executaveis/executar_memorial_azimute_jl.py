@@ -14,6 +14,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
 
     with open(log_path, 'w', encoding='utf-8') as log:
         log.write(f"🟢 LOG iniciado em: {datetime.now()}\n")
+        
         try:
             # 🔹 Limpar DXF e obter ponto Az
             dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
