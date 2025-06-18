@@ -413,14 +413,10 @@ def gerar_memorial_azimute_az():
                            zip_download=zip_download,
                            log_path=log_relativo)
 
-{% if zip_download %}
-  <div class="mt-4 text-center">
-    <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
-      📦 Baixar ZIP Gerado
-    </a>
-  </div>
-{% endif %}
-
+@app.route('/download/<filename>')
+def download_zip(filename):
+    caminho = os.path.join(BASE_DIR, 'static', 'arquivos')
+    return send_from_directory(caminho, filename, as_attachment=True)
 
 
 @app.route('/memorial_azimute_jl', methods=['GET', 'POST'])
@@ -474,8 +470,8 @@ def memorial_azimute_jl():
 
             # 6. Gerar ZIP com os arquivos de saída (sem o LOG)
             zip_name = f"memorial_{matricula}.zip"
-            zip_path = os.path.join(pasta_temp, zip_name)
-
+            zip_path = os.path.join(BASE_DIR, 'static', 'arquivos', zip_name)
+            
             with zipfile.ZipFile(zip_path, 'w') as zipf:
                 for arquivo in arquivos_gerados:
                     if os.path.exists(arquivo) and not arquivo.endswith('.log'):
