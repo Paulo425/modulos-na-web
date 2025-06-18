@@ -468,8 +468,10 @@ def memorial_azimute_jl():
             
             with zipfile.ZipFile(zip_path, 'w') as zipf:
                 for arquivo in arquivos_gerados:
+
                     if os.path.exists(arquivo) and not arquivo.endswith('.log'):
                         zipf.write(arquivo, arcname=os.path.basename(arquivo))
+
 
             resultado = "✅ Processamento concluído com sucesso!"
             zip_download = zip_name
