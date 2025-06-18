@@ -36,7 +36,12 @@ except locale.Error as e:
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
 
-def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
+def limpar_dxf_e_inserir_ponto_az(original_path, saida_path,log=None):
+    if log is None:
+    class DummyLog:
+        def write(self, msg): pass
+    log = DummyLog()
+
     try:
         doc_antigo = ezdxf.readfile(original_path)
         msp_antigo = doc_antigo.modelspace()
@@ -176,6 +181,11 @@ def bulge_to_arc_length(start_point, end_point, bulge):
     return arc_length, radius, angle
 
 def get_document_info_from_dxf(dxf_file_path, log=None):
+
+    if log is None:
+    class DummyLog:
+        def write(self, msg): pass
+    log = DummyLog()
     try:
         doc = ezdxf.readfile(dxf_file_path)
         msp = doc.modelspace()
@@ -325,7 +335,12 @@ def set_default_font(doc):
     font.name = 'Arial'
     font.size = Pt(12)
 
-def add_arc_labels(doc, msp, start_point, end_point, radius, length, label):
+def add_arc_labels(doc, msp, start_point, end_point, radius, length, label, log=None):
+
+    if log is None:
+    class DummyLog:
+        def write(self, msg): pass
+    log = DummyLog()
     try:
         #mid_point = Vec2((start_point[0] + end_point[0])/2, (start_point[1] + end_point[1])/2)
         mid_point = ((float(start_point[0]) + float(end_point[0]))/2, (float(start_point[1]) + float(end_point[1]))/2)
@@ -424,10 +439,15 @@ def calculate_azimuth_and_distance(start_point, end_point):
     return azimuth, distance
 
 
-def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth):
+def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth, log=None):
     """
     Adiciona o arco do azimute no ModelSpace.
     """
+    if log is None:
+    class DummyLog:
+        def write(self, msg): pass
+    log = DummyLog()
+
     try:
         if 'LAYOUT_AZIMUTES' not in doc.layers:
             doc.layers.new(name='LAYOUT_AZIMUTES', dxfattribs={'color': 5})
@@ -474,7 +494,12 @@ def calculate_polygon_area(points):
     return area / 2.0
 
 
-def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
+def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log=None):
+    if log is None:
+    class DummyLog:
+        def write(self, msg): pass
+    log = DummyLog()
+
     try:
         # Garantir pontos como tuplas de float
         start_point = (float(start_point[0]), float(start_point[1]))
@@ -572,6 +597,10 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
+    if log is None:
+    class DummyLog:
+        def write(self, msg): pass
+    log = DummyLog()
 
     if excel_file_path:
         try:
@@ -674,7 +703,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
         label = f"P{idx + 1}"
-        add_label_and_distance(doc, msp, start_point, end_point, label, distance)
+        add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=None)
 
         confrontante = confrontantes_dict.get(f"P{idx + 1}_P{(idx + 2) if (idx + 1) < num_vertices else 1}", "Desconhecido")
 
@@ -755,6 +784,11 @@ def create_memorial_document(
     perimeter_dxf=None, area_dxf=None, desc_ponto_Az=None, Coorde_E_ponto_Az=None, Coorde_N_ponto_Az=None,
     azimuth=None, distance=None, log=None
 ):
+    if log is None:
+    class DummyLog:
+        def write(self, msg): pass
+    log = DummyLog()
+
     try:
         # 🔍 Verificação do template
         print(f"🔎 Caminho do template: {template_path}")

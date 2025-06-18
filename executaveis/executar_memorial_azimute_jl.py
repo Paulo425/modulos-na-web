@@ -19,7 +19,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
 
             try:
                 dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
-                dxf_limpo_path, ponto_az = limpar_dxf_e_inserir_ponto_az(dxf_path, dxf_limpo_path)
+                dxf_limpo_path, ponto_az = limpar_dxf_e_inserir_ponto_az(dxf_path, dxf_limpo_path, log=None)
 
                 doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_limpo_path, log=log)
                 if not doc or not ponto_az:
