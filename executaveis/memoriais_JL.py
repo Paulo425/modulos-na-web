@@ -297,7 +297,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 #             print("Ponto Az não encontrado no arquivo DXF.")
 #             return None, lines, arcs, perimeter_dxf, area_dxf
 
-        if log::
+        if log:
             log.write(f"Linhas processadas: {len(lines)}\n")
             log.write(f"Arcos processados: {len(arcs)}\n")
             log.write(f"Perímetro do DXF: {perimeter_dxf:.2f} metros\n")
@@ -756,7 +756,7 @@ def create_memorial_document(
     try:
         # 🔍 Verificação do template
         print(f"🔎 Caminho do template: {template_path}")
-        if log::
+        if log:
             log.write(f"🔎 Template path: {template_path}\n")
         if not os.path.exists(template_path):
             raise FileNotFoundError(f"❌ Template não encontrado: {template_path}")
@@ -764,7 +764,7 @@ def create_memorial_document(
         # 🔍 Verificação do diretório de saída
         output_dir = os.path.dirname(output_path)
         print(f"📁 Caminho de saída do DOCX: {output_path}")
-        if log::
+        if log:
             log.write(f"📁 Output DOCX path: {output_path}\n")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
@@ -903,7 +903,7 @@ def create_memorial_document(
 
     except Exception as e:
         print(f"Erro ao criar o documento memorial: {e}")
-        if log::
+        if log:
             log.write(f"Erro ao criar o documento memorial: {e}\n")
 
 
