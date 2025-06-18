@@ -84,7 +84,8 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
 
     except Exception as e:
         print(f"❌ Erro ao limpar DXF: {e}")
-        log.write(f"❌ Erro ao limpar DXF: {e}\n")
+        if log:
+            log.write(f"❌ Erro ao limpar DXF: {e}\n")
         return original_path, None
 
 
@@ -451,7 +452,8 @@ def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth):
 
     except Exception as e:
         print(f"Erro ao adicionar arco do azimute: {e}")
-        log.write(f"Erro ao adicionar arco do azimute: {e}\n")
+        if log:
+            log.write(f"Erro ao adicionar arco do azimute: {e}\n")
 
 
 # Função para converter graus decimais para DMS
@@ -899,7 +901,8 @@ def create_memorial_document(
         # Salvar o documento
         doc_word.save(output_path)
         print(f"Memorial descritivo salvo em: {output_path}")
-        log.write(f"Memorial descritivo salvo em: {output_path}\n")
+        if log:
+            log.write(f"Memorial descritivo salvo em: {output_path}\n")
 
     except Exception as e:
         print(f"Erro ao criar o documento memorial: {e}")
