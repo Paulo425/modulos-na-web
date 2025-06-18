@@ -14,7 +14,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
 
     try:
         with open(log_path, 'w', encoding='utf-8') as log:
-            if log
+            if log:
                 log.write(f"🟢 LOG iniciado em: {datetime.now()}\n")
 
             try:
