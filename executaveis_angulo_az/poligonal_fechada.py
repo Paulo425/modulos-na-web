@@ -1096,7 +1096,7 @@ def sanitize_filename(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
         
-def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido):
+def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, template_path):
     # 🔹 Leitura dos dados do Excel
     df_excel = pd.read_excel(arquivo_excel_recebido, sheet_name='Dados_do_Imóvel', header=None)
     dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
@@ -1186,7 +1186,6 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
 
         # ✅ Geração do DOCX
         if excel_file_path:
-            template_path = r"C:\Users\Paulo\OneDrive\Documentos\SIGEF_RS\TESTE\Memorial_modelo_padrao.docx"
             output_path_docx = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.docx")
             assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
 
