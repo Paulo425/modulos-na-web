@@ -43,7 +43,7 @@ def main():
     cidade_formatada = cidade.replace(" ", "_")  # 🔧 Adicione esta linha
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    #BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
 
 

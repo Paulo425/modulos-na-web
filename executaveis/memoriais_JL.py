@@ -23,15 +23,18 @@ except ImportError:
 
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
-# Correção definitiva do locale para Windows:
+# Força o locale para português em sistemas Windows ou Linux
+
 try:
-    locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')
-except locale.Error as e:
-    print(f"Erro ao definir locale: {e}")
-    locale.setlocale(locale.LC_TIME, '')  # fallback para padrão
+    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # Linux/Mac padrão
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')  # Windows
+    except locale.Error as e:
+        print(f"⚠️ Locale não pôde ser definido: {e}")
+        locale.setlocale(locale.LC_TIME, '')  # fallback para padrão
 
-
-# Exemplo da data:
+# Agora sim a data será em português
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
 
@@ -825,8 +828,10 @@ def create_memorial_document(
         set_default_font(doc_word)  # Fonte Arial 12
 
         # Adiciona o preâmbulo centralizado com a variável "descricao"
-        p1 = doc_word.add_paragraph("MEMORIAL DESCRITIVO INDIVIDUAL", style='Normal')
+        p1 = doc_word.add_paragraph(style='Normal')
         p1.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        run1 = p1.add_run("MEMORIAL DESCRITIVO INDIVIDUAL")
+        run1.bold = True
 
         p2 = doc_word.add_paragraph(f"({descricao})", style='Normal')
         p2.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
@@ -845,23 +850,55 @@ def create_memorial_document(
         ]
 
         for linha in dados_obra:
-            doc_word.add_paragraph(linha, style='Normal')
+            if ":" in linha:
+                negrito, restante = linha.split(":", 1)
+                par = doc_word.add_paragraph(style='Normal')
+                run_bold = par.add_run(negrito + ":")
+                run_bold.bold = True
+                par.add_run(restante)  # texto normal
+            else:
+                par = doc_word.add_paragraph(style='Normal')
+                run = par.add_run(linha)
+                if linha.strip() == "DADOS DA OBRA":
+                    run.bold = True
 
         # Adicionar dados do proprietário
-        doc_word.add_paragraph(f"NOME PROPRIETÁRIO / OCUPANTE: {proprietario}", style='Normal')
-        doc_word.add_paragraph(f"DOCUMENTAÇÃO: MATRÍCULA {matricula}", style='Normal')
-        doc_word.add_paragraph(f"ÁREA DO IMÓVEL: {str(round(area_dxf, 2)).replace('.', ',')} metros quadrados", style='Normal')
+        par1 = doc_word.add_paragraph(style='Normal')
+        run1 = par1.add_run("NOME PROPRIETÁRIO / OCUPANTE:")
+        run1.bold = True
+        par1.add_run(f" {proprietario}")
+
+        par2 = doc_word.add_paragraph(style='Normal')
+        run2 = par2.add_run("DOCUMENTAÇÃO:")
+        run2.bold = True
+        par2.add_run(f" MATRÍCULA {matricula}")
+
+        # ÁREA DO IMÓVEL (m²)
+        par3 = doc_word.add_paragraph(style='Normal')
+        run3a = par3.add_run("ÁREA DO IMÓVEL (m")
+        run3a.bold = True
+        run3b = par3.add_run("2")
+        run3b.bold = True
+        run3b.font.superscript = True
+        run3c = par3.add_run("):")
+        run3c.bold = True
+        par3.add_run(f" {str(round(area_dxf, 2)).replace('.', ',')}")
+
         doc_word.add_paragraph("")  # Uma linha em branco para separar
+
 
         # Descrição do perímetro, somente se o arquivo Excel foi fornecido
         if df is not None:
             initial = df.iloc[0]
-            doc_word.add_paragraph(
-                f"Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000.\n\n"
-                f"Inicia-se a descrição deste perímetro no vértice {initial['V']}, de coordenadas "
-                f"N(Y) {initial['N']} e E(X) {initial['E']}, situado no limite com {initial['Confrontante']}.",
-                style='Normal'
-            )
+            par_intro = doc_word.add_paragraph(style='Normal')
+            par_intro.add_run("Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000.\n\n")
+            par_intro.add_run("Inicia-se a descrição deste perímetro no vértice ")
+            
+            run_v = par_intro.add_run(str(initial['V']))
+            run_v.bold = True
+            
+            par_intro.add_run(f", de coordenadas N(Y) {initial['N']} e E(X) {initial['E']}, situado no limite com {initial['Confrontante']}.")
+
 
 
             num_points = len(df)
@@ -878,23 +915,28 @@ def create_memorial_document(
                 coord_e = next_point['E']
 
                 if azimute.startswith("R=") and distancia.startswith("C="):
-                    doc_word.add_paragraph(
-                        f"Deste, segue com raio de {azimute[2:]}m e distância de {distancia[2:]}m, "
-                        f"confrontando neste trecho com {confrontante}, até o vértice {destino}, "
-                        f"de coordenadas N(Y) {coord_n} e E(X) {coord_e};",
-                        style='Normal'
-                    )
+                    par = doc_word.add_paragraph(style='Normal')
+                    par.add_run(f"Deste, segue com raio de {azimute[2:]}m e distância de {distancia[2:]}m, ")
+                    par.add_run(f"confrontando neste trecho com {confrontante}, até o vértice ")
+                    run_destino = par.add_run(str(destino))
+                    run_destino.bold = True
+                    par.add_run(f", de coordenadas N(Y) {coord_n} e E(X) {coord_e};")
+
                 else:
-                    doc_word.add_paragraph(
-                        f"Deste, segue com azimute de {azimute} e distância de {distancia} m, "
-                        f"confrontando neste trecho com {confrontante}, até o vértice {destino}, "
-                        f"de coordenadas N(Y) {coord_n} e E(X) {coord_e};",
-                        style='Normal'
-                    )
+                    par = doc_word.add_paragraph(style='Normal')
+                    par.add_run(f"Deste, segue com azimute de {azimute} e distância de {distancia} m, ")
+                    par.add_run(f"confrontando neste trecho com {confrontante}, até o vértice ")
+                    run_destino = par.add_run(str(destino))
+                    run_destino.bold = True
+                    par.add_run(f", de coordenadas N(Y) {coord_n} e E(X) {coord_e};")
+
         else:
             # Caso não haja Excel, pode deixar espaço para preenchimento manual
-            doc_word.add_paragraph("\nDescrição do perímetro não incluída neste memorial.", style='Normal')
+            doc_word.add_paragraph("Descrição do perímetro não incluída neste memorial.", style='Normal')
             pular_linhas(doc_word, 8)
+
+        doc_word.add_paragraph("")  # Uma linha em branco para separar
+   
         # Adicionar o fechamento do perímetro e área
         paragrafo_fechamento = doc_word.add_paragraph(
             f"Fechando-se assim o perímetro com {str(round(perimeter_dxf, 2)).replace('.', ',')} m "
@@ -911,7 +953,10 @@ def create_memorial_document(
         paragrafo_data = doc_word.add_paragraph(f"Paraná, {data_atual}.", style='Normal')
         paragrafo_data.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-        
+        doc_word.add_paragraph("")  # Uma linha em branco para separar
+        doc_word.add_paragraph("")  # Uma linha em branco para separar
+        doc_word.add_paragraph("")  # Uma linha em branco para separar
+
         # Adicionar a imagem da assinatura centralizada
         assinatura = doc_word.add_paragraph()
         assinatura.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
