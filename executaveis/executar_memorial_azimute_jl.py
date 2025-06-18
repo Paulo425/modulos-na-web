@@ -14,7 +14,8 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
 
     try:
         with open(log_path, 'w', encoding='utf-8') as log:
-            log.write(f"🟢 LOG iniciado em: {datetime.now()}\n")
+            if log
+                log.write(f"🟢 LOG iniciado em: {datetime.now()}\n")
 
             try:
                 dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
@@ -58,12 +59,14 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                 )
 
                 final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
-                log.write("✅ Processamento finalizado com sucesso.\n")
+                if log:
+                    log.write("✅ Processamento finalizado com sucesso.\n")
                 return log_path, [excel_output, final_dxf_path, docx_path]
 
             except Exception as e:
                 traceback.print_exc(file=log)
-                log.write(f"\n❌ Erro durante execução: {e}\n")
+                if log:
+                    log.write(f"\n❌ Erro durante execução: {e}\n")
                 return log_path, []
 
     except Exception as e_fora:
