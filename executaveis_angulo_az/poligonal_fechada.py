@@ -1056,39 +1056,39 @@ def find_excel_file(directory, keywords):
 
 
 
+#função não pode ser usada para LINUX       
+# def convert_docx_to_pdf(output_path, pdf_file_path):
+#     """
+#     Converte um arquivo DOCX para PDF usando a biblioteca comtypes.
+#     """
+#     try:
+#         # Verificar se o arquivo DOCX existe antes de abrir
+#         if not os.path.exists(output_path):
+#             raise FileNotFoundError(f"Arquivo DOCX não encontrado: {output_path}")
         
-def convert_docx_to_pdf(output_path, pdf_file_path):
-    """
-    Converte um arquivo DOCX para PDF usando a biblioteca comtypes.
-    """
-    try:
-        # Verificar se o arquivo DOCX existe antes de abrir
-        if not os.path.exists(output_path):
-            raise FileNotFoundError(f"Arquivo DOCX não encontrado: {output_path}")
-        
-        print(f"Tentando converter o arquivo DOCX: {output_path} para PDF: {pdf_file_path}")
+#         print(f"Tentando converter o arquivo DOCX: {output_path} para PDF: {pdf_file_path}")
 
-        word = comtypes.client.CreateObject("Word.Application")
-        word.Visible = False  # Ocultar a interface do Word
-        doc = word.Documents.Open(output_path)
+#         word = comtypes.client.CreateObject("Word.Application")
+#         word.Visible = False  # Ocultar a interface do Word
+#         doc = word.Documents.Open(output_path)
         
-        # Aguardar alguns segundos antes de salvar como PDF
-        import time
-        time.sleep(2)
+#         # Aguardar alguns segundos antes de salvar como PDF
+#         import time
+#         time.sleep(2)
 
-        doc.SaveAs(pdf_file_path, FileFormat=17)  # 17 corresponde ao formato PDF
-        doc.Close()
-        word.Quit()
-        print(f"Arquivo PDF salvo com sucesso em: {pdf_file_path}")
-    except FileNotFoundError as fnf_error:
-        print(f"Erro: {fnf_error}")
-    except Exception as e:
-        print(f"Erro ao converter DOCX para PDF: {e}")
-    finally:
-        try:
-            word.Quit()
-        except:
-            pass  # Garantir que o Word seja fechado
+#         #doc.SaveAs(pdf_file_path, FileFormat=17)  # 17 corresponde ao formato PDF
+#         doc.Close()
+#         word.Quit()
+#         #print(f"Arquivo PDF salvo com sucesso em: {pdf_file_path}")
+#     except FileNotFoundError as fnf_error:
+#         print(f"Erro: {fnf_error}")
+#     except Exception as e:
+#         print(f"Erro ao converter DOCX para PDF: {e}")
+#     finally:
+#         try:
+#             word.Quit()
+#         except:
+#             pass  # Garantir que o Word seja fechado
 
 
 
@@ -1213,13 +1213,13 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
             )
 
             # ✅ Geração do PDF
-            time.sleep(2)
-            if os.path.exists(output_path_docx):
-                pdf_file_path = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.pdf")
-                convert_docx_to_pdf(output_path_docx, pdf_file_path)
-                print(f"✅ PDF salvo em: {pdf_file_path}")
-            else:
-                print("❌ Arquivo DOCX não gerado para conversão.")
+            # time.sleep(2)
+            # if os.path.exists(output_path_docx):
+            #     pdf_file_path = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.pdf")
+            #     convert_docx_to_pdf(output_path_docx, pdf_file_path)
+            #     print(f"✅ PDF salvo em: {pdf_file_path}")
+            # else:
+            #     print("❌ Arquivo DOCX não gerado para conversão.")
 
         else:
             print("❌ Planilha Excel não gerada.")
