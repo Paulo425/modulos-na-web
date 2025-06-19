@@ -563,7 +563,6 @@ def gerar_memorial_angulo_az():
                            log_path=log_relativo)
 # ✅ ROTA PARA O MÓDULO DE AVALIAÇÕES
 
-f
 
 from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 
