@@ -37,8 +37,8 @@ from lxml import etree
 from docx.oxml.ns import nsdecls, qn
 
 # Para seleção de múltiplas fotos e da planilha (file dialog).
-import tkinter
-from tkinter import filedialog
+
+
 
 from docx.oxml.ns import nsdecls
 from lxml import etree
@@ -3536,12 +3536,9 @@ def main():
     # =================================================================== ▒ SETUP
     barra_progresso = tqdm(total=6, desc="Processando", ncols=80)
 
-    print("\nSelecione a planilha de amostras de mercado (Excel):")
-    root_plan = tkinter.Tk(); root_plan.withdraw()
-    caminho_planilha = filedialog.askopenfilename(
-        title="Selecione a planilha de amostras",
-        filetypes=[("Planilhas Excel", "*.xlsx *.xls"), ("Todos os arquivos", "*.*")]
-    )
+    caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
+    request.files["planilha_excel"].save(caminho_planilha)
+
     root_plan.destroy()
     if not caminho_planilha:
         print("Nenhuma planilha selecionada. Encerrando."); return
@@ -3783,22 +3780,9 @@ def main():
     barra_progresso.update(1)
 
     # =================================================== ▒ SELECIONAR FOTOS / LOGO
-    print("\nSelecione as fotos do imóvel...")
-    root_fotos = tkinter.Tk(); root_fotos.withdraw()
-    caminhos_fotos_selecionados = filedialog.askopenfilenames(
-        title="Selecione fotos do imóvel",
-        filetypes=[("Imagens", "*.png *.jpg *.jpeg *.bmp *.gif"), ("Todos", "*.*")]
-    )
-    root_fotos.destroy()
+    
+    fatores_do_usuario["caminhoLogo"] = caminho_logo  # já definido a partir de request.files["arquivo_logo"]
 
-    print("Selecione o arquivo de imagem do logo:")
-    root_logo = tkinter.Tk(); root_logo.withdraw()
-    caminho_logo = filedialog.askopenfilename(
-        title="Selecione LOGO",
-        filetypes=[("Imagens", "*.png *.jpg *.jpeg *.bmp *.gif"), ("Todos", "*.*")]
-    )
-    root_logo.destroy()
-    fatores_do_usuario["caminhoLogo"] = caminho_logo
 
     # placeholders para listas que, se não usadas,
     # devem existir para evitar NameError
@@ -5660,8 +5644,6 @@ from docx.oxml.ns import qn, nsdecls
 from docx.text.paragraph import Paragraph
 
 # --- Interface gráfica / Diálogos de arquivo ---
-import tkinter
-from tkinter import filedialog
 
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
