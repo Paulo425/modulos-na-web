@@ -35,7 +35,9 @@ CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
 os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
 
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'),
+                       static_folder=os.path.join(BASE_DIR, 'static'))
+
 app.secret_key = 'chave_super_secreta'
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
