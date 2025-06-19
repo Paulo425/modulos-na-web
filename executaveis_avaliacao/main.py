@@ -19,7 +19,6 @@ from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from tqdm import tqdm
 from datetime import datetime
-from docx.oxml import OxmlElement
 from docx.oxml.shared import OxmlElement
 from docx.oxml import parse_xml
 from docx.oxml.ns import qn, nsdecls
