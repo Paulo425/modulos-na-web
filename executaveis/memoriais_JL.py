@@ -38,6 +38,19 @@ except locale.Error:
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
 
+def obter_data_em_portugues():
+    meses_pt = {
+        "January": "janeiro", "February": "fevereiro", "March": "março",
+        "April": "abril", "May": "maio", "June": "junho",
+        "July": "julho", "August": "agosto", "September": "setembro",
+        "October": "outubro", "November": "novembro", "December": "dezembro"
+    }
+    data = datetime.now()
+    mes_en = data.strftime("%B")
+    mes_pt = meses_pt.get(mes_en, mes_en)
+    return f"{data.day:02d} de {mes_pt} de {data.year}"
+
+
 def limpar_dxf_e_inserir_ponto_az(original_path, saida_path,log=None):
     if log is None:
         class DummyLog:
@@ -947,7 +960,8 @@ def create_memorial_document(
         doc_word.add_paragraph("")
         doc_word.add_paragraph("")
         # Adicionar data
-        data_atual = datetime.now().strftime("%d de %B de %Y")
+        
+        data_atual = obter_data_em_portugues()
         
        # Centralizar data
         paragrafo_data = doc_word.add_paragraph(f"Paraná, {data_atual}.", style='Normal')
