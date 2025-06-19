@@ -15,6 +15,11 @@ tqdm==4.66.2
 gunicorn==21.2.0
 sqlalchemy==2.0.30
 mysql-connector-python==8.3.0
+folium==0.16.0
+selenium==4.21.0
+webdriver-manager==4.0.1
+contextily==1.6.0
+
 
 
 
