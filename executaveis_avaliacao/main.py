@@ -20,7 +20,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from tqdm import tqdm
 from datetime import datetime
 from docx.oxml.shared import OxmlElement
-from docx.oxml import parse_xml
+from lxml import etree
 from docx.oxml.ns import qn, nsdecls
 import folium
 from folium import plugins
@@ -32,7 +32,8 @@ import pandas as pd
 # Módulos do python-docx para manipular parágrafos e XML
 from docx.text.paragraph import Paragraph
 from docx.oxml.shared import OxmlElement
-from docx.oxml import parse_xml
+from lxml import etree
+
 from docx.oxml.ns import nsdecls, qn
 
 # Para seleção de múltiplas fotos e da planilha (file dialog).
@@ -40,7 +41,8 @@ import tkinter
 from tkinter import filedialog
 
 from docx.oxml.ns import nsdecls
-from docx.oxml import parse_xml
+from lxml import etree
+
 from docx.shared import Pt
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -54,7 +56,8 @@ import numpy
 
 
 from docx.oxml.shared import OxmlElement
-from docx.oxml import parse_xml
+from lxml import etree
+
 from docx.oxml.ns import nsdecls, qn
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -65,7 +68,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
 from docx.oxml.ns import nsdecls, qn
 from docx.oxml.shared import OxmlElement
-from docx.oxml import parse_xml
+from lxml import etree
+
 
 
 ###############################################################################
@@ -1063,7 +1067,7 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=Non
 
     # ---- Sombras ----------------------------------------------------------
     def _shading(fill_hex):   # cria um <w:shd ... w:fill="XXXXXX"/>
-        return parse_xml(
+        return etree.fromstring(
             r'<w:shd {} w:val="clear" w:fill="{}"/>'.format(nsdecls('w'), fill_hex)
         )
     azul  = "BDD7EE"   # cabeçalhos
@@ -1162,7 +1166,8 @@ def inserir_tabela_amostras_originais(documento, dataframe):
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.shared import OxmlElement
-    from docx.oxml import parse_xml
+    from lxml import etree
+
     from docx.oxml.ns import nsdecls, qn
 
     # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
@@ -1225,7 +1230,7 @@ def inserir_tabela_amostras_originais(documento, dataframe):
         cell_header.text = titulo_exib
 
         # Fundo azul claro no cabeçalho
-        shading_xml = parse_xml(
+        shading_xml = etree.fromstring(
             f'<w:shd {nsdecls("w")} w:fill="BDD7EE" w:val="clear"/>'
         )
         cell_header._tc.get_or_add_tcPr().append(shading_xml)
@@ -1691,7 +1696,8 @@ def inserir_tabela_classificacao_de_precisao(documento, marcador, amplitude_ic80
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt
     from docx.oxml.shared import OxmlElement
-    from docx.oxml import parse_xml
+    from lxml import etree
+
     from docx.oxml.ns import nsdecls, qn
 
     for paragrafo in documento.paragraphs:
@@ -1739,7 +1745,7 @@ def inserir_tabela_classificacao_de_precisao(documento, marcador, amplitude_ic80
                             runn.font.name = "Arial"
                             runn.font.size = Pt(10)
 
-            shading_azul = parse_xml(r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w')))
+            shading_azul = etree.fromstring(r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w')))
             if grau_obtido == "GRAU III":
                 tabela.cell(0,1)._tc.get_or_add_tcPr().append(shading_azul)
                 tabela.cell(1,1)._tc.get_or_add_tcPr().append(shading_azul)
@@ -1791,7 +1797,8 @@ def inserir_fundamentacao_e_enquadramento(
     """
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.shared import OxmlElement
-    from docx.oxml import parse_xml
+    from lxml import etree
+
     from docx.oxml.ns import qn, nsdecls
     from docx.shared import Pt
 
@@ -1877,7 +1884,7 @@ def inserir_fundamentacao_e_enquadramento(
     #
 
     def pintar_celula_azul(cell):
-        shading_azul = parse_xml(
+        shading_azul = etree.fromstring(
             r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w'))
         )
         cell._tc.get_or_add_tcPr().append(shading_azul)
@@ -1984,7 +1991,7 @@ def inserir_fundamentacao_e_enquadramento(
     # E pintar as células conforme o grau de cada item.
     # ----------------------------------------------------------------------------------
 
-    shading_azul = parse_xml(r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w')))
+    shading_azul = etree.fromstring(r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w')))
 
     # Função que pinta a célula de acordo com "III", "II", "I"
     def pintar_grau_urbano(tabela, row, grau_txt):
@@ -2262,7 +2269,7 @@ def inserir_fundamentacao_e_enquadramento(
             # --------------------------------------------------------------
             def _pinta(cel):
                 cel._tc.get_or_add_tcPr().append(
-                    parse_xml(
+                    etree.fromstring(
                         r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'
                         .format(nsdecls("w"))
                     )
@@ -2418,7 +2425,8 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
         em seguida, a inicial é forçada para maiúsculo.
     """
     import re
-    from docx.oxml import parse_xml, OxmlElement
+    from lxml import etree
+, OxmlElement
     from docx.oxml.ns import nsdecls, qn
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
@@ -2497,7 +2505,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
             # (0) Cabeçalho mesclado
             cel_titulo = tabela_principal.cell(0, 0).merge(tabela_principal.cell(0, 1))
             cel_titulo.text = "RESUMO DOS VALORES TOTAIS"
-            shading_cab = parse_xml(r'<w:shd {} w:fill="D9D9D9" w:val="clear"/>'.format(nsdecls('w')))
+            shading_cab = etree.fromstring(r'<w:shd {} w:fill="D9D9D9" w:val="clear"/>'.format(nsdecls('w')))
             cel_titulo._tc.get_or_add_tcPr().append(shading_cab)
             for p_ in cel_titulo.paragraphs:
                 p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -2520,7 +2528,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
 
             # (4) Sub-tabela => célula mesclada
             cel_sub = tabela_principal.cell(4,0).merge(tabela_principal.cell(4,1))
-            shading_light_blue = parse_xml(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
+            shading_light_blue = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
             cel_sub._tc.get_or_add_tcPr().append(shading_light_blue)
 
             # Remove margens internas da célula mesclada
@@ -2601,7 +2609,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
                 # Fundo azul e remover margens em todas as células
                 for row_ in subtab.rows:
                     for cell_ in row_.cells:
-                        shade_cell = parse_xml(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
+                        shade_cell = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
                         cell_._tc.get_or_add_tcPr().append(shade_cell)
                         cell_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                         tcpr = cell_._tc.get_or_add_tcPr()
@@ -2676,7 +2684,8 @@ def inserir_tabela_diagnostico_de_mercado(documento, marcador, escolha_estrutura
     from docx.enum.table import WD_ROW_HEIGHT_RULE
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt
-    from docx.oxml import parse_xml
+    from lxml import etree
+
     from docx.oxml.ns import nsdecls, qn
 
     dados_tabela = [
@@ -2724,7 +2733,7 @@ def inserir_tabela_diagnostico_de_mercado(documento, marcador, escolha_estrutura
                 c_desc.text = descricao
 
                 if verificar_se_destacar(dimensao, opcao):
-                    shading_azul = parse_xml(
+                    shading_azul = etree.fromstring(
                         r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w'))
                     )
                     c_opc._tc.get_or_add_tcPr().append(shading_azul)
@@ -2768,7 +2777,8 @@ def inserir_tabela_resumo_geral_completo(documento, placeholder, info_resumo_ger
             from docx.enum.text import WD_ALIGN_PARAGRAPH
             from docx.shared import Pt
             from docx.oxml.shared import OxmlElement
-            from docx.oxml import parse_xml
+            from lxml import etree
+
             from docx.oxml.ns import nsdecls, qn
 
             tabela_resumo = documento.add_table(rows=5, cols=2, style="Table Grid")
@@ -5645,7 +5655,8 @@ from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT
 from docx.oxml.shared import OxmlElement
-from docx.oxml import parse_xml
+from lxml import etree
+
 from docx.oxml.ns import qn, nsdecls
 from docx.text.paragraph import Paragraph
 
@@ -6277,7 +6288,8 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=Non
     limitar_fator() e formatado com duas casas decimais.
     """
     from docx.shared import Pt, Inches
-    from docx.oxml import parse_xml
+    from lxml import etree
+
     from docx.oxml.ns import nsdecls
     from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
     from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -6332,7 +6344,7 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=Non
                     row.cells[i].width = Inches(w_inches)
 
             # Cabeçalho com sombreamento azul-claro
-            shading_azul_claro = parse_xml(
+            shading_azul_claro = etree.fromstring(
                 r'<w:shd {} w:val="clear" w:fill="BDD7EE"/>'.format(nsdecls('w'))
             )
             # Preenche o cabeçalho
@@ -6413,7 +6425,8 @@ def inserir_tabela_amostras_originais(documento, dataframe):
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.shared import OxmlElement
-    from docx.oxml import parse_xml
+    from lxml import etree
+
     from docx.oxml.ns import nsdecls, qn
 
     # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
@@ -6476,7 +6489,7 @@ def inserir_tabela_amostras_originais(documento, dataframe):
         cell_header.text = titulo_exib
 
         # Fundo azul claro no cabeçalho
-        shading_xml = parse_xml(
+        shading_xml = etree.fromstring(
             f'<w:shd {nsdecls("w")} w:fill="BDD7EE" w:val="clear"/>'
         )
         cell_header._tc.get_or_add_tcPr().append(shading_xml)
@@ -6930,7 +6943,8 @@ def inserir_tabela_classificacao_de_precisao(documento, marcador, amplitude_ic80
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt
     from docx.oxml.shared import OxmlElement
-    from docx.oxml import parse_xml
+    from lxml import etree
+
     from docx.oxml.ns import nsdecls, qn
 
     for paragrafo in documento.paragraphs:
@@ -6978,7 +6992,7 @@ def inserir_tabela_classificacao_de_precisao(documento, marcador, amplitude_ic80
                             runn.font.name = "Arial"
                             runn.font.size = Pt(10)
 
-            shading_azul = parse_xml(r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w')))
+            shading_azul = etree.fromstring(r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w')))
             if grau_obtido == "GRAU III":
                 tabela.cell(0,1)._tc.get_or_add_tcPr().append(shading_azul)
                 tabela.cell(1,1)._tc.get_or_add_tcPr().append(shading_azul)
@@ -7098,7 +7112,8 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
         em seguida, a inicial é forçada para maiúsculo.
     """
     import re
-    from docx.oxml import parse_xml, OxmlElement
+    from lxml import etree
+, OxmlElement
     from docx.oxml.ns import nsdecls, qn
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
@@ -7202,7 +7217,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
             # (0) Cabeçalho mesclado
             cel_titulo = tabela_principal.cell(0, 0).merge(tabela_principal.cell(0, 1))
             cel_titulo.text = "RESUMO DOS VALORES TOTAIS"
-            shading_cab = parse_xml(r'<w:shd {} w:fill="D9D9D9" w:val="clear"/>'.format(nsdecls('w')))
+            shading_cab = etree.fromstring(r'<w:shd {} w:fill="D9D9D9" w:val="clear"/>'.format(nsdecls('w')))
             cel_titulo._tc.get_or_add_tcPr().append(shading_cab)
             for p_ in cel_titulo.paragraphs:
                 p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -7225,7 +7240,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
 
             # (4) Sub-tabela => célula mesclada
             cel_sub = tabela_principal.cell(4,0).merge(tabela_principal.cell(4,1))
-            shading_light_blue = parse_xml(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
+            shading_light_blue = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
             cel_sub._tc.get_or_add_tcPr().append(shading_light_blue)
 
             # Remove margens internas da célula mesclada
@@ -7306,7 +7321,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
                 # Fundo azul e remover margens em todas as células
                 for row_ in subtab.rows:
                     for cell_ in row_.cells:
-                        shade_cell = parse_xml(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
+                        shade_cell = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
                         cell_._tc.get_or_add_tcPr().append(shade_cell)
                         cell_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                         tcpr = cell_._tc.get_or_add_tcPr()
@@ -7384,7 +7399,8 @@ def inserir_tabela_diagnostico_de_mercado(documento, marcador, escolha_estrutura
     from docx.enum.table import WD_ROW_HEIGHT_RULE
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt
-    from docx.oxml import parse_xml
+    from lxml import etree
+
     from docx.oxml.ns import nsdecls, qn
 
     dados_tabela = [
@@ -7432,7 +7448,7 @@ def inserir_tabela_diagnostico_de_mercado(documento, marcador, escolha_estrutura
                 c_desc.text = descricao
 
                 if verificar_se_destacar(dimensao, opcao):
-                    shading_azul = parse_xml(
+                    shading_azul = etree.fromstring(
                         r'<w:shd {} w:fill="BDD7EE" w:val="clear"/>'.format(nsdecls('w'))
                     )
                     c_opc._tc.get_or_add_tcPr().append(shading_azul)
@@ -7477,7 +7493,8 @@ def inserir_tabela_resumo_geral_completo(documento, placeholder, info_resumo_ger
             from docx.enum.text import WD_ALIGN_PARAGRAPH
             from docx.shared import Pt
             from docx.oxml.shared import OxmlElement
-            from docx.oxml import parse_xml
+            from lxml import etree
+
             from docx.oxml.ns import nsdecls, qn
 
             tabela_resumo = documento.add_table(rows=5, cols=2, style="Table Grid")
