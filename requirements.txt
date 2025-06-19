@@ -19,6 +19,8 @@ folium==0.16.0
 selenium==4.21.0
 webdriver-manager==4.0.1
 contextily==1.6.0
+scipy==1.13.1
+
 
 
 
