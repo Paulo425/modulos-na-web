@@ -2426,7 +2426,6 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
     """
     import re
     from lxml import etree
-, OxmlElement
     from docx.oxml.ns import nsdecls, qn
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
