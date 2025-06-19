@@ -19,7 +19,9 @@ from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from tqdm import tqdm
 from datetime import datetime
-from docx.oxml import OxmlElement, parse_xml
+from docx.oxml import OxmlElement
+from docx.oxml.shared import OxmlElement
+from docx.oxml import parse_xml
 from docx.oxml.ns import qn, nsdecls
 import folium
 from folium import plugins
@@ -30,7 +32,8 @@ import contextily as ctx
 import pandas as pd
 # Módulos do python-docx para manipular parágrafos e XML
 from docx.text.paragraph import Paragraph
-from docx.oxml import OxmlElement, parse_xml
+from docx.oxml.shared import OxmlElement
+from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls, qn
 
 # Para seleção de múltiplas fotos e da planilha (file dialog).
@@ -50,7 +53,9 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 import os
 import numpy
 
-from docx.oxml import OxmlElement, parse_xml
+
+from docx.oxml.shared import OxmlElement
+from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls, qn
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -60,7 +65,8 @@ from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
 from docx.oxml.ns import nsdecls, qn
-from docx.oxml import OxmlElement, parse_xml
+from docx.oxml.shared import OxmlElement
+from docx.oxml import parse_xml
 
 
 ###############################################################################
@@ -1156,7 +1162,8 @@ def inserir_tabela_amostras_originais(documento, dataframe):
     from docx.shared import Pt, Inches
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml import OxmlElement, parse_xml
+    from docx.oxml.shared import OxmlElement
+    from docx.oxml import parse_xml
     from docx.oxml.ns import nsdecls, qn
 
     # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
@@ -1684,7 +1691,8 @@ def inserir_tabela_classificacao_de_precisao(documento, marcador, amplitude_ic80
     grau_obtido = classificar_grau_de_precisao(amplitude_ic80)
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt
-    from docx.oxml import OxmlElement, parse_xml
+    from docx.oxml.shared import OxmlElement
+    from docx.oxml import parse_xml
     from docx.oxml.ns import nsdecls, qn
 
     for paragrafo in documento.paragraphs:
@@ -1783,7 +1791,8 @@ def inserir_fundamentacao_e_enquadramento(
          dentro de [0.80..1.25], [0.50..1.40], [0.20..2.00] ou fora disso.
     """
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml import OxmlElement, parse_xml
+    from docx.oxml.shared import OxmlElement
+    from docx.oxml import parse_xml
     from docx.oxml.ns import qn, nsdecls
     from docx.shared import Pt
 
@@ -2759,7 +2768,8 @@ def inserir_tabela_resumo_geral_completo(documento, placeholder, info_resumo_ger
             from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
             from docx.enum.text import WD_ALIGN_PARAGRAPH
             from docx.shared import Pt
-            from docx.oxml import OxmlElement, parse_xml
+            from docx.oxml.shared import OxmlElement
+            from docx.oxml import parse_xml
             from docx.oxml.ns import nsdecls, qn
 
             tabela_resumo = documento.add_table(rows=5, cols=2, style="Table Grid")
@@ -5635,7 +5645,8 @@ from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT
-from docx.oxml import OxmlElement, parse_xml
+from docx.oxml.shared import OxmlElement
+from docx.oxml import parse_xml
 from docx.oxml.ns import qn, nsdecls
 from docx.text.paragraph import Paragraph
 
@@ -6402,7 +6413,8 @@ def inserir_tabela_amostras_originais(documento, dataframe):
     from docx.shared import Pt, Inches
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml import OxmlElement, parse_xml
+    from docx.oxml.shared import OxmlElement
+    from docx.oxml import parse_xml
     from docx.oxml.ns import nsdecls, qn
 
     # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
@@ -6918,7 +6930,8 @@ def inserir_tabela_classificacao_de_precisao(documento, marcador, amplitude_ic80
     grau_obtido = classificar_grau_de_precisao(amplitude_ic80)
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt
-    from docx.oxml import OxmlElement, parse_xml
+    from docx.oxml.shared import OxmlElement
+    from docx.oxml import parse_xml
     from docx.oxml.ns import nsdecls, qn
 
     for paragrafo in documento.paragraphs:
@@ -7464,7 +7477,8 @@ def inserir_tabela_resumo_geral_completo(documento, placeholder, info_resumo_ger
             from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
             from docx.enum.text import WD_ALIGN_PARAGRAPH
             from docx.shared import Pt
-            from docx.oxml import OxmlElement, parse_xml
+            from docx.oxml.shared import OxmlElement
+            from docx.oxml import parse_xml
             from docx.oxml.ns import nsdecls, qn
 
             tabela_resumo = documento.add_table(rows=5, cols=2, style="Table Grid")
