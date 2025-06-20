@@ -73,6 +73,8 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
         print(f"❌ Erro ao copiar arquivo DXF: {e}")
         logger.error(f"Erro ao copiar arquivo DXF: {e}")
         return None
+        
+    preparar_planilhas(destino_excel, PREPARADO)
 
     try:
         df = pd.read_excel(destino_excel, sheet_name=None)
