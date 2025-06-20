@@ -1015,12 +1015,18 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
         logger.info(f"Tipo identificado: {tipo}")
 
         # Novo padrão correto
-        excel_confrontantes = os.path.join(pasta_preparado, f"{tipo}_PREPARADO.xlsx")
-        if not os.path.exists(excel_confrontantes):
-            print(f"❌ Arquivo de confrontantes esperado não encontrado: {excel_confrontantes}")
+        padrao = os.path.join(pasta_preparado, f"FECHADA_*_{tipo}.xlsx")
+        lista_encontrada = glob.glob(padrao)
+
+        if not lista_encontrada:
+            print(f"❌ Arquivo de confrontantes esperado não encontrado para tipo {tipo}")
+            logger.warning(f"Nenhuma planilha FECHADA_*_{tipo}.xlsx encontrada.")
             return
-       
+
+        excel_confrontantes = lista_encontrada[0]
+        print(f"✅ Confrontante carregado: {excel_confrontantes}")
         logger.info(f"Planilha de confrontantes usada: {excel_confrontantes}")
+
 
         nome_limpo_dxf = f"DXF_LIMPO_{matricula}.dxf"
         caminho_dxf_limpo = os.path.join(pasta_concluido, nome_limpo_dxf)
