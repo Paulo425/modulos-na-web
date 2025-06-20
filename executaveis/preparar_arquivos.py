@@ -2,8 +2,8 @@
 
 import os
 import shutil
-import pandas as pd
 import logging
+import pandas as pd
 from datetime import datetime
 
 # Diretórios e logger
@@ -18,6 +18,31 @@ file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
 logger.addHandler(file_handler)
 
+# ✅ Função para gerar planilhas abertas e fechadas como no AZIMUTE_AZ
+def preparar_planilhas(arquivo_recebido, diretorio_preparado):
+    def processar_planilha(df, coluna_codigo, identificador, diretorio_destino):
+        if coluna_codigo not in df.columns:
+            print(f"⚠️ Coluna '{coluna_codigo}' não encontrada.")
+            return
+
+        df_v = df[df[coluna_codigo].astype(str).str.match(r'^[Vv][0-9]*$', na=False)][[coluna_codigo, "Confrontante"]]
+        df_outros = df[~df[coluna_codigo].astype(str).str.match(r'^[Vv][0-9]*$', na=False)]
+
+        df_v.to_excel(os.path.join(diretorio_destino, f"FECHADA_{identificador}.xlsx"), index=False)
+        df_outros.to_excel(os.path.join(diretorio_destino, f"ABERTA_{identificador}.xlsx"), index=False)
+        print(f"✅ Planilhas processadas para: {identificador}")
+
+    xls = pd.ExcelFile(arquivo_recebido)
+    for sheet_name, sufixo in [("ETE", "ETE"), ("Confrontantes_Remanescente", "REM"),
+                               ("Confrontantes_Servidao", "SER"), ("Confrontantes_Acesso", "ACE")]:
+        if sheet_name in xls.sheet_names:
+            df = pd.read_excel(xls, sheet_name=sheet_name)
+            identificador = f"{os.path.splitext(os.path.basename(arquivo_recebido))[0]}_{sufixo}"
+            processar_planilha(df, "Código", identificador, diretorio_preparado)
+        else:
+            print(f"⚠️ Planilha '{sheet_name}' não encontrada.")
+
+# ✅ Função principal usada pelo main.py
 def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
     TMP_DIR = os.path.join(BASE_DIR, 'tmp')
     RECEBIDO = os.path.join(TMP_DIR, 'RECEBIDO')
@@ -51,6 +76,14 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
         logger.error(f"Erro ao copiar arquivo DXF: {e}")
         return None
 
+    # ✅ Gera planilhas abertas/fechadas (ponto-chave que estava faltando)
+    try:
+        preparar_planilhas(destino_excel, PREPARADO)
+    except Exception as e:
+        print(f"⚠️ Erro ao preparar planilhas: {e}")
+        logger.error(f"Erro ao preparar planilhas: {e}")
+
+    # ✅ Também salva as planilhas completas como antes
     try:
         df = pd.read_excel(destino_excel, sheet_name=None)
         for nome_aba, tabela in df.items():
@@ -60,8 +93,8 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
             print(f"✅ Planilha '{nome_aba}' salva em: {caminho_saida}")
             logger.info(f"Planilha '{nome_aba}' salva em: {caminho_saida}")
     except Exception as e:
-        print(f"⚠️ Erro ao processar planilhas do Excel: {e}")
-        logger.error(f"Erro ao processar planilhas do Excel: {e}")
+        print(f"⚠️ Erro ao salvar planilhas completas: {e}")
+        logger.error(f"Erro ao salvar planilhas completas: {e}")
         return None
 
     print("🟢 [main_preparo_arquivos] Tudo pronto, retornando variáveis:")
