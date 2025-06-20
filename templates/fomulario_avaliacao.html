@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<div class="container mt-5">
+    <h2 class="text-primary mb-4 text-center">Formulário de Avaliação PHOENIX APPRAISAL</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+
+        <div class="mb-3">
+            <label class="form-label">Planilha de Amostras (Excel):</label>
+            <input type="file" name="planilha_excel" accept=".xlsx" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label>Nome do Proprietário:</label>
+            <input type="text" name="nome_proprietario" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label>Outros Proprietários?</label>
+            <select name="outros_proprietarios" class="form-select">
+                <option value="nao">Não</option>
+                <option value="sim">Sim</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label>Incluir telefone?</label>
+            <select name="incluir_tel" class="form-select">
+                <option value="nao">Não</option>
+                <option value="sim">Sim</option>
+            </select>
+            <input type="text" name="telefone_proprietario" class="form-control mt-2" placeholder="(00) 00000-0000">
+        </div>
+
+        <div class="mb-3">
+            <label>Incluir e-mail?</label>
+            <select name="incluir_mail" class="form-select">
+                <option value="nao">Não</option>
+                <option value="sim">Sim</option>
+            </select>
+            <input type="email" name="email_proprietario" class="form-control mt-2" placeholder="email@exemplo.com">
+        </div>
+
+        <div class="mb-3">
+            <label>Solicitante do laudo:</label>
+            <input type="text" name="nome_solicitante" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label>Nome do Avaliador:</label>
+            <input type="text" name="nome_avaliador" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label>Registro do Avaliador:</label>
+            <input type="text" name="registro_avaliador" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label>Tipo de Imóvel:</label>
+            <select name="tipo_imovel_escolhido" class="form-select">
+                <option value="">Selecione</option>
+                <option>Apartamento residencial</option>
+                <option>Casa residencial</option>
+                <option>Terreno urbano</option>
+                <option>Gleba urbana</option>
+                <option>Terreno rural</option>
+                <option>Gleba rural</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label>Finalidade do Laudo:</label>
+            <select name="finalidade_lido" class="form-select" onchange="document.getElementById('outraFinalidade').style.display = this.value === 'Outra' ? 'block' : 'none';">
+                <option value="">Selecione</option>
+                <option>Desapropriação</option>
+                <option>Servidão administrativa</option>
+                <option>Garantia bancária</option>
+                <option>Mercado</option>
+                <option>Regularização</option>
+                <option>Outra</option>
+            </select>
+            <input id="outraFinalidade" type="text" name="finalidade_descricao" class="form-control mt-2" placeholder="Descreva a finalidade" style="display:none;">
+        </div>
+
+        <div class="mb-3">
+            <label>Área total ou afetada (m²):</label>
+            <input type="text" name="area_parcial" class="form-control" placeholder="Ex: 2.500,00">
+        </div>
+
+        <hr>
+        <h5 class="text-secondary">Fatores de Homogeneização</h5>
+
+        {% for fator in [
+            'usar_fator_area', 'usar_fator_oferta', 'usar_fator_aproveitamento',
+            'localizacao_mesma_regiao', 'usar_fator_topografia', 'usar_fator_pedologia',
+            'usar_fator_pavimentacao', 'usar_fator_esquina', 'usar_fator_acessibilidade'
+        ] %}
+        <div class="mb-3">
+            <label>{{ fator.replace('_', ' ').capitalize() }}?</label>
+            <select name="{{ fator }}" class="form-select">
+                <option value="">Selecione</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Não</option>
+            </select>
+        </div>
+        {% endfor %}
+
+        <hr>
+        <h5 class="text-secondary">Documentação e Diagnóstico</h5>
+
+        <div class="mb-3">
+            <label>Número da Matrícula:</label>
+            <input type="text" name="num_doc" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label>Nome do Cartório:</label>
+            <input type="text" name="nome_cartorio" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label>Nome da Comarca:</label>
+            <input type="text" name="nome_comarca" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label>Endereço do Imóvel:</label>
+            <input type="text" name="endereco_imovel" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label>Diagnóstico - Estrutura:</label>
+            <select name="estrutura_escolha" class="form-select">
+                <option value="">Selecione</option>
+                <option value="BOA">BOA</option>
+                <option value="LIMITADA">LIMITADA</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label>Diagnóstico - Conduta:</label>
+            <select name="conduta_escolha" class="form-select">
+                <option value="">Selecione</option>
+                <option value="DESESTAGNADO">DESESTAGNADO</option>
+                <option value="ESTAGNADA">ESTAGNADA</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label>Diagnóstico - Desempenho:</label>
+            <select name="desempenho_escolha" class="form-select">
+                <option value="">Selecione</option>
+                <option value="ALTO">ALTO</option>
+                <option value="MÉDIO">MÉDIO</option>
+                <option value="BAIXO">BAIXO</option>
+            </select>
+        </div>
+
+        <hr>
+        <h5 class="text-secondary">Arquivos Complementares</h5>
+
+        <div class="mb-3">
+            <label>Logo:</label>
+            <input type="file" name="arquivo_logo" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label>Fotos do imóvel:</label>
+            <input type="file" name="fotos_imovel" class="form-control" multiple>
+        </div>
+
+        <div class="mb-3">
+            <label>Documentação adicional:</label>
+            <input type="file" name="fotos_imovel_adicionais" class="form-control" multiple>
+        </div>
+
+        <div class="mb-3">
+            <label>Documentos do(s) proprietário(s):</label>
+            <input type="file" name="doc_proprietario" class="form-control" multiple>
+        </div>
+
+        <div class="mb-3">
+            <label>Plantas / memoriais descritivos:</label>
+            <input type="file" name="doc_planta" class="form-control" multiple>
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">Gerar Laudo</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

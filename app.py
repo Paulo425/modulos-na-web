@@ -35,7 +35,9 @@ CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
 os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
 
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'),
+                       static_folder=os.path.join(BASE_DIR, 'static'))
+
 app.secret_key = 'chave_super_secreta'
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
@@ -561,6 +563,169 @@ def gerar_memorial_angulo_az():
                            erro=erro_execucao,
                            zip_download=zip_download,
                            log_path=log_relativo)
+# ✅ ROTA PARA O MÓDULO DE AVALIAÇÕES
+
+
+from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
+
+@app.route("/avaliacoes", methods=["GET", "POST"])
+def gerar_avaliacao():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    resultado = erro_execucao = zip_download = log_relativo = None
+
+    if request.method == "POST":
+        try:
+            from werkzeug.utils import secure_filename
+            import uuid, zipfile
+
+            # 1. Criação de diretório temporário para essa execução
+            id_execucao = str(uuid.uuid4())[:8]
+            pasta_execucao = f'avaliacao_{id_execucao}'
+            pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
+            os.makedirs(pasta_temp, exist_ok=True)
+
+            # 2. Salvar arquivos recebidos
+            caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
+            request.files["planilha_excel"].save(caminho_planilha)
+
+            def salvar_multiplos(nome_form, prefixo):
+                caminhos = []
+                arquivos = request.files.getlist(nome_form)
+                for i, arq in enumerate(arquivos):
+                    if arq and arq.filename:
+                        nome = secure_filename(f"{prefixo}_{i}.png")
+                        caminho = os.path.join(pasta_temp, nome)
+                        arq.save(caminho)
+                        caminhos.append(caminho)
+                return caminhos
+
+            fotos_imovel = salvar_multiplos("fotos_imovel", "foto_imovel")
+            fotos_adicionais = salvar_multiplos("fotos_imovel_adicionais", "doc_adicional")
+            fotos_proprietario = salvar_multiplos("doc_proprietario", "doc_proprietario")
+            fotos_planta = salvar_multiplos("doc_planta", "planta")
+
+            caminho_logo = ""
+            logo = request.files.get("arquivo_logo")
+            if logo and logo.filename:
+                caminho_logo = os.path.join(pasta_temp, "logo.png")
+                logo.save(caminho_logo)
+
+            # 3. Inputs simples
+            f = request.form
+            def chk(nome): return f.get(nome, "").lower() == "sim"
+
+            restricoes = []
+            i = 1
+            while f.get(f"tipo_restricao_{i}"):
+                area = float(f.get(f"area_restricao_{i}", "0").replace(",", ".") or "0")
+                perc = float(f.get(f"depreciacao_restricao_{i}", "0").replace(",", ".") or "0")
+                restricoes.append({
+                    "tipo": f.get(f"tipo_restricao_{i}"),
+                    "area": area,
+                    "percentualDepreciacao": perc,
+                    "fator": (100.0 - perc) / 100.0
+                })
+                i += 1
+
+            fatores_usuario = {
+                "nomeSolicitante": f.get("nome_solicitante"),
+                "avaliadorNome": f.get("nome_avaliador"),
+                "avaliadorRegistro": f.get("registro_avaliador"),
+                "tipoImovel": f.get("tipo_imovel_escolhido"),
+                "nomeProprietario": f.get("nome_proprietario"),
+                "telefoneProprietario": f.get("telefone_proprietario") if chk("incluir_tel") else "Não Informado",
+                "emailProprietario": f.get("email_proprietario") if chk("incluir_mail") else "Não Informado",
+                "documentacaoImovel": f"Matrícula n° {f.get('num_doc')}" if f.get("num_doc") else "Documentação não informada",
+                "nomeCartorio": f.get("nome_cartorio"),
+                "nomeComarca": f.get("nome_comarca"),
+                "enderecoCompleto": f.get("endereco_imovel"),
+                "finalidade_descricao": f.get("finalidade_descricao") or f.get("finalidade_lido", ""),
+                "area": chk("usar_fator_area"),
+                "oferta": chk("usar_fator_oferta"),
+                "aproveitamento": chk("usar_fator_aproveitamento"),
+                "localizacao_mesma_regiao": chk("localizacao_mesma_regiao"),
+                "topografia": chk("usar_fator_topografia"),
+                "pedologia": chk("usar_fator_pedologia"),
+                "pavimentacao": chk("usar_fator_pavimentacao"),
+                "esquina": chk("usar_fator_esquina"),
+                "acessibilidade": chk("usar_fator_acessibilidade"),
+                "estrutura_escolha": f.get("estrutura_escolha", "").upper(),
+                "conduta_escolha": f.get("conduta_escolha", "").upper(),
+                "desempenho_escolha": f.get("desempenho_escolha", "").upper(),
+                "caminhoLogo": caminho_logo,
+                "restricoes": restricoes
+            }
+
+            try:
+                area_parcial = float(f.get("area_parcial", "0").replace(".", "").replace(",", "."))
+            except:
+                area_parcial = 0.0
+
+            # 4. Geração do relatório
+            nome_docx = "RELATORIO_AVALIACAO_COMPLETO.docx"
+            caminho_docx = os.path.join(pasta_temp, nome_docx)
+
+            from executaveis_avaliacao.main import (
+                ler_planilha_excel, aplicar_chauvenet_e_filtrar,
+                homogeneizar_amostras, gerar_grafico_aderencia_totais,
+                gerar_grafico_dispersao_mediana
+            )
+
+            df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
+            df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_amostras)
+            homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
+
+            img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
+            img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
+            gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+            gerar_grafico_dispersao_mediana(homog, img2)
+
+            gerar_relatorio_avaliacao_com_template(
+                dados_avaliando=dados_imovel,
+                dataframe_amostras_inicial=df_amostras,
+                dataframe_amostras_filtrado=df_filtrado,
+                indices_excluidos=idx_exc,
+                amostras_excluidas=amostras_exc,
+                media=media, desvio_padrao=dp,
+                menor_valor=menor, maior_valor=maior, mediana_valor=mediana,
+                valores_originais_iniciais=df_filtrado["VALOR TOTAL"].tolist(),
+                valores_homogeneizados_validos=homog,
+                caminho_imagem_aderencia=img1,
+                caminho_imagem_dispersao=img2,
+                finalidade_do_laudo="mercado",
+                area_parcial_afetada=area_parcial,
+                fatores_do_usuario=fatores_usuario,
+                caminhos_fotos_avaliando=fotos_imovel,
+                caminhos_fotos_adicionais=fotos_adicionais,
+                caminhos_fotos_proprietario=fotos_proprietario,
+                caminhos_fotos_planta=fotos_planta,
+                caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
+                nome_arquivo_word=caminho_docx
+            )
+
+            # 5. Gerar ZIP
+            nome_zip = f"relatorio_avaliacao_{id_execucao}.zip"
+            caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos', nome_zip)
+            with zipfile.ZipFile(caminho_zip, 'w') as zipf:
+                for root, dirs, files in os.walk(pasta_temp):
+                    for file in files:
+                        zipf.write(os.path.join(root, file), arcname=file)
+
+            resultado = "✅ Relatório gerado com sucesso!"
+            zip_download = nome_zip
+
+        except Exception as e:
+            erro_execucao = f"❌ Erro durante o processamento: {e}"
+
+    return render_template("formulario_avaliacao.html",
+                           resultado=resultado,
+                           erro=erro_execucao,
+                           zip_download=zip_download,
+                           log_path=None)
+
+
 
 @app.route('/memoriais-azimute-p1-p2')
 def memoriais_azimute_p1_p2():
