@@ -56,6 +56,18 @@ os.makedirs(arquivos_dir, exist_ok=True)
 #         except:
 #             return dict(pendentes_count=0)
 #     return dict(pendentes_count=0)
+import uuid
+
+def salvar_com_nome_unico(arquivo, destino_base):
+    """
+    Salva o arquivo com um nome único no destino_base.
+    Retorna o caminho completo salvo.
+    """
+    uuid_curtinho = uuid.uuid4().hex[:8]
+    nome_unico = f"{uuid_curtinho}_{arquivo.filename}"
+    caminho_completo = os.path.join(destino_base, nome_unico)
+    arquivo.save(caminho_completo)
+    return caminho_completo
 
 
 @app.route('/')
@@ -189,10 +201,9 @@ def memoriais_descritivos():
 
         os.makedirs(diretorio, exist_ok=True)
 
-        caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
-        caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
-        arquivo_excel.save(caminho_excel)
-        arquivo_dxf.save(caminho_dxf)
+        caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
+        caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
+
 
         # Corrigido para salvar o log na pasta pública correta
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.log")
@@ -202,7 +213,8 @@ def memoriais_descritivos():
         os.makedirs(log_dir_absoluto, exist_ok=True)
 
         log_path = os.path.join(log_dir_absoluto, log_filename)
-        log_relativo = f"logs/{log_filename}"
+        log_relativo = f"/static/logs/{log_filename}"
+
 
         # DEBUG opcional
         print(f"🧾 Salvando LOG em: {log_path}")
@@ -250,6 +262,11 @@ def memoriais_descritivos():
                 zip_download = arquivos_zip[0]
         except Exception as e:
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
+        print("🧪 DEBUG - ZIP encontrado:", zip_download)
+        print("🧪 DEBUG - LOG gerado:", log_relativo)
+        logging.info(f"🧪 DEBUG - ZIP encontrado: {zip_download}")
+        logging.info(f"🧪 DEBUG - LOG gerado: {log_relativo}")
+
 
     return render_template("formulario_DECOPA.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
 
@@ -350,10 +367,9 @@ def gerar_memorial_azimute_az():
 
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
-        caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
-        caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
-        arquivo_excel.save(caminho_excel)
-        arquivo_dxf.save(caminho_dxf)
+        caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
+        caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
+
 
         log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
         log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
@@ -505,10 +521,9 @@ def gerar_memorial_angulo_az():
 
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
-        caminho_excel = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_excel.filename)
-        caminho_dxf = os.path.join(app.config['UPLOAD_FOLDER'], arquivo_dxf.filename)
-        arquivo_excel.save(caminho_excel)
-        arquivo_dxf.save(caminho_dxf)
+        caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
+        caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
+
 
         log_filename = datetime.now().strftime("log_ANGULOAZ_%Y%m%d_%H%M%S.log")
         log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
