@@ -213,7 +213,8 @@ def memoriais_descritivos():
         os.makedirs(log_dir_absoluto, exist_ok=True)
 
         log_path = os.path.join(log_dir_absoluto, log_filename)
-        log_relativo = f"/static/logs/{log_filename}"
+        log_relativo = f"static/logs/{log_filename}"
+
 
 
         # DEBUG opcional
