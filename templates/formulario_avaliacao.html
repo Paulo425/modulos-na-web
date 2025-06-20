@@ -189,6 +189,27 @@
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-primary btn-lg">Gerar Laudo</button>
         </div>
+        
     </form>
+    {% if resultado %}
+    <div class="alert alert-success mt-4 text-center">
+        {{ resultado }}
+    </div>
+    {% endif %}
+
+    {% if zip_download %}
+    <div class="alert alert-success mt-4 text-center">
+        📦 <strong>Download disponível:</strong><br>
+        <a class="btn btn-success mt-2" href="{{ url_for('static', filename='arquivos/' ~ zip_download) }}" download>
+            Baixar Relatório ZIP
+        </a>
+    </div>
+    {% endif %}
+
+    {% if erro %}
+    <div class="alert alert-danger mt-4 text-center">
+        {{ erro }}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
