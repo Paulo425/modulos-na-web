@@ -195,34 +195,27 @@ def memoriais_descritivos():
     resultado = erro_execucao = zip_download = log_relativo = None
 
     if request.method == 'POST':
+        import uuid
+
         id_execucao = str(uuid.uuid4())[:8]
         diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
+        os.makedirs(diretorio, exist_ok=True)
+
         cidade = request.form['cidade']
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
 
-        os.makedirs(diretorio, exist_ok=True)
-
         caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
         caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
 
-
-        # Corrigido para salvar o log na pasta pública correta
+        # Log
         log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.log")
-
-        # Garante que o log seja salvo em /static/logs no diretório RAIZ do projeto
         log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
         os.makedirs(log_dir_absoluto, exist_ok=True)
-
         log_path = os.path.join(log_dir_absoluto, log_filename)
         log_relativo = f"static/logs/{log_filename}"
-
-
-
-        # DEBUG opcional
         print(f"🧾 Salvando LOG em: {log_path}")
 
-        
         try:
             processo = Popen(
                 ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
@@ -238,8 +231,8 @@ def memoriais_descritivos():
             log_lines = []
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
+                    log_file.write(linha)
                     if len(log_lines) < 100:
-                        log_file.write(linha)
                         log_lines.append(linha)
                     print("🖨️", linha.strip())
 
@@ -253,30 +246,38 @@ def memoriais_descritivos():
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
-
         finally:
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
 
+        # Verifica ZIP e copia para static/arquivos
         try:
-            pasta_concluido = os.path.join(diretorio, 'CONCLUIDO')
-            arquivos_zip = [f for f in os.listdir(pasta_concluido) if f.lower().endswith('.zip')]
+            arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
+            print("🧪 ZIPs encontrados:", arquivos_zip)
+            logging.info(f"🧪 ZIPs encontrados: {arquivos_zip}")
 
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
-                caminho_zip = os.path.join(pasta_concluido, arquivos_zip[0])
-                shutil.copy2(caminho_zip, os.path.join(BASE_DIR, 'static', 'arquivos', arquivos_zip[0]))
-                zip_download = arquivos_zip[0]
+                caminho_zip = os.path.join(diretorio, arquivos_zip[0])
+                destino_zip = os.path.join(BASE_DIR, 'static', 'arquivos', arquivos_zip[0])
+                shutil.copy2(caminho_zip, destino_zip)
 
+                if os.path.exists(destino_zip):
+                    print(f"✅ ZIP copiado com sucesso para: {destino_zip}")
+                    logging.info(f"✅ ZIP copiado com sucesso para: {destino_zip}")
+                    zip_download = arquivos_zip[0]
+                else:
+                    print("❌ ZIP não encontrado no destino!")
+                    logging.error("❌ ZIP não encontrado no destino!")
         except Exception as e:
-            print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
-        print("🧪 DEBUG - ZIP encontrado:", zip_download)
-        print("🧪 DEBUG - LOG gerado:", log_relativo)
-        logging.info(f"🧪 DEBUG - ZIP encontrado: {zip_download}")
-        logging.info(f"🧪 DEBUG - LOG gerado: {log_relativo}")
+            print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
+            logging.error(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
 
+    return render_template("formulario_DECOPA.html",
+                           resultado=resultado,
+                           erro=erro_execucao,
+                           zip_download=zip_download,
+                           log_path=log_relativo)
 
-    return render_template("formulario_DECOPA.html", resultado=resultado, erro=erro_execucao, zip_download=zip_download, log_path=log_relativo)
 
 
 @app.route("/arquivos-gerados")
