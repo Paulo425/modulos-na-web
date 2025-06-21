@@ -8,6 +8,7 @@ from datetime import datetime
 from preparar_arquivos import main_preparo_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
+import uuid
 
 # ✅ 1. Caminho base
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -116,6 +117,7 @@ if __name__ == "__main__":
     dxf = args.dxf
 
     if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
-        diretorio = os.path.join(BASE_DIR, '..', 'CONCLUIDO')
+        id_execucao = str(uuid.uuid4())[:8]
+        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
 
     executar_programa(diretorio, cidade, excel, dxf)

@@ -23,6 +23,7 @@ from usuarios_mysql import (
 
 import logging
 import sys
+import uuid
 
 logging.basicConfig(
     level=logging.INFO,
@@ -194,7 +195,8 @@ def memoriais_descritivos():
     resultado = erro_execucao = zip_download = log_relativo = None
 
     if request.method == 'POST':
-        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        id_execucao = str(uuid.uuid4())[:8]
+        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
         cidade = request.form['cidade']
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
@@ -363,7 +365,8 @@ def gerar_memorial_azimute_az():
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
-        diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        id_execucao = str(uuid.uuid4())[:8]
+        diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
         os.makedirs(diretorio_tmp, exist_ok=True)
 
         arquivo_excel = request.files['excel']
@@ -517,7 +520,9 @@ def gerar_memorial_angulo_az():
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
-        diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO')
+        id_execucao = str(uuid.uuid4())[:8]
+        diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
+
         os.makedirs(diretorio_tmp, exist_ok=True)
 
         arquivo_excel = request.files['excel']

@@ -3,7 +3,9 @@ import shutil
 import tempfile
 import logging
 import pandas as pd
+import uuid
 from datetime import datetime
+
 
 
 # Diretórios e logger
@@ -45,13 +47,18 @@ def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir):
     try:
         cidade_formatada = cidade.replace(" ", "_")
 
-        TMP_DIR = tempfile.mkdtemp()
+        id_execucao = str(uuid.uuid4())[:8]
+        TMP_DIR = os.path.join(base_dir, 'tmp', id_execucao)
+        os.makedirs(TMP_DIR, exist_ok=True)
+
         RECEBIDO = os.path.join(TMP_DIR, "RECEBIDO")
         PREPARADO = os.path.join(TMP_DIR, "PREPARADO")
         CONCLUIDO = os.path.join(TMP_DIR, "CONCLUIDO")
 
         for pasta in [RECEBIDO, PREPARADO, CONCLUIDO]:
             os.makedirs(pasta, exist_ok=True)
+
+     
 
         nome_excel = os.path.basename(caminho_excel)
         nome_dxf = os.path.basename(caminho_dxf)
