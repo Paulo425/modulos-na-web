@@ -277,7 +277,7 @@ def memoriais_descritivos():
                            erro=erro_execucao,
                            zip_download=zip_download,
                            log_path=log_relativo)
-
+#ATUALIZADO
 
 
 @app.route("/arquivos-gerados")
