@@ -252,19 +252,23 @@ def memoriais_descritivos():
 
         # Verifica ZIP e copia para static/arquivos
         try:
-            arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
-            print("🧪 ZIPs encontrados:", arquivos_zip)
-            logging.info(f"🧪 ZIPs encontrados: {arquivos_zip}")
+            from pathlib import Path
 
-            if arquivos_zip:
-                caminho_zip = os.path.join(diretorio, arquivos_zip[0])
-                destino_zip = os.path.join(BASE_DIR, 'static', 'arquivos', arquivos_zip[0])
-                shutil.copy2(caminho_zip, destino_zip)
+            zip_paths = list(Path(diretorio).rglob("*.zip"))  # Procura ZIPs em todas as subpastas do diretório
+            print("🧪 ZIPs encontrados:", [str(p) for p in zip_paths])
+            logging.info(f"🧪 ZIPs encontrados: {[str(p) for p in zip_paths]}")
+
+            if zip_paths:
+                zip_paths.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+                zip_mais_recente = zip_paths[0]
+                destino_zip = os.path.join(BASE_DIR, 'static', 'arquivos', zip_mais_recente.name)
+
+                shutil.copy2(zip_mais_recente, destino_zip)
 
                 if os.path.exists(destino_zip):
                     print(f"✅ ZIP copiado com sucesso para: {destino_zip}")
                     logging.info(f"✅ ZIP copiado com sucesso para: {destino_zip}")
-                    zip_download = arquivos_zip[0]
+                    zip_download = zip_mais_recente.name
                 else:
                     print("❌ ZIP não encontrado no destino!")
                     logging.error("❌ ZIP não encontrado no destino!")
