@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE
 import shutil
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
+import traceback
 
 from usuarios_mysql import (
     salvar_usuario_mysql,
@@ -733,7 +734,8 @@ def gerar_avaliacao():
             zip_download = nome_zip
 
         except Exception as e:
-            erro_execucao = f"❌ Erro durante o processamento: {e}"
+            erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
+
 
     return render_template("formulario_avaliacao.html",
                            resultado=resultado,
