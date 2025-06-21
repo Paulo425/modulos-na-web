@@ -259,10 +259,15 @@ def memoriais_descritivos():
             os.remove(caminho_dxf)
 
         try:
-            arquivos_zip = [f for f in os.listdir(diretorio) if f.lower().endswith('.zip')]
+            pasta_concluido = os.path.join(diretorio, 'CONCLUIDO')
+            arquivos_zip = [f for f in os.listdir(pasta_concluido) if f.lower().endswith('.zip')]
+
             if arquivos_zip:
                 arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(diretorio, x)), reverse=True)
+                caminho_zip = os.path.join(pasta_concluido, arquivos_zip[0])
+                shutil.copy2(caminho_zip, os.path.join(BASE_DIR, 'static', 'arquivos', arquivos_zip[0]))
                 zip_download = arquivos_zip[0]
+
         except Exception as e:
             print(f"⚠️ Erro ao localizar arquivo ZIP para download: {e}")
         print("🧪 DEBUG - ZIP encontrado:", zip_download)
