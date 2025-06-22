@@ -8,7 +8,6 @@ import logging
 from datetime import datetime
 from shutil import copyfile
 
-
 # Diretórios e setup de log
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
@@ -27,14 +26,13 @@ def montar_pacote_zip(diretorio, cidade):
     logger.info("Iniciando montagem dos pacotes ZIP")
 
     tipos = ["ETE", "REM", "SER", "ACE"]
-    matricula_regex = re.compile(r"_([0-9]+\.[0-9]+)")
 
     for tipo in tipos:
         print(f"🔍 Buscando arquivos do tipo: {tipo}")
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
         arquivos_dxf = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}*Memorial*.docx"))  # ← Corrigido aqui
+        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.docx"))
         arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.xlsx"))
 
         print(f"   - DXF encontrados: {len(arquivos_dxf)}")
@@ -46,9 +44,11 @@ def montar_pacote_zip(diretorio, cidade):
         # Coletar todas as matrículas
         matriculas = set()
         for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
-            match = matricula_regex.search(arq)
+            nome_arquivo = os.path.basename(arq)
+            match = re.search(r"_(\d+)[.,](\d+)", nome_arquivo)
             if match:
-                matriculas.add(match.group(1))
+                matricula = f"{match.group(1)}.{match.group(2)}"
+                matriculas.add(matricula)
 
         for matricula in matriculas:
             print(f"\n🔢 Processando matrícula: {matricula}")
@@ -59,7 +59,7 @@ def montar_pacote_zip(diretorio, cidade):
             arq_excel = [a for a in arquivos_excel if matricula in a]
 
             if arq_dxf and arq_docx and arq_excel:
-                cidade_sanitizada = cidade.replace(" ", "_")
+                cidade_sanitizada = cidade.replace(" ", "_")  # sanitize o nome da cidade
                 nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_Memorial_MAT_{matricula}.zip")
 
                 STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'zips')
@@ -82,7 +82,7 @@ def montar_pacote_zip(diretorio, cidade):
                 print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
                 logger.warning(f"Incompleto: {tipo} | matrícula {matricula} | DXF={bool(arq_dxf)}, DOCX={bool(arq_docx)}, XLSX={bool(arq_excel)}")
 
-def main_compactar_arquivos(diretorio_concluido,cidade_formatada):
+def main_compactar_arquivos(diretorio_concluido, cidade_formatada):
     print(f"\n📦 Iniciando compactação no diretório: {diretorio_concluido}")
     logger.info(f"Iniciando compactação no diretório: {diretorio_concluido}")
     montar_pacote_zip(diretorio_concluido, cidade_formatada)
@@ -98,4 +98,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main_compactar_arquivos(args.diretorio)
+
 
