@@ -64,10 +64,11 @@ def montar_pacote_zip(diretorio, cidade):
                 uuid_prefix = os.path.basename(diretorio)
                 nome_zip = os.path.join(diretorio, f"{uuid_prefix}_{cidade_sanitizada}_{tipo}_{matricula}.zip")
 
-                try:
-                    uuid_prefix = os.path.basename(diretorio)  # ex: '0eb3f562'
-                    nome_zip = os.path.join(diretorio, f"{uuid_prefix}_{cidade_sanitizada}_{tipo}_{matricula}.zip")
+                STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'arquivos')
+                os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
+                caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
 
+                try:
                     with zipfile.ZipFile(nome_zip, 'w') as zipf:
                         zipf.write(arq_docx[0], arcname=f"{uuid_prefix}_{tipo}_{matricula}.docx")
                         zipf.write(arq_dxf[0],  arcname=f"{uuid_prefix}_{tipo}_{matricula}.dxf")
@@ -78,18 +79,9 @@ def montar_pacote_zip(diretorio, cidade):
                     print(f"✅ ZIP criado com sucesso: {nome_zip}")
                     logger.info(f"ZIP criado: {nome_zip} e copiado para: {caminho_debug_zip}")
 
-                    # 🔁 Limpar pasta TEMP_ZIP após uso
-                    try:
-                        shutil.rmtree(temp_dir)
-                        print(f"🧹 Pasta temporária removida: {temp_dir}")
-                        logger.info(f"Pasta temporária removida: {temp_dir}")
-                    except Exception as e:
-                        print(f"⚠️ Falha ao remover pasta temporária: {e}")
-                        logger.warning(f"Falha ao remover pasta temporária {temp_dir}: {e}")
-
                 except Exception as e:
                     print(f"❌ Erro ao criar ZIP: {e}")
-                    logger.error(f"Erro ao criar ZIP {nome_zip}: {e}")
+                    logger.error(f"Erro ao criar ZIP {nome_zip}: {e}"
 
 
 

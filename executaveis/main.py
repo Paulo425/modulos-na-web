@@ -80,7 +80,8 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print(f"\n📦 [main.py] Chamando compactação no diretório: {diretorio_concluido}")
     logging.info(f"📦 Chamando compactação no diretório: {diretorio_concluido}")
 
-    main_compactar_arquivos(diretorio_concluido, cidade)
+    main_compactar_arquivos(diretorio_saida, cidade)
+
 
     print("✅ [main.py] Compactação finalizada com sucesso!")
     logging.info("✅ Compactação finalizada com sucesso!")
