@@ -65,29 +65,29 @@ def montar_pacote_zip(diretorio, cidade):
                 nome_zip = os.path.join(diretorio, f"{uuid_prefix}_{cidade_sanitizada}_{tipo}_{matricula}.zip")
 
                 try:
-                    # Criar pasta temporária com nomes corretos
+                    uuid_prefix = os.path.basename(diretorio)  # EX: '8f92ac18'
+
+                    nome_zip = os.path.join(diretorio, f"{uuid_prefix}_{cidade_sanitizada}_{tipo}_{matricula}.zip")
                     temp_dir = os.path.join(diretorio, "TEMP_ZIP")
                     os.makedirs(temp_dir, exist_ok=True)
 
-                    temp_docx = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.docx")
-                    temp_dxf  = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.dxf")
-                    temp_xlsx = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.xlsx")
+                    caminho_docx = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.docx")
+                    caminho_dxf  = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.dxf")
+                    caminho_xlsx = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.xlsx")
 
-                    shutil.copy2(arq_docx[0], temp_docx)
-                    shutil.copy2(arq_dxf[0], temp_dxf)
-                    shutil.copy2(arq_excel[0], temp_xlsx)
+                    shutil.copy2(arq_docx[0], caminho_docx)
+                    shutil.copy2(arq_dxf[0], caminho_dxf)
+                    shutil.copy2(arq_excel[0], caminho_xlsx)
 
-                    # Criar o ZIP
                     with zipfile.ZipFile(nome_zip, 'w') as zipf:
-                        zipf.write(temp_docx, os.path.basename(temp_docx))
-                        zipf.write(temp_dxf, os.path.basename(temp_dxf))
-                        zipf.write(temp_xlsx, os.path.basename(temp_xlsx))
+                        zipf.write(caminho_docx, os.path.basename(caminho_docx))
+                        zipf.write(caminho_dxf,  os.path.basename(caminho_dxf))
+                        zipf.write(caminho_xlsx, os.path.basename(caminho_xlsx))
 
-                    # Copiar para pasta pública
-                    STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'arquivos')
-                    os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
-                    caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
                     shutil.copy2(nome_zip, caminho_debug_zip)
+
+                    print(f"✅ ZIP criado com sucesso: {nome_zip}")
+                    logger.info(f"ZIP criado: {nome_zip} e copiado para: {caminho_debug_zip}")
 
                     # 🔁 Limpar pasta TEMP_ZIP após uso
                     try:
@@ -98,15 +98,10 @@ def montar_pacote_zip(diretorio, cidade):
                         print(f"⚠️ Falha ao remover pasta temporária: {e}")
                         logger.warning(f"Falha ao remover pasta temporária {temp_dir}: {e}")
 
-
-                    print(f"✅ ZIP criado com sucesso: {nome_zip}")
-                    logger.info(f"ZIP criado: {nome_zip} e copiado para: {caminho_debug_zip}")
                 except Exception as e:
                     print(f"❌ Erro ao criar ZIP: {e}")
                     logger.error(f"Erro ao criar ZIP {nome_zip}: {e}")
-            else:
-                print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
-                logger.warning(f"Incompleto: {tipo} | matrícula {matricula} | DXF={bool(arq_dxf)}, DOCX={bool(arq_docx)}, XLSX={bool(arq_excel)}")
+
 
 
 
