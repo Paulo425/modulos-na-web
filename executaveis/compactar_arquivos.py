@@ -33,7 +33,7 @@ def montar_pacote_zip(diretorio, cidade):
 
         arquivos_dxf = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.dxf"))
         arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.docx"))
-        arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.xlsx"))
+        arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial*.xlsx"))
 
         print(f"   - DXF encontrados: {len(arquivos_dxf)}")
         print(f"   - DOCX encontrados: {len(arquivos_docx)}")
