@@ -39,16 +39,15 @@ def montar_pacote_zip(diretorio, cidade):
 
         logger.info(f"DXF={len(arquivos_dxf)} | DOCX={len(arquivos_docx)} | XLSX={len(arquivos_excel)}")
 
-        # Coletar todas as matrículas com ponto, vírgula, espaço ou nenhuma separação
         matriculas = set()
-        regex_matricula = re.compile(rf"{tipo}[_\- ]*Mat[_\- ]*(\d+[\., ]?\d*)", re.IGNORECASE)
-
         for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
             nome_arquivo = os.path.basename(arq)
-            match = regex_matricula.search(nome_arquivo)
+            match = re.search(r"[Mm]at[ _]?([0-9., ]+)", nome_arquivo)
             if match:
-                raw = match.group(1)
-                matricula = raw.replace(",", ".").replace(" ", "")
+                matricula = match.group(1).replace(",", ".").replace(" ", "")
+                if not "." in matricula:
+                    if len(matricula) > 2:
+                        matricula = f"{matricula[:-3]}.{matricula[-3:]}"
                 matriculas.add(matricula)
 
         for matricula in matriculas:
@@ -61,7 +60,7 @@ def montar_pacote_zip(diretorio, cidade):
 
             if arq_dxf and arq_docx and arq_excel:
                 cidade_sanitizada = cidade.replace(" ", "_")
-                nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_Memorial_MAT_{matricula}.zip")
+                nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_{matricula}.zip")
 
                 STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'zips')
                 os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
