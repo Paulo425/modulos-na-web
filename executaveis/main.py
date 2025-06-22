@@ -87,19 +87,19 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
 
     for fname in os.listdir(diretorio_concluido):
-    origem = os.path.join(diretorio_concluido, fname)
-    if os.path.isfile(origem):
-        nome_com_uuid = f"{id_execucao}_{fname}"
-        destino = os.path.join(BASE_DIR, 'static', 'arquivos', nome_com_uuid)
-        try:
-            shutil.copy2(origem, destino)
-            print(f"🗂️ Arquivo copiado: {destino}")
-            logging.info(f"🗂️ Arquivo copiado: {destino}")
-            if fname.endswith(".zip"):
-                zip_download = nome_com_uuid
-        except Exception as e:
-            print(f"❌ Falha ao copiar {fname}: {e}")
-            logging.error(f"❌ Erro ao copiar {fname}: {e}")
+        origem = os.path.join(diretorio_concluido, fname)
+        if os.path.isfile(origem):
+            nome_com_uuid = f"{id_execucao}_{fname}"
+            destino = os.path.join(BASE_DIR, 'static', 'arquivos', nome_com_uuid)
+            try:
+                shutil.copy2(origem, destino)
+                print(f"🗂️ Arquivo copiado: {destino}")
+                logging.info(f"🗂️ Arquivo copiado: {destino}")
+                if fname.endswith(".zip"):
+                    zip_download = nome_com_uuid
+            except Exception as e:
+                print(f"❌ Falha ao copiar {fname}: {e}")
+                logging.error(f"❌ Erro ao copiar {fname}: {e}")
 
 
     print("✅ [main.py] Processo geral concluído com sucesso!")
