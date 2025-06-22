@@ -126,6 +126,6 @@ if __name__ == "__main__":
 
     if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
         id_execucao = str(uuid.uuid4())[:8]
-         diretorio= os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
+        diretorio= os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
 
     executar_programa(diretorio, cidade, excel, dxf)
