@@ -715,7 +715,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
 
     df = pd.DataFrame(data, dtype=str)
-    excel_output_path = os.path.join(caminho_salvar, f"{tipo}_{matricula}.xlsx")
+    excel_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula}.xlsx")
     df.to_excel(excel_output_path, index=False)
 
     wb = openpyxl.load_workbook(excel_output_path)
@@ -742,7 +742,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
 
     try:
-        dxf_output_path = os.path.join(caminho_salvar, f"{tipo}_{matricula}.dxf")
+        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula}.dxf")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
     except Exception as e:
@@ -1074,7 +1074,7 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
         )
 
         if excel_output:
-            output_docx = os.path.join(pasta_concluido, f"{tipo}_{matricula}.docx")
+            output_docx = os.path.join(pasta_concluido, f"{uuid_prefix}_{tipo}_{matricula}.docx")
             create_memorial_document(
                 proprietario=proprietario,
                 matricula=matricula,
