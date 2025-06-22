@@ -69,12 +69,24 @@ def montar_pacote_zip(diretorio, cidade):
                 caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
 
                 try:
-                    with zipfile.ZipFile(nome_zip, 'w') as zipf:
-                        uuid_prefix = os.path.basename(diretorio)  # usa o nome da subpasta como UUID
+                    uuid_prefix = os.path.basename(diretorio)  # isso pega o UUID (ex: d1ea5235)
+                    temp_dir = os.path.join(diretorio, "TEMP_ZIP")
+                    os.makedirs(temp_dir, exist_ok=True)
 
-                        zipf.write(arq_dxf[0], f"{uuid_prefix}_{tipo}_{matricula}.dxf")
-                        zipf.write(arq_docx[0], f"{uuid_prefix}_{tipo}_{matricula}.docx")
-                        zipf.write(arq_excel[0], f"{uuid_prefix}_{tipo}_{matricula}.xlsx")
+                    # Copiar com nomes corretos para pasta temporária
+                    novo_dxf = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.dxf")
+                    novo_docx = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.docx")
+                    novo_xlsx = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.xlsx")
+
+                    shutil.copy2(arq_dxf[0], novo_dxf)
+                    shutil.copy2(arq_docx[0], novo_docx)
+                    shutil.copy2(arq_excel[0], novo_xlsx)
+
+                    # Criar o ZIP a partir dos arquivos renomeados
+                    with zipfile.ZipFile(nome_zip, 'w') as zipf:
+                        zipf.write(novo_dxf, os.path.basename(novo_dxf))
+                        zipf.write(novo_docx, os.path.basename(novo_docx))
+                        zipf.write(novo_xlsx, os.path.basename(novo_xlsx))
 
                     shutil.copy2(nome_zip, caminho_debug_zip)
 
@@ -83,9 +95,7 @@ def montar_pacote_zip(diretorio, cidade):
                 except Exception as e:
                     print(f"❌ Erro ao criar ZIP: {e}")
                     logger.error(f"Erro ao criar ZIP {nome_zip}: {e}")
-            else:
-                print(f"⚠️ Arquivos incompletos para {tipo}, matrícula {matricula}")
-                logger.warning(f"Incompleto: {tipo} | matrícula {matricula} | DXF={bool(arq_dxf)}, DOCX={bool(arq_docx)}, XLSX={bool(arq_excel)}")
+
 
 def main_compactar_arquivos(diretorio_concluido, cidade_formatada):
     print(f"\n📦 Iniciando compactação no diretório: {diretorio_concluido}")
