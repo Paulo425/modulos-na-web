@@ -252,26 +252,17 @@ def memoriais_descritivos():
 
         # Verifica ZIP e copia para static/arquivos
         try:
-            from pathlib import Path
+            static_zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
+            arquivos_zip = [f for f in os.listdir(static_zip_dir) if f.lower().endswith('.zip')]
 
-            zip_paths = list(Path(diretorio).rglob("*.zip"))  # Procura ZIPs em todas as subpastas do diretório
-            print("🧪 ZIPs encontrados:", [str(p) for p in zip_paths])
-            logging.info(f"🧪 ZIPs encontrados: {[str(p) for p in zip_paths]}")
+            print("🧪 ZIPs encontrados:", arquivos_zip)
+            logging.info(f"🧪 ZIPs encontrados: {arquivos_zip}")
 
-            if zip_paths:
-                zip_paths.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-                zip_mais_recente = zip_paths[0]
-                destino_zip = os.path.join(BASE_DIR, 'static', 'arquivos', zip_mais_recente.name)
-
-                shutil.copy2(zip_mais_recente, destino_zip)
-
-                if os.path.exists(destino_zip):
-                    print(f"✅ ZIP copiado com sucesso para: {destino_zip}")
-                    logging.info(f"✅ ZIP copiado com sucesso para: {destino_zip}")
-                    zip_download = zip_mais_recente.name
-                else:
-                    print("❌ ZIP não encontrado no destino!")
-                    logging.error("❌ ZIP não encontrado no destino!")
+            if arquivos_zip:
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(static_zip_dir, x)), reverse=True)
+                zip_download = arquivos_zip[0]
+                print(f"✅ ZIP para download: {zip_download}")
+                logging.info(f"✅ ZIP para download: {zip_download}")
         except Exception as e:
             print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
             logging.error(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
