@@ -37,16 +37,21 @@ except Exception:
     pass
 
 def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
+    id_execucao = os.path.basename(diretorio_saida)  # ou 'diretorio' se for o nome da variável recebida
+
     print("🚀 [main.py] Início da execução principal")
     logging.info("🚀 Início da execução principal")
 
     print(f"📁 Variáveis de entrada: {diretorio_saida=}, {cidade=}, {caminho_excel=}, {caminho_dxf=}")
     logging.info(f"📁 Variáveis de entrada: {diretorio_saida=}, {cidade=}, {caminho_excel=}, {caminho_dxf=}")
+    
 
     print("\n🔷 Iniciando: Preparo inicial dos arquivos")
     logging.info("🔷 Iniciando preparo inicial dos arquivos")
 
     variaveis = main_preparo_arquivos(diretorio_saida, cidade, caminho_excel, caminho_dxf)
+    
+
     if not isinstance(variaveis, dict):
         print("❌ [main.py] ERRO: main_preparo_arquivos não retornou dicionário!")
         logging.error("❌ ERRO: main_preparo_arquivos não retornou dicionário!")
