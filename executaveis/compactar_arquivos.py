@@ -1,5 +1,3 @@
-# compactar_arquivos.py
-
 import os
 import glob
 import zipfile
@@ -31,9 +29,9 @@ def montar_pacote_zip(diretorio, cidade):
         print(f"🔍 Buscando arquivos do tipo: {tipo}")
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
-        arquivos_dxf = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.docx"))
-        arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial*.xlsx"))
+        arquivos_dxf = glob.glob(os.path.join(diretorio, f"*{tipo}*.dxf"))
+        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}*.docx"))
+        arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}*.xlsx"))
 
         print(f"   - DXF encontrados: {len(arquivos_dxf)}")
         print(f"   - DOCX encontrados: {len(arquivos_docx)}")
@@ -41,13 +39,16 @@ def montar_pacote_zip(diretorio, cidade):
 
         logger.info(f"DXF={len(arquivos_dxf)} | DOCX={len(arquivos_docx)} | XLSX={len(arquivos_excel)}")
 
-        # Coletar todas as matrículas
+        # Coletar todas as matrículas com ponto, vírgula, espaço ou nenhuma separação
         matriculas = set()
+        regex_matricula = re.compile(rf"{tipo}[_\- ]*Mat[_\- ]*(\d+[\., ]?\d*)", re.IGNORECASE)
+
         for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
             nome_arquivo = os.path.basename(arq)
-            match = re.search(r"_(\d+)[.,](\d+)", nome_arquivo)
+            match = regex_matricula.search(nome_arquivo)
             if match:
-                matricula = f"{match.group(1)}.{match.group(2)}"
+                raw = match.group(1)
+                matricula = raw.replace(",", ".").replace(" ", "")
                 matriculas.add(matricula)
 
         for matricula in matriculas:
@@ -59,7 +60,7 @@ def montar_pacote_zip(diretorio, cidade):
             arq_excel = [a for a in arquivos_excel if matricula in a]
 
             if arq_dxf and arq_docx and arq_excel:
-                cidade_sanitizada = cidade.replace(" ", "_")  # sanitize o nome da cidade
+                cidade_sanitizada = cidade.replace(" ", "_")
                 nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_Memorial_MAT_{matricula}.zip")
 
                 STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'zips')
@@ -98,5 +99,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main_compactar_arquivos(args.diretorio)
-
-
