@@ -62,7 +62,7 @@ def montar_pacote_zip(diretorio, cidade):
                 cidade_sanitizada = cidade.replace(" ", "_")
                 nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_{matricula}.zip")
 
-                STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'zips')
+                STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'arquivos')
                 os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
                 caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
 
@@ -71,7 +71,7 @@ def montar_pacote_zip(diretorio, cidade):
                         zipf.write(arq_dxf[0], os.path.basename(arq_dxf[0]))
                         zipf.write(arq_docx[0], os.path.basename(arq_docx[0]))
                         zipf.write(arq_excel[0], os.path.basename(arq_excel[0]))
-                    copyfile(nome_zip, caminho_debug_zip)
+                    shutil.copy2(nome_zip, caminho_debug_zip)
 
                     print(f"✅ ZIP criado com sucesso: {nome_zip}")
                     logger.info(f"ZIP criado: {nome_zip} e copiado para: {caminho_debug_zip}")
