@@ -75,16 +75,21 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print(f"\n📦 [main.py] Chamando compactação no diretório: {diretorio_concluido}")
     logging.info(f"📦 Chamando compactação no diretório: {diretorio_concluido}")
 
-    main_compactar_arquivos(diretorio_concluido,cidade)
+    main_compactar_arquivos(diretorio_concluido, cidade)
+
     print("✅ [main.py] Compactação finalizada com sucesso!")
     logging.info("✅ Compactação finalizada com sucesso!")
 
     print("\n📤 Copiando arquivos finais para a pasta pública")
     logging.info("📤 Copiando arquivos finais para a pasta pública")
 
+    # Cria pasta pública se necessário
+    os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
+
     for fname in os.listdir(diretorio_concluido):
         origem = os.path.join(diretorio_concluido, fname)
         destino = os.path.join(CAMINHO_PUBLICO, fname)
+
         if os.path.isfile(origem):
             try:
                 shutil.copy2(origem, destino)
