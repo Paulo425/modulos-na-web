@@ -422,17 +422,28 @@ def gerar_memorial_azimute_az():
 
         # 🔍 Verificação do ZIP após o processamento
         try:
-            zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(zip_dir) if f.lower().endswith('.zip')]
+            parent_dir = os.path.dirname(diretorio)  # sobe de tmp/CONCLUIDO/uuid para tmp/CONCLUIDO
+            arquivos_zip = [f for f in os.listdir(parent_dir) if f.lower().endswith('.zip') and cidade.replace(" ", "_") in f]
+
+            print("🧪 ZIPs disponíveis:", arquivos_zip)
+            logging.info(f"🧪 ZIPs disponíveis: {arquivos_zip}")
+
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(zip_dir, x)), reverse=True)
-                zip_download = arquivos_zip[0]
-                print(f"✅ ZIP disponível para download: {zip_download}")
-            else:
-                print("⚠️ Nenhum ZIP encontrado no diretório público.")
+                caminho_zip = os.path.join(parent_dir, arquivos_zip[0])
+                destino_zip = os.path.join(BASE_DIR, 'static', 'arquivos', arquivos_zip[0])
+                shutil.copy2(caminho_zip, destino_zip)
+
+                if os.path.exists(destino_zip):
+                    print(f"✅ ZIP copiado com sucesso para: {destino_zip}")
+                    logging.info(f"✅ ZIP copiado com sucesso para: {destino_zip}")
+                    zip_download = arquivos_zip[0]
+                else:
+                    print("❌ ZIP não encontrado no destino!")
+                    logging.error("❌ ZIP não encontrado no destino!")
         except Exception as e:
-            print(f"❌ Erro ao verificar ZIP: {e}")
-            zip_download = None
+            print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
+            logging.error(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
+
     return render_template("formulario_AZIMUTE_AZ.html",
                            resultado=resultado,
                            erro=erro_execucao,
