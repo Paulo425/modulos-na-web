@@ -85,7 +85,7 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
 
     # Cria pasta pública se necessário
     os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
-
+    zip_download = None
     for fname in os.listdir(diretorio_concluido):
         origem = os.path.join(diretorio_concluido, fname)
         if os.path.isfile(origem):
