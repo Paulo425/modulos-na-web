@@ -80,8 +80,8 @@ def montar_pacote_zip(diretorio, cidade):
                     logger.info(f"ZIP criado: {nome_zip} e copiado para: {caminho_debug_zip}")
 
                 except Exception as e:
+                    logger.exception(f"Erro ao criar ZIP {nome_zip}")
                     print(f"❌ Erro ao criar ZIP: {e}")
-                    logger.error(f"Erro ao criar ZIP {nome_zip}: {e}"
 
 
 
