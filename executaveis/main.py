@@ -87,17 +87,20 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
 
     for fname in os.listdir(diretorio_concluido):
-        origem = os.path.join(diretorio_concluido, fname)
-        destino = os.path.join(CAMINHO_PUBLICO, fname)
+    origem = os.path.join(diretorio_concluido, fname)
+    if os.path.isfile(origem):
+        nome_com_uuid = f"{id_execucao}_{fname}"
+        destino = os.path.join(BASE_DIR, 'static', 'arquivos', nome_com_uuid)
+        try:
+            shutil.copy2(origem, destino)
+            print(f"🗂️ Arquivo copiado: {destino}")
+            logging.info(f"🗂️ Arquivo copiado: {destino}")
+            if fname.endswith(".zip"):
+                zip_download = nome_com_uuid
+        except Exception as e:
+            print(f"❌ Falha ao copiar {fname}: {e}")
+            logging.error(f"❌ Erro ao copiar {fname}: {e}")
 
-        if os.path.isfile(origem):
-            try:
-                shutil.copy2(origem, destino)
-                print(f"🗂️ Arquivo copiado: {destino}")
-                logging.info(f"🗂️ Arquivo copiado: {destino}")
-            except Exception as e:
-                print(f"❌ Falha ao copiar {fname}: {e}")
-                logging.error(f"❌ Erro ao copiar {fname}: {e}")
 
     print("✅ [main.py] Processo geral concluído com sucesso!")
     logging.info("✅ Processo geral concluído com sucesso!")
@@ -123,6 +126,6 @@ if __name__ == "__main__":
 
     if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
         id_execucao = str(uuid.uuid4())[:8]
-        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
+         diretorio= os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
 
     executar_programa(diretorio, cidade, excel, dxf)
