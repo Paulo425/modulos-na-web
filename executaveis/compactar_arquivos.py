@@ -69,9 +69,12 @@ def montar_pacote_zip(diretorio, cidade):
 
                 try:
                     with zipfile.ZipFile(nome_zip, 'w') as zipf:
-                        zipf.write(arq_dxf[0], os.path.basename(arq_dxf[0]))
-                        zipf.write(arq_docx[0], os.path.basename(arq_docx[0]))
-                        zipf.write(arq_excel[0], os.path.basename(arq_excel[0]))
+                        uuid_prefix = os.path.basename(diretorio)  # usa o nome da subpasta como UUID
+
+                        zipf.write(arq_dxf[0], f"{uuid_prefix}_{os.path.basename(arq_dxf[0])}")
+                        zipf.write(arq_docx[0], f"{uuid_prefix}_{os.path.basename(arq_docx[0])}")
+                        zipf.write(arq_excel[0], f"{uuid_prefix}_{os.path.basename(arq_excel[0])}")
+
                     shutil.copy2(nome_zip, caminho_debug_zip)
 
                     print(f"✅ ZIP criado com sucesso: {nome_zip}")
