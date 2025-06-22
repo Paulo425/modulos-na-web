@@ -82,11 +82,12 @@
     {% endif %}
 
     {% if zip_download %}
-    <div class="mt-4 text-center">
-        <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
+    <div class="mt-4">
+        <a class="btn btn-success" href="{{ url_for('static', filename='arquivos/' ~ zip_download) }}" download>
             📦 Baixar ZIP Gerado
         </a>
     </div>
-    {% endif %}
+{% endif %}
+
 </div>
 {% endblock %}

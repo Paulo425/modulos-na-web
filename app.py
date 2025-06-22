@@ -422,14 +422,17 @@ def gerar_memorial_azimute_az():
 
         # 🔍 Verificação do ZIP após o processamento
         try:
-            parent_dir = os.path.dirname(diretorio)  # sobe de tmp/CONCLUIDO/uuid para tmp/CONCLUIDO
-            arquivos_zip = [f for f in os.listdir(parent_dir) if f.lower().endswith('.zip') and cidade.replace(" ", "_") in f]
+            #parent_dir = os.path.dirname(diretorio)  # sobe de tmp/CONCLUIDO/uuid para tmp/CONCLUIDO
+            # Verifica ZIP na pasta correta (static/arquivos)
+            static_zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
+            arquivos_zip = [f for f in os.listdir(static_zip_dir) if f.lower().endswith('.zip')]
+
 
             print("🧪 ZIPs disponíveis:", arquivos_zip)
             logging.info(f"🧪 ZIPs disponíveis: {arquivos_zip}")
 
             if arquivos_zip:
-                caminho_zip = os.path.join(parent_dir, arquivos_zip[0])
+                caminho_zip = os.path.join(static_zip_dir, arquivos_zip[0])
                 destino_zip = os.path.join(BASE_DIR, 'static', 'arquivos', arquivos_zip[0])
                 shutil.copy2(caminho_zip, destino_zip)
 
