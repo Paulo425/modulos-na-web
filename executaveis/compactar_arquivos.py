@@ -65,24 +65,13 @@ def montar_pacote_zip(diretorio, cidade):
                 nome_zip = os.path.join(diretorio, f"{uuid_prefix}_{cidade_sanitizada}_{tipo}_{matricula}.zip")
 
                 try:
-                    uuid_prefix = os.path.basename(diretorio)  # EX: '8f92ac18'
-
+                    uuid_prefix = os.path.basename(diretorio)  # ex: '0eb3f562'
                     nome_zip = os.path.join(diretorio, f"{uuid_prefix}_{cidade_sanitizada}_{tipo}_{matricula}.zip")
-                    temp_dir = os.path.join(diretorio, "TEMP_ZIP")
-                    os.makedirs(temp_dir, exist_ok=True)
-
-                    caminho_docx = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.docx")
-                    caminho_dxf  = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.dxf")
-                    caminho_xlsx = os.path.join(temp_dir, f"{uuid_prefix}_{tipo}_{matricula}.xlsx")
-
-                    shutil.copy2(arq_docx[0], caminho_docx)
-                    shutil.copy2(arq_dxf[0], caminho_dxf)
-                    shutil.copy2(arq_excel[0], caminho_xlsx)
 
                     with zipfile.ZipFile(nome_zip, 'w') as zipf:
-                        zipf.write(caminho_docx, os.path.basename(caminho_docx))
-                        zipf.write(caminho_dxf,  os.path.basename(caminho_dxf))
-                        zipf.write(caminho_xlsx, os.path.basename(caminho_xlsx))
+                        zipf.write(arq_docx[0], arcname=f"{uuid_prefix}_{tipo}_{matricula}.docx")
+                        zipf.write(arq_dxf[0],  arcname=f"{uuid_prefix}_{tipo}_{matricula}.dxf")
+                        zipf.write(arq_excel[0], arcname=f"{uuid_prefix}_{tipo}_{matricula}.xlsx")
 
                     shutil.copy2(nome_zip, caminho_debug_zip)
 
