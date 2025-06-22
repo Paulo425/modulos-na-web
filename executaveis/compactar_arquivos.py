@@ -4,6 +4,7 @@ import zipfile
 import re
 import logging
 from datetime import datetime
+import shutil
 from shutil import copyfile
 
 # Diretórios e setup de log
