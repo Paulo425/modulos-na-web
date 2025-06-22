@@ -21,6 +21,7 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(messa
 logger.addHandler(file_handler)
 
 def montar_pacote_zip(diretorio, cidade):
+    uuid_prefix = os.path.basename(diretorio)
     print("\n📦 [compactar] Iniciando montagem dos pacotes ZIP")
     logger.info("Iniciando montagem dos pacotes ZIP")
 
