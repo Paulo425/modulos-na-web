@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from shutil import copyfile
 
+
 # Diretórios e setup de log
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
@@ -21,7 +22,7 @@ file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
 logger.addHandler(file_handler)
 
-def montar_pacote_zip(diretorio,cidade):
+def montar_pacote_zip(diretorio, cidade):
     print("\n📦 [compactar] Iniciando montagem dos pacotes ZIP")
     logger.info("Iniciando montagem dos pacotes ZIP")
 
@@ -33,9 +34,8 @@ def montar_pacote_zip(diretorio,cidade):
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
         arquivos_dxf = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.docx"))
+        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}*Memorial*.docx"))  # ← Corrigido aqui
         arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}_Memorial_*.xlsx"))
-
 
         print(f"   - DXF encontrados: {len(arquivos_dxf)}")
         print(f"   - DOCX encontrados: {len(arquivos_docx)}")
@@ -59,7 +59,7 @@ def montar_pacote_zip(diretorio,cidade):
             arq_excel = [a for a in arquivos_excel if matricula in a]
 
             if arq_dxf and arq_docx and arq_excel:
-                cidade_sanitizada = cidade.replace(" ", "_")  # sanitize o nome da cidade
+                cidade_sanitizada = cidade.replace(" ", "_")
                 nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_Memorial_MAT_{matricula}.zip")
 
                 STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'zips')
