@@ -29,9 +29,9 @@ def montar_pacote_zip(diretorio, cidade):
         print(f"🔍 Buscando arquivos do tipo: {tipo}")
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
-        arquivos_dxf = glob.glob(os.path.join(diretorio, f"*{tipo}*.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}*.docx"))
-        arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}*.xlsx"))
+        arquivos_dxf = glob.glob(os.path.join(diretorio, f"{tipo}_*.dxf"))
+        arquivos_docx = glob.glob(os.path.join(diretorio, f"{tipo}_*.docx"))
+        arquivos_excel = glob.glob(os.path.join(diretorio, f"{tipo}_*.xlsx"))
 
         print(f"   - DXF encontrados: {len(arquivos_dxf)}")
         print(f"   - DOCX encontrados: {len(arquivos_docx)}")
@@ -39,16 +39,15 @@ def montar_pacote_zip(diretorio, cidade):
 
         logger.info(f"DXF={len(arquivos_dxf)} | DOCX={len(arquivos_docx)} | XLSX={len(arquivos_excel)}")
 
+        # Coletar todas as matrículas
         matriculas = set()
         for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
             nome_arquivo = os.path.basename(arq)
-            match = re.search(r"([0-9]+)[., ]?([0-9]{3})", nome_arquivo)
+            match = re.search(rf"{tipo}[_ ]?(\d+[.,]?\d*)", nome_arquivo)
             if match:
-                matricula = f"{match.group(1)}.{match.group(2)}"
-                matriculas.add(matricula)
-                if not "." in matricula:
-                    if len(matricula) > 2:
-                        matricula = f"{matricula[:-3]}.{matricula[-3:]}"
+                matricula = match.group(1).replace(",", ".").replace(" ", "")
+                if not "." in matricula and len(matricula) > 3:
+                    matricula = f"{matricula[:-3]}.{matricula[-3:]}"
                 matriculas.add(matricula)
 
         for matricula in matriculas:
