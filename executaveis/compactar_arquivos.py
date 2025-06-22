@@ -30,9 +30,9 @@ def montar_pacote_zip(diretorio, cidade):
         print(f"🔍 Buscando arquivos do tipo: {tipo}")
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
-        arquivos_dxf = glob.glob(os.path.join(diretorio, f"{tipo}_*.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"{tipo}_*.docx"))
-        arquivos_excel = glob.glob(os.path.join(diretorio, f"{tipo}_*.xlsx"))
+        arquivos_dxf = glob.glob(os.path.join(diretorio, f"*_{tipo}_*.dxf"))
+        arquivos_docx = glob.glob(os.path.join(diretorio, f"*_{tipo}_*.docx"))
+        arquivos_excel = glob.glob(os.path.join(diretorio, f"*_{tipo}_*.xlsx"))
 
         print(f"   - DXF encontrados: {len(arquivos_dxf)}")
         print(f"   - DOCX encontrados: {len(arquivos_docx)}")
