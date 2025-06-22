@@ -44,7 +44,7 @@ def montar_pacote_zip(diretorio, cidade):
         matriculas = set()
         for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
             nome_arquivo = os.path.basename(arq)
-            match = re.search(rf"{tipo}[_ ]?(\d+[.,]?\d*)", nome_arquivo)
+            match = re.search(rf"{tipo}[_ ]+(\d+[.,]?\d*)", nome_arquivo, re.IGNORECASE)
             if match:
                 matricula = match.group(1).replace(",", ".").replace(" ", "")
                 if not "." in matricula and len(matricula) > 3:
