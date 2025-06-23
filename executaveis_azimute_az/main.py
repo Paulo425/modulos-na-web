@@ -90,6 +90,17 @@ def main():
             print("⚠️ Nenhum ZIP encontrado para copiar.")
     except Exception as e:
         print(f"❌ Erro ao copiar ZIPs: {e}")
+    
+    # 🔎 Verificação final para exibir o nome do ZIP copiado mais recente
+    try:
+        arquivos_zip = [f for f in os.listdir(pasta_destino) if f.lower().endswith('.zip')]
+        if arquivos_zip:
+            arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(pasta_destino, x)), reverse=True)
+            zip_download = arquivos_zip[0]
+            print(f"🔗 ZIP disponível para download: {zip_download}")
+    except Exception as e:
+        print(f"⚠️ Não foi possível determinar o nome do ZIP: {e}")
+
 
 
 
