@@ -601,7 +601,7 @@ def calculate_angular_turn(p1, p2, p3):
 def create_memorial_descritivo(
     doc, lines, proprietario, matricula, caminho_salvar, confrontantes,
     ponto_az, dxf_file_path, area_poligonal, azimute, v1, msp,
-    base_filename, excel_file_path, tipo=None, giro_angular_v1_dms=None
+    base_filename, excel_file_path, tipo=None, giro_angular_v1_dms=None, uuid_str=None
 ):
     """
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
@@ -610,9 +610,8 @@ def create_memorial_descritivo(
         print("Nenhuma linha disponível para criar o memorial descritivo.")
         return None
 
-    dxf_output_path = os.path.join(
-        caminho_salvar, f"FECHADA_{tipo}_POLIGONAL_COM_AZ_{matricula}.dxf"
-    )
+    dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_POLIGONAL_COM_AZ_{matricula}.dxf")
+
 
     try:
         doc_dxf = ezdxf.readfile(dxf_file_path)
@@ -856,7 +855,8 @@ def create_memorial_document(
     area_dxf,
     desc_ponto_amarracao,
     perimeter_dxf,
-    giro_angular_v1_dms
+    giro_angular_v1_dms,
+    uuid_str=None
 ):
     try:
         df = pd.read_excel(excel_file_path, engine='openpyxl', dtype=str)
@@ -1096,7 +1096,7 @@ def sanitize_filename(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
         
-def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, template_path):
+def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, template_path, uuid_str):
     # 🔹 Leitura dos dados do Excel
     df_excel = pd.read_excel(arquivo_excel_recebido, sheet_name='Dados_do_Imóvel', header=None)
     dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
@@ -1162,7 +1162,8 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
         giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
         giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
-        excel_file_path = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.xlsx")
+        excel_file_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.xlsx")
+
 
         # ✅ Geração do Excel e atualização do DXF
         create_memorial_descritivo(
@@ -1181,12 +1182,13 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
             base_filename=dxf_filename,
             excel_file_path=excel_file_path,
             tipo=tipo,
-            giro_angular_v1_dms=giro_angular_v1_dms
+            giro_angular_v1_dms=giro_angular_v1_dms,
+            uuid_str=uuid_str
         )
 
         # ✅ Geração do DOCX
         if excel_file_path:
-            output_path_docx = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.docx")
+            output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
             assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
 
             create_memorial_document(
@@ -1209,7 +1211,8 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
                 area_dxf=area_dxf,
                 desc_ponto_amarracao=desc_ponto_az,
                 perimeter_dxf=0,  # atualizar se desejar calcular
-                giro_angular_v1_dms=giro_angular_v1_dms
+                giro_angular_v1_dms=giro_angular_v1_dms,
+                uuid_str=uuid_str
             )
 
             # ✅ Geração do PDF

@@ -43,11 +43,10 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
         else:
             print(f"⚠️ Planilha '{sheet_name}' não encontrada.")
 
-def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir):
+def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir, id_execucao):
     try:
         cidade_formatada = cidade.replace(" ", "_")
 
-        id_execucao = str(uuid.uuid4())[:8]
         TMP_DIR = os.path.join(base_dir, 'tmp', id_execucao)
         os.makedirs(TMP_DIR, exist_ok=True)
 

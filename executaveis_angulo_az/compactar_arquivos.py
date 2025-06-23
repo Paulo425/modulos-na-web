@@ -19,7 +19,8 @@ file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
 logger.addHandler(file_handler)
 
-def montar_pacote_zip(diretorio, cidade_formatada):
+def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
+
     print(f"\n📦 Compactando arquivos no diretório: {diretorio}")
     logger.info(f"[AZIMUTE_AZ] Iniciando montagem dos pacotes ZIP")
 
@@ -47,7 +48,8 @@ def montar_pacote_zip(diretorio, cidade_formatada):
             partes = base_nome.split("_", 1)
             sufixo_identificador = partes[1] if len(partes) > 1 else partes[0]
 
-            nome_zip = f"{cidade_formatada}_{tipo}_{sufixo_identificador}.zip"
+            nome_zip = f"{uuid_str}_{cidade_formatada}_{tipo}.zip"
+
             caminho_zip = os.path.join(diretorio, nome_zip)
 
             try:
@@ -67,10 +69,11 @@ def montar_pacote_zip(diretorio, cidade_formatada):
             logger.warning(f"Incompleto: {tipo} - DXF={bool(arquivo_dxf)}, DOCX={bool(arquivo_docx)}, XLSX={bool(arquivo_excel)}")
 
 
-def main_compactar_arquivos(diretorio_concluido, cidade):
+def main_compactar_arquivos(diretorio_concluido, cidade, uuid_str):
+
     print(f"\n📦 Compactando arquivos no diretório: {diretorio_concluido}")
     logger.info(f"Iniciando compactação no diretório: {diretorio_concluido}")
-    montar_pacote_zip(diretorio_concluido, cidade)
+    montar_pacote_zip(diretorio_concluido, cidade, uuid_str)
     print("✅ Compactação finalizada")
     logger.info("Compactação finalizada")
 

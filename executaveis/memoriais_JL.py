@@ -895,7 +895,8 @@ def create_memorial_document(
         run3b.font.superscript = True
         run3c = par3.add_run("):")
         run3c.bold = True
-        par3.add_run(f" {str(round(area_dxf, 2)).replace('.', ',')}")
+        area_formatada = f"{area_dxf:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        par3.add_run(f" {area_formatada}")
 
         doc_word.add_paragraph("")  # Uma linha em branco para separar
 
@@ -951,9 +952,13 @@ def create_memorial_document(
         doc_word.add_paragraph("")  # Uma linha em branco para separar
    
         # Adicionar o fechamento do perímetro e área
+        # Formata perímetro e área com separador de milhar (ponto) e decimal (vírgula)
+        perimetro_formatado = f"{perimeter_dxf:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        area_formatada = f"{area_dxf:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
         paragrafo_fechamento = doc_word.add_paragraph(
-            f"Fechando-se assim o perímetro com {str(round(perimeter_dxf, 2)).replace('.', ',')} m "
-            f"e a área com {str(round(area_dxf, 2)).replace('.', ',')} m².",
+            f"Fechando-se assim o perímetro com {perimetro_formatado} m "
+            f"e a área com {area_formatada} m².",
             style='Normal'
         )
         paragrafo_fechamento.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT

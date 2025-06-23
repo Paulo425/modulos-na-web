@@ -41,6 +41,7 @@ def main():
         sys.exit(1)
 
     cidade = sys.argv[1]
+    uuid_str = str(uuid.uuid4())[:8]
     cidade_formatada = cidade.replace(" ", "_")  # 🔧 Adicione esta linha
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
@@ -52,17 +53,21 @@ def main():
         print(f"Template '{caminho_template}' não encontrado.")
         sys.exit(1)
 
-    variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, BASE_DIR)
+    variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, BASE_DIR, uuid_str)
+
 
     main_poligonal_fechada(
         variaveis["arquivo_excel_recebido"],
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
-        caminho_template
+        caminho_template,
+        uuid_str
     )
 
-    main_compactar_arquivos(variaveis["diretorio_concluido"], cidade_formatada)
+
+    main_compactar_arquivos(variaveis["diretorio_concluido"], cidade_formatada, uuid_str)
+
     print("✅ [main.py] Compactação finalizada com sucesso!")
 
     # 🔁 Copiar ZIPs para static/arquivos e exibir debug
