@@ -104,3 +104,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main_compactar_arquivos(args.diretorio)
+
+#atualizado
