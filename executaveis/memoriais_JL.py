@@ -720,7 +720,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         label = f"P{idx + 1}"
         add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=None)
 
-        confrontante = confrontantes_dict.get(f"P{idx + 1}_P{(idx + 2) if (idx + 1) < num_vertices else 1}", "Desconhecido")
+        confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
 
         divisa = f"P{idx + 1}_P{idx + 2}" if idx + 1 < num_vertices else f"P{idx + 1}_P1"
 

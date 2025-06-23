@@ -8,6 +8,7 @@ from datetime import datetime
 from preparar_arquivos import main_preparo_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
+import uuid
 
 # ✅ 1. Caminho base
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -36,16 +37,21 @@ except Exception:
     pass
 
 def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
+    id_execucao = os.path.basename(diretorio_saida)  # ou 'diretorio' se for o nome da variável recebida
+
     print("🚀 [main.py] Início da execução principal")
     logging.info("🚀 Início da execução principal")
 
     print(f"📁 Variáveis de entrada: {diretorio_saida=}, {cidade=}, {caminho_excel=}, {caminho_dxf=}")
     logging.info(f"📁 Variáveis de entrada: {diretorio_saida=}, {cidade=}, {caminho_excel=}, {caminho_dxf=}")
+    
 
     print("\n🔷 Iniciando: Preparo inicial dos arquivos")
     logging.info("🔷 Iniciando preparo inicial dos arquivos")
 
     variaveis = main_preparo_arquivos(diretorio_saida, cidade, caminho_excel, caminho_dxf)
+    
+
     if not isinstance(variaveis, dict):
         print("❌ [main.py] ERRO: main_preparo_arquivos não retornou dicionário!")
         logging.error("❌ ERRO: main_preparo_arquivos não retornou dicionário!")
@@ -74,24 +80,33 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print(f"\n📦 [main.py] Chamando compactação no diretório: {diretorio_concluido}")
     logging.info(f"📦 Chamando compactação no diretório: {diretorio_concluido}")
 
-    main_compactar_arquivos(diretorio_concluido,cidade)
+    main_compactar_arquivos(diretorio_saida, cidade)
+
+
     print("✅ [main.py] Compactação finalizada com sucesso!")
     logging.info("✅ Compactação finalizada com sucesso!")
 
     print("\n📤 Copiando arquivos finais para a pasta pública")
     logging.info("📤 Copiando arquivos finais para a pasta pública")
 
+    # Cria pasta pública se necessário
+    os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
+    zip_download = None
     for fname in os.listdir(diretorio_concluido):
         origem = os.path.join(diretorio_concluido, fname)
-        destino = os.path.join(CAMINHO_PUBLICO, fname)
         if os.path.isfile(origem):
+            nome_com_uuid = f"{id_execucao}_{fname}"
+            destino = os.path.join(BASE_DIR, 'static', 'arquivos', nome_com_uuid)
             try:
                 shutil.copy2(origem, destino)
                 print(f"🗂️ Arquivo copiado: {destino}")
                 logging.info(f"🗂️ Arquivo copiado: {destino}")
+                if fname.endswith(".zip"):
+                    zip_download = nome_com_uuid
             except Exception as e:
                 print(f"❌ Falha ao copiar {fname}: {e}")
                 logging.error(f"❌ Erro ao copiar {fname}: {e}")
+
 
     print("✅ [main.py] Processo geral concluído com sucesso!")
     logging.info("✅ Processo geral concluído com sucesso!")
@@ -114,8 +129,10 @@ if __name__ == "__main__":
     cidade = args.cidade
     excel = args.excel
     dxf = args.dxf
+    print(f"[DEBUG main.py] UUID da execução: {os.path.basename(diretorio)}")
 
     if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
-        diretorio = os.path.join(BASE_DIR, '..', 'CONCLUIDO')
+        id_execucao = str(uuid.uuid4())[:8]
+        diretorio= os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
 
     executar_programa(diretorio, cidade, excel, dxf)
