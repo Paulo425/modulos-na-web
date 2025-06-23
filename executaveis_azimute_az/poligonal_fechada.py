@@ -388,7 +388,7 @@ def sanitize_filename(filename):
 
 
 # Função para criar memorial descritivo
-def create_memorial_descritivo(doc,msp, lines, proprietario, matricula, caminho_salvar, excel_file_path, ponto_az,distance_az_v1, azimute_az_v1, tipo, encoding='ISO-8859-1'):
+def create_memorial_descritivo(doc,msp, lines, proprietario, matricula, caminho_salvar, excel_file_path, ponto_az,distance_az_v1, azimute_az_v1, tipo, uuid_str=None, encoding='ISO-8859-1'):
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
@@ -465,7 +465,7 @@ def create_memorial_descritivo(doc,msp, lines, proprietario, matricula, caminho_
 
     # Criar DataFrame e salvar em Excel
     df = pd.DataFrame(data, dtype=str)
-    excel_output_path = os.path.join(caminho_salvar, f"{tipo}_Memorial_{matricula}.xlsx")
+    excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_{tipo}_Memorial_{matricula}.xlsx")
 
     df.to_excel(excel_output_path, index=False)
 
@@ -527,7 +527,7 @@ def create_memorial_descritivo(doc,msp, lines, proprietario, matricula, caminho_
     # Salvar o arquivo DXF com as alterações
     # Salvar o arquivo DXF com as alterações
     try:
-        dxf_output_path = os.path.join(caminho_salvar, f"{tipo}_Memorial_{matricula}.dxf")
+        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_{tipo}_Memorial_{matricula}.dxf")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF atualizado salvo em: {dxf_output_path}")
 
@@ -542,7 +542,7 @@ def create_memorial_descritivo(doc,msp, lines, proprietario, matricula, caminho_
 def create_memorial_document(
     proprietario, matricula, descricao, excel_file_path, template_path, output_path,
     perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
-    azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar,tipo
+    azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar,tipo,uuid_str=None
 ):
 
 
@@ -726,7 +726,8 @@ def create_memorial_document(
         data_atual = datetime.now().strftime("%d de %B de %Y")
         doc_word.add_paragraph(f"\n Porto Alegre, RS, {data_atual}.", style='Normal')
         doc_word.add_paragraph("\n\n")
-        output_path = os.path.normpath(os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.docx"))
+        output_path = os.path.normpath(os.path.join(caminho_salvar, f"{uuid_str}_{tipo}_Memorial_MAT_{matricula}.docx"))
+
 
         doc_word.save(output_path)
         print(f"Memorial descritivo salvo em: {output_path}")
@@ -735,7 +736,8 @@ def create_memorial_document(
 
         
 # Função principal
-def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, caminho_template):
+def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, caminho_template, uuid_str):
+
     # Carrega arquivo Excel com os dados do imóvel
     #dados_imovel_excel_path = input("Digite o caminho completo do arquivo Excel com Dados do Imóvel: ").strip('"')
     dados_imovel_excel_path = arquivo_excel_recebido
@@ -845,7 +847,8 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
             excel_file_path=exc_file_path,
             ponto_az=ponto_az,distance_az_v1=distance_az_v1,
             azimute_az_v1=azimute_az_v1,
-            tipo=tipo
+            tipo=tipo,
+            uuid_str=uuid_str
             )
 
         if excel_output_path:
@@ -876,7 +879,8 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
                 comarca=comarca,
                 RI=RI,
                 caminho_salvar=caminho_salvar,
-                tipo=tipo# <-- adicionado aqui
+                tipo=tipo,
+                uuid_str=uuid_str
             )
 
                                 
