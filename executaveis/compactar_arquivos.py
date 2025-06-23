@@ -77,8 +77,8 @@ def montar_pacote_zip(diretorio, cidade):
 
             if arq_dxf and arq_docx and arq_excel:
                 cidade_sanitizada = cidade.replace(" ", "_")
-                nome_zip = os.path.join(diretorio, f"{uuid_prefix}_{cidade_sanitizada}_{tipo}_{matricula}.zip")
-
+                nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_{matricula}.zip")
+                
                 STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'arquivos')
                 os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
                 caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
