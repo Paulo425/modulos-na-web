@@ -30,10 +30,10 @@ def montar_pacote_zip(diretorio, cidade):
         print(f"🔍 Buscando arquivos do tipo: {tipo}")
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
-        arquivos_dxf = glob.glob(os.path.join(diretorio, f"*_{tipo}_*.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"*_{tipo}_*.docx"))
-        arquivos_excel = glob.glob(os.path.join(diretorio, f"*_{tipo}_*.xlsx"))
-
+        arquivos_dxf = glob.glob(os.path.join(diretorio, f"*{tipo}**.dxf"))
+        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}**.docx"))
+        arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}**.xlsx"))
+        
         print(f"   - DXF encontrados: {len(arquivos_dxf)}")
         print(f"   - DOCX encontrados: {len(arquivos_docx)}")
         print(f"   - XLSX encontrados: {len(arquivos_excel)}")
@@ -44,13 +44,15 @@ def montar_pacote_zip(diretorio, cidade):
         matriculas = set()
         for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
             nome_arquivo = os.path.basename(arq)
-            match = re.search(rf"{tipo}[_ ]?(\d+[.,]?\d*)", nome_arquivo)
+            match = re.search(rf"{tipo}.*?(\d{{2,6}}[.,]?\d*)", nome_arquivo)
+
             if match:
                 matricula = match.group(1).replace(",", ".").replace(" ", "")
                 if not "." in matricula and len(matricula) > 3:
                     matricula = f"{matricula[:-3]}.{matricula[-3:]}"
                 matriculas.add(matricula)
 
+    
         for matricula in matriculas:
             print(f"\n🔢 Processando matrícula: {matricula}")
             logger.info(f"Processando matrícula: {matricula}")
