@@ -129,6 +129,7 @@ if __name__ == "__main__":
     cidade = args.cidade
     excel = args.excel
     dxf = args.dxf
+    print(f"[DEBUG main.py] UUID da execução: {os.path.basename(diretorio)}")
 
     if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
         id_execucao = str(uuid.uuid4())[:8]

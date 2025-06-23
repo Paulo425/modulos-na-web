@@ -992,6 +992,7 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
     print("\n🔹 Carregando dados do imóvel")
     logger.info("Iniciando processamento da poligonal fechada")
     uuid_prefix = os.path.basename(pasta_concluido)
+    print(f"[DEBUG poligonal_fechada] UUID recebido: {uuid_prefix}")
 
     try:
         dados_df = pd.read_excel(caminho_excel, sheet_name='Dados_do_Imóvel', header=None)

@@ -34,6 +34,8 @@ def montar_pacote_zip(diretorio, cidade):
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
         uuid_prefix = os.path.basename(diretorio)
+        print(f"[DEBUG compactar] UUID identificado: {uuid_prefix}")
+
 
         padrao_dxf = os.path.join(diretorio, f"*{tipo}*.dxf")
         padrao_docx = os.path.join(diretorio, f"*{tipo}*.docx")
