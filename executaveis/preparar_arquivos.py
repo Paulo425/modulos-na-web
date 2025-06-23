@@ -47,7 +47,8 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
     TMP_DIR = os.path.join(BASE_DIR, 'tmp')
     RECEBIDO = os.path.join(TMP_DIR, 'RECEBIDO')
     PREPARADO = os.path.join(TMP_DIR, 'PREPARADO')
-    CONCLUIDO = os.path.join(TMP_DIR, 'CONCLUIDO')
+    CONCLUIDO = diretorio_base  # já vem com UUID do main.py
+
 
     for pasta in [RECEBIDO, PREPARADO, CONCLUIDO]:
         os.makedirs(pasta, exist_ok=True)
