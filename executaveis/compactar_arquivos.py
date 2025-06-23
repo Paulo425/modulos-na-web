@@ -32,9 +32,10 @@ def montar_pacote_zip(diretorio, cidade):
 
         uuid_prefix = os.path.basename(diretorio)
 
-        arquivos_dxf = glob.glob(os.path.join(diretorio, f"{uuid_prefix}_{tipo}_*.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"{uuid_prefix}_{tipo}_*.docx"))
-        arquivos_excel = glob.glob(os.path.join(diretorio, f"{uuid_prefix}_{tipo}_*.xlsx"))
+        arquivos_dxf = glob.glob(os.path.join(diretorio, f"*{tipo}*.*.dxf"))
+        arquivos_docx = glob.glob(os.path.join(diretorio, f"*{tipo}*.*.docx"))
+        arquivos_excel = glob.glob(os.path.join(diretorio, f"*{tipo}*.*.xlsx"))
+
 
         
         print(f"   - DXF encontrados: {len(arquivos_dxf)}")
@@ -47,7 +48,8 @@ def montar_pacote_zip(diretorio, cidade):
         matriculas = set()
         for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
             nome_arquivo = os.path.basename(arq)
-            match = re.search(rf"{tipo}.*?(\d{{2,6}}[.,]?\d*)", nome_arquivo)
+            match = re.search(rf"{tipo}.*?(\d{{2,6}}[.,_]?\d{{0,3}})", nome_arquivo, re.IGNORECASE)
+
 
             if match:
                 matricula = match.group(1).replace(",", ".").replace(" ", "")
