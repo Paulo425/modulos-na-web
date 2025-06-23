@@ -56,7 +56,7 @@ def main():
     variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir, uuid_str)
 
 
-   main_poligonal_fechada(
+    main_poligonal_fechada(
         variaveis["arquivo_excel_recebido"],
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
