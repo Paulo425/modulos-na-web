@@ -21,6 +21,7 @@ import traceback
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import sys
 import time
+import uuid
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -587,7 +588,7 @@ def sanitize_filename(filename):
 # Função para criar memorial descritivo
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, ponto_inicial_real=None,tipo=None, encoding='ISO-8859-1'):
+                               azimute_az_v1=None, ponto_inicial_real=None,tipo=None, uuid_prefix=None, encoding='ISO-8859-1'):
 
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
@@ -753,7 +754,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 def create_memorial_document(
     proprietario, matricula, descricao, area_terreno, excel_file_path=None, template_path=None, output_path=None,
     perimeter_dxf=None, area_dxf=None, desc_ponto_Az=None, Coorde_E_ponto_Az=None, Coorde_N_ponto_Az=None,
-    azimuth=None, distance=None, comarca=None, RI=None, rua=None
+    azimuth=None, distance=None, comarca=None, RI=None, rua=None,uuid_prefix=None
 ):
 
     try:
@@ -990,6 +991,8 @@ def create_memorial_document(
 def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_concluido, caminho_template):
     print("\n🔹 Carregando dados do imóvel")
     logger.info("Iniciando processamento da poligonal fechada")
+    uuid_prefix = os.path.basename(pasta_concluido)
+
     try:
         dados_df = pd.read_excel(caminho_excel, sheet_name='Dados_do_Imóvel', header=None)
         dados_dict = dict(zip(dados_df.iloc[:, 0], dados_df.iloc[:, 1]))
@@ -1070,7 +1073,8 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
             distance_az_v1=distance_az_v1,
             azimute_az_v1=azimute_az_v1,
             ponto_inicial_real=ponto_inicial,
-            tipo=tipo
+            tipo=tipo,
+            uuid_prefix=uuid_prefix
         )
 
         if excel_output:
@@ -1092,7 +1096,8 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
                 distance=distance,
                 comarca=comarca,
                 RI=RI,
-                rua=rua
+                rua=rua,
+                uuid_prefix=uuid_prefix
             )
 
             print(f"📄 Memorial gerado com sucesso: {output_docx}")
