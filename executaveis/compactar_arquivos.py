@@ -35,9 +35,10 @@ def montar_pacote_zip(diretorio, cidade):
 
         uuid_prefix = os.path.basename(diretorio)
 
-        padrao_dxf = os.path.join(diretorio, f"*{tipo}*.*.dxf")
-        padrao_docx = os.path.join(diretorio, f"*{tipo}*.*.docx")
-        padrao_excel = os.path.join(diretorio, f"*{tipo}*.*.xlsx")
+        padrao_dxf = os.path.join(diretorio, f"*{tipo}*.dxf")
+        padrao_docx = os.path.join(diretorio, f"*{tipo}*.docx")
+        padrao_excel = os.path.join(diretorio, f"*{tipo}*.xlsx")
+
 
         print(f"🧭 [DEBUG] Padrões de busca:")
         print(f"   - DXF  : {padrao_dxf}")
