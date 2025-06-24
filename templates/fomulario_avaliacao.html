@@ -1,149 +1,758 @@
 {% extends 'base.html' %}
-
 {% block conteudo %}
-<div class="container mt-5">
-    <h2 class="text-primary mb-4 text-center">Formulário de Avaliação PHOENIX APPRAISAL</h2>
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <title>Formulário de Avaliação PHOENIX APPRAISAL</title>
+    <style>
+        body {
+            margin: 40px;
+            background: #000033; 
+            font-family: Arial, sans-serif;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        h1 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #ffffff;
+        }
+        form {
+            display: block;
+            width: 80%;
+            max-width: 640px;
+            margin: 0 auto; 
+            background: #ffffff; 
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 20px rgba(0,0,0,0.3);
+            text-align: left;
+            color: #000;
+        }
+        .dark-mode form {
+            background: #2f2f2f !important;
+            color: #ffffff !important;
+        }
+        .dark-mode form label {
+            color: #ffffff !important;
+        }
+        .dark-mode .input-change::placeholder {
+            color: #000000 !important;
+        }
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            color: #ffffff;
+            background-color: #1e90ff;
+            font-size: 16px;
+            box-shadow: 0px 0px 8px rgba(0,0,0,0.3);
+        }
+        .toggle-btn:hover {
+            filter: brightness(1.1);
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+        .input-change {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin: auto;
+            font-size: 14px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        input[type="file"].file-green {
+            width: 100%;
+        }
+        input[type="file"].file-green::-webkit-file-upload-button {
+            background-color: #006400;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        input[type="file"].file-green::file-selector-button {
+            background-color: #006400;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: #fff;
+            background-color: #006400; 
+        }
+        .btn:hover {
+            filter: brightness(1.2);
+        }
+        .center-btn {
+            text-align: center;
+        }
+        .restricoes-container {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+            background: #f0f0f0;
+            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        hr {
+            margin: 20px 0;
+        }
+        .subtitle {
+            margin-top: 30px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .notice {
+            font-size: 0.9em;
+            color: #555;
+        }
+        .small-explanation {
+            font-size: 13px;
+            line-height: 1.3em;
+            text-align: justify;
+            text-justify: inter-word;
+            margin-bottom: 5px;
+            width: 100%;
+        }
+
+        /* Forçar cor verde se autofill em inputs do Chrome */
+        input:-webkit-autofill {
+            background-color: #ccffcc !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+        input:-webkit-autofill:focus {
+            background-color: #ccffcc !important;
+        }
+    </style>
+</head>
+<body>
+
+    <button class="toggle-btn" onclick="toggleDarkMode()">
+        Alternar Modo
+    </button>
+
+    <h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
 
     <form method="post" enctype="multipart/form-data">
-        <div class="mb-3">
-            <label class="form-label">Planilha de Amostras (Excel):</label>
-            <input type="file" name="planilha_excel" class="form-control input-change file-green" required>
+
+        <label>INSIRA AQUI SUA PLANILHA DE AMOSTRAS (Excel):</label>
+        <input type="file" name="planilha_excel" class="input-change file-green" required>
+
+        <label>Informe o nome completo do proprietário do imóvel:</label>
+        <input type="text" name="nome_proprietario" class="input-change" placeholder="Ex: José da Silva" required>
+
+        <label>Existem outros proprietários? (Sim ou Não):</label>
+        <select name="outros_proprietarios" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+
+        <label>Deseja incluir telefone do proprietário? (Sim ou Não):</label>
+        <select name="incluir_tel" id="incluirTelSelect" class="input-change" onchange="toggleTelefoneCampo()">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <div id="telefoneCampo" style="display:none;">
+          <label>Digite o telefone do proprietário:</label>
+          <input type="text" name="telefone_proprietario" class="input-change" placeholder="Ex: (47) 99999-8888">
         </div>
 
-        <div class="mb-3">
-            <label>Nome do Proprietário:</label>
-            <input type="text" name="nome_proprietario" class="form-control input-change" required>
+        <label>Deseja incluir email do proprietário? (Sim ou Não):</label>
+        <select name="incluir_mail" id="incluirMailSelect" class="input-change" onchange="toggleEmailCampo()">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <div id="emailCampo" style="display:none;">
+          <label>Digite o email do proprietário:</label>
+          <input type="text" name="email_proprietario" class="input-change" placeholder="Ex: exemplo@dominio.com">
         </div>
 
-        <div class="mb-3">
-            <label>Outros Proprietários?</label>
-            <select name="outros_proprietarios" class="form-select input-change">
-                <option value="" disabled selected>Selecione</option>
-                <option value="sim">Sim</option>
-                <option value="nao">Não</option>
-            </select>
+        <label>Informe o nome do solicitante do laudo:</label>
+        <input type="text" name="nome_solicitante" class="input-change" placeholder="Ex: Prefeitura Municipal de Joinville-SC">
+
+        <label>Informe o nome do avaliador responsável:</label>
+        <input type="text" name="nome_avaliador" class="input-change" placeholder="Ex: Eng. Civil Paulo Roberto">
+
+        <label>Informe o registro profissional do avaliador:</label>
+        <input type="text" name="registro_avaliador" class="input-change" placeholder="Ex: CREA SP 45.678/D">
+
+        <label>Qual tipo de imóvel está sendo avaliado?</label>
+        <select name="tipo_imovel_escolhido" class="input-change">
+            <option value="" disabled selected>Selecione</option>
+            <option value="Apartamento residencial">Apartamento residencial</option>
+            <option value="Casa residencial">Casa residencial</option>
+            <option value="Terreno urbano">Terreno urbano</option>
+            <option value="Gleba urbana">Gleba urbana</option>
+            <option value="Terreno rural">Terreno rural</option>
+            <option value="Gleba rural">Gleba rural</option>
+        </select>
+
+        <label>Qual a finalidade do laudo?</label>
+        <select name="finalidade_lido" id="finalidadeSelect" class="input-change"
+                onchange="atualizarAreaLabel(); exibirRestricoesSeNecessario(); exibirCampoOutraFinalidade();">
+            <option value="" disabled selected>Selecione</option>
+            <option value="Desapropriação">Desapropriação</option>
+            <option value="Garantia bancária">Garantia bancária</option>
+            <option value="Inventário e partilha">Inventário e partilha</option>
+            <option value="Obtenção do preço de mercado">Obtenção do preço de mercado</option>
+            <option value="Locação">Locação</option>
+            <option value="Regularização fiscal">Regularização fiscal</option>
+            <option value="Seguros patrimoniais">Seguros patrimoniais</option>
+            <option value="Servidão administrativa">Servidão administrativa</option>
+            <option value="Outra">Outra</option>
+        </select>
+        <div id="outraFinalidadeCampo" style="display:none;">
+          <label>Descreva a finalidade:</label>
+          <input type="text" name="finalidade_descricao" class="input-change" placeholder="Ex: Avaliação judicial específica">
         </div>
 
-        <div class="mb-3">
-            <label>Incluir telefone?</label>
-            <select name="incluir_tel" id="incluirTelSelect" class="form-select input-change" onchange="toggleTelefoneCampo()">
-                <option value="" disabled selected>Selecione</option>
-                <option value="sim">Sim</option>
-                <option value="nao">Não</option>
-            </select>
-            <div id="telefoneCampo" style="display:none;">
-                <input type="text" name="telefone_proprietario" class="form-control input-change mt-2" placeholder="(00) 00000-0000">
-            </div>
+
+        <label id="areaLabel">Insira a área total do imóvel a ser avaliado (m²)</label>
+        <div id="areaInfoBox" style="display:none; margin:5px 0 15px 0; padding:10px; border:1px solid #b20000; border-radius:5px; background-color:#ffe6e6; color:#b20000; font-size:13px;">
+          <strong>IMPORTANTE:</strong> Para desapropriação/servidão, a área que você digitar aqui será utilizada para todos os cálculos, independente da área na planilha.
+        </div>
+        
+        <input type="text" name="area_parcial" class="input-change" placeholder="Ex: 29.567,89">
+
+        <!-- RESTRIÇÕES -->
+        <div id="restricoesSectionContainer" style="display:none;">
+          <hr>
+          <div class="subtitle">Múltiplas Restrições</div>
+          <p class="notice">Insira todas as restrições desejadas. Ao clicar em "Adicionar Restrição", outra aparecerá.</p>
+          <div id="restricoesSection"></div>
+          <button type="button" class="btn" onclick="addRestricao()">Adicionar Restrição</button>
+          <hr>
         </div>
 
-        <div class="mb-3">
-            <label>Incluir e-mail?</label>
-            <select name="incluir_mail" id="incluirMailSelect" class="form-select input-change" onchange="toggleEmailCampo()">
-                <option value="" disabled selected>Selecione</option>
-                <option value="sim">Sim</option>
-                <option value="nao">Não</option>
-            </select>
-            <div id="emailCampo" style="display:none;">
-                <input type="email" name="email_proprietario" class="form-control input-change mt-2" placeholder="email@exemplo.com">
-            </div>
+        <div class="subtitle">FATORES DE HOMOGENEIZAÇÃO DAS AMOSTRAS</div>
+
+        <label>Fator Área</label>
+        <p class="small-explanation">
+          Tem como objetivo adequar o valor da amostra à área do avaliando, aplicando ((Área da amostra /
+          Área do avaliando)^(0,25)), atenuando grandes distorções (Abunahman, Ed. Pini).
+        </p>
+        <label>Usar fator Área? (Sim ou Não)</label>
+        <select name="usar_fator_area" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Fator Oferta</label>
+        <p class="small-explanation">
+          Ajusta os valores para 0,90 se há indicação clara de oferta abundante. Caso contrário, 1,00. Este
+          fator previne distorções em cenários com alto estoque de imóveis.
+        </p>
+        <label>Usar fator Oferta? (Sim ou Não)</label>
+        <select name="usar_fator_oferta" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Fator Aproveitamento</label>
+        <p class="small-explanation">
+          Se urbano, adota-se 1,00; se rural, 0,80. Metodologia adaptada de João Ruy Canteiro (Ed. Pini),
+          considerando o potencial construtivo do imóvel.
+        </p>
+        <label>Usar fator Aproveitamento? (Sim ou Não)</label>
+        <select name="usar_fator_aproveitamento" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Fator Localização</label>
+        <p class="small-explanation">
+          Se amostras e avaliando estão na mesma região (~1 km), fator=1,00; caso contrário, utiliza-se
+          fórmula adaptada de Martins & Martins (2014, p.341) baseada na distância.
+        </p>
+        <label>O imóvel avaliando está na mesma região (~1km) das amostras? (Sim ou Não)</label>
+        <select name="localizacao_mesma_regiao" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Fator Topografia</label>
+        <p class="small-explanation">
+          Se a topografia for boa, emprega-se 1,10; caso contrário, 1,00. Adaptação de João R. Canteiro
+          (Ed. Pini), refletindo o relevo do terreno.
+        </p>
+        <label>Usar fator Topografia? (Sim ou Não)</label>
+        <select name="usar_fator_topografia" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Fator Pedologia</label>
+        <p class="small-explanation">
+          Caso o solo seja alagável, aplica-se 0,70 (depreciação de 30%). Se normal, 1,00. Critério baseado
+          em João R. Canteiro (Ed. Pini).
+        </p>
+        <label>Usar fator Pedologia? (Sim ou Não)</label>
+        <select name="usar_fator_pedologia" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Fator Pavimentação</label>
+        <p class="small-explanation">
+          Presença de pavimentação mantém fator 1,00; ausência reduz para 0,90. Segue o critério de
+          Mendes Sobrinho, indicando 10% de desvalorização.
+        </p>
+        <label>Usar fator Pavimentação? (Sim ou Não)</label>
+        <select name="usar_fator_pavimentacao" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Fator Esquina</label>
+        <p class="small-explanation">
+          Terrenos em esquina recebem fator 1,10; os demais, 1,00. Conforme Thofehrn (2008), há um
+          acréscimo limitado a 10% para compensar recuos.
+        </p>
+        <label>Usar fator Esquina? (Sim ou Não)</label>
+        <select name="usar_fator_esquina" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Fator Acessibilidade</label>
+        <p class="small-explanation">
+          Boa acessibilidade, fator 1,00; em caso de acesso difícil, 0,90. Adaptado do critério de Mendes
+          Sobrinho, demonstrando 10% de depreciação.
+        </p>
+        <label>Usar fator Acessibilidade? (Sim ou Não)</label>
+        <select name="usar_fator_acessibilidade" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+        <hr>
+
+        <label>Número da matrícula (documentação do imóvel):</label>
+        <input type="text" name="num_doc" class="input-change" placeholder="Ex: 12.345">
+
+        <label>Nome do cartório:</label>
+        <input type="text" name="nome_cartorio" class="input-change" placeholder="Ex: Ofício de Registros Públicos">
+
+        <label>Nome da comarca:</label>
+        <input type="text" name="nome_comarca" class="input-change" placeholder="Ex: Joinville-SC">
+
+        <label>Endereço completo do imóvel:</label>
+        <input type="text" name="endereco_imovel" class="input-change"
+               placeholder="Ex: Rua Dr. Plácido Olimpio de Oliveira, 1277 - Anita Garibaldi - Joinville-SC">
+
+        <hr>
+        <div class="subtitle">Diagnóstico de Mercado</div>
+
+        <label>Estrutura</label>
+        <p class="small-explanation">
+          Pode ser BOA (facilidade de encontrar imóveis similares na região) ou LIMITADA (dificuldade).
+        </p>
+        <select name="estrutura_escolha" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="BOA">BOA</option>
+          <option value="LIMITADA">LIMITADA</option>
+        </select>
+        <hr>
+
+        <label>Conduta</label>
+        <p class="small-explanation">
+          DESESTAGNADO (boa movimentação do mercado) ou ESTAGNADA (pouca movimentação).
+        </p>
+        <select name="conduta_escolha" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="DESESTAGNADO">DESESTAGNADO</option>
+          <option value="ESTAGNADA">ESTAGNADA</option>
+        </select>
+        <hr>
+
+        <label>Desempenho</label>
+        <p class="small-explanation">
+          ALTO (grande atratividade comercial), MÉDIO (atratividade moderada) ou BAIXO (baixa atratividade).
+        </p>
+        <select name="desempenho_escolha" class="input-change">
+          <option value="" disabled selected>Selecione</option>
+          <option value="ALTO">ALTO</option>
+          <option value="MÉDIO">MÉDIO</option>
+          <option value="BAIXO">BAIXO</option>
+        </select>
+
+        <hr>
+        <div class="subtitle">Selecione as fotos do imóvel (múltiplas):</div>
+        <input type="file" name="fotos_imovel" class="input-change file-green" multiple>
+
+
+
+        <label>Selecione arquivo de imagem do logo (se desejar):</label>
+        <input type="file" name="arquivo_logo" class="input-change file-green">
+
+        <br><br>
+        <div class="center-btn">
+          <button type="submit" class="btn">Gerar Laudo</button>
         </div>
 
-        <div class="mb-3">
-            <label>Solicitante do laudo:</label>
-            <input type="text" name="nome_solicitante" class="form-control input-change">
-        </div>
-
-        <div class="mb-3">
-            <label>Nome do Avaliador:</label>
-            <input type="text" name="nome_avaliador" class="form-control input-change">
-        </div>
-
-        <div class="mb-3">
-            <label>Registro do Avaliador:</label>
-            <input type="text" name="registro_avaliador" class="form-control input-change">
-        </div>
-
-        <div class="mb-3">
-            <label>Tipo de Imóvel:</label>
-            <select name="tipo_imovel_escolhido" class="form-select input-change">
-                <option value="" disabled selected>Selecione</option>
-                <option>Apartamento residencial</option>
-                <option>Casa residencial</option>
-                <option>Terreno urbano</option>
-                <option>Gleba urbana</option>
-                <option>Terreno rural</option>
-                <option>Gleba rural</option>
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label>Finalidade do Laudo:</label>
-            <select name="finalidade_lido" id="finalidadeSelect" class="form-select input-change" onchange="document.getElementById('outraFinalidade').style.display = this.value === 'Outra' ? 'block' : 'none'; atualizarAreaLabel(); exibirRestricoesSeNecessario();">
-                <option value="" disabled selected>Selecione</option>
-                <option>Desapropriação</option>
-                <option>Servidão administrativa</option>
-                <option>Garantia bancária</option>
-                <option>Mercado</option>
-                <option>Regularização</option>
-                <option>Outra</option>
-            </select>
-            <input id="outraFinalidade" type="text" name="finalidade_descricao" class="form-control input-change mt-2" placeholder="Descreva a finalidade" style="display:none;">
-        </div>
-
-        <div class="mb-3">
-            <label id="areaLabel">Insira a área total do imóvel a ser avaliado (m²)</label>
-            <input type="text" name="area_parcial" class="form-control input-change" placeholder="Ex: 2.500,00">
-        </div>
-
-        <!-- Campos adicionais omitidos por brevidade -->
-
-        <div class="text-center mt-4">
-            <button type="submit" class="btn btn-primary btn-lg">Gerar Laudo</button>
-        </div>
     </form>
-</div>
 
-<script>
-function toggleTelefoneCampo() {
-    const telSelect = document.getElementById("incluirTelSelect");
-    const telCampo = document.getElementById("telefoneCampo");
-    telCampo.style.display = telSelect.value === "sim" ? "block" : "none";
-}
+    <script>
+      function toggleDarkMode() {
+          document.body.classList.toggle("dark-mode");
+      }
 
-function toggleEmailCampo() {
-    const mailSelect = document.getElementById("incluirMailSelect");
-    const mailCampo = document.getElementById("emailCampo");
-    mailCampo.style.display = mailSelect.value === "sim" ? "block" : "none";
-}
-
-function atualizarAreaLabel() {
-    const finalidadeSelect = document.getElementById("finalidadeSelect");
-    const valor = (finalidadeSelect.value || "").trim().toLowerCase();
-    const areaLabel = document.getElementById("areaLabel");
-    if (valor.includes("desapropria")) {
-        areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong>";
-        areaLabel.style.color = "#b20000";
-    } else if (valor.includes("servid")) {
-        areaLabel.innerHTML = "<strong>ÁREA TOTAL DE INTERESSE (m²)</strong>";
-        areaLabel.style.color = "#b20000";
-    } else {
-        areaLabel.innerHTML = "Insira a área total do imóvel a ser avaliado (m²)";
-        areaLabel.style.color = "";
+    function atualizarAreaLabel() {
+        const finalidadeSelect = document.getElementById("finalidadeSelect");
+        const valor = (finalidadeSelect.value || "").trim().toLowerCase();
+        const areaLabel = document.getElementById("areaLabel");
+        const areaInput = document.querySelector('input[name="area_parcial"]');
+    
+        if (valor.includes("desapropria")) {
+            areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong> - Esta é a área que será utilizada para cálculo final indenizatório";
+            areaLabel.style.color = "#b20000"; // vermelho escuro
+            if (areaInput) areaInput.style.borderColor = "#b20000";
+        } else if (valor.includes("servid")) {
+            areaLabel.innerHTML = "<strong>ÁREA TOTAL DE INTERESSE (m²)</strong> - Esta é a área que será utilizada para cálculo final indenizatório";
+            areaLabel.style.color = "#b20000"; // vermelho escuro  
+            if (areaInput) areaInput.style.borderColor = "#b20000";
+        } else {
+            areaLabel.innerHTML = "Insira a área total do imóvel a ser avaliado (m²)";
+            areaLabel.style.color = ""; // cor padrão
+            if (areaInput) areaInput.style.borderColor = "";
+        }
     }
-}
 
-function exibirRestricoesSeNecessario() {
-    const select = document.getElementById("finalidadeSelect");
-    const valor = (select.value || "").trim().toLowerCase();
-    const restricoesContainer = document.getElementById("restricoesSectionContainer");
-    restricoesContainer.style.display = (valor.includes("desapropria") || valor.includes("servid") || valor.includes("regulariza")) ? "block" : "none";
-}
+    
+    // Modificar a função exibirRestricoesSeNecessario para também ajustar o comportamento da área
+    function exibirRestricoesSeNecessario() {
+        const select = document.getElementById("finalidadeSelect");
+        const valor = (select.value || "").trim().toLowerCase();
+        const restricoesContainer = document.getElementById("restricoesSectionContainer");
+        const areaInput = document.getElementById("area_parcial"); // Assumindo que o campo de área tem este id
+        
+        // Definir cor de fundo laranja para o container de restrições
+        restricoesContainer.style.backgroundColor = "#ffe8cc"; // Fundo laranja claro
+        restricoesContainer.style.padding = "15px";
+        restricoesContainer.style.borderRadius = "8px";
+        restricoesContainer.style.marginTop = "20px";
+        restricoesContainer.style.marginBottom = "20px";
+        restricoesContainer.style.border = "2px solid #ff8c00"; // Borda laranja
+        
+        // Mostrar imediatamente se for desapropriação ou servidão
+        
+        if (valor.includes("desapropria") || valor.includes("servid") || valor.includes("regulariza")) {       
+        
+            // Mostrar o container de restrições
+            restricoesContainer.style.display = "block";
+            
+            // Marcar o campo de área como sendo a área de interesse (não a da planilha)
+            if (areaInput) {
+                areaInput.setAttribute("data-use-for-calculation", "true");
+            }
+            
+            // Aplicar destaque aos campos
+            const camposRestricoes = restricoesContainer.querySelectorAll('.input-change');
+            camposRestricoes.forEach(campo => {
+                // Verificar estado inicial
+                if (campo.value.trim() !== '') {
+                    campo.style.backgroundColor = '#ccffcc'; // Verde se já tiver valor
+                }
+                
+                // Adicionar listeners para mudanças
+                campo.addEventListener('input', () => {
+                    if (campo.value.trim() !== '') {
+                        campo.style.backgroundColor = '#ccffcc'; // Verde quando preenchido
+                    } else {
+                        campo.style.backgroundColor = '#f0f0f0'; // Cor padrão quando vazio
+                    }
+                });
+            });
+            
+            // Observar novos campos adicionados
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length) {
+                        const novosCampos = restricoesContainer.querySelectorAll('.input-change:not([data-observed])');
+                        novosCampos.forEach(campo => {
+                            campo.setAttribute('data-observed', 'true');
+                            if (campo.value.trim() !== '') {
+                                campo.style.backgroundColor = '#ccffcc';
+                            }
+                            campo.addEventListener('input', () => {
+                                if (campo.value.trim() !== '') {
+                                    campo.style.backgroundColor = '#ccffcc';
+                                } else {
+                                    campo.style.backgroundColor = '#f0f0f0';
+                                }
+                            });
+                        });
+                    }
+                });
+            });
+            
+            observer.observe(restricoesContainer, { childList: true, subtree: true });
+        } else {
+            restricoesContainer.style.display = "none";
+            
+            // Remover o atributo para casos que não são desapropriação ou servidão
+            if (areaInput) {
+                areaInput.removeAttribute("data-use-for-calculation");
+            }
+        }
+    }
+    
+    // Executar a função quando a página carrega
+    document.addEventListener('DOMContentLoaded', exibirRestricoesSeNecessario);
 
-setInterval(() => {
-    document.querySelectorAll('.input-change').forEach(el => {
-        el.style.backgroundColor = el.value.trim() !== '' ? '#ccffcc' : '#f0f0f0';
+
+
+
+// Adicionar esta linha para executar a função quando a página carrega
+document.addEventListener('DOMContentLoaded', exibirRestricoesSeNecessario);
+
+      function toggleTelefoneCampo() {
+          const telSelect = document.getElementById("incluirTelSelect");
+          const telCampo = document.getElementById("telefoneCampo");
+          if (telSelect.value === "sim") {
+              telCampo.style.display = "block";
+          } else {
+              telCampo.style.display = "none";
+          }
+      }
+
+      function toggleEmailCampo() {
+          const mailSelect = document.getElementById("incluirMailSelect");
+          const mailCampo = document.getElementById("emailCampo");
+          if (mailSelect.value === "sim") {
+              mailCampo.style.display = "block";
+          } else {
+              mailCampo.style.display = "none";
+          }
+      }
+
+      function exibirCampoOutraFinalidade() {
+          const finalidade = document.getElementById("finalidadeSelect").value;
+          const outraCampo = document.getElementById("outraFinalidadeCampo");
+          if (finalidade === "Outra") {
+              outraCampo.style.display = "block";
+          } else {
+              outraCampo.style.display = "none";
+          }
+      }
+
+      let restricaoCount = 0;
+      function addRestricao() {
+        restricaoCount++;
+        const container = document.getElementById('restricoesSection');
+        const divR = document.createElement('div');
+        divR.className = "restricoes-container";
+        divR.innerHTML = `
+          <label>Tipo de restrição (ex: APP, Servidão, Outro) [${restricaoCount}]:</label>
+          <input type="text" name="tipo_restricao_${restricaoCount}" class="input-change" placeholder="Ex: APP ou Servidão">
+
+          <label>Área (m²) com essa restrição [${restricaoCount}]:</label>
+          <input type="text" name="area_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 500.0">
+
+          <label>Porcentagem de depreciação (ex: 66) [${restricaoCount}]:</label>
+          <input type="text" name="depreciacao_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 66">
+        `;
+        container.appendChild(divR);
+      }
+
+      // Faz todos os campos input-change (incluindo select) ficarem verdes se preenchidos
+      
+      
+    document.addEventListener('DOMContentLoaded', function() {
+        // ... outros códigos existentes ...
+        
+        // Executar funções importantes na carga da página
+        atualizarAreaLabel();
+        exibirRestricoesSeNecessario();
+    });      
+      
+      
+          atualizarAreaLabel();
+          exibirRestricoesSeNecessario();
+          exibirCampoOutraFinalidade();
+
+          const allFields = document.querySelectorAll('.input-change');
+
+          function checkFill(elem) {
+              // Se for SELECT e o value != "", fica verde
+              if (elem.tagName === 'SELECT') {
+                  if (elem.value.trim() !== '') {
+                      elem.style.backgroundColor = '#ccffcc';
+                  } else {
+                      elem.style.backgroundColor = '#f0f0f0';
+                  }
+              } else {
+                  // Para inputs text/file
+                  if (elem.value.trim() !== '') {
+                      elem.style.backgroundColor = '#ccffcc';
+                  } else {
+                      elem.style.backgroundColor = '#f0f0f0';
+                  }
+              }
+          }
+
+          // Verifica periodicamente (para capturar autofill)
+          setInterval(() => {
+              allFields.forEach(f => checkFill(f));
+          }, 1000);
+
+          allFields.forEach(field => {
+              // Se já vier preenchido
+              checkFill(field);
+
+              // Monitorar eventos
+              field.addEventListener('input',   () => checkFill(field));
+              field.addEventListener('change',  () => checkFill(field));
+              field.addEventListener('focusout',() => checkFill(field));
+          });
+
+      });
+    </script>
+
+
+    <script>
+
+    function atualizarAreaLabel() {
+        const finalidadeSelect = document.getElementById('finalidadeSelect');
+        const valor = (finalidadeSelect.value || "").trim().toLowerCase();
+        const areaLabel = document.getElementById('areaLabel');
+        const areaInput = document.querySelector('input[name="area_parcial"]');
+        const infoBox = document.getElementById('areaInfoBox');
+        
+        // Resetar estilos primeiro
+        areaLabel.style.fontWeight = "normal";
+        areaLabel.style.color = "";
+        if (areaInput) {
+            areaInput.style.borderColor = "";
+            areaInput.style.backgroundColor = "#f0f0f0";
+            areaInput.placeholder = "Será validada com a planilha";
+        }
+        
+        // Definir comportamento com base na finalidade
+        if (valor.includes("desapropria")) {
+            // Destacar visualmente
+            areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong>";
+            areaLabel.style.color = "#b20000"; // vermelho escuro
+            if (areaInput) {
+                areaInput.style.borderColor = "#b20000";
+                areaInput.style.borderWidth = "2px";
+                areaInput.style.fontWeight = "bold";
+                areaInput.placeholder = "Ex: 1.250,00";
+            }
+            
+            // Mostrar caixa de informação
+            if (infoBox) {
+                infoBox.style.display = "block";
+                infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área que você digitar aqui substituirá a área total da planilha para todos os cálculos de valor e restrições.";
+            }
+            
+        } else if (valor.includes("servid")) {
+            // Destacar visualmente
+            areaLabel.innerHTML = "<strong>ÁREA DE INTERESSE PARA SERVIDÃO (m²)</strong>";
+            areaLabel.style.color = "#b20000"; // vermelho escuro
+            if (areaInput) {
+                areaInput.style.borderColor = "#b20000";
+                areaInput.style.borderWidth = "2px";
+                areaInput.style.fontWeight = "bold";
+                areaInput.placeholder = "Ex: 3.500,00";
+            }
+            
+            // Mostrar caixa de informação
+            if (infoBox) {
+                infoBox.style.display = "block";
+                infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área que você digitar aqui substituirá a área total da planilha para todos os cálculos de valor e restrições.";
+            }
+            
+        } else {
+            // Finalidades comuns - usar área da planilha
+            areaLabel.innerHTML = "Área total do imóvel a ser avaliado (m²)";
+            
+            // Esconder caixa de informação
+            if (infoBox) {
+                infoBox.style.display = "none";
+            }
+        }
+    }
+    
+    // Executar na carga da página e quando o select for alterado
+    window.addEventListener('DOMContentLoaded', function() {
+        // Adicionar a caixa de informação se não existir
+        if (!document.getElementById('areaInfoBox')) {
+            const infoBox = document.createElement('div');
+            infoBox.id = 'areaInfoBox';
+            infoBox.style.display = 'none';
+            infoBox.style.margin = '5px 0 15px 0';
+            infoBox.style.padding = '10px';
+            infoBox.style.border = '1px solid #b20000';
+            infoBox.style.borderRadius = '5px';
+            infoBox.style.backgroundColor = '#ffe6e6';
+            infoBox.style.color = '#b20000';
+            infoBox.style.fontSize = '13px';
+            
+            // Inserir após o label da área
+            const areaLabel = document.getElementById('areaLabel');
+            if (areaLabel && areaLabel.parentNode) {
+                areaLabel.parentNode.insertBefore(infoBox, areaLabel.nextSibling);
+            }
+        }
+        
+        // Executar inicialmente
+        atualizarAreaLabel();
+        
+        // Garantir que o evento de mudança no select funcione
+        const finalidadeSelect = document.getElementById('finalidadeSelect');
+        if (finalidadeSelect) {
+            finalidadeSelect.addEventListener('change', atualizarAreaLabel);
+        }
     });
-}, 1000);
-</script>
+
+</body>
+</html>
 
 {% endblock %}
