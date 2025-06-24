@@ -424,20 +424,17 @@ def gerar_memorial_azimute_az():
             logging.info(f"🧪 ZIPs disponíveis: {arquivos_zip}")
 
             if arquivos_zip:
-                caminho_zip = os.path.join(static_zip_dir, arquivos_zip[0])
-                destino_zip = os.path.join(BASE_DIR, 'static', 'arquivos', arquivos_zip[0])
-                shutil.copy2(caminho_zip, destino_zip)
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(static_zip_dir, x)), reverse=True)
+                zip_download = arquivos_zip[0]
+                print(f"✅ ZIP disponível para download: {zip_download}")
+                logging.info(f"✅ ZIP disponível para download: {zip_download}")
 
-                if os.path.exists(destino_zip):
-                    print(f"✅ ZIP copiado com sucesso para: {destino_zip}")
-                    logging.info(f"✅ ZIP copiado com sucesso para: {destino_zip}")
-                    zip_download = arquivos_zip[0]
-                else:
-                    print("❌ ZIP não encontrado no destino!")
-                    logging.error("❌ ZIP não encontrado no destino!")
         except Exception as e:
             print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
             logging.error(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
+
+    print("DEBUG FLASK - zip_download final:", zip_download)
+    
 
     return render_template("formulario_AZIMUTE_AZ.html",
                            resultado=resultado,
