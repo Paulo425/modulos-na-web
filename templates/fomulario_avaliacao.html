@@ -1,9 +1,69 @@
 {% extends 'base.html' %}
-{% block conteudo %}
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
+{% block head %}
+<style>
+    body {
+        margin: 40px;
+        background: #000033; 
+        font-family: Arial, sans-serif;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    h1 {
+        margin-bottom: 20px;
+        text-align: center;
+        color: #ffffff;
+    }
+    form {
+        display: block;
+        width: 80%;
+        max-width: 640px;
+        margin: 0 auto; 
+        background: #ffffff; 
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0px 0px 20px rgba(0,0,0,0.3);
+        text-align: left;
+        color: #000;
+    }
+    .dark-mode form {
+        background: #2f2f2f !important;
+        color: #ffffff !important;
+    }
+    .dark-mode form label {
+        color: #ffffff !important;
+    }
+    .dark-mode .input-change::placeholder {
+        color: #000000 !important;
+    }
+    .toggle-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        color: #ffffff;
+        background-color: #1e90ff;
+        font-size: 16px;
+        box-shadow: 0px 0px 8px rgba(0,0,0,0.3);
+    }
+    .toggle-btn:hover {
+        filter: brightness(1.1);
+    }
+    /* restante do CSS original aqui */
+</style>
+{% endblock %}
+
+{% block conteudo %}
+<div class="container mt-5">
+
+    <button class="toggle-btn" onclick="toggleDarkMode()">Alternar Modo</button>
+
+    <h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
+
     <meta charset="utf-8">
     <title>Formulário de Avaliação PHOENIX APPRAISAL</title>
     <style>
@@ -151,8 +211,6 @@
             background-color: #ccffcc !important;
         }
     </style>
-</head>
-<body>
 
     <button class="toggle-btn" onclick="toggleDarkMode()">
         Alternar Modo
@@ -752,7 +810,58 @@ document.addEventListener('DOMContentLoaded', exibirRestricoesSeNecessario);
         }
     });
 
-</body>
-</html>
 
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleDarkMode() {
+        document.body.classList.toggle("dark-mode");
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const allFields = document.querySelectorAll('.input-change');
+        function checkFill(elem) {
+            if (elem.tagName === 'SELECT') {
+                elem.style.backgroundColor = elem.value.trim() !== '' ? '#ccffcc' : '#f0f0f0';
+            } else {
+                elem.style.backgroundColor = elem.value.trim() !== '' ? '#ccffcc' : '#f0f0f0';
+            }
+        }
+        allFields.forEach(field => {
+            checkFill(field);
+            field.addEventListener('input', () => checkFill(field));
+            field.addEventListener('change', () => checkFill(field));
+        });
+        setInterval(() => allFields.forEach(checkFill), 1000);
+
+        if (!document.getElementById('areaInfoBox')) {
+            const infoBox = document.createElement('div');
+            infoBox.id = 'areaInfoBox';
+            infoBox.style.display = 'none';
+            infoBox.style.margin = '5px 0 15px 0';
+            infoBox.style.padding = '10px';
+            infoBox.style.border = '1px solid #b20000';
+            infoBox.style.borderRadius = '5px';
+            infoBox.style.backgroundColor = '#ffe6e6';
+            infoBox.style.color = '#b20000';
+            infoBox.style.fontSize = '13px';
+
+            const areaLabel = document.getElementById('areaLabel');
+            if (areaLabel && areaLabel.parentNode) {
+                areaLabel.parentNode.insertBefore(infoBox, areaLabel.nextSibling);
+            }
+        }
+
+        atualizarAreaLabel();
+
+        const finalidadeSelect = document.getElementById('finalidadeSelect');
+        if (finalidadeSelect) {
+            finalidadeSelect.addEventListener('change', atualizarAreaLabel);
+        }
+    });
+
+    // restante do seu JavaScript original aqui
+</script>
 {% endblock %}
