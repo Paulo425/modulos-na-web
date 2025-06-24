@@ -5257,355 +5257,355 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 # ----------------------------------------------------------------------------
 # ROTA PRINCIPAL – GET exibe o formulário / POST processa o upload
 # ----------------------------------------------------------------------------
-@app.route("/", methods=["GET", "POST"])
-def index():
-    """
-    - GET  → devolve o HTML do formulário (HTML_FORM_TEMPLATE)
-    - POST → recebe planilha + dados do form, processa e gera o DOCX
-    """
+# @app.route("/", methods=["GET", "POST"])
+# def index():
+#     """
+#     - GET  → devolve o HTML do formulário (HTML_FORM_TEMPLATE)
+#     - POST → recebe planilha + dados do form, processa e gera o DOCX
+#     """
 
-    # ─────────────────────────────── GET ───────────────────────────────
-    if request.method == "GET":
-        return render_template_string(HTML_FORM_TEMPLATE)
+#     # ─────────────────────────────── GET ───────────────────────────────
+#     if request.method == "GET":
+#         return render_template_string(HTML_FORM_TEMPLATE)
 
-    # ─────────────────────────────── POST ──────────────────────────────
-    # 0.  Imports locais (evita dependências desnecessárias em cold-start)
-    from pathlib import Path
-    from werkzeug.utils import secure_filename
-    import fitz                               # PyMuPDF
-    import pandas as pd
-    import numpy as np
-    import uuid
-    import os
-    from tqdm import tqdm
+#     # ─────────────────────────────── POST ──────────────────────────────
+#     # 0.  Imports locais (evita dependências desnecessárias em cold-start)
+#     from pathlib import Path
+#     from werkzeug.utils import secure_filename
+#     import fitz                               # PyMuPDF
+#     import pandas as pd
+#     import numpy as np
+#     import uuid
+#     import os
+#     from tqdm import tqdm
 
-    # 1.  ---------- Upload da planilha (obrigatório) --------------------
-    file_planilha = request.files.get("planilha_excel")
-    if not file_planilha or not file_planilha.filename:
-        return "Nenhuma planilha selecionada.", 400
+#     # 1.  ---------- Upload da planilha (obrigatório) --------------------
+#     file_planilha = request.files.get("planilha_excel")
+#     if not file_planilha or not file_planilha.filename:
+#         return "Nenhuma planilha selecionada.", 400
 
-    caminho_planilha = Path("amostras_temp.xlsx")
-    file_planilha.save(caminho_planilha)
+#     caminho_planilha = Path("amostras_temp.xlsx")
+#     file_planilha.save(caminho_planilha)
 
-    # 2.  ---------- Dados do formulário --------------------------------
-    f = request.form                                              # alias
+#     # 2.  ---------- Dados do formulário --------------------------------
+#     f = request.form                                              # alias
 
-    # 2.1 Proprietários
-    nome_proprietario   = f.get("nome_proprietario", "").strip()
-    if f.get("outros_proprietarios", "nao").lower() == "sim":
-        nome_proprietario += " e Outros"
+#     # 2.1 Proprietários
+#     nome_proprietario   = f.get("nome_proprietario", "").strip()
+#     if f.get("outros_proprietarios", "nao").lower() == "sim":
+#         nome_proprietario += " e Outros"
 
-    # 2.2 Contato
-    telefone_proprietario = (
-        f.get("telefone_proprietario", "").strip()
-        if f.get("incluir_tel", "nao").lower() == "sim"
-        else "Não Informado"
-    )
-    email_proprietario = (
-        f.get("email_proprietario", "").strip()
-        if f.get("incluir_mail", "nao").lower() == "sim"
-        else "Não Informado"
-    )
+#     # 2.2 Contato
+#     telefone_proprietario = (
+#         f.get("telefone_proprietario", "").strip()
+#         if f.get("incluir_tel", "nao").lower() == "sim"
+#         else "Não Informado"
+#     )
+#     email_proprietario = (
+#         f.get("email_proprietario", "").strip()
+#         if f.get("incluir_mail", "nao").lower() == "sim"
+#         else "Não Informado"
+#     )
 
-    # 2.3 Solicitante / Avaliador
-    nome_solicitante      = f.get("nome_solicitante", "").strip()
-    nome_avaliador        = f.get("nome_avaliador", "").strip()
-    registro_avaliador    = f.get("registro_avaliador", "").strip()
-    tipo_imovel_escolhido = f.get("tipo_imovel_escolhido", "").strip()
+#     # 2.3 Solicitante / Avaliador
+#     nome_solicitante      = f.get("nome_solicitante", "").strip()
+#     nome_avaliador        = f.get("nome_avaliador", "").strip()
+#     registro_avaliador    = f.get("registro_avaliador", "").strip()
+#     tipo_imovel_escolhido = f.get("tipo_imovel_escolhido", "").strip()
 
-    # 2.4 Finalidade
-    texto_finalidade  = f.get("finalidade_lido", "").strip()
-    finalidade_extra  = f.get("finalidade_outra", "").strip()
-    finalidade_det    = finalidade_extra or texto_finalidade
+#     # 2.4 Finalidade
+#     texto_finalidade  = f.get("finalidade_lido", "").strip()
+#     finalidade_extra  = f.get("finalidade_outra", "").strip()
+#     finalidade_det    = finalidade_extra or texto_finalidade
 
-    # ▸▸▸ NOVO BLOCO – mapeia pela presença de palavras-chave
-    def mapear_finalidade(frase: str) -> str:
-        """
-        Converte a string vinda do <select> HTML (“Desapropriação do Imóvel”,
-        “Avaliação para Implantação de Servidão Administrativa”, etc.) em
-        códigos internos:  desapropriacao, servidao ou mercado.
-        """
-        t = frase.strip().lower()
-        if "desapropria" in t:          # pega “Desapropriação …”
-            return "desapropriacao"
-        if "servid" in t:               # pega “Servidão …”
-            return "servidao"
-        return "mercado"
+#     # ▸▸▸ NOVO BLOCO – mapeia pela presença de palavras-chave
+#     def mapear_finalidade(frase: str) -> str:
+#         """
+#         Converte a string vinda do <select> HTML (“Desapropriação do Imóvel”,
+#         “Avaliação para Implantação de Servidão Administrativa”, etc.) em
+#         códigos internos:  desapropriacao, servidao ou mercado.
+#         """
+#         t = frase.strip().lower()
+#         if "desapropria" in t:          # pega “Desapropriação …”
+#             return "desapropriacao"
+#         if "servid" in t:               # pega “Servidão …”
+#             return "servidao"
+#         return "mercado"
     
-    finalidade_lida = mapear_finalidade(texto_finalidade)
+#     finalidade_lida = mapear_finalidade(texto_finalidade)
 
 
-    # 2.5 Área parcial afetada
+#     # 2.5 Área parcial afetada
 
-    try:
-        area_parcial = converter_valor_brasileiro_para_float(request.form.get("area_parcial", "0"))
-    except ValueError:
-        area_parcial = 0.0       
+#     try:
+#         area_parcial = converter_valor_brasileiro_para_float(request.form.get("area_parcial", "0"))
+#     except ValueError:
+#         area_parcial = 0.0       
     
-    # ▸▸▸ SE a finalidade for desapropriação ou servidão, esta é a área-limite
-    if finalidade_lida in ("desapropriacao", "servidao"):
-        area_disponivel = area_parcial       # ← chave da correção
-    else:
-        area_disponivel = 0.0                # ficará 0, será trocado pela planilha
+#     # ▸▸▸ SE a finalidade for desapropriação ou servidão, esta é a área-limite
+#     if finalidade_lida in ("desapropriacao", "servidao"):
+#         area_disponivel = area_parcial       # ← chave da correção
+#     else:
+#         area_disponivel = 0.0                # ficará 0, será trocado pela planilha
 
    
-    # 2.6 Fatores (checkboxes)
-    def _chk(chave: str) -> bool:
-        return f.get(chave, "nao").lower() == "sim"
+#     # 2.6 Fatores (checkboxes)
+#     def _chk(chave: str) -> bool:
+#         return f.get(chave, "nao").lower() == "sim"
 
-    usar_fator_area    = _chk("usar_fator_area")
-    usar_fator_oferta  = _chk("usar_fator_oferta")
-    usar_fator_aprov   = _chk("usar_fator_aproveitamento")
-    mesma_regiao       = _chk("localizacao_mesma_regiao")
-    usar_fator_topog   = _chk("usar_fator_topografia")
-    usar_fator_pedol   = _chk("usar_fator_pedologia")
-    usar_fator_pavim   = _chk("usar_fator_pavimentacao")
-    usar_fator_esq     = _chk("usar_fator_esquina")
-    usar_fator_acess   = _chk("usar_fator_acessibilidade")
+#     usar_fator_area    = _chk("usar_fator_area")
+#     usar_fator_oferta  = _chk("usar_fator_oferta")
+#     usar_fator_aprov   = _chk("usar_fator_aproveitamento")
+#     mesma_regiao       = _chk("localizacao_mesma_regiao")
+#     usar_fator_topog   = _chk("usar_fator_topografia")
+#     usar_fator_pedol   = _chk("usar_fator_pedologia")
+#     usar_fator_pavim   = _chk("usar_fator_pavimentacao")
+#     usar_fator_esq     = _chk("usar_fator_esquina")
+#     usar_fator_acess   = _chk("usar_fator_acessibilidade")
 
-    # 2.7 Restrições dinâmicas
-    restricoes = []
-    idx = 1
-    while f.get(f"tipo_restricao_{idx}") is not None:
-        tipo  = f.get(f"tipo_restricao_{idx}", "").strip() or "Sem Tipo"
-        area  = float(f.get(f"area_restricao_{idx}", "0").replace(",", ".") or 0)
-        dep   = float(f.get(f"depreciacao_restricao_{idx}", "0").replace(",", ".") or 0)
-        restricoes.append({
-            "tipo" : tipo,
-            "area" : area,
-            "percentualDepreciacao": dep,
-            "fator": (100.0 - dep) / 100.0
-        })
-        idx += 1
+#     # 2.7 Restrições dinâmicas
+#     restricoes = []
+#     idx = 1
+#     while f.get(f"tipo_restricao_{idx}") is not None:
+#         tipo  = f.get(f"tipo_restricao_{idx}", "").strip() or "Sem Tipo"
+#         area  = float(f.get(f"area_restricao_{idx}", "0").replace(",", ".") or 0)
+#         dep   = float(f.get(f"depreciacao_restricao_{idx}", "0").replace(",", ".") or 0)
+#         restricoes.append({
+#             "tipo" : tipo,
+#             "area" : area,
+#             "percentualDepreciacao": dep,
+#             "fator": (100.0 - dep) / 100.0
+#         })
+#         idx += 1
 
-    # 2.8 Documentação / endereço
-    num_doc       = f.get("num_doc", "").strip()
-    texto_doc     = f"Matrícula n° {num_doc}" if num_doc else "Documentação não informada"
-    nome_cartorio = f.get("nome_cartorio", "").strip()
-    nome_comarca  = f.get("nome_comarca", "").strip()
-    end_imovel    = f.get("endereco_imovel", "").strip()
+#     # 2.8 Documentação / endereço
+#     num_doc       = f.get("num_doc", "").strip()
+#     texto_doc     = f"Matrícula n° {num_doc}" if num_doc else "Documentação não informada"
+#     nome_cartorio = f.get("nome_cartorio", "").strip()
+#     nome_comarca  = f.get("nome_comarca", "").strip()
+#     end_imovel    = f.get("endereco_imovel", "").strip()
 
-    # 2.9 Diagnóstico
-    estrutura_escolha  = f.get("estrutura_escolha", "").upper()
-    conduta_escolha    = f.get("conduta_escolha", "").upper()
-    desempenho_escolha = f.get("desempenho_escolha", "").upper()
+#     # 2.9 Diagnóstico
+#     estrutura_escolha  = f.get("estrutura_escolha", "").upper()
+#     conduta_escolha    = f.get("conduta_escolha", "").upper()
+#     desempenho_escolha = f.get("desempenho_escolha", "").upper()
 
-    # 3.  ---------- Arquivos opcionais ----------------------------------
-    def _save_file(file_storage, nome_final):
-        """Salva arquivo se existir e devolve o caminho; senão ''."""
-        if not file_storage or not file_storage.filename:
-            return ""
-        file_storage.save(nome_final)
-        return str(nome_final)
+#     # 3.  ---------- Arquivos opcionais ----------------------------------
+#     def _save_file(file_storage, nome_final):
+#         """Salva arquivo se existir e devolve o caminho; senão ''."""
+#         if not file_storage or not file_storage.filename:
+#             return ""
+#         file_storage.save(nome_final)
+#         return str(nome_final)
 
-    # 3.1 Logo
-    caminho_logo = _save_file(
-        request.files.get("arquivo_logo"), Path("logo_temp.png")
-    )
+#     # 3.1 Logo
+#     caminho_logo = _save_file(
+#         request.files.get("arquivo_logo"), Path("logo_temp.png")
+#     )
 
-    # 3.2 Fotos do imóvel
-    caminhos_fotos = []
-    for i, foto in enumerate(request.files.getlist("fotos_imovel")):
-        if foto and foto.filename:
-            nome_foto = Path(f"foto_imovel_{i}.png")
-            caminhos_fotos.append(_save_file(foto, nome_foto))
+#     # 3.2 Fotos do imóvel
+#     caminhos_fotos = []
+#     for i, foto in enumerate(request.files.getlist("fotos_imovel")):
+#         if foto and foto.filename:
+#             nome_foto = Path(f"foto_imovel_{i}.png")
+#             caminhos_fotos.append(_save_file(foto, nome_foto))
 
-    # 3.3 Documentos adicionais (pdf ou imagens)
-    caminhos_fotos_adicionais = []
-    for n, arq in enumerate(request.files.getlist("fotos_imovel_adicionais")):
-        if not arq or not arq.filename:
-            continue
-        ext = Path(arq.filename).suffix.lower()
-        if ext == ".pdf":
-            nome_pdf = Path(f"matricula_{n}.pdf")
-            _save_file(arq, nome_pdf)
-            pdf = fitz.open(nome_pdf)
-            for p in range(pdf.page_count):
-                pix   = pdf.load_page(p).get_pixmap(dpi=300)
-                nome_png = Path(f"matricula_{n}_{p}.png")
-                pix.save(nome_png)
-                caminhos_fotos_adicionais.append(str(nome_png))
-            pdf.close()
-        else:
-            nome_img = Path(f"matricula_{n}.png")
-            caminhos_fotos_adicionais.append(_save_file(arq, nome_img))
-
-
-    # 3.4 Documentos do proprietário (pdf ou imagens)
-    caminhos_fotos_proprietario = []
-    for n, arq in enumerate(request.files.getlist("doc_proprietario")):
-        if not arq or not arq.filename:
-            continue
-        ext = Path(arq.filename).suffix.lower()
-        if ext == ".pdf":
-            nome_pdf = Path(f"proprietario_{n}.pdf")
-            _save_file(arq, nome_pdf)
-            pdf = fitz.open(nome_pdf)
-            for p in range(pdf.page_count):
-                pix = pdf.load_page(p).get_pixmap(dpi=300)
-                nome_png = Path(f"proprietario_{n}_{p}.png")
-                pix.save(nome_png)
-                caminhos_fotos_proprietario.append(str(nome_png))
-            pdf.close()
-        else:
-            nome_img = Path(f"proprietario_{n}.png")
-            caminhos_fotos_proprietario.append(_save_file(arq, nome_img))
+#     # 3.3 Documentos adicionais (pdf ou imagens)
+#     caminhos_fotos_adicionais = []
+#     for n, arq in enumerate(request.files.getlist("fotos_imovel_adicionais")):
+#         if not arq or not arq.filename:
+#             continue
+#         ext = Path(arq.filename).suffix.lower()
+#         if ext == ".pdf":
+#             nome_pdf = Path(f"matricula_{n}.pdf")
+#             _save_file(arq, nome_pdf)
+#             pdf = fitz.open(nome_pdf)
+#             for p in range(pdf.page_count):
+#                 pix   = pdf.load_page(p).get_pixmap(dpi=300)
+#                 nome_png = Path(f"matricula_{n}_{p}.png")
+#                 pix.save(nome_png)
+#                 caminhos_fotos_adicionais.append(str(nome_png))
+#             pdf.close()
+#         else:
+#             nome_img = Path(f"matricula_{n}.png")
+#             caminhos_fotos_adicionais.append(_save_file(arq, nome_img))
 
 
-    # ——— NOVO BLOCO • documentação da PLANTA ———
+#     # 3.4 Documentos do proprietário (pdf ou imagens)
+#     caminhos_fotos_proprietario = []
+#     for n, arq in enumerate(request.files.getlist("doc_proprietario")):
+#         if not arq or not arq.filename:
+#             continue
+#         ext = Path(arq.filename).suffix.lower()
+#         if ext == ".pdf":
+#             nome_pdf = Path(f"proprietario_{n}.pdf")
+#             _save_file(arq, nome_pdf)
+#             pdf = fitz.open(nome_pdf)
+#             for p in range(pdf.page_count):
+#                 pix = pdf.load_page(p).get_pixmap(dpi=300)
+#                 nome_png = Path(f"proprietario_{n}_{p}.png")
+#                 pix.save(nome_png)
+#                 caminhos_fotos_proprietario.append(str(nome_png))
+#             pdf.close()
+#         else:
+#             nome_img = Path(f"proprietario_{n}.png")
+#             caminhos_fotos_proprietario.append(_save_file(arq, nome_img))
 
-# --- NOVO BLOCO • documentação da PLANTA ---
-    caminhos_fotos_planta = []
-    for n, arq in enumerate(request.files.getlist("doc_planta")):
-        if not arq or not arq.filename:
-            continue
+
+#     # ——— NOVO BLOCO • documentação da PLANTA ———
+
+# # --- NOVO BLOCO • documentação da PLANTA ---
+#     caminhos_fotos_planta = []
+#     for n, arq in enumerate(request.files.getlist("doc_planta")):
+#         if not arq or not arq.filename:
+#             continue
     
-        ext = Path(arq.filename).suffix.lower()
+#         ext = Path(arq.filename).suffix.lower()
     
-        if ext == ".pdf":
-            # ⇢ Mesma lógica usada para matrícula / proprietário
-            nome_pdf = Path(f"doc_planta_{n}.pdf")
-            _save_file(arq, nome_pdf)
+#         if ext == ".pdf":
+#             # ⇢ Mesma lógica usada para matrícula / proprietário
+#             nome_pdf = Path(f"doc_planta_{n}.pdf")
+#             _save_file(arq, nome_pdf)
     
-            pdf = fitz.open(nome_pdf)
-            for p in range(pdf.page_count):
-                pix       = pdf.load_page(p).get_pixmap(dpi=300)
-                nome_png  = Path(f"doc_planta_{n}_{p}.png")
-                pix.save(nome_png)
-                caminhos_fotos_planta.append(str(nome_png))
-            pdf.close()
+#             pdf = fitz.open(nome_pdf)
+#             for p in range(pdf.page_count):
+#                 pix       = pdf.load_page(p).get_pixmap(dpi=300)
+#                 nome_png  = Path(f"doc_planta_{n}_{p}.png")
+#                 pix.save(nome_png)
+#                 caminhos_fotos_planta.append(str(nome_png))
+#             pdf.close()
     
-        else:
-            # mantém o formato original ↴
-            nome_img = Path(f"doc_planta_{n}{ext}")
-            caminhos_fotos_planta.append(_save_file(arq, nome_img))
+#         else:
+#             # mantém o formato original ↴
+#             nome_img = Path(f"doc_planta_{n}{ext}")
+#             caminhos_fotos_planta.append(_save_file(arq, nome_img))
     
   
     
-    # 4.  ---------- Dicionário consolidado do usuário -------------------
-    fatores_do_usuario = {
-        "restricoes"              : restricoes,
-        "nomeSolicitante"         : nome_solicitante,
-        "avaliadorNome"           : nome_avaliador,
-        "avaliadorRegistro"       : registro_avaliador,
-        "tipoImovel"              : tipo_imovel_escolhido,
-        "finalidadeTexto"         : texto_finalidade,
-        "finalidade_descricao"    : finalidade_det,
-        "nomeProprietario"        : nome_proprietario,
-        "telefoneProprietario"    : telefone_proprietario,
-        "emailProprietario"       : email_proprietario,
-        "documentacaoImovel"      : texto_doc,
-        "nomeCartorio"            : nome_cartorio,
-        "nomeComarca"             : nome_comarca,
-        "enderecoCompleto"        : end_imovel,
-        "area"                    : usar_fator_area,
-        "oferta"                  : usar_fator_oferta,
-        "aproveitamento"          : usar_fator_aprov,
-        "localizacao_mesma_regiao": mesma_regiao,
-        "topografia"              : usar_fator_topog,
-        "pedologia"               : usar_fator_pedol,
-        "pavimentacao"            : usar_fator_pavim,
-        "esquina"                 : usar_fator_esq,
-        "acessibilidade"          : usar_fator_acess,
-        "estrutura_escolha"       : estrutura_escolha,
-        "conduta_escolha"         : conduta_escolha,
-        "desempenho_escolha"      : desempenho_escolha,
-        "caminhoLogo"             : caminho_logo,
-    }
+#     # 4.  ---------- Dicionário consolidado do usuário -------------------
+#     fatores_do_usuario = {
+#         "restricoes"              : restricoes,
+#         "nomeSolicitante"         : nome_solicitante,
+#         "avaliadorNome"           : nome_avaliador,
+#         "avaliadorRegistro"       : registro_avaliador,
+#         "tipoImovel"              : tipo_imovel_escolhido,
+#         "finalidadeTexto"         : texto_finalidade,
+#         "finalidade_descricao"    : finalidade_det,
+#         "nomeProprietario"        : nome_proprietario,
+#         "telefoneProprietario"    : telefone_proprietario,
+#         "emailProprietario"       : email_proprietario,
+#         "documentacaoImovel"      : texto_doc,
+#         "nomeCartorio"            : nome_cartorio,
+#         "nomeComarca"             : nome_comarca,
+#         "enderecoCompleto"        : end_imovel,
+#         "area"                    : usar_fator_area,
+#         "oferta"                  : usar_fator_oferta,
+#         "aproveitamento"          : usar_fator_aprov,
+#         "localizacao_mesma_regiao": mesma_regiao,
+#         "topografia"              : usar_fator_topog,
+#         "pedologia"               : usar_fator_pedol,
+#         "pavimentacao"            : usar_fator_pavim,
+#         "esquina"                 : usar_fator_esq,
+#         "acessibilidade"          : usar_fator_acess,
+#         "estrutura_escolha"       : estrutura_escolha,
+#         "conduta_escolha"         : conduta_escolha,
+#         "desempenho_escolha"      : desempenho_escolha,
+#         "caminhoLogo"             : caminho_logo,
+#     }
 
-    # 5.  ---------- Processamento pesado (barra de progresso) -----------
-    barra = tqdm(total=6, desc="Processando", ncols=80)
+#     # 5.  ---------- Processamento pesado (barra de progresso) -----------
+#     barra = tqdm(total=6, desc="Processando", ncols=80)
 
-    # 5.1 Planilha
-    dataframe_amostras, dados_avaliando = ler_planilha_excel(caminho_planilha)
-    area_total_planilha = float(dados_avaliando.get("AREA TOTAL", 0))
-    barra.update(1)
+#     # 5.1 Planilha
+#     dataframe_amostras, dados_avaliando = ler_planilha_excel(caminho_planilha)
+#     area_total_planilha = float(dados_avaliando.get("AREA TOTAL", 0))
+#     barra.update(1)
     
-    # ─── NOVA CHECAGEM ───
-    if finalidade_lida in ("desapropriacao", "servidao"):
-        if area_parcial > area_total_planilha:
-            return (f"A área digitada ({area_parcial:,.2f} m²) "
-                    f"é MAIOR que a área total do imóvel ({area_total_planilha:,.2f} m²). "
-                    f"Verifique o valor informado.", 400)
+#     # ─── NOVA CHECAGEM ───
+#     if finalidade_lida in ("desapropriacao", "servidao"):
+#         if area_parcial > area_total_planilha:
+#             return (f"A área digitada ({area_parcial:,.2f} m²) "
+#                     f"é MAIOR que a área total do imóvel ({area_total_planilha:,.2f} m²). "
+#                     f"Verifique o valor informado.", 400)
    
-    # ------------------------------------------------------------------
-    # 5.2  Validação das restrições  (usa o *limite correto* de área)
-    # ------------------------------------------------------------------
-    soma_rest = sum(r["area"] for r in restricoes)
+#     # ------------------------------------------------------------------
+#     # 5.2  Validação das restrições  (usa o *limite correto* de área)
+#     # ------------------------------------------------------------------
+#     soma_rest = sum(r["area"] for r in restricoes)
     
-    if finalidade_lida in ("desapropriacao", "servidao"):
-        # Limita pela área digitada no campo “Área a ser desapropriada / de interesse”
-        if area_disponivel > 0 and soma_rest > area_disponivel:
-            return (f"A soma das áreas restritas ({soma_rest:.2f} m²) ultrapassa "
-                    f"a área de interesse ({area_disponivel:.2f} m²)."), 400
-    else:
-        # Demais finalidades → limite = área total da planilha
-        if soma_rest > area_total_planilha:
-            return (f"A soma das áreas restritas ({soma_rest:.2f} m²) ultrapassa "
-                    f"a área total ({area_total_planilha:.2f} m²)."), 400
-    barra.update(1)
+#     if finalidade_lida in ("desapropriacao", "servidao"):
+#         # Limita pela área digitada no campo “Área a ser desapropriada / de interesse”
+#         if area_disponivel > 0 and soma_rest > area_disponivel:
+#             return (f"A soma das áreas restritas ({soma_rest:.2f} m²) ultrapassa "
+#                     f"a área de interesse ({area_disponivel:.2f} m²)."), 400
+#     else:
+#         # Demais finalidades → limite = área total da planilha
+#         if soma_rest > area_total_planilha:
+#             return (f"A soma das áreas restritas ({soma_rest:.2f} m²) ultrapassa "
+#                     f"a área total ({area_total_planilha:.2f} m²)."), 400
+#     barra.update(1)
 
 
-    # 5.3 Chauvenet
-    (df_filtrado, idx_exc, amostras_exc,
-     media_c, desvio_c, menor_c, maior_c, mediana_c) = aplicar_chauvenet_e_filtrar(dataframe_amostras)
-    barra.update(1)
+#     # 5.3 Chauvenet
+#     (df_filtrado, idx_exc, amostras_exc,
+#      media_c, desvio_c, menor_c, maior_c, mediana_c) = aplicar_chauvenet_e_filtrar(dataframe_amostras)
+#     barra.update(1)
 
-    # 5.4 Homogeneização
-    valores_homog = homogeneizar_amostras(
-        df_filtrado, dados_avaliando, fatores_do_usuario, finalidade_lida)
-    lista_orig = df_filtrado["VALOR TOTAL"].tolist()
-    barra.update(1)
+#     # 5.4 Homogeneização
+#     valores_homog = homogeneizar_amostras(
+#         df_filtrado, dados_avaliando, fatores_do_usuario, finalidade_lida)
+#     lista_orig = df_filtrado["VALOR TOTAL"].tolist()
+#     barra.update(1)
 
-    # 5.5 Gráficos
-    gerar_grafico_aderencia_totais(df_filtrado, valores_homog, "grafico_aderencia_totais.png")
-    barra.update(1)
-    gerar_grafico_dispersao_mediana(valores_homog, "grafico_dispersao_mediana.png")
-    barra.update(1)
-    barra.close()
+#     # 5.5 Gráficos
+#     gerar_grafico_aderencia_totais(df_filtrado, valores_homog, "grafico_aderencia_totais.png")
+#     barra.update(1)
+#     gerar_grafico_dispersao_mediana(valores_homog, "grafico_dispersao_mediana.png")
+#     barra.update(1)
+#     barra.close()
 
-    # 5.6 Relatório
-    # nome_relatorio = "RELATORIO_AVALIACAO_COMPLETO.docx"
-    # gerar_relatorio_avaliacao_com_template(
-    #     dados_avaliando=dados_avaliando,
-    #     dataframe_amostras_inicial=dataframe_amostras,
-    #     dataframe_amostras_filtrado=df_filtrado,
-    #     indices_excluidos=idx_exc,
-    #     amostras_excluidas=amostras_exc,
-    #     media=media_c, desvio_padrao=desvio_c,
-    #     menor_valor=menor_c, maior_valor=maior_c, mediana_valor=mediana_c,
-    #     valores_originais_iniciais=lista_orig,
-    #     valores_homogeneizados_validos=valores_homog,
-    #     caminho_imagem_aderencia="grafico_aderencia_totais.png",
-    #     caminho_imagem_dispersao="grafico_dispersao_mediana.png",
-    #     finalidade_do_laudo=finalidade_lida,
-    #     area_parcial_afetada=area_parcial,
-    #     fatores_do_usuario=fatores_do_usuario,
-    #     caminhos_fotos_avaliando=caminhos_fotos,
-    #     caminhos_fotos_adicionais=caminhos_fotos_adicionais,
-    #     caminhos_fotos_proprietario=caminhos_fotos_proprietario,  # <<< NOVO
-    #     caminhos_fotos_planta=caminhos_fotos_planta,              # <<< NOVO
-    #     caminho_template=r"C:\Users\Gigabyte\OneDrive\Área de Trabalho\LAUDO FATORES OFICIAL\Template.docx",
-    #     nome_arquivo_word=nome_relatorio
-    # )
+#     # 5.6 Relatório
+#     # nome_relatorio = "RELATORIO_AVALIACAO_COMPLETO.docx"
+#     # gerar_relatorio_avaliacao_com_template(
+#     #     dados_avaliando=dados_avaliando,
+#     #     dataframe_amostras_inicial=dataframe_amostras,
+#     #     dataframe_amostras_filtrado=df_filtrado,
+#     #     indices_excluidos=idx_exc,
+#     #     amostras_excluidas=amostras_exc,
+#     #     media=media_c, desvio_padrao=desvio_c,
+#     #     menor_valor=menor_c, maior_valor=maior_c, mediana_valor=mediana_c,
+#     #     valores_originais_iniciais=lista_orig,
+#     #     valores_homogeneizados_validos=valores_homog,
+#     #     caminho_imagem_aderencia="grafico_aderencia_totais.png",
+#     #     caminho_imagem_dispersao="grafico_dispersao_mediana.png",
+#     #     finalidade_do_laudo=finalidade_lida,
+#     #     area_parcial_afetada=area_parcial,
+#     #     fatores_do_usuario=fatores_do_usuario,
+#     #     caminhos_fotos_avaliando=caminhos_fotos,
+#     #     caminhos_fotos_adicionais=caminhos_fotos_adicionais,
+#     #     caminhos_fotos_proprietario=caminhos_fotos_proprietario,  # <<< NOVO
+#     #     caminhos_fotos_planta=caminhos_fotos_planta,              # <<< NOVO
+#     #     caminho_template=r"C:\Users\Gigabyte\OneDrive\Área de Trabalho\LAUDO FATORES OFICIAL\Template.docx",
+#     #     nome_arquivo_word=nome_relatorio
+#     # )
 
-    # # 6.  ---------- Resposta HTML ---------------------------------------
-    # return f"""
-    # <html>
-    #   <head><title>Finalizado</title></head>
-    #   <body style='text-align:center; font-family:Arial; margin:40px;'>
-    #     <h2>Processo concluído!</h2>
-    #     <p>O arquivo <strong>{nome_relatorio}</strong> foi gerado com sucesso.</p>
-    #     <p>
-    #       <a href="{url_for('download_doc', filename=nome_relatorio)}"
-    #          style="font-size:18px; color:blue; text-decoration:underline;">
-    #          Baixar Laudo de Avaliação
-    #       </a>
-    #     </p>
-    #     <p>Depois de baixar, abra normalmente no Microsoft Word.</p>
-    #   </body>
-    # </html>
-    # """
+#     # # 6.  ---------- Resposta HTML ---------------------------------------
+#     # return f"""
+#     # <html>
+#     #   <head><title>Finalizado</title></head>
+#     #   <body style='text-align:center; font-family:Arial; margin:40px;'>
+#     #     <h2>Processo concluído!</h2>
+#     #     <p>O arquivo <strong>{nome_relatorio}</strong> foi gerado com sucesso.</p>
+#     #     <p>
+#     #       <a href="{url_for('download_doc', filename=nome_relatorio)}"
+#     #          style="font-size:18px; color:blue; text-decoration:underline;">
+#     #          Baixar Laudo de Avaliação
+#     #       </a>
+#     #     </p>
+#     #     <p>Depois de baixar, abra normalmente no Microsoft Word.</p>
+#     #   </body>
+#     # </html>
+#     # """
 
 
 @app.route("/download/<path:filename>")
@@ -8955,356 +8955,356 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 # """
 
 
-# ----------------------------------------------------------------------------
-# ROTA PRINCIPAL
-# ----------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-#  ROTA PRINCIPAL – COMPLETAMENTE REESCRITA
-#  • Grava o texto digitado em “Descreva a finalidade em detalhes”
-#    na chave  fatores_do_usuario["finalidade_descricao"]
-#  • É esse campo que você usará no Word para substituir [finalidade]
-# -------------------------------------------------------------------------
-@app.route("/", methods=["GET", "POST"])
-def index():
-    # ------------------------- GET  -------------------------
-    if request.method == "GET":
-        return render_template_string(HTML_FORM_TEMPLATE)
+# # ----------------------------------------------------------------------------
+# # ROTA PRINCIPAL
+# # ----------------------------------------------------------------------------
+# # -------------------------------------------------------------------------
+# #  ROTA PRINCIPAL – COMPLETAMENTE REESCRITA
+# #  • Grava o texto digitado em “Descreva a finalidade em detalhes”
+# #    na chave  fatores_do_usuario["finalidade_descricao"]
+# #  • É esse campo que você usará no Word para substituir [finalidade]
+# # -------------------------------------------------------------------------
+# @app.route("/", methods=["GET", "POST"])
+# def index():
+#     # ------------------------- GET  -------------------------
+#     if request.method == "GET":
+#         return render_template_string(HTML_FORM_TEMPLATE)
 
-    # --------------------  IMPORTAÇÕES  ---------------------
-    from werkzeug.utils import secure_filename
-    import pandas as pd
-    import numpy as np               # noqa – usado nas funções auxiliares
-    # tqdm, ler_planilha_excel() etc. já estão importados no módulo
+#     # --------------------  IMPORTAÇÕES  ---------------------
+#     from werkzeug.utils import secure_filename
+#     import pandas as pd
+#     import numpy as np               # noqa – usado nas funções auxiliares
+#     # tqdm, ler_planilha_excel() etc. já estão importados no módulo
 
-    # =====================================================================
-    # 1 ▪ ARQUIVO EXCEL (obrigatório)
-    # =====================================================================
-    file_planilha = request.files.get("planilha_excel")
-    if not file_planilha or file_planilha.filename == "":
-        return "Nenhuma planilha selecionada.", 400
-    caminho_planilha = "amostras_temp.xlsx"
-    file_planilha.save(caminho_planilha)
+#     # =====================================================================
+#     # 1 ▪ ARQUIVO EXCEL (obrigatório)
+#     # =====================================================================
+#     file_planilha = request.files.get("planilha_excel")
+#     if not file_planilha or file_planilha.filename == "":
+#         return "Nenhuma planilha selecionada.", 400
+#     caminho_planilha = "amostras_temp.xlsx"
+#     file_planilha.save(caminho_planilha)
 
-    # =====================================================================
-    # 2 ▪ CAMPOS BÁSICOS DO FORMULÁRIO
-    # =====================================================================
-    # ─── Proprietário ────────────────────────────────────────────────────
-    nome_proprietario = request.form.get("nome_proprietario", "").strip()
-    if request.form.get("outros_proprietarios", "nao").lower() == "sim":
-        nome_proprietario += " e Outros"
+#     # =====================================================================
+#     # 2 ▪ CAMPOS BÁSICOS DO FORMULÁRIO
+#     # =====================================================================
+#     # ─── Proprietário ────────────────────────────────────────────────────
+#     nome_proprietario = request.form.get("nome_proprietario", "").strip()
+#     if request.form.get("outros_proprietarios", "nao").lower() == "sim":
+#         nome_proprietario += " e Outros"
 
-    # ─── Contato ─────────────────────────────────────────────────────────
-    telefone_proprietario = (
-        request.form.get("telefone_proprietario", "").strip()
-        if request.form.get("incluir_tel", "nao").lower() == "sim"
-        else "Não Informado"
-    )
-    email_proprietario = (
-        request.form.get("email_proprietario", "").strip()
-        if request.form.get("incluir_mail", "nao").lower() == "sim"
-        else "Não Informado"
-    )
+#     # ─── Contato ─────────────────────────────────────────────────────────
+#     telefone_proprietario = (
+#         request.form.get("telefone_proprietario", "").strip()
+#         if request.form.get("incluir_tel", "nao").lower() == "sim"
+#         else "Não Informado"
+#     )
+#     email_proprietario = (
+#         request.form.get("email_proprietario", "").strip()
+#         if request.form.get("incluir_mail", "nao").lower() == "sim"
+#         else "Não Informado"
+#     )
 
-    # ─── Responsáveis ────────────────────────────────────────────────────
-    nome_solicitante   = request.form.get("nome_solicitante",   "").strip()
-    nome_avaliador     = request.form.get("nome_avaliador",     "").strip()
-    registro_avaliador = request.form.get("registro_avaliador", "").strip()
+#     # ─── Responsáveis ────────────────────────────────────────────────────
+#     nome_solicitante   = request.form.get("nome_solicitante",   "").strip()
+#     nome_avaliador     = request.form.get("nome_avaliador",     "").strip()
+#     registro_avaliador = request.form.get("registro_avaliador", "").strip()
 
-    # ─── Tipo de imóvel ──────────────────────────────────────────────────
-    tipo_imovel_escolhido = request.form.get("tipo_imovel_escolhido", "").strip()
+#     # ─── Tipo de imóvel ──────────────────────────────────────────────────
+#     tipo_imovel_escolhido = request.form.get("tipo_imovel_escolhido", "").strip()
 
-    # =====================================================================
-    # 3 ▪ FINALIDADE
-    #    ▸ finalidade_drop  : valor do <select> (usado para regras internas)
-    #    ▸ finalidade_descricao : texto livre digitado – vai para o Word
-    # =====================================================================
-    finalidade_drop = request.form.get("finalidade_lido", "").strip()
-    finalidade_descricao = request.form.get("finalidade_descricao", "").strip()
+#     # =====================================================================
+#     # 3 ▪ FINALIDADE
+#     #    ▸ finalidade_drop  : valor do <select> (usado para regras internas)
+#     #    ▸ finalidade_descricao : texto livre digitado – vai para o Word
+#     # =====================================================================
+#     finalidade_drop = request.form.get("finalidade_lido", "").strip()
+#     finalidade_descricao = request.form.get("finalidade_descricao", "").strip()
 
-    if finalidade_drop.lower() == "desapropriação":
-        finalidade_lida = "desapropriacao"
-    elif finalidade_drop.lower() == "servidão administrativa":
-        finalidade_lida = "servidao"
-    else:
-        finalidade_lida = "mercado"
+#     if finalidade_drop.lower() == "desapropriação":
+#         finalidade_lida = "desapropriacao"
+#     elif finalidade_drop.lower() == "servidão administrativa":
+#         finalidade_lida = "servidao"
+#     else:
+#         finalidade_lida = "mercado"
 
-    # =====================================================================
-    # 4 ▪ ÁREA DE INTERESSE
-    # =====================================================================
-    try:
-        area_parcial = float(
-            request.form.get("area_parcial", "0").replace(".", "").replace(",", ".")
-        )
-    except ValueError:
-        area_parcial = 0.0
+#     # =====================================================================
+#     # 4 ▪ ÁREA DE INTERESSE
+#     # =====================================================================
+#     try:
+#         area_parcial = float(
+#             request.form.get("area_parcial", "0").replace(".", "").replace(",", ".")
+#         )
+#     except ValueError:
+#         area_parcial = 0.0
 
-    # =====================================================================
-    # 5 ▪ FATORES DE HOMOGENEIZAÇÃO  (helper para reduzir repetição)
-    # =====================================================================
-    bool_field = lambda nome: request.form.get(nome, "nao").lower() == "sim"
+#     # =====================================================================
+#     # 5 ▪ FATORES DE HOMOGENEIZAÇÃO  (helper para reduzir repetição)
+#     # =====================================================================
+#     bool_field = lambda nome: request.form.get(nome, "nao").lower() == "sim"
 
-    usar_fator_area          = bool_field("usar_fator_area")
-    usar_fator_oferta        = bool_field("usar_fator_oferta")
-    usar_fator_aprov         = bool_field("usar_fator_aproveitamento")
-    localizacao_mesma_regiao = bool_field("localizacao_mesma_regiao")
-    usar_fator_topog         = bool_field("usar_fator_topografia")
-    usar_fator_pedol         = bool_field("usar_fator_pedologia")
-    usar_fator_pavim         = bool_field("usar_fator_pavimentacao")
-    usar_fator_esq           = bool_field("usar_fator_esquina")
-    usar_fator_acess         = bool_field("usar_fator_acessibilidade")
+#     usar_fator_area          = bool_field("usar_fator_area")
+#     usar_fator_oferta        = bool_field("usar_fator_oferta")
+#     usar_fator_aprov         = bool_field("usar_fator_aproveitamento")
+#     localizacao_mesma_regiao = bool_field("localizacao_mesma_regiao")
+#     usar_fator_topog         = bool_field("usar_fator_topografia")
+#     usar_fator_pedol         = bool_field("usar_fator_pedologia")
+#     usar_fator_pavim         = bool_field("usar_fator_pavimentacao")
+#     usar_fator_esq           = bool_field("usar_fator_esquina")
+#     usar_fator_acess         = bool_field("usar_fator_acessibilidade")
 
-    # =====================================================================
-    # 6 ▪ RESTRIÇÕES  (APP, servidão etc.)
-    # =====================================================================
-    restricoes = []
-    idx = 1
-    while f"tipo_restricao_{idx}" in request.form:
-        tipo  = request.form.get(f"tipo_restricao_{idx}", "").strip() or "Sem Tipo"
-        area = converter_valor_brasileiro_para_float(request.form.get(f"area_restricao_{idx}", "0") or "0")       
-        perc  = float(request.form.get(f"depreciacao_restricao_{idx}", "0").replace(",", ".") or 0)
-        restricoes.append({
-            "tipo": tipo,
-            "area": area,
-            "percentualDepreciacao": perc,
-            "fator": (100.0 - perc) / 100.0
-        })
-        idx += 1
+#     # =====================================================================
+#     # 6 ▪ RESTRIÇÕES  (APP, servidão etc.)
+#     # =====================================================================
+#     restricoes = []
+#     idx = 1
+#     while f"tipo_restricao_{idx}" in request.form:
+#         tipo  = request.form.get(f"tipo_restricao_{idx}", "").strip() or "Sem Tipo"
+#         area = converter_valor_brasileiro_para_float(request.form.get(f"area_restricao_{idx}", "0") or "0")       
+#         perc  = float(request.form.get(f"depreciacao_restricao_{idx}", "0").replace(",", ".") or 0)
+#         restricoes.append({
+#             "tipo": tipo,
+#             "area": area,
+#             "percentualDepreciacao": perc,
+#             "fator": (100.0 - perc) / 100.0
+#         })
+#         idx += 1
 
-    # =====================================================================
-    # 7 ▪ DOCUMENTAÇÃO E ENDEREÇO
-    # =====================================================================
-    matricula       = request.form.get("num_doc", "").strip()
-    texto_doc       = f"Matrícula n° {matricula}" if matricula else "Documentação não informada"
-    nome_cartorio   = request.form.get("nome_cartorio", "").strip()
-    nome_comarca    = request.form.get("nome_comarca", "").strip()
-    endereco_imovel = request.form.get("endereco_imovel", "").strip()
+#     # =====================================================================
+#     # 7 ▪ DOCUMENTAÇÃO E ENDEREÇO
+#     # =====================================================================
+#     matricula       = request.form.get("num_doc", "").strip()
+#     texto_doc       = f"Matrícula n° {matricula}" if matricula else "Documentação não informada"
+#     nome_cartorio   = request.form.get("nome_cartorio", "").strip()
+#     nome_comarca    = request.form.get("nome_comarca", "").strip()
+#     endereco_imovel = request.form.get("endereco_imovel", "").strip()
 
-    # =====================================================================
-    # 8 ▪ DIAGNÓSTICO DE MERCADO
-    # =====================================================================
-    estrutura_escolha  = request.form.get("estrutura_escolha",  "").upper()
-    conduta_escolha    = request.form.get("conduta_escolha",    "").upper()
-    desempenho_escolha = request.form.get("desempenho_escolha", "").upper()
+#     # =====================================================================
+#     # 8 ▪ DIAGNÓSTICO DE MERCADO
+#     # =====================================================================
+#     estrutura_escolha  = request.form.get("estrutura_escolha",  "").upper()
+#     conduta_escolha    = request.form.get("conduta_escolha",    "").upper()
+#     desempenho_escolha = request.form.get("desempenho_escolha", "").upper()
 
-    # =====================================================================
-    # 9 ▪ LOGO E FOTOS
-    # =====================================================================
-    caminho_logo = ""
-    file_logo = request.files.get("arquivo_logo")
-    if file_logo and file_logo.filename:
-        caminho_logo = "logo_temp.png"
-        file_logo.save(caminho_logo)
+#     # =====================================================================
+#     # 9 ▪ LOGO E FOTOS
+#     # =====================================================================
+#     caminho_logo = ""
+#     file_logo = request.files.get("arquivo_logo")
+#     if file_logo and file_logo.filename:
+#         caminho_logo = "logo_temp.png"
+#         file_logo.save(caminho_logo)
 
-    caminhos_fotos = []
-    for n, foto in enumerate(request.files.getlist("fotos_imovel")):
-        if foto and foto.filename:
-            nome_seguro = secure_filename(f"foto_imovel_{n}.png")
-            foto.save(nome_seguro)
-            caminhos_fotos.append(nome_seguro)
+#     caminhos_fotos = []
+#     for n, foto in enumerate(request.files.getlist("fotos_imovel")):
+#         if foto and foto.filename:
+#             nome_seguro = secure_filename(f"foto_imovel_{n}.png")
+#             foto.save(nome_seguro)
+#             caminhos_fotos.append(nome_seguro)
 
 
-    # Segundo conjunto de fotos (adicional)
-    caminhos_fotos_adicionais = []
-    for n, foto in enumerate(request.files.getlist("fotos_imovel_adicionais")):
-        if foto and foto.filename:
-            nome_seguro = secure_filename(f"foto_imovel_adicional_{n}.png")
-            foto.save(nome_seguro)
-            caminhos_fotos_adicionais.append(nome_seguro)
+#     # Segundo conjunto de fotos (adicional)
+#     caminhos_fotos_adicionais = []
+#     for n, foto in enumerate(request.files.getlist("fotos_imovel_adicionais")):
+#         if foto and foto.filename:
+#             nome_seguro = secure_filename(f"foto_imovel_adicional_{n}.png")
+#             foto.save(nome_seguro)
+#             caminhos_fotos_adicionais.append(nome_seguro)
             
-    # ——— NOVO BLOCO • documentação do PROPRIETÁRIO ———
-    caminhos_fotos_proprietario = []
-    for n, foto in enumerate(request.files.getlist("doc_proprietario")):
-        if foto and foto.filename:
-            nome_seguro = secure_filename(f"doc_proprietario_{n}.png")
-            foto.save(nome_seguro)
-            caminhos_fotos_proprietario.append(nome_seguro)
+#     # ——— NOVO BLOCO • documentação do PROPRIETÁRIO ———
+#     caminhos_fotos_proprietario = []
+#     for n, foto in enumerate(request.files.getlist("doc_proprietario")):
+#         if foto and foto.filename:
+#             nome_seguro = secure_filename(f"doc_proprietario_{n}.png")
+#             foto.save(nome_seguro)
+#             caminhos_fotos_proprietario.append(nome_seguro)
 
 
-    # ——— NOVO BLOCO • PLANTA DO IMÓVEL ———
-    caminhos_fotos_planta = []
-    for n, foto in enumerate(request.files.getlist("doc_planta")):
-        if foto and foto.filename:
-            nome_seguro = secure_filename(f"doc_planta_{n}.png")
-            foto.save(nome_seguro)
-            caminhos_fotos_planta.append(nome_seguro)
+#     # ——— NOVO BLOCO • PLANTA DO IMÓVEL ———
+#     caminhos_fotos_planta = []
+#     for n, foto in enumerate(request.files.getlist("doc_planta")):
+#         if foto and foto.filename:
+#             nome_seguro = secure_filename(f"doc_planta_{n}.png")
+#             foto.save(nome_seguro)
+#             caminhos_fotos_planta.append(nome_seguro)
   
 
-    # =====================================================================
-    # 10 ▪ DICIONÁRIO QUE VAI PARA O GERADOR DE RELATÓRIO
-    #      (contém SÓ o que será realmente utilizado depois)
-    # =====================================================================
-    fatores_do_usuario = {
-        # textos principais ------------------------------------------------
-        "nomeSolicitante":      nome_solicitante,
-        "avaliadorNome":        nome_avaliador,
-        "avaliadorRegistro":    registro_avaliador,
-        "tipoImovel":           tipo_imovel_escolhido,
-        "nomeProprietario":     nome_proprietario,
-        "telefoneProprietario": telefone_proprietario,
-        "emailProprietario":    email_proprietario,
-        "documentacaoImovel":   texto_doc,
-        "nomeCartorio":         nome_cartorio,
-        "nomeComarca":          nome_comarca,
-        "enderecoCompleto":     endereco_imovel,
+#     # =====================================================================
+#     # 10 ▪ DICIONÁRIO QUE VAI PARA O GERADOR DE RELATÓRIO
+#     #      (contém SÓ o que será realmente utilizado depois)
+#     # =====================================================================
+#     fatores_do_usuario = {
+#         # textos principais ------------------------------------------------
+#         "nomeSolicitante":      nome_solicitante,
+#         "avaliadorNome":        nome_avaliador,
+#         "avaliadorRegistro":    registro_avaliador,
+#         "tipoImovel":           tipo_imovel_escolhido,
+#         "nomeProprietario":     nome_proprietario,
+#         "telefoneProprietario": telefone_proprietario,
+#         "emailProprietario":    email_proprietario,
+#         "documentacaoImovel":   texto_doc,
+#         "nomeCartorio":         nome_cartorio,
+#         "nomeComarca":          nome_comarca,
+#         "enderecoCompleto":     endereco_imovel,
 
-        # >>> ESTE É O CAMPO USADO NO WORD <<<
-        "finalidade_descricao": finalidade_descricao,
+#         # >>> ESTE É O CAMPO USADO NO WORD <<<
+#         "finalidade_descricao": finalidade_descricao,
 
-        # fatores de homogenização ----------------------------------------
-        "area":            usar_fator_area,
-        "oferta":          usar_fator_oferta,
-        "aproveitamento":  usar_fator_aprov,
-        "localizacao_mesma_regiao": localizacao_mesma_regiao,
-        "topografia":      usar_fator_topog,
-        "pedologia":       usar_fator_pedol,
-        "pavimentacao":    usar_fator_pavim,
-        "esquina":         usar_fator_esq,
-        "acessibilidade":  usar_fator_acess,
+#         # fatores de homogenização ----------------------------------------
+#         "area":            usar_fator_area,
+#         "oferta":          usar_fator_oferta,
+#         "aproveitamento":  usar_fator_aprov,
+#         "localizacao_mesma_regiao": localizacao_mesma_regiao,
+#         "topografia":      usar_fator_topog,
+#         "pedologia":       usar_fator_pedol,
+#         "pavimentacao":    usar_fator_pavim,
+#         "esquina":         usar_fator_esq,
+#         "acessibilidade":  usar_fator_acess,
 
-        # diagnóstico ------------------------------------------------------
-        "estrutura_escolha":  estrutura_escolha,
-        "conduta_escolha":    conduta_escolha,
-        "desempenho_escolha": desempenho_escolha,
+#         # diagnóstico ------------------------------------------------------
+#         "estrutura_escolha":  estrutura_escolha,
+#         "conduta_escolha":    conduta_escolha,
+#         "desempenho_escolha": desempenho_escolha,
 
-        # mídia & restrições ----------------------------------------------
-        "restricoes":  restricoes,
-        "caminhoLogo": caminho_logo,
-    }
+#         # mídia & restrições ----------------------------------------------
+#         "restricoes":  restricoes,
+#         "caminhoLogo": caminho_logo,
+#     }
 
-    # =====================================================================
-    # 11 ▪ PROCESSAMENTO / GERAÇÃO DO RELATÓRIO
-    #      (nada foi alterado nesta parte – só mantivemos os nomes certos)
-    # =====================================================================
-    barra_progresso = tqdm(total=6, desc="Processando", ncols=80)
+#     # =====================================================================
+#     # 11 ▪ PROCESSAMENTO / GERAÇÃO DO RELATÓRIO
+#     #      (nada foi alterado nesta parte – só mantivemos os nomes certos)
+#     # =====================================================================
+#     barra_progresso = tqdm(total=6, desc="Processando", ncols=80)
 
-    dataframe_amostras, dados_avaliando = ler_planilha_excel(caminho_planilha)
-    area_total_planilha = float(dados_avaliando.get("AREA TOTAL", 0))
-    barra_progresso.update(1)
+#     dataframe_amostras, dados_avaliando = ler_planilha_excel(caminho_planilha)
+#     area_total_planilha = float(dados_avaliando.get("AREA TOTAL", 0))
+#     barra_progresso.update(1)
 
 
     
-    # Validação das áreas de restrição conforme a finalidade
-    if finalidade_lida not in ["desapropriacao", "servidao"]:
-        # Para finalidades comuns - compara com área da planilha
-        soma_areas = sum(r["area"] for r in restricoes)
-        if soma_areas > area_total_planilha:
-            return (
-                f"<html><body style='font-family:Arial;padding:20px;'>"
-                f"<h3 style='color:#b20000'>Erro: Áreas restritas excedem o limite</h3>"
-                f"<p>A soma das áreas restritas ({soma_areas:.2f} m²) ultrapassa "
-                f"a área total do imóvel ({area_total_planilha:.2f} m²).</p>"
-                f"<p><a href='/'>Voltar ao formulário</a></p>"
-                f"</body></html>", 400
-            )
-    else:
-        # Para desapropriação/servidão - compara com área informada pelo usuário
-        soma_areas = sum(r["area"] for r in restricoes)
-        if soma_areas > area_parcial:
-            return (
-                f"<html><body style='font-family:Arial;padding:20px;'>"
-                f"<h3 style='color:#b20000'>Erro: Áreas restritas excedem o limite</h3>"
-                f"<p>A soma das áreas restritas ({soma_areas:.2f} m²) ultrapassa "
-                f"a área de interesse/desapropriada ({area_parcial:.2f} m²).</p>"
-                f"<p><a href='/'>Voltar ao formulário</a></p>"
-                f"</body></html>", 400
-            )
+#     # Validação das áreas de restrição conforme a finalidade
+#     if finalidade_lida not in ["desapropriacao", "servidao"]:
+#         # Para finalidades comuns - compara com área da planilha
+#         soma_areas = sum(r["area"] for r in restricoes)
+#         if soma_areas > area_total_planilha:
+#             return (
+#                 f"<html><body style='font-family:Arial;padding:20px;'>"
+#                 f"<h3 style='color:#b20000'>Erro: Áreas restritas excedem o limite</h3>"
+#                 f"<p>A soma das áreas restritas ({soma_areas:.2f} m²) ultrapassa "
+#                 f"a área total do imóvel ({area_total_planilha:.2f} m²).</p>"
+#                 f"<p><a href='/'>Voltar ao formulário</a></p>"
+#                 f"</body></html>", 400
+#             )
+#     else:
+#         # Para desapropriação/servidão - compara com área informada pelo usuário
+#         soma_areas = sum(r["area"] for r in restricoes)
+#         if soma_areas > area_parcial:
+#             return (
+#                 f"<html><body style='font-family:Arial;padding:20px;'>"
+#                 f"<h3 style='color:#b20000'>Erro: Áreas restritas excedem o limite</h3>"
+#                 f"<p>A soma das áreas restritas ({soma_areas:.2f} m²) ultrapassa "
+#                 f"a área de interesse/desapropriada ({area_parcial:.2f} m²).</p>"
+#                 f"<p><a href='/'>Voltar ao formulário</a></p>"
+#                 f"</body></html>", 400
+#             )
         
-        # Opcional: verificar se a área digitada não é maior que a da planilha
-        if area_parcial > area_total_planilha:
-            return (
-                f"<html><body style='font-family:Arial;padding:20px;'>"
-                f"<h3 style='color:#b20000'>Aviso: Área de interesse maior que a área total</h3>"
-                f"<p>A área de interesse ({area_parcial:.2f} m²) é maior que "
-                f"a área total do imóvel na planilha ({area_total_planilha:.2f} m²).</p>"
-                f"<p>Deseja continuar mesmo assim? "
-                f"<a href='/confirmar?area={area_parcial}&planilha={caminho_planilha}' "
-                f"style='background:#006400;color:white;padding:5px 10px;text-decoration:none;border-radius:3px;'>Sim, continuar</a> "
-                f"<a href='/' style='margin-left:10px;background:#b20000;color:white;padding:5px 10px;text-decoration:none;border-radius:3px;'>Não, voltar</a></p>"
-                f"</body></html>", 200
-            )
+#         # Opcional: verificar se a área digitada não é maior que a da planilha
+#         if area_parcial > area_total_planilha:
+#             return (
+#                 f"<html><body style='font-family:Arial;padding:20px;'>"
+#                 f"<h3 style='color:#b20000'>Aviso: Área de interesse maior que a área total</h3>"
+#                 f"<p>A área de interesse ({area_parcial:.2f} m²) é maior que "
+#                 f"a área total do imóvel na planilha ({area_total_planilha:.2f} m²).</p>"
+#                 f"<p>Deseja continuar mesmo assim? "
+#                 f"<a href='/confirmar?area={area_parcial}&planilha={caminho_planilha}' "
+#                 f"style='background:#006400;color:white;padding:5px 10px;text-decoration:none;border-radius:3px;'>Sim, continuar</a> "
+#                 f"<a href='/' style='margin-left:10px;background:#b20000;color:white;padding:5px 10px;text-decoration:none;border-radius:3px;'>Não, voltar</a></p>"
+#                 f"</body></html>", 200
+#             )
        
 
-    barra_progresso.update(1)
+#     barra_progresso.update(1)
 
-    (
-        dataframe_amostras_filtrado,
-        indices_excluidos,
-        amostras_excluidas,
-        media_chauvenet,
-        desvio_chauvenet,
-        menor_valor_chauvenet,
-        maior_valor_chauvenet,
-        mediana_chauvenet,
-    ) = aplicar_chauvenet_e_filtrar(dataframe_amostras)
-    barra_progresso.update(1)
+#     (
+#         dataframe_amostras_filtrado,
+#         indices_excluidos,
+#         amostras_excluidas,
+#         media_chauvenet,
+#         desvio_chauvenet,
+#         menor_valor_chauvenet,
+#         maior_valor_chauvenet,
+#         mediana_chauvenet,
+#     ) = aplicar_chauvenet_e_filtrar(dataframe_amostras)
+#     barra_progresso.update(1)
 
-    valores_homogeneizados_validos = homogeneizar_amostras(
-        dataframe_amostras_filtrado,
-        dados_avaliando,
-        fatores_do_usuario,
-        finalidade_lida,
-    )
-    lista_valores_originais_iniciais = dataframe_amostras_filtrado["VALOR TOTAL"].tolist()
-    barra_progresso.update(1)
+#     valores_homogeneizados_validos = homogeneizar_amostras(
+#         dataframe_amostras_filtrado,
+#         dados_avaliando,
+#         fatores_do_usuario,
+#         finalidade_lida,
+#     )
+#     lista_valores_originais_iniciais = dataframe_amostras_filtrado["VALOR TOTAL"].tolist()
+#     barra_progresso.update(1)
 
-    arquivo_aderencia = "grafico_aderencia_totais.png"
-    gerar_grafico_aderencia_totais(
-        dataframe_amostras_filtrado,
-        valores_homogeneizados_validos,
-        arquivo_aderencia,
-    )
-    barra_progresso.update(1)
+#     arquivo_aderencia = "grafico_aderencia_totais.png"
+#     gerar_grafico_aderencia_totais(
+#         dataframe_amostras_filtrado,
+#         valores_homogeneizados_validos,
+#         arquivo_aderencia,
+#     )
+#     barra_progresso.update(1)
 
-    arquivo_dispersao = "grafico_dispersao_mediana.png"
-    gerar_grafico_dispersao_mediana(valores_homogeneizados_validos, arquivo_dispersao)
-    barra_progresso.update(1)
+#     arquivo_dispersao = "grafico_dispersao_mediana.png"
+#     gerar_grafico_dispersao_mediana(valores_homogeneizados_validos, arquivo_dispersao)
+#     barra_progresso.update(1)
 
-    # nome_arquivo_relatorio = "RELATORIO_AVALIACAO_COMPLETO.DOCX"
-    # gerar_relatorio_avaliacao_com_template(
-    #     dados_avaliando=dados_avaliando,
-    #     dataframe_amostras_inicial=dataframe_amostras,
-    #     dataframe_amostras_filtrado=dataframe_amostras_filtrado,
-    #     indices_excluidos=indices_excluidos,
-    #     amostras_excluidas=amostras_excluidas,
-    #     media=media_chauvenet,
-    #     desvio_padrao=desvio_chauvenet,
-    #     menor_valor=menor_valor_chauvenet,
-    #     maior_valor=maior_valor_chauvenet,
-    #     mediana_valor=mediana_chauvenet,
-    #     valores_originais_iniciais=lista_valores_originais_iniciais,
-    #     valores_homogeneizados_validos=valores_homogeneizados_validos,
-    #     caminho_imagem_aderencia=arquivo_aderencia,
-    #     caminho_imagem_dispersao=arquivo_dispersao,
-    #     finalidade_do_laudo=finalidade_lida,
-    #     area_parcial_afetada=area_parcial,
-    #     fatores_do_usuario=fatores_do_usuario,
-    #     caminhos_fotos_avaliando=caminhos_fotos,
-    #     caminhos_fotos_adicionais=caminhos_fotos_adicionais,  # Novo parâmetro
-    #     caminhos_fotos_proprietario=caminhos_fotos_proprietario,  # <<< NOVO
-    #     caminhos_fotos_planta=caminhos_fotos_planta,              # <<< NOVO
-    #     caminho_template=r"C:\Users\Gigabyte\OneDrive\Área de Trabalho\LAUDO FATORES OFICIAL\Template.docx",
-    #     nome_arquivo_word=nome_arquivo_relatorio,
-    # )
-    # barra_progresso.close()
+#     # nome_arquivo_relatorio = "RELATORIO_AVALIACAO_COMPLETO.DOCX"
+#     # gerar_relatorio_avaliacao_com_template(
+#     #     dados_avaliando=dados_avaliando,
+#     #     dataframe_amostras_inicial=dataframe_amostras,
+#     #     dataframe_amostras_filtrado=dataframe_amostras_filtrado,
+#     #     indices_excluidos=indices_excluidos,
+#     #     amostras_excluidas=amostras_excluidas,
+#     #     media=media_chauvenet,
+#     #     desvio_padrao=desvio_chauvenet,
+#     #     menor_valor=menor_valor_chauvenet,
+#     #     maior_valor=maior_valor_chauvenet,
+#     #     mediana_valor=mediana_chauvenet,
+#     #     valores_originais_iniciais=lista_valores_originais_iniciais,
+#     #     valores_homogeneizados_validos=valores_homogeneizados_validos,
+#     #     caminho_imagem_aderencia=arquivo_aderencia,
+#     #     caminho_imagem_dispersao=arquivo_dispersao,
+#     #     finalidade_do_laudo=finalidade_lida,
+#     #     area_parcial_afetada=area_parcial,
+#     #     fatores_do_usuario=fatores_do_usuario,
+#     #     caminhos_fotos_avaliando=caminhos_fotos,
+#     #     caminhos_fotos_adicionais=caminhos_fotos_adicionais,  # Novo parâmetro
+#     #     caminhos_fotos_proprietario=caminhos_fotos_proprietario,  # <<< NOVO
+#     #     caminhos_fotos_planta=caminhos_fotos_planta,              # <<< NOVO
+#     #     caminho_template=r"C:\Users\Gigabyte\OneDrive\Área de Trabalho\LAUDO FATORES OFICIAL\Template.docx",
+#     #     nome_arquivo_word=nome_arquivo_relatorio,
+#     # )
+#     # barra_progresso.close()
 
-    # # =====================================================================
-    # # 12 ▪ RESPOSTA AO USUÁRIO
-    # # =====================================================================
-    # return f"""
-    # <html>
-    #   <head><title>Finalizado</title></head>
-    #   <body style="text-align:center;font-family:Arial;margin:40px;">
-    #     <h2>Processo concluído!</h2>
-    #     <p>O arquivo <strong>{nome_arquivo_relatorio}</strong> foi gerado com sucesso.</p>
-    #     <p>
-    #       <a href="{url_for('download_doc', filename=nome_arquivo_relatorio)}"
-    #          style="font-size:18px;color:blue;text-decoration:underline;">
-    #          Baixar Laudo de Avaliação
-    #       </a>
-    #     </p>
-    #   </body>
-    # </html>
-    # """
+#     # # =====================================================================
+#     # # 12 ▪ RESPOSTA AO USUÁRIO
+#     # # =====================================================================
+#     # return f"""
+#     # <html>
+#     #   <head><title>Finalizado</title></head>
+#     #   <body style="text-align:center;font-family:Arial;margin:40px;">
+#     #     <h2>Processo concluído!</h2>
+#     #     <p>O arquivo <strong>{nome_arquivo_relatorio}</strong> foi gerado com sucesso.</p>
+#     #     <p>
+#     #       <a href="{url_for('download_doc', filename=nome_arquivo_relatorio)}"
+#     #          style="font-size:18px;color:blue;text-decoration:underline;">
+#     #          Baixar Laudo de Avaliação
+#     #       </a>
+#     #     </p>
+#     #   </body>
+#     # </html>
+#     # """
 
 
 @app.route("/download/<path:filename>")
@@ -9316,5 +9316,5 @@ def download_doc(filename):
         as_attachment=True
     )
 
-if __name__ == "__main__":
-    app.run(debug=False)
+# if __name__ == "__main__":
+#     app.run(debug=False)
