@@ -5608,17 +5608,17 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 #     # """
 
 
-@app.route("/download/<path:filename>")
-def download_doc(filename):
-    folder_atual = os.getcwd()
-    return send_from_directory(
-        directory=folder_atual,
-        path=filename,
-        as_attachment=True
-    )
+# @app.route("/download/<path:filename>")
+# def download_doc(filename):
+#     folder_atual = os.getcwd()
+#     return send_from_directory(
+#         directory=folder_atual,
+#         path=filename,
+#         as_attachment=True
+#     )
 
-if __name__ == "__main__":
-    app.run(debug=False)
+# if __name__ == "__main__":
+#     app.run(debug=False)
 # --- Biblioteca padrão ---
 import os
 import math
@@ -9307,14 +9307,14 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 #     # """
 
 
-@app.route("/download/<path:filename>")
-def download_doc(filename):
-    folder_atual = os.getcwd()
-    return send_from_directory(
-        directory=folder_atual,
-        path=filename,
-        as_attachment=True
-    )
+# @app.route("/download/<path:filename>")
+# def download_doc(filename):
+#     folder_atual = os.getcwd()
+#     return send_from_directory(
+#         directory=folder_atual,
+#         path=filename,
+#         as_attachment=True
+#     )
 
 # if __name__ == "__main__":
 #     app.run(debug=False)
