@@ -3110,7 +3110,9 @@ def gerar_relatorio_avaliacao_com_template(
         Pt(11)
     )
 
-    distancia_km = float(dados_avaliando.get("DISTANCIA CENTRO", 0))
+    distancia_raw = dados_avaliando.get("DISTANCIA CENTRO", 0)
+    distancia_km = float(distancia_raw) if pd.notna(distancia_raw) else 0.0
+
     distancia_str = f"{distancia_km:.2f} km"
     substituir_placeholder_por_titulo_e_valor(
         documento,
