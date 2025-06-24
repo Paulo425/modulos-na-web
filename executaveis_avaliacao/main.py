@@ -3829,25 +3829,25 @@ def main():
     # print(f"Arquivo salvo como: {nome_arquivo_relatorio}")
 
 
-###############################################################################
-# APLICAÇÃO FLASK COM TODOS OS CAMPOS (INPUTS E DROPDOWNS) FICANDO COM FUNDO
-# VERDE, INDEPENDENTE SE O PREENCHIMENTO OCORREU POR DIGITAÇÃO MANUAL
-# OU AUTOCOMPLETE (INCLUSIVE MEMÓRIA DO NAVEGADOR).
-#
-# OBS: Para os campos <select>, também aplicamos a mesma lógica. 
-#      Se o usuário escolher uma opção diferente de "", o fundo fica verde.
-#      O "setInterval" verifica periodicamente se o valor mudou por autofill.
-###############################################################################
+# ###############################################################################
+# # APLICAÇÃO FLASK COM TODOS OS CAMPOS (INPUTS E DROPDOWNS) FICANDO COM FUNDO
+# # VERDE, INDEPENDENTE SE O PREENCHIMENTO OCORREU POR DIGITAÇÃO MANUAL
+# # OU AUTOCOMPLETE (INCLUSIVE MEMÓRIA DO NAVEGADOR).
+# #
+# # OBS: Para os campos <select>, também aplicamos a mesma lógica. 
+# #      Se o usuário escolher uma opção diferente de "", o fundo fica verde.
+# #      O "setInterval" verifica periodicamente se o valor mudou por autofill.
+# ###############################################################################
 
-from flask import (
-    Flask, request, render_template_string, redirect, url_for,
-    send_from_directory
-)
-import os
-from tqdm import tqdm
+# from flask import (
+#     Flask, request, render_template_string, redirect, url_for,
+#     send_from_directory
+# )
+# import os
+# from tqdm import tqdm
 
-app = Flask(__name__)
-app.secret_key = "segredo-flask-123"
+# app = Flask(__name__)
+# app.secret_key = "segredo-flask-123"
 
 
 # ----------------------------------------------------------------------------
@@ -4218,1040 +4218,1040 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 
     return lista_valores_unitarios
 
-# ----------------------------------------------------------------------------
-# TEMPLATE HTML COM FUNDO VERDE INCLUSIVE PARA DROPDOWNS
-# ----------------------------------------------------------------------------
-HTML_FORM_TEMPLATE = r"""
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="utf-8">
-    <title>Formulário de Avaliação PHOENIX APPRAISAL</title>
-    <style>
-        body {
-            margin: 40px;
-            background: #000033; 
-            font-family: Arial, sans-serif;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        h1 {
-            margin-bottom: 20px;
-            text-align: center;
-            color: #ffffff;
-        }
-        form {
-            display: block;
-            width: 80%;
-            max-width: 640px;
-            margin: 0 auto; 
-            background: #ffffff; 
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0px 0px 20px rgba(0,0,0,0.3);
-            text-align: left;
-            color: #000;
-        }
-        .dark-mode form {
-            background: #2f2f2f !important;
-            color: #ffffff !important;
-        }
-        .dark-mode form label {
-            color: #ffffff !important;
-        }
-        .dark-mode .input-change::placeholder {
-            color: #000000 !important;
-        }
-        .toggle-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 14px 24px;
-            border-radius: 8px;
-            font-weight: bold;
-            border: none;
-            cursor: pointer;
-            color: #ffffff;
-            background-color: #1e90ff;
-            font-size: 16px;
-            box-shadow: 0px 0px 8px rgba(0,0,0,0.3);
-        }
-        .toggle-btn:hover {
-            filter: brightness(1.1);
-        }
-        label {
-            display: block;
-            font-weight: bold;
-            margin-top: 15px;
-            margin-bottom: 5px;
-        }
-        .input-change {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px;
-            margin: auto;
-            font-size: 14px;
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        input[type="file"].file-green {
-            width: 100%;
-        }
-        input[type="file"].file-green::-webkit-file-upload-button {
-            background-color: #006400;
-            color: #ffffff;
-            padding: 10px 20px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        input[type="file"].file-green::file-selector-button {
-            background-color: #006400;
-            color: #ffffff;
-            padding: 10px 20px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .btn {
-            margin-top: 20px;
-            padding: 15px 30px;
-            font-size: 16px;
-            font-weight: bold;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            color: #fff;
-            background-color: #006400; 
-        }
-        .btn:hover {
-            filter: brightness(1.2);
-        }
-        .center-btn {
-            text-align: center;
-        }
-        .restricoes-container {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin-top: 15px;
-            border-radius: 5px;
-            background: #f0f0f0;
-            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        hr {
-            margin: 20px 0;
-        }
-        .subtitle {
-            margin-top: 30px;
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        .notice {
-            font-size: 0.9em;
-            color: #555;
-        }
-        .small-explanation {
-            font-size: 13px;
-            line-height: 1.3em;
-            text-align: justify;
-            text-justify: inter-word;
-            margin-bottom: 5px;
-            width: 100%;
-        }
+# # ----------------------------------------------------------------------------
+# # TEMPLATE HTML COM FUNDO VERDE INCLUSIVE PARA DROPDOWNS
+# # ----------------------------------------------------------------------------
+# HTML_FORM_TEMPLATE = r"""
+# <!DOCTYPE html>
+# <html lang="pt-BR">
+# <head>
+#     <meta charset="utf-8">
+#     <title>Formulário de Avaliação PHOENIX APPRAISAL</title>
+#     <style>
+#         body {
+#             margin: 40px;
+#             background: #000033; 
+#             font-family: Arial, sans-serif;
+#             text-align: center;
+#             transition: all 0.3s ease;
+#         }
+#         h1 {
+#             margin-bottom: 20px;
+#             text-align: center;
+#             color: #ffffff;
+#         }
+#         form {
+#             display: block;
+#             width: 80%;
+#             max-width: 640px;
+#             margin: 0 auto; 
+#             background: #ffffff; 
+#             padding: 30px;
+#             border-radius: 8px;
+#             box-shadow: 0px 0px 20px rgba(0,0,0,0.3);
+#             text-align: left;
+#             color: #000;
+#         }
+#         .dark-mode form {
+#             background: #2f2f2f !important;
+#             color: #ffffff !important;
+#         }
+#         .dark-mode form label {
+#             color: #ffffff !important;
+#         }
+#         .dark-mode .input-change::placeholder {
+#             color: #000000 !important;
+#         }
+#         .toggle-btn {
+#             position: fixed;
+#             top: 20px;
+#             right: 20px;
+#             padding: 14px 24px;
+#             border-radius: 8px;
+#             font-weight: bold;
+#             border: none;
+#             cursor: pointer;
+#             color: #ffffff;
+#             background-color: #1e90ff;
+#             font-size: 16px;
+#             box-shadow: 0px 0px 8px rgba(0,0,0,0.3);
+#         }
+#         .toggle-btn:hover {
+#             filter: brightness(1.1);
+#         }
+#         label {
+#             display: block;
+#             font-weight: bold;
+#             margin-top: 15px;
+#             margin-bottom: 5px;
+#         }
+#         .input-change {
+#             width: 100%;
+#             box-sizing: border-box;
+#             padding: 10px;
+#             margin: auto;
+#             font-size: 14px;
+#             background: #f0f0f0;
+#             border: 1px solid #ccc;
+#             border-radius: 3px;
+#             box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
+#         }
+#         input[type="file"].file-green {
+#             width: 100%;
+#         }
+#         input[type="file"].file-green::-webkit-file-upload-button {
+#             background-color: #006400;
+#             color: #ffffff;
+#             padding: 10px 20px;
+#             border: none;
+#             font-weight: bold;
+#             cursor: pointer;
+#             border-radius: 5px;
+#         }
+#         input[type="file"].file-green::file-selector-button {
+#             background-color: #006400;
+#             color: #ffffff;
+#             padding: 10px 20px;
+#             border: none;
+#             font-weight: bold;
+#             cursor: pointer;
+#             border-radius: 5px;
+#         }
+#         .btn {
+#             margin-top: 20px;
+#             padding: 15px 30px;
+#             font-size: 16px;
+#             font-weight: bold;
+#             border: none;
+#             border-radius: 5px;
+#             cursor: pointer;
+#             color: #fff;
+#             background-color: #006400; 
+#         }
+#         .btn:hover {
+#             filter: brightness(1.2);
+#         }
+#         .center-btn {
+#             text-align: center;
+#         }
+#         .restricoes-container {
+#             border: 1px solid #ccc;
+#             padding: 15px;
+#             margin-top: 15px;
+#             border-radius: 5px;
+#             background: #f0f0f0;
+#             box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
+#         }
+#         hr {
+#             margin: 20px 0;
+#         }
+#         .subtitle {
+#             margin-top: 30px;
+#             font-weight: bold;
+#             font-size: 1.1em;
+#         }
+#         .notice {
+#             font-size: 0.9em;
+#             color: #555;
+#         }
+#         .small-explanation {
+#             font-size: 13px;
+#             line-height: 1.3em;
+#             text-align: justify;
+#             text-justify: inter-word;
+#             margin-bottom: 5px;
+#             width: 100%;
+#         }
 
-        /* Forçar cor verde se autofill em inputs do Chrome */
-        input:-webkit-autofill {
-            background-color: #ccffcc !important;
-            transition: background-color 5000s ease-in-out 0s;
-        }
-        input:-webkit-autofill:focus {
-            background-color: #ccffcc !important;
-        }
-    </style>
-</head>
-<body>
+#         /* Forçar cor verde se autofill em inputs do Chrome */
+#         input:-webkit-autofill {
+#             background-color: #ccffcc !important;
+#             transition: background-color 5000s ease-in-out 0s;
+#         }
+#         input:-webkit-autofill:focus {
+#             background-color: #ccffcc !important;
+#         }
+#     </style>
+# </head>
+# <body>
 
-    <button class="toggle-btn" onclick="toggleDarkMode()">
-        Alternar Modo
-    </button>
+#     <button class="toggle-btn" onclick="toggleDarkMode()">
+#         Alternar Modo
+#     </button>
 
-    <h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
+#     <h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
 
-    <form method="post" enctype="multipart/form-data">
+#     <form method="post" enctype="multipart/form-data">
 
-        <label>INSIRA AQUI SUA PLANILHA DE AMOSTRAS (Excel):</label>
-        <input type="file" name="planilha_excel" class="input-change file-green" required>
+#         <label>INSIRA AQUI SUA PLANILHA DE AMOSTRAS (Excel):</label>
+#         <input type="file" name="planilha_excel" class="input-change file-green" required>
 
-        <label>Informe o nome completo do proprietário do imóvel:</label>
-        <input type="text" name="nome_proprietario" class="input-change" placeholder="Ex: José da Silva" required>
+#         <label>Informe o nome completo do proprietário do imóvel:</label>
+#         <input type="text" name="nome_proprietario" class="input-change" placeholder="Ex: José da Silva" required>
 
-        <label>Existem outros proprietários? (Sim ou Não):</label>
-        <select name="outros_proprietarios" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
+#         <label>Existem outros proprietários? (Sim ou Não):</label>
+#         <select name="outros_proprietarios" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
 
-        <label>Deseja incluir telefone do proprietário? (Sim ou Não):</label>
-        <select name="incluir_tel" id="incluirTelSelect" class="input-change" onchange="toggleTelefoneCampo()">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <div id="telefoneCampo" style="display:none;">
-          <label>Digite o telefone do proprietário:</label>
-          <input type="text" name="telefone_proprietario" class="input-change" placeholder="Ex: (47) 99999-8888">
-        </div>
+#         <label>Deseja incluir telefone do proprietário? (Sim ou Não):</label>
+#         <select name="incluir_tel" id="incluirTelSelect" class="input-change" onchange="toggleTelefoneCampo()">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <div id="telefoneCampo" style="display:none;">
+#           <label>Digite o telefone do proprietário:</label>
+#           <input type="text" name="telefone_proprietario" class="input-change" placeholder="Ex: (47) 99999-8888">
+#         </div>
 
-        <label>Deseja incluir email do proprietário? (Sim ou Não):</label>
-        <select name="incluir_mail" id="incluirMailSelect" class="input-change" onchange="toggleEmailCampo()">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <div id="emailCampo" style="display:none;">
-          <label>Digite o email do proprietário:</label>
-          <input type="text" name="email_proprietario" class="input-change" placeholder="Ex: exemplo@dominio.com">
-        </div>
+#         <label>Deseja incluir email do proprietário? (Sim ou Não):</label>
+#         <select name="incluir_mail" id="incluirMailSelect" class="input-change" onchange="toggleEmailCampo()">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <div id="emailCampo" style="display:none;">
+#           <label>Digite o email do proprietário:</label>
+#           <input type="text" name="email_proprietario" class="input-change" placeholder="Ex: exemplo@dominio.com">
+#         </div>
 
-        <label>Informe o nome do solicitante do laudo:</label>
-        <input type="text" name="nome_solicitante" class="input-change" placeholder="Ex: Prefeitura Municipal de Joinville-SC">
+#         <label>Informe o nome do solicitante do laudo:</label>
+#         <input type="text" name="nome_solicitante" class="input-change" placeholder="Ex: Prefeitura Municipal de Joinville-SC">
 
-        <label>Informe o nome do avaliador responsável:</label>
-        <input type="text" name="nome_avaliador" class="input-change" placeholder="Ex: Eng. Civil Paulo Roberto">
+#         <label>Informe o nome do avaliador responsável:</label>
+#         <input type="text" name="nome_avaliador" class="input-change" placeholder="Ex: Eng. Civil Paulo Roberto">
 
-        <label>Informe o registro profissional do avaliador:</label>
-        <input type="text" name="registro_avaliador" class="input-change" placeholder="Ex: CREA SP 45.678/D">
+#         <label>Informe o registro profissional do avaliador:</label>
+#         <input type="text" name="registro_avaliador" class="input-change" placeholder="Ex: CREA SP 45.678/D">
 
-        <label>Qual tipo de imóvel está sendo avaliado?</label>
-        <select name="tipo_imovel_escolhido" class="input-change">
-            <option value="" disabled selected>Selecione</option>
-            <option value="Apartamento residencial">Apartamento residencial</option>
-            <option value="Casa residencial">Casa residencial</option>
-            <option value="Terreno urbano">Terreno urbano</option>
-            <option value="Gleba urbana">Gleba urbana</option>
-            <option value="Terreno rural">Terreno rural</option>
-            <option value="Gleba rural">Gleba rural</option>
-        </select>
+#         <label>Qual tipo de imóvel está sendo avaliado?</label>
+#         <select name="tipo_imovel_escolhido" class="input-change">
+#             <option value="" disabled selected>Selecione</option>
+#             <option value="Apartamento residencial">Apartamento residencial</option>
+#             <option value="Casa residencial">Casa residencial</option>
+#             <option value="Terreno urbano">Terreno urbano</option>
+#             <option value="Gleba urbana">Gleba urbana</option>
+#             <option value="Terreno rural">Terreno rural</option>
+#             <option value="Gleba rural">Gleba rural</option>
+#         </select>
 
-        <label>Qual a finalidade do laudo?</label>
-        <select name="finalidade_lido" id="finalidadeSelect" class="input-change" onchange="atualizarAreaLabel(); exibirRestricoesSeNecessario();">
-            <option value="" disabled selected>Selecione</option>
-            <option value="Desapropriação do Imóvel">Desapropriação do Imóvel</option>
-            <option value="Avaliação para Garantia Bancária">Avaliação para Garantia Bancária</option>
-            <option value="Avaliação para processos de Inventário e Partilha">Avaliação para processos de Inventário e Partilha</option>
-            <option value="Avaliação de mercado para Compra e venda do Imóvel">Avaliação de mercado para Compra e venda do Imóvel</option>
-            <option value="Avaliação para obtenção do valor de Locação do Imóvel">Avaliação para obtenção do valor de Locação do Imóvel</option>
-            <option value="Avaliação para Regularização Fiscal do Imóvel">Avaliação para Regularização Fiscal do Imóvel</option>
-            <option value="Avaliação para a obtenção de Seguro patrimonial do Imóvel">Avaliação para a obtenção de Seguro patrimonial do Imóvel</option>
-            <option value="Avaliação para Implantação de Servidão Administrativa">Avaliação para Implantação de Servidão Administrativa</option>
-            <option value="Avaliação para Regularização do Imóvel">Avaliação para Regularização do Imóvel</option>
-        </select>
+#         <label>Qual a finalidade do laudo?</label>
+#         <select name="finalidade_lido" id="finalidadeSelect" class="input-change" onchange="atualizarAreaLabel(); exibirRestricoesSeNecessario();">
+#             <option value="" disabled selected>Selecione</option>
+#             <option value="Desapropriação do Imóvel">Desapropriação do Imóvel</option>
+#             <option value="Avaliação para Garantia Bancária">Avaliação para Garantia Bancária</option>
+#             <option value="Avaliação para processos de Inventário e Partilha">Avaliação para processos de Inventário e Partilha</option>
+#             <option value="Avaliação de mercado para Compra e venda do Imóvel">Avaliação de mercado para Compra e venda do Imóvel</option>
+#             <option value="Avaliação para obtenção do valor de Locação do Imóvel">Avaliação para obtenção do valor de Locação do Imóvel</option>
+#             <option value="Avaliação para Regularização Fiscal do Imóvel">Avaliação para Regularização Fiscal do Imóvel</option>
+#             <option value="Avaliação para a obtenção de Seguro patrimonial do Imóvel">Avaliação para a obtenção de Seguro patrimonial do Imóvel</option>
+#             <option value="Avaliação para Implantação de Servidão Administrativa">Avaliação para Implantação de Servidão Administrativa</option>
+#             <option value="Avaliação para Regularização do Imóvel">Avaliação para Regularização do Imóvel</option>
+#         </select>
         
       
-        <label id="areaLabel" for="areaInput">
-            Insira a área total do imóvel a ser avaliado (m²)
-        </label>
-        <input type="text"
-               id="areaInput"
-               name="area_parcial"
-               class="input-change"
-               placeholder="Ex: 29.567,89">
+#         <label id="areaLabel" for="areaInput">
+#             Insira a área total do imóvel a ser avaliado (m²)
+#         </label>
+#         <input type="text"
+#                id="areaInput"
+#                name="area_parcial"
+#                class="input-change"
+#                placeholder="Ex: 29.567,89">
 
 
-        <!-- RESTRIÇÕES -->
-        <div id="restricoesSectionContainer" style="display:none;">
-          <hr>
-          <div class="subtitle">Múltiplas Restrições</div>
-          <p class="notice">Insira todas as restrições desejadas. Ao clicar em "Adicionar Restrição", outra aparecerá.</p>
-          <div id="restricoesSection"></div>
-          <button type="button" class="btn" onclick="addRestricao()">Adicionar Restrição</button>
-          <hr>
-        </div>
+#         <!-- RESTRIÇÕES -->
+#         <div id="restricoesSectionContainer" style="display:none;">
+#           <hr>
+#           <div class="subtitle">Múltiplas Restrições</div>
+#           <p class="notice">Insira todas as restrições desejadas. Ao clicar em "Adicionar Restrição", outra aparecerá.</p>
+#           <div id="restricoesSection"></div>
+#           <button type="button" class="btn" onclick="addRestricao()">Adicionar Restrição</button>
+#           <hr>
+#         </div>
 
-        <div class="subtitle">FATORES DE HOMOGENEIZAÇÃO DAS AMOSTRAS</div>
+#         <div class="subtitle">FATORES DE HOMOGENEIZAÇÃO DAS AMOSTRAS</div>
 
-        <label>Fator Área</label>
-        <p class="small-explanation">
-          Tem como objetivo adequar o valor da amostra à área do avaliando, aplicando ((Área da amostra /
-          Área do avaliando)^(0,25)), atenuando grandes distorções (Abunahman, Ed. Pini).
-        </p>
-        <label>Usar fator Área? (Sim ou Não)</label>
-        <select name="usar_fator_area" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Área</label>
+#         <p class="small-explanation">
+#           Tem como objetivo adequar o valor da amostra à área do avaliando, aplicando ((Área da amostra /
+#           Área do avaliando)^(0,25)), atenuando grandes distorções (Abunahman, Ed. Pini).
+#         </p>
+#         <label>Usar fator Área? (Sim ou Não)</label>
+#         <select name="usar_fator_area" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Oferta</label>
-        <p class="small-explanation">
-          Ajusta os valores para 0,90 se há indicação clara de oferta abundante. Caso contrário, 1,00. Este
-          fator previne distorções em cenários com alto estoque de imóveis.
-        </p>
-        <label>Usar fator Oferta? (Sim ou Não)</label>
-        <select name="usar_fator_oferta" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Oferta</label>
+#         <p class="small-explanation">
+#           Ajusta os valores para 0,90 se há indicação clara de oferta abundante. Caso contrário, 1,00. Este
+#           fator previne distorções em cenários com alto estoque de imóveis.
+#         </p>
+#         <label>Usar fator Oferta? (Sim ou Não)</label>
+#         <select name="usar_fator_oferta" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Aproveitamento</label>
-        <p class="small-explanation">
-          Se urbano, adota-se 1,00; se rural, 0,80. Metodologia adaptada de João Ruy Canteiro (Ed. Pini),
-          considerando o potencial construtivo do imóvel.
-        </p>
-        <label>Usar fator Aproveitamento? (Sim ou Não)</label>
-        <select name="usar_fator_aproveitamento" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Aproveitamento</label>
+#         <p class="small-explanation">
+#           Se urbano, adota-se 1,00; se rural, 0,80. Metodologia adaptada de João Ruy Canteiro (Ed. Pini),
+#           considerando o potencial construtivo do imóvel.
+#         </p>
+#         <label>Usar fator Aproveitamento? (Sim ou Não)</label>
+#         <select name="usar_fator_aproveitamento" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Localização</label>
-        <p class="small-explanation">
-          Se amostras e avaliando estão na mesma região (~1 km), fator=1,00; caso contrário, utiliza-se
-          fórmula adaptada de Martins & Martins (2014, p.341) baseada na distância.
-        </p>
-        <label>O imóvel avaliando está na mesma região (~1km) das amostras? (Sim ou Não)</label>
-        <select name="localizacao_mesma_regiao" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Localização</label>
+#         <p class="small-explanation">
+#           Se amostras e avaliando estão na mesma região (~1 km), fator=1,00; caso contrário, utiliza-se
+#           fórmula adaptada de Martins & Martins (2014, p.341) baseada na distância.
+#         </p>
+#         <label>O imóvel avaliando está na mesma região (~1km) das amostras? (Sim ou Não)</label>
+#         <select name="localizacao_mesma_regiao" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Topografia</label>
-        <p class="small-explanation">
-          Se a topografia for boa, emprega-se 1,10; caso contrário, 1,00. Adaptação de João R. Canteiro
-          (Ed. Pini), refletindo o relevo do terreno.
-        </p>
-        <label>Usar fator Topografia? (Sim ou Não)</label>
-        <select name="usar_fator_topografia" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Topografia</label>
+#         <p class="small-explanation">
+#           Se a topografia for boa, emprega-se 1,10; caso contrário, 1,00. Adaptação de João R. Canteiro
+#           (Ed. Pini), refletindo o relevo do terreno.
+#         </p>
+#         <label>Usar fator Topografia? (Sim ou Não)</label>
+#         <select name="usar_fator_topografia" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Pedologia</label>
-        <p class="small-explanation">
-          Caso o solo seja alagável, aplica-se 0,70 (depreciação de 30%). Se normal, 1,00. Critério baseado
-          em João R. Canteiro (Ed. Pini).
-        </p>
-        <label>Usar fator Pedologia? (Sim ou Não)</label>
-        <select name="usar_fator_pedologia" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Pedologia</label>
+#         <p class="small-explanation">
+#           Caso o solo seja alagável, aplica-se 0,70 (depreciação de 30%). Se normal, 1,00. Critério baseado
+#           em João R. Canteiro (Ed. Pini).
+#         </p>
+#         <label>Usar fator Pedologia? (Sim ou Não)</label>
+#         <select name="usar_fator_pedologia" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Pavimentação</label>
-        <p class="small-explanation">
-          Presença de pavimentação mantém fator 1,00; ausência reduz para 0,90. Segue o critério de
-          Mendes Sobrinho, indicando 10% de desvalorização.
-        </p>
-        <label>Usar fator Pavimentação? (Sim ou Não)</label>
-        <select name="usar_fator_pavimentacao" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Pavimentação</label>
+#         <p class="small-explanation">
+#           Presença de pavimentação mantém fator 1,00; ausência reduz para 0,90. Segue o critério de
+#           Mendes Sobrinho, indicando 10% de desvalorização.
+#         </p>
+#         <label>Usar fator Pavimentação? (Sim ou Não)</label>
+#         <select name="usar_fator_pavimentacao" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Esquina</label>
-        <p class="small-explanation">
-          Terrenos em esquina recebem fator 1,10; os demais, 1,00. Conforme Thofehrn (2008), há um
-          acréscimo limitado a 10% para compensar recuos.
-        </p>
-        <label>Usar fator Esquina? (Sim ou Não)</label>
-        <select name="usar_fator_esquina" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Esquina</label>
+#         <p class="small-explanation">
+#           Terrenos em esquina recebem fator 1,10; os demais, 1,00. Conforme Thofehrn (2008), há um
+#           acréscimo limitado a 10% para compensar recuos.
+#         </p>
+#         <label>Usar fator Esquina? (Sim ou Não)</label>
+#         <select name="usar_fator_esquina" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Acessibilidade</label>
-        <p class="small-explanation">
-          Boa acessibilidade, fator 1,00; em caso de acesso difícil, 0,90. Adaptado do critério de Mendes
-          Sobrinho, demonstrando 10% de depreciação.
-        </p>
-        <label>Usar fator Acessibilidade? (Sim ou Não)</label>
-        <select name="usar_fator_acessibilidade" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Acessibilidade</label>
+#         <p class="small-explanation">
+#           Boa acessibilidade, fator 1,00; em caso de acesso difícil, 0,90. Adaptado do critério de Mendes
+#           Sobrinho, demonstrando 10% de depreciação.
+#         </p>
+#         <label>Usar fator Acessibilidade? (Sim ou Não)</label>
+#         <select name="usar_fator_acessibilidade" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Número da matrícula (documentação do imóvel):</label>
-        <input type="text" name="num_doc" class="input-change" placeholder="Ex: 12.345">
+#         <label>Número da matrícula (documentação do imóvel):</label>
+#         <input type="text" name="num_doc" class="input-change" placeholder="Ex: 12.345">
 
-        <label>Nome do cartório:</label>
-        <input type="text" name="nome_cartorio" class="input-change" placeholder="Ex: Ofício de Registros Públicos">
+#         <label>Nome do cartório:</label>
+#         <input type="text" name="nome_cartorio" class="input-change" placeholder="Ex: Ofício de Registros Públicos">
 
-        <label>Nome da comarca:</label>
-        <input type="text" name="nome_comarca" class="input-change" placeholder="Ex: Joinville-SC">
+#         <label>Nome da comarca:</label>
+#         <input type="text" name="nome_comarca" class="input-change" placeholder="Ex: Joinville-SC">
 
-        <label>Endereço completo do imóvel:</label>
-        <input type="text" name="endereco_imovel" class="input-change"
-               placeholder="Ex: Rua Dr. Plácido Olimpio de Oliveira, 1277 - Anita Garibaldi - Joinville-SC">
+#         <label>Endereço completo do imóvel:</label>
+#         <input type="text" name="endereco_imovel" class="input-change"
+#                placeholder="Ex: Rua Dr. Plácido Olimpio de Oliveira, 1277 - Anita Garibaldi - Joinville-SC">
 
-        <hr>
-        <div class="subtitle">Diagnóstico de Mercado</div>
+#         <hr>
+#         <div class="subtitle">Diagnóstico de Mercado</div>
 
-        <label>Estrutura</label>
-        <p class="small-explanation">
-          Pode ser BOA (facilidade de encontrar imóveis similares na região) ou LIMITADA (dificuldade).
-        </p>
-        <select name="estrutura_escolha" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="BOA">BOA</option>
-          <option value="LIMITADA">LIMITADA</option>
-        </select>
-        <hr>
+#         <label>Estrutura</label>
+#         <p class="small-explanation">
+#           Pode ser BOA (facilidade de encontrar imóveis similares na região) ou LIMITADA (dificuldade).
+#         </p>
+#         <select name="estrutura_escolha" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="BOA">BOA</option>
+#           <option value="LIMITADA">LIMITADA</option>
+#         </select>
+#         <hr>
 
-        <label>Conduta</label>
-        <p class="small-explanation">
-          DESESTAGNADO (boa movimentação do mercado) ou ESTAGNADA (pouca movimentação).
-        </p>
-        <select name="conduta_escolha" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="DESESTAGNADO">DESESTAGNADO</option>
-          <option value="ESTAGNADA">ESTAGNADA</option>
-        </select>
-        <hr>
+#         <label>Conduta</label>
+#         <p class="small-explanation">
+#           DESESTAGNADO (boa movimentação do mercado) ou ESTAGNADA (pouca movimentação).
+#         </p>
+#         <select name="conduta_escolha" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="DESESTAGNADO">DESESTAGNADO</option>
+#           <option value="ESTAGNADA">ESTAGNADA</option>
+#         </select>
+#         <hr>
 
-        <label>Desempenho</label>
-        <p class="small-explanation">
-          ALTO (grande atratividade comercial), MÉDIO (atratividade moderada) ou BAIXO (baixa atratividade).
-        </p>
-        <select name="desempenho_escolha" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="ALTO">ALTO</option>
-          <option value="MÉDIO">MÉDIO</option>
-          <option value="BAIXO">BAIXO</option>
-        </select>
+#         <label>Desempenho</label>
+#         <p class="small-explanation">
+#           ALTO (grande atratividade comercial), MÉDIO (atratividade moderada) ou BAIXO (baixa atratividade).
+#         </p>
+#         <select name="desempenho_escolha" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="ALTO">ALTO</option>
+#           <option value="MÉDIO">MÉDIO</option>
+#           <option value="BAIXO">BAIXO</option>
+#         </select>
 
 
-                <!-- ===========================================================
-         🅐  VARIÁVEIS E ESTILO GLOBAL  ─ paleta + efeitos 3-D “neumórficos”
-             (sem comentários dentro de TAGs  ⇢ evita quebrar o HTML)
-        =========================================================== -->
-        <style>
-        :root{
-            /* paleta base */
-            --laranja-claro : #ffeede;
-            --laranja-escuro: #ff8c00;
+#                 <!-- ===========================================================
+#          🅐  VARIÁVEIS E ESTILO GLOBAL  ─ paleta + efeitos 3-D “neumórficos”
+#              (sem comentários dentro de TAGs  ⇢ evita quebrar o HTML)
+#         =========================================================== -->
+#         <style>
+#         :root{
+#             /* paleta base */
+#             --laranja-claro : #ffeede;
+#             --laranja-escuro: #ff8c00;
         
-            /* azul-escuro para botões “+” e “Gerar Laudo” */
-            --azul-top : #004c8c;
-            --azul-bot : #002549;
+#             /* azul-escuro para botões “+” e “Gerar Laudo” */
+#             --azul-top : #004c8c;
+#             --azul-bot : #002549;
         
-            /* relevo */
-            --shadow-out :  4px  4px 10px rgba(0,0,0,.18),
-                           -4px -4px 10px rgba(255,255,255,.8);
-            --shadow-in  : inset 2px  2px  6px rgba(0,0,0,.12),
-                           inset -2px -2px 6px rgba(255,255,255,.65);
+#             /* relevo */
+#             --shadow-out :  4px  4px 10px rgba(0,0,0,.18),
+#                            -4px -4px 10px rgba(255,255,255,.8);
+#             --shadow-in  : inset 2px  2px  6px rgba(0,0,0,.12),
+#                            inset -2px -2px 6px rgba(255,255,255,.65);
         
-            --radius     : 10px;
-            --green-fill : #ccffcc;               /* fundo verde quando houver arquivo */
-        }
+#             --radius     : 10px;
+#             --green-fill : #ccffcc;               /* fundo verde quando houver arquivo */
+#         }
         
-        /* -------- botões genéricos -------- */
-        .btn-small{
-            padding:8px 18px;
-            font-size:14px;
-            border:none;
-            border-radius:var(--radius);
-            background:linear-gradient(180deg,#fafafa 0%,#e7e7e7 100%);
-            box-shadow:var(--shadow-out);
-            cursor:pointer;
-            transition:.15s transform;
-        }
-        .btn-small:active{ transform:translateY(2px); }
+#         /* -------- botões genéricos -------- */
+#         .btn-small{
+#             padding:8px 18px;
+#             font-size:14px;
+#             border:none;
+#             border-radius:var(--radius);
+#             background:linear-gradient(180deg,#fafafa 0%,#e7e7e7 100%);
+#             box-shadow:var(--shadow-out);
+#             cursor:pointer;
+#             transition:.15s transform;
+#         }
+#         .btn-small:active{ transform:translateY(2px); }
         
-        .btn-red{
-            background:linear-gradient(180deg,#ca5552 0%,#a94442 100%);
-            color:#fff;
-        }
+#         .btn-red{
+#             background:linear-gradient(180deg,#ca5552 0%,#a94442 100%);
+#             color:#fff;
+#         }
         
-        /* --------  azul-escuro  -------- */
-        .btn-blue{
-            background:linear-gradient(180deg,var(--azul-top) 0%,var(--azul-bot) 100%);
-            color:#fff;
-        }
+#         /* --------  azul-escuro  -------- */
+#         .btn-blue{
+#             background:linear-gradient(180deg,var(--azul-top) 0%,var(--azul-bot) 100%);
+#             color:#fff;
+#         }
         
-        /* --------  file-picker interno (laranja)  -------- */
-        input[type="file"].file-orange::-webkit-file-upload-button,
-        input[type="file"].file-orange::file-selector-button{
-            background:linear-gradient(180deg,#0d7a43 0%, #064b2e 100%);
-            color:#fff;
-            border:none;
-            padding:10px 24px;
-            font-weight:bold;
-            border-radius:var(--radius);
-            box-shadow:var(--shadow-out);
-            cursor:pointer;
-        }
+#         /* --------  file-picker interno (laranja)  -------- */
+#         input[type="file"].file-orange::-webkit-file-upload-button,
+#         input[type="file"].file-orange::file-selector-button{
+#             background:linear-gradient(180deg,#0d7a43 0%, #064b2e 100%);
+#             color:#fff;
+#             border:none;
+#             padding:10px 24px;
+#             font-weight:bold;
+#             border-radius:var(--radius);
+#             box-shadow:var(--shadow-out);
+#             cursor:pointer;
+#         }
         
-        /* --------  cartão 3-D -------- */
-        .wrapper-3d{
-            display:flex;
-            flex-wrap:wrap;
-            gap:12px;
-            align-items:center;
+#         /* --------  cartão 3-D -------- */
+#         .wrapper-3d{
+#             display:flex;
+#             flex-wrap:wrap;
+#             gap:12px;
+#             align-items:center;
         
-            background:var(--laranja-claro);
-            border:2px solid var(--laranja-escuro);
-            border-radius:var(--radius);
-            padding:18px;
-            margin-bottom:26px;
-            box-shadow:var(--shadow-out);
-        }
-        .wrapper-3d:has(input[type=file]:focus-within){
-            box-shadow:var(--shadow-in),var(--shadow-out);
-        }
-        .wrapper-3d input[type=file]{
-            flex:1;
-            min-width:260px;
-            padding:10px;
-            border-radius:var(--radius);
-            transition:background-color .25s ease;
-            color:#000;                /* ← texto preto SEMPRE */
-        }
-        .wrapper-3d input[type=file].filled{ background-color:var(--green-fill); }
-        </style>
+#             background:var(--laranja-claro);
+#             border:2px solid var(--laranja-escuro);
+#             border-radius:var(--radius);
+#             padding:18px;
+#             margin-bottom:26px;
+#             box-shadow:var(--shadow-out);
+#         }
+#         .wrapper-3d:has(input[type=file]:focus-within){
+#             box-shadow:var(--shadow-in),var(--shadow-out);
+#         }
+#         .wrapper-3d input[type=file]{
+#             flex:1;
+#             min-width:260px;
+#             padding:10px;
+#             border-radius:var(--radius);
+#             transition:background-color .25s ease;
+#             color:#000;                /* ← texto preto SEMPRE */
+#         }
+#         .wrapper-3d input[type=file].filled{ background-color:var(--green-fill); }
+#         </style>
         
-        <!-- ===========================================================
-         🅑  FOTOS DO IMÓVEL  (multiple ⇒ sem “+”)
-        =========================================================== -->
-        <hr>
-        <div class="subtitle">Acrescente as Fotos do imóvel avaliando:</div>
+#         <!-- ===========================================================
+#          🅑  FOTOS DO IMÓVEL  (multiple ⇒ sem “+”)
+#         =========================================================== -->
+#         <hr>
+#         <div class="subtitle">Acrescente as Fotos do imóvel avaliando:</div>
         
-        <div id="fotoWrapper" class="wrapper-3d">
-            <input type="file"
-                   name="fotos_imovel"
-                   class="input-change file-orange"
-                   multiple>
-            <button type="button"
-                    id="clearFotoBtn"
-                    class="btn-small btn-red"
-                    onclick="clearFotos()">Limpar</button>
-        </div>
+#         <div id="fotoWrapper" class="wrapper-3d">
+#             <input type="file"
+#                    name="fotos_imovel"
+#                    class="input-change file-orange"
+#                    multiple>
+#             <button type="button"
+#                     id="clearFotoBtn"
+#                     class="btn-small btn-red"
+#                     onclick="clearFotos()">Limpar</button>
+#         </div>
         
-        <!-- ===========================================================
-         🅒  DOCUMENTAÇÃO DO IMÓVEL
-        =========================================================== -->
-        <div class="subtitle">Acrescente a Documentação do imóvel avaliando:</div>
+#         <!-- ===========================================================
+#          🅒  DOCUMENTAÇÃO DO IMÓVEL
+#         =========================================================== -->
+#         <div class="subtitle">Acrescente a Documentação do imóvel avaliando:</div>
         
-        <div id="imovWrapper" class="wrapper-3d">
-            <input type="file"
-                   name="fotos_imovel_adicionais"
-                   class="input-change file-orange">
-            <button type="button"
-                    id="addImovBtn"
-                    class="btn-small btn-blue"
-                    onclick="addImovInput()">+</button>
-            <button type="button"
-                    id="clearImovBtn"
-                    class="btn-small btn-red"
-                    onclick="clearImovs()">Limpar</button>
-        </div>
+#         <div id="imovWrapper" class="wrapper-3d">
+#             <input type="file"
+#                    name="fotos_imovel_adicionais"
+#                    class="input-change file-orange">
+#             <button type="button"
+#                     id="addImovBtn"
+#                     class="btn-small btn-blue"
+#                     onclick="addImovInput()">+</button>
+#             <button type="button"
+#                     id="clearImovBtn"
+#                     class="btn-small btn-red"
+#                     onclick="clearImovs()">Limpar</button>
+#         </div>
         
-        <!-- ===========================================================
-         🅓  DOCUMENTAÇÃO DO(S) PROPRIETÁRIO(S)
-        =========================================================== -->
-        <div class="subtitle">Acrescente a Documentação do(s) proprietário(s):</div>
+#         <!-- ===========================================================
+#          🅓  DOCUMENTAÇÃO DO(S) PROPRIETÁRIO(S)
+#         =========================================================== -->
+#         <div class="subtitle">Acrescente a Documentação do(s) proprietário(s):</div>
         
-        <div id="propWrapper" class="wrapper-3d">
-            <input type="file"
-                   name="doc_proprietario"
-                   class="input-change file-orange">
-            <button type="button"
-                    id="addPropBtn"
-                    class="btn-small btn-blue"
-                    onclick="addPropInput()">+</button>
-            <button type="button"
-                    id="clearPropBtn"
-                    class="btn-small btn-red"
-                    onclick="clearProps()">Limpar</button>
-        </div>
+#         <div id="propWrapper" class="wrapper-3d">
+#             <input type="file"
+#                    name="doc_proprietario"
+#                    class="input-change file-orange">
+#             <button type="button"
+#                     id="addPropBtn"
+#                     class="btn-small btn-blue"
+#                     onclick="addPropInput()">+</button>
+#             <button type="button"
+#                     id="clearPropBtn"
+#                     class="btn-small btn-red"
+#                     onclick="clearProps()">Limpar</button>
+#         </div>
         
-        <!-- ===========================================================
-         🅔  PLANTAS / MEMORIAIS
-        =========================================================== -->
-        <div class="subtitle">Adicione Plantas e Memoriais Descritivos do Avaliando:</div>
+#         <!-- ===========================================================
+#          🅔  PLANTAS / MEMORIAIS
+#         =========================================================== -->
+#         <div class="subtitle">Adicione Plantas e Memoriais Descritivos do Avaliando:</div>
         
-        <div id="plantaWrapper" class="wrapper-3d">
-            <input type="file"
-                   name="doc_planta"
-                   class="input-change file-orange">
-            <button type="button"
-                    id="addPlantaBtn"
-                    class="btn-small btn-blue"
-                    onclick="addPlantaInput()">+</button>
-            <button type="button"
-                    id="clearPlantaBtn"
-                    class="btn-small btn-red"
-                    onclick="clearPlantas()">Limpar</button>
-        </div>
+#         <div id="plantaWrapper" class="wrapper-3d">
+#             <input type="file"
+#                    name="doc_planta"
+#                    class="input-change file-orange">
+#             <button type="button"
+#                     id="addPlantaBtn"
+#                     class="btn-small btn-blue"
+#                     onclick="addPlantaInput()">+</button>
+#             <button type="button"
+#                     id="clearPlantaBtn"
+#                     class="btn-small btn-red"
+#                     onclick="clearPlantas()">Limpar</button>
+#         </div>
         
-        <!-- ===========================================================
-         🅕  LOGOTIPO
-        =========================================================== -->
-        <label>Selecione arquivo de imagem do logo (se desejar):</label>
+#         <!-- ===========================================================
+#          🅕  LOGOTIPO
+#         =========================================================== -->
+#         <label>Selecione arquivo de imagem do logo (se desejar):</label>
         
-        <div id="logoWrapper" class="wrapper-3d">
-            <input type="file"
-                   name="arquivo_logo"
-                   class="input-change file-orange">
-            <button type="button"
-                    id="clearLogoBtn"
-                    class="btn-small btn-red"
-                    onclick="clearLogo()">Limpar</button>
-        </div>
+#         <div id="logoWrapper" class="wrapper-3d">
+#             <input type="file"
+#                    name="arquivo_logo"
+#                    class="input-change file-orange">
+#             <button type="button"
+#                     id="clearLogoBtn"
+#                     class="btn-small btn-red"
+#                     onclick="clearLogo()">Limpar</button>
+#         </div>
         
-        <br><br>
-        <div class="center-btn">
-          <button type="submit"
-                  class="btn-small btn-blue"
-                  style="font-size:16px;padding:14px 36px;">Gerar Laudo</button>
-        </div>
+#         <br><br>
+#         <div class="center-btn">
+#           <button type="submit"
+#                   class="btn-small btn-blue"
+#                   style="font-size:16px;padding:14px 36px;">Gerar Laudo</button>
+#         </div>
         
-        <!-- ===========================================================
-         🅖  JAVASCRIPT  (highlight verde + add / clear)
-        =========================================================== -->
-        <script>
-        /* ----------  ajuda visual: verde quando houver arquivo ---------- */
-        const highlight = inp=>{
-            const update=()=>inp.classList.toggle('filled',inp.files.length>0);
-            update(); inp.addEventListener('change',update);
-        };
-        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(highlight);
+#         <!-- ===========================================================
+#          🅖  JAVASCRIPT  (highlight verde + add / clear)
+#         =========================================================== -->
+#         <script>
+#         /* ----------  ajuda visual: verde quando houver arquivo ---------- */
+#         const highlight = inp=>{
+#             const update=()=>inp.classList.toggle('filled',inp.files.length>0);
+#             update(); inp.addEventListener('change',update);
+#         };
+#         document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(highlight);
         
-        /* -------- IMÓVEL -------- */
-        function addImovInput(){
-            const w=imovWrapper, btn=addImovBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
-            w.insertBefore(n,btn); highlight(n);
-        }
-        function clearImovs(){
-            imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
-            imovWrapper.insertBefore(b,imovWrapper.firstChild); highlight(b);
-        }
+#         /* -------- IMÓVEL -------- */
+#         function addImovInput(){
+#             const w=imovWrapper, btn=addImovBtn;
+#             const n=document.createElement('input');
+#             n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
+#             w.insertBefore(n,btn); highlight(n);
+#         }
+#         function clearImovs(){
+#             imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+#             const b=document.createElement('input');
+#             b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
+#             imovWrapper.insertBefore(b,imovWrapper.firstChild); highlight(b);
+#         }
         
-        /* -------- PROPRIETÁRIO -------- */
-        function addPropInput(){
-            const w=propWrapper, btn=addPropBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
-            w.insertBefore(n,btn); highlight(n);
-        }
-        function clearProps(){
-            propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
-            propWrapper.insertBefore(b,propWrapper.firstChild); highlight(b);
-        }
+#         /* -------- PROPRIETÁRIO -------- */
+#         function addPropInput(){
+#             const w=propWrapper, btn=addPropBtn;
+#             const n=document.createElement('input');
+#             n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
+#             w.insertBefore(n,btn); highlight(n);
+#         }
+#         function clearProps(){
+#             propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+#             const b=document.createElement('input');
+#             b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
+#             propWrapper.insertBefore(b,propWrapper.firstChild); highlight(b);
+#         }
         
-        /* -------- PLANTA -------- */
-        function addPlantaInput(){
-            const w=plantaWrapper, btn=addPlantaBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
-            w.insertBefore(n,btn); highlight(n);
-        }
-        function clearPlantas(){
-            plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
-            plantaWrapper.insertBefore(b,plantaWrapper.firstChild); highlight(b);
-        }
+#         /* -------- PLANTA -------- */
+#         function addPlantaInput(){
+#             const w=plantaWrapper, btn=addPlantaBtn;
+#             const n=document.createElement('input');
+#             n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
+#             w.insertBefore(n,btn); highlight(n);
+#         }
+#         function clearPlantas(){
+#             plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+#             const b=document.createElement('input');
+#             b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
+#             plantaWrapper.insertBefore(b,plantaWrapper.firstChild); highlight(b);
+#         }
         
-        /* -------- LOGO -------- */
-        function clearLogo(){
-            const inp=document.querySelector('#logoWrapper input[type="file"]');
-            if(inp){ inp.value=''; inp.classList.remove('filled'); }
-        }
+#         /* -------- LOGO -------- */
+#         function clearLogo(){
+#             const inp=document.querySelector('#logoWrapper input[type="file"]');
+#             if(inp){ inp.value=''; inp.classList.remove('filled'); }
+#         }
         
-        /* -------- Fotos -------- */
-        function clearFotos(){
-            const inp=document.querySelector('#fotoWrapper input[type="file"]');
-            if(inp){ inp.value=''; inp.classList.remove('filled'); }
-        }
-        </script>
+#         /* -------- Fotos -------- */
+#         function clearFotos(){
+#             const inp=document.querySelector('#fotoWrapper input[type="file"]');
+#             if(inp){ inp.value=''; inp.classList.remove('filled'); }
+#         }
+#         </script>
 
         
-        <!-- ===========================================================
-         🅖  JAVASCRIPT — funções de adicionar / limpar + destaque verde
-        =========================================================== -->
-        <script>
-        const addHL = inp=>{
-            const t=()=>inp.classList.toggle('filled',inp.files.length>0);
-            t(); inp.addEventListener('change',t);
-        };
-        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHL);
+#         <!-- ===========================================================
+#          🅖  JAVASCRIPT — funções de adicionar / limpar + destaque verde
+#         =========================================================== -->
+#         <script>
+#         const addHL = inp=>{
+#             const t=()=>inp.classList.toggle('filled',inp.files.length>0);
+#             t(); inp.addEventListener('change',t);
+#         };
+#         document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHL);
         
-        /* ---------- IMÓVEL ---------- */
-        function addImovInput(){
-            const w=imovWrapper,a=addImovBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
-            w.insertBefore(n,a); addHL(n);
-        }
-        function clearImovs(){
-            imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
-            imovWrapper.insertBefore(b,imovWrapper.firstChild); addHL(b);
-        }
-        /* ---------- PROPRIETÁRIO ---------- */
-        function addPropInput(){
-            const w=propWrapper,a=addPropBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
-            w.insertBefore(n,a); addHL(n);
-        }
-        function clearProps(){
-            propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
-            propWrapper.insertBefore(b,propWrapper.firstChild); addHL(b);
-        }
-        /* ---------- PLANTA ---------- */
-        function addPlantaInput(){
-            const w=plantaWrapper,a=addPlantaBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
-            w.insertBefore(n,a); addHL(n);
-        }
-        function clearPlantas(){
-            plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
-            plantaWrapper.insertBefore(b,plantaWrapper.firstChild); addHL(b);
-        }
-        /* ---------- LOGO ---------- */
-        function clearLogo(){
-            const inp=document.querySelector('#logoWrapper input[type="file"]');
-            if(inp){ inp.value=""; inp.classList.remove('filled'); }
-        }
-        </script>
+#         /* ---------- IMÓVEL ---------- */
+#         function addImovInput(){
+#             const w=imovWrapper,a=addImovBtn;
+#             const n=document.createElement('input');
+#             n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
+#             w.insertBefore(n,a); addHL(n);
+#         }
+#         function clearImovs(){
+#             imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+#             const b=document.createElement('input');
+#             b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
+#             imovWrapper.insertBefore(b,imovWrapper.firstChild); addHL(b);
+#         }
+#         /* ---------- PROPRIETÁRIO ---------- */
+#         function addPropInput(){
+#             const w=propWrapper,a=addPropBtn;
+#             const n=document.createElement('input');
+#             n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
+#             w.insertBefore(n,a); addHL(n);
+#         }
+#         function clearProps(){
+#             propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+#             const b=document.createElement('input');
+#             b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
+#             propWrapper.insertBefore(b,propWrapper.firstChild); addHL(b);
+#         }
+#         /* ---------- PLANTA ---------- */
+#         function addPlantaInput(){
+#             const w=plantaWrapper,a=addPlantaBtn;
+#             const n=document.createElement('input');
+#             n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
+#             w.insertBefore(n,a); addHL(n);
+#         }
+#         function clearPlantas(){
+#             plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+#             const b=document.createElement('input');
+#             b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
+#             plantaWrapper.insertBefore(b,plantaWrapper.firstChild); addHL(b);
+#         }
+#         /* ---------- LOGO ---------- */
+#         function clearLogo(){
+#             const inp=document.querySelector('#logoWrapper input[type="file"]');
+#             if(inp){ inp.value=""; inp.classList.remove('filled'); }
+#         }
+#         </script>
       
         
         
-        <!-- ===========================================================
-         🅖  JAVASCRIPT GENÉRICO  (re-usa funções de highlight / clear)
-        =========================================================== -->
-        <script>
-        /* -------- util: aplica / remove classe “filled” para fundo verde -------- */
-        const addHighlightListener = inp=>{
-            const handler = ()=> inp.classList.toggle('filled', inp.files.length>0);
-            handler();            // executa já
-            inp.addEventListener('change', handler);
-        };
+#         <!-- ===========================================================
+#          🅖  JAVASCRIPT GENÉRICO  (re-usa funções de highlight / clear)
+#         =========================================================== -->
+#         <script>
+#         /* -------- util: aplica / remove classe “filled” para fundo verde -------- */
+#         const addHighlightListener = inp=>{
+#             const handler = ()=> inp.classList.toggle('filled', inp.files.length>0);
+#             handler();            // executa já
+#             inp.addEventListener('change', handler);
+#         };
         
-        /* inicial: aplica a todos os inputs já existentes na página */
-        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
+#         /* inicial: aplica a todos os inputs já existentes na página */
+#         document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
         
-        /* ------------------------- IMÓVEL AVALIANDO ------------------------- */
-        function addImovInput(){
-            const wrap = document.getElementById('imovWrapper');
-            const add  = document.getElementById('addImovBtn');
-            const novo = document.createElement('input');
-            novo.type='file'; novo.name='fotos_imovel_adicionais';
-            novo.className='input-change file-orange';
-            wrap.insertBefore(novo, add);
-            addHighlightListener(novo);
-        }
-        function clearImovs(){
-            const wrap = document.getElementById('imovWrapper');
-            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
-            const base = document.createElement('input');
-            base.type='file'; base.name='fotos_imovel_adicionais';
-            base.className='input-change file-orange';
-            wrap.insertBefore(base, wrap.firstChild);
-            addHighlightListener(base);
-        }
+#         /* ------------------------- IMÓVEL AVALIANDO ------------------------- */
+#         function addImovInput(){
+#             const wrap = document.getElementById('imovWrapper');
+#             const add  = document.getElementById('addImovBtn');
+#             const novo = document.createElement('input');
+#             novo.type='file'; novo.name='fotos_imovel_adicionais';
+#             novo.className='input-change file-orange';
+#             wrap.insertBefore(novo, add);
+#             addHighlightListener(novo);
+#         }
+#         function clearImovs(){
+#             const wrap = document.getElementById('imovWrapper');
+#             wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
+#             const base = document.createElement('input');
+#             base.type='file'; base.name='fotos_imovel_adicionais';
+#             base.className='input-change file-orange';
+#             wrap.insertBefore(base, wrap.firstChild);
+#             addHighlightListener(base);
+#         }
         
-        /* ------------------------- PROPRIETÁRIO(S) ------------------------- */
-        function addPropInput(){
-            const wrap=document.getElementById('propWrapper');
-            const add =document.getElementById('addPropBtn');
-            const novo=document.createElement('input');
-            novo.type='file'; novo.name='doc_proprietario';
-            novo.className='input-change file-orange';
-            wrap.insertBefore(novo, add);
-            addHighlightListener(novo);
-        }
-        function clearProps(){
-            const wrap=document.getElementById('propWrapper');
-            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
-            const base=document.createElement('input');
-            base.type='file'; base.name='doc_proprietario';
-            base.className='input-change file-orange';
-            wrap.insertBefore(base, wrap.firstChild);
-            addHighlightListener(base);
-        }
+#         /* ------------------------- PROPRIETÁRIO(S) ------------------------- */
+#         function addPropInput(){
+#             const wrap=document.getElementById('propWrapper');
+#             const add =document.getElementById('addPropBtn');
+#             const novo=document.createElement('input');
+#             novo.type='file'; novo.name='doc_proprietario';
+#             novo.className='input-change file-orange';
+#             wrap.insertBefore(novo, add);
+#             addHighlightListener(novo);
+#         }
+#         function clearProps(){
+#             const wrap=document.getElementById('propWrapper');
+#             wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
+#             const base=document.createElement('input');
+#             base.type='file'; base.name='doc_proprietario';
+#             base.className='input-change file-orange';
+#             wrap.insertBefore(base, wrap.firstChild);
+#             addHighlightListener(base);
+#         }
         
-        /* ------------------------- PLANTAS ------------------------- */
-        function addPlantaInput(){
-            const wrap=document.getElementById('plantaWrapper');
-            const add =document.getElementById('addPlantaBtn');
-            const novo=document.createElement('input');
-            novo.type='file'; novo.name='doc_planta';
-            novo.className='input-change file-orange';
-            wrap.insertBefore(novo, add);
-            addHighlightListener(novo);
-        }
-        function clearPlantas(){
-            const wrap=document.getElementById('plantaWrapper');
-            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
-            const base=document.createElement('input');
-            base.type='file'; base.name='doc_planta';
-            base.className='input-change file-orange';
-            wrap.insertBefore(base, wrap.firstChild);
-            addHighlightListener(base);
-        }
+#         /* ------------------------- PLANTAS ------------------------- */
+#         function addPlantaInput(){
+#             const wrap=document.getElementById('plantaWrapper');
+#             const add =document.getElementById('addPlantaBtn');
+#             const novo=document.createElement('input');
+#             novo.type='file'; novo.name='doc_planta';
+#             novo.className='input-change file-orange';
+#             wrap.insertBefore(novo, add);
+#             addHighlightListener(novo);
+#         }
+#         function clearPlantas(){
+#             const wrap=document.getElementById('plantaWrapper');
+#             wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
+#             const base=document.createElement('input');
+#             base.type='file'; base.name='doc_planta';
+#             base.className='input-change file-orange';
+#             wrap.insertBefore(base, wrap.firstChild);
+#             addHighlightListener(base);
+#         }
         
-        /* ------------------------- LOGO ------------------------- */
-        function clearLogo(){
-            const inp=document.querySelector('#logoWrapper input[type="file"]');
-            if(inp){ inp.value=""; inp.classList.remove('filled'); }
-        }
-        </script>
+#         /* ------------------------- LOGO ------------------------- */
+#         function clearLogo(){
+#             const inp=document.querySelector('#logoWrapper input[type="file"]');
+#             if(inp){ inp.value=""; inp.classList.remove('filled'); }
+#         }
+#         </script>
 
 
 
 
-    </form>
+#     </form>
 
-    <script>
-      function toggleDarkMode() {
-          document.body.classList.toggle("dark-mode");
-      }
+#     <script>
+#       function toggleDarkMode() {
+#           document.body.classList.toggle("dark-mode");
+#       }
 
-    function atualizarAreaLabel() {
-        const finalidadeSelect = document.getElementById("finalidadeSelect");
-        const valor        = (finalidadeSelect.value || "").trim().toLowerCase();
-        const areaLabel    = document.getElementById("areaLabel");
-        const areaInput    = document.querySelector('input[name="area_parcial"]');
+#     function atualizarAreaLabel() {
+#         const finalidadeSelect = document.getElementById("finalidadeSelect");
+#         const valor        = (finalidadeSelect.value || "").trim().toLowerCase();
+#         const areaLabel    = document.getElementById("areaLabel");
+#         const areaInput    = document.querySelector('input[name="area_parcial"]');
     
-        if (valor.includes("desapropria")) {
-            /* —— DESAPROPRIAÇÃO —— */
-            areaLabel.innerHTML = "<strong>Área a ser desapropriada (m²)</strong> - Informe apenas a área que será desapropriada.";
-            areaLabel.style.color = "#b20000";          // vermelho-escuro
-            if (areaInput) {
-                areaInput.style.borderColor = "#b20000";
-                areaInput.style.fontWeight  = "bold";
-            }
+#         if (valor.includes("desapropria")) {
+#             /* —— DESAPROPRIAÇÃO —— */
+#             areaLabel.innerHTML = "<strong>Área a ser desapropriada (m²)</strong> - Informe apenas a área que será desapropriada.";
+#             areaLabel.style.color = "#b20000";          // vermelho-escuro
+#             if (areaInput) {
+#                 areaInput.style.borderColor = "#b20000";
+#                 areaInput.style.fontWeight  = "bold";
+#             }
     
-        } else if (valor.includes("servid") || valor.includes("regulariza")) {
-            /* —— SERVIDÃO ou REGULARIZAÇÃO —— */
-            areaLabel.innerHTML = "<strong>Área total de Interesse (m²)</strong> - Informe apenas a área total atingida";
-            areaLabel.style.color = "#b20000";          // vermelho-escuro
-            if (areaInput) {
-                areaInput.style.borderColor = "#b20000";
-                areaInput.style.fontWeight  = "bold";
-            }
+#         } else if (valor.includes("servid") || valor.includes("regulariza")) {
+#             /* —— SERVIDÃO ou REGULARIZAÇÃO —— */
+#             areaLabel.innerHTML = "<strong>Área total de Interesse (m²)</strong> - Informe apenas a área total atingida";
+#             areaLabel.style.color = "#b20000";          // vermelho-escuro
+#             if (areaInput) {
+#                 areaInput.style.borderColor = "#b20000";
+#                 areaInput.style.fontWeight  = "bold";
+#             }
     
-        } else {
-            /* —— Demais finalidades —— */
-            areaLabel.innerHTML = "Insira a área total do imóvel a ser avaliado (m²) - Será validada com a planilha";
-            areaLabel.style.color = "";                 // cor padrão
-            if (areaInput) {
-                areaInput.style.borderColor = "";
-                areaInput.style.fontWeight  = "normal";
-            }
-        }
-    }
+#         } else {
+#             /* —— Demais finalidades —— */
+#             areaLabel.innerHTML = "Insira a área total do imóvel a ser avaliado (m²) - Será validada com a planilha";
+#             areaLabel.style.color = "";                 // cor padrão
+#             if (areaInput) {
+#                 areaInput.style.borderColor = "";
+#                 areaInput.style.fontWeight  = "normal";
+#             }
+#         }
+#     }
 
 
 
-        /* ===========================================================
-           Função • exibirRestricoesSeNecessario()
-           -----------------------------------------------------------
-           Exibe o quadro “Múltiplas Restrições” e aplica destaque
-           quando a finalidade for: Desapropriação, Servidão **ou**
-           Regularização do Imóvel.
-           =========================================================== */
-        function exibirRestricoesSeNecessario() {
+#         /* ===========================================================
+#            Função • exibirRestricoesSeNecessario()
+#            -----------------------------------------------------------
+#            Exibe o quadro “Múltiplas Restrições” e aplica destaque
+#            quando a finalidade for: Desapropriação, Servidão **ou**
+#            Regularização do Imóvel.
+#            =========================================================== */
+#         function exibirRestricoesSeNecessario() {
         
-            /* ---------- referências principais ---------- */
-            const select              = document.getElementById("finalidadeSelect");
-            const valor               = (select.value || "").trim().toLowerCase();
-            const restricoesContainer = document.getElementById("restricoesSectionContainer");
+#             /* ---------- referências principais ---------- */
+#             const select              = document.getElementById("finalidadeSelect");
+#             const valor               = (select.value || "").trim().toLowerCase();
+#             const restricoesContainer = document.getElementById("restricoesSectionContainer");
         
-            /* ---------- aparência base do container ---------- */
-            restricoesContainer.style.backgroundColor = "#ffe8cc";   // laranja‐claro
-            restricoesContainer.style.padding        = "15px";
-            restricoesContainer.style.borderRadius   = "8px";
-            restricoesContainer.style.marginTop      = "20px";
-            restricoesContainer.style.marginBottom   = "20px";
-            restricoesContainer.style.border         = "2px solid #ff8c00";
+#             /* ---------- aparência base do container ---------- */
+#             restricoesContainer.style.backgroundColor = "#ffe8cc";   // laranja‐claro
+#             restricoesContainer.style.padding        = "15px";
+#             restricoesContainer.style.borderRadius   = "8px";
+#             restricoesContainer.style.marginTop      = "20px";
+#             restricoesContainer.style.marginBottom   = "20px";
+#             restricoesContainer.style.border         = "2px solid #ff8c00";
         
-            /* ---------- decidir se deve mostrar ---------- */
-            const mostrar = valor.includes("desapropria") ||
-                            valor.includes("servid")      ||
-                            valor.includes("regulariza");
+#             /* ---------- decidir se deve mostrar ---------- */
+#             const mostrar = valor.includes("desapropria") ||
+#                             valor.includes("servid")      ||
+#                             valor.includes("regulariza");
         
-            if (mostrar) {
-                /* ======== MOSTRAR QUADRO ======== */
-                restricoesContainer.style.display = "block";
+#             if (mostrar) {
+#                 /* ======== MOSTRAR QUADRO ======== */
+#                 restricoesContainer.style.display = "block";
         
-                /* ----- aviso permanente (cria só uma vez) ----- */
-                if (!document.getElementById("avisoAreaRestricoes")) {
-                    const aviso = document.createElement("div");
-                    aviso.id   = "avisoAreaRestricoes";
-                    aviso.innerHTML =
-                      "<strong>ATENÇÃO:</strong> As restrições indicadas abaixo incidem exclusivamente sobre a área de interesse (área desapropriada, de servidão ou a ser regularizada) e não sobre a área total documentada da propriedade.";
-                    Object.assign(aviso.style, {
-                        color:"#b20000",
-                        backgroundColor:"#ffe6e6",
-                        padding:"10px",
-                        marginBottom:"15px",
-                        border:"1px solid #b20000",
-                        borderRadius:"5px",
-                        fontSize:"14px",
-                        fontWeight:"bold"
-                    });
-                    restricoesContainer.prepend(aviso);
-                }
+#                 /* ----- aviso permanente (cria só uma vez) ----- */
+#                 if (!document.getElementById("avisoAreaRestricoes")) {
+#                     const aviso = document.createElement("div");
+#                     aviso.id   = "avisoAreaRestricoes";
+#                     aviso.innerHTML =
+#                       "<strong>ATENÇÃO:</strong> As restrições indicadas abaixo incidem exclusivamente sobre a área de interesse (área desapropriada, de servidão ou a ser regularizada) e não sobre a área total documentada da propriedade.";
+#                     Object.assign(aviso.style, {
+#                         color:"#b20000",
+#                         backgroundColor:"#ffe6e6",
+#                         padding:"10px",
+#                         marginBottom:"15px",
+#                         border:"1px solid #b20000",
+#                         borderRadius:"5px",
+#                         fontSize:"14px",
+#                         fontWeight:"bold"
+#                     });
+#                     restricoesContainer.prepend(aviso);
+#                 }
         
-                /* ---------- função de destaque verde ---------- */
-                const aplicarHighlight = campo => {
-                    const atualiza = () =>
-                      campo.style.backgroundColor = campo.value.trim() ? "#ccffcc" : "#f0f0f0";
-                    atualiza();
-                    campo.addEventListener("input", atualiza);
-                };
+#                 /* ---------- função de destaque verde ---------- */
+#                 const aplicarHighlight = campo => {
+#                     const atualiza = () =>
+#                       campo.style.backgroundColor = campo.value.trim() ? "#ccffcc" : "#f0f0f0";
+#                     atualiza();
+#                     campo.addEventListener("input", atualiza);
+#                 };
         
-                /* destaca inputs já existentes */
-                restricoesContainer
-                    .querySelectorAll(".input-change")
-                    .forEach(aplicarHighlight);
+#                 /* destaca inputs já existentes */
+#                 restricoesContainer
+#                     .querySelectorAll(".input-change")
+#                     .forEach(aplicarHighlight);
         
-                /* observa novos inputs adicionados dinamicamente */
-                new MutationObserver(muts => {
-                    muts.forEach(m => {
-                        m.addedNodes.forEach(node => {
-                            if (node.nodeType === 1) { // elemento
-                                if (node.classList.contains("input-change")) {
-                                    aplicarHighlight(node);
-                                }
-                                node
-                                  .querySelectorAll?.(".input-change")
-                                  .forEach(aplicarHighlight);
-                            }
-                        });
-                    });
-                }).observe(restricoesContainer, { childList:true, subtree:true });
+#                 /* observa novos inputs adicionados dinamicamente */
+#                 new MutationObserver(muts => {
+#                     muts.forEach(m => {
+#                         m.addedNodes.forEach(node => {
+#                             if (node.nodeType === 1) { // elemento
+#                                 if (node.classList.contains("input-change")) {
+#                                     aplicarHighlight(node);
+#                                 }
+#                                 node
+#                                   .querySelectorAll?.(".input-change")
+#                                   .forEach(aplicarHighlight);
+#                             }
+#                         });
+#                     });
+#                 }).observe(restricoesContainer, { childList:true, subtree:true });
         
-            } else {
-                /* ======== OCULTAR QUADRO ======== */
-                restricoesContainer.style.display = "none";
-            }
-        }
+#             } else {
+#                 /* ======== OCULTAR QUADRO ======== */
+#                 restricoesContainer.style.display = "none";
+#             }
+#         }
             
     
 
-      function toggleTelefoneCampo() {
-          const telSelect = document.getElementById("incluirTelSelect");
-          const telCampo = document.getElementById("telefoneCampo");
-          if (telSelect.value === "sim") {
-              telCampo.style.display = "block";
-          } else {
-              telCampo.style.display = "none";
-          }
-      }
+#       function toggleTelefoneCampo() {
+#           const telSelect = document.getElementById("incluirTelSelect");
+#           const telCampo = document.getElementById("telefoneCampo");
+#           if (telSelect.value === "sim") {
+#               telCampo.style.display = "block";
+#           } else {
+#               telCampo.style.display = "none";
+#           }
+#       }
 
-      function toggleEmailCampo() {
-          const mailSelect = document.getElementById("incluirMailSelect");
-          const mailCampo = document.getElementById("emailCampo");
-          if (mailSelect.value === "sim") {
-              mailCampo.style.display = "block";
-          } else {
-              mailCampo.style.display = "none";
-          }
-      }
+#       function toggleEmailCampo() {
+#           const mailSelect = document.getElementById("incluirMailSelect");
+#           const mailCampo = document.getElementById("emailCampo");
+#           if (mailSelect.value === "sim") {
+#               mailCampo.style.display = "block";
+#           } else {
+#               mailCampo.style.display = "none";
+#           }
+#       }
 
-      let restricaoCount = 0;
-      function addRestricao() {
-        restricaoCount++;
-        const container = document.getElementById('restricoesSection');
-        const divR = document.createElement('div');
-        divR.className = "restricoes-container";
-        divR.innerHTML = `
-          <label>Tipo de restrição (ex: APP, Servidão, Outro) [${restricaoCount}]:</label>
-          <input type="text" name="tipo_restricao_${restricaoCount}" class="input-change" placeholder="Ex: APP ou Servidão">
+#       let restricaoCount = 0;
+#       function addRestricao() {
+#         restricaoCount++;
+#         const container = document.getElementById('restricoesSection');
+#         const divR = document.createElement('div');
+#         divR.className = "restricoes-container";
+#         divR.innerHTML = `
+#           <label>Tipo de restrição (ex: APP, Servidão, Outro) [${restricaoCount}]:</label>
+#           <input type="text" name="tipo_restricao_${restricaoCount}" class="input-change" placeholder="Ex: APP ou Servidão">
 
-          <label>Área (m²) com essa restrição [${restricaoCount}]:</label>
-          <input type="text" name="area_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 500.0">
+#           <label>Área (m²) com essa restrição [${restricaoCount}]:</label>
+#           <input type="text" name="area_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 500.0">
 
-          <label>Porcentagem de depreciação (ex: 66) [${restricaoCount}]:</label>
-          <input type="text" name="depreciacao_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 66">
-        `;
-        container.appendChild(divR);
-      }
+#           <label>Porcentagem de depreciação (ex: 66) [${restricaoCount}]:</label>
+#           <input type="text" name="depreciacao_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 66">
+#         `;
+#         container.appendChild(divR);
+#       }
 
-      // Faz todos os campos input-change (incluindo select) ficarem verdes se preenchidos
-      document.addEventListener('DOMContentLoaded', function() {
-          atualizarAreaLabel();
-          exibirRestricoesSeNecessario();
+#       // Faz todos os campos input-change (incluindo select) ficarem verdes se preenchidos
+#       document.addEventListener('DOMContentLoaded', function() {
+#           atualizarAreaLabel();
+#           exibirRestricoesSeNecessario();
 
-          const allFields = document.querySelectorAll('.input-change');
+#           const allFields = document.querySelectorAll('.input-change');
 
-          function checkFill(elem) {
-              // Se for SELECT e o value != "", fica verde
-              if (elem.tagName === 'SELECT') {
-                  if (elem.value.trim() !== '') {
-                      elem.style.backgroundColor = '#ccffcc';
-                  } else {
-                      elem.style.backgroundColor = '#f0f0f0';
-                  }
-              } else {
-                  // Para inputs text/file
-                  if (elem.value.trim() !== '') {
-                      elem.style.backgroundColor = '#ccffcc';
-                  } else {
-                      elem.style.backgroundColor = '#f0f0f0';
-                  }
-              }
-          }
+#           function checkFill(elem) {
+#               // Se for SELECT e o value != "", fica verde
+#               if (elem.tagName === 'SELECT') {
+#                   if (elem.value.trim() !== '') {
+#                       elem.style.backgroundColor = '#ccffcc';
+#                   } else {
+#                       elem.style.backgroundColor = '#f0f0f0';
+#                   }
+#               } else {
+#                   // Para inputs text/file
+#                   if (elem.value.trim() !== '') {
+#                       elem.style.backgroundColor = '#ccffcc';
+#                   } else {
+#                       elem.style.backgroundColor = '#f0f0f0';
+#                   }
+#               }
+#           }
 
-          // Verifica periodicamente (para capturar autofill)
-          setInterval(() => {
-              allFields.forEach(f => checkFill(f));
-          }, 1000);
+#           // Verifica periodicamente (para capturar autofill)
+#           setInterval(() => {
+#               allFields.forEach(f => checkFill(f));
+#           }, 1000);
 
-          allFields.forEach(field => {
-              // Se já vier preenchido
-              checkFill(field);
+#           allFields.forEach(field => {
+#               // Se já vier preenchido
+#               checkFill(field);
 
-              // Monitorar eventos
-              field.addEventListener('input',   () => checkFill(field));
-              field.addEventListener('change',  () => checkFill(field));
-              field.addEventListener('focusout',() => checkFill(field));
-          });
+#               // Monitorar eventos
+#               field.addEventListener('input',   () => checkFill(field));
+#               field.addEventListener('change',  () => checkFill(field));
+#               field.addEventListener('focusout',() => checkFill(field));
+#           });
 
-      });
-    </script>
+#       });
+#     </script>
 
-</body>
-</html>
-"""
+# </body>
+# </html>
+# """
 
 
 # ----------------------------------------------------------------------------
@@ -7973,25 +7973,25 @@ def gerar_relatorio_avaliacao_com_template(
     except:
         pass
 
-###############################################################################
-# APLICAÇÃO FLASK COM TODOS OS CAMPOS (INPUTS E DROPDOWNS) FICANDO COM FUNDO
-# VERDE, INDEPENDENTE SE O PREENCHIMENTO OCORREU POR DIGITAÇÃO MANUAL
-# OU AUTOCOMPLETE (INCLUSIVE MEMÓRIA DO NAVEGADOR).
-#
-# OBS: Para os campos <select>, também aplicamos a mesma lógica. 
-#      Se o usuário escolher uma opção diferente de "", o fundo fica verde.
-#      O "setInterval" verifica periodicamente se o valor mudou por autofill.
-###############################################################################
+# ###############################################################################
+# # APLICAÇÃO FLASK COM TODOS OS CAMPOS (INPUTS E DROPDOWNS) FICANDO COM FUNDO
+# # VERDE, INDEPENDENTE SE O PREENCHIMENTO OCORREU POR DIGITAÇÃO MANUAL
+# # OU AUTOCOMPLETE (INCLUSIVE MEMÓRIA DO NAVEGADOR).
+# #
+# # OBS: Para os campos <select>, também aplicamos a mesma lógica. 
+# #      Se o usuário escolher uma opção diferente de "", o fundo fica verde.
+# #      O "setInterval" verifica periodicamente se o valor mudou por autofill.
+# ###############################################################################
 
-from flask import (
-    Flask, request, render_template_string, redirect, url_for,
-    send_from_directory
-)
-import os
-from tqdm import tqdm
+# from flask import (
+#     Flask, request, render_template_string, redirect, url_for,
+#     send_from_directory
+# )
+# import os
+# from tqdm import tqdm
 
-app = Flask(__name__)
-app.secret_key = "segredo-flask-123"
+# app = Flask(__name__)
+# app.secret_key = "segredo-flask-123"
 
 
 ###############################################################################
@@ -8195,764 +8195,764 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 
     return lista_valores_unitarios
 
-# ----------------------------------------------------------------------------
-# TEMPLATE HTML COM FUNDO VERDE INCLUSIVE PARA DROPDOWNS
-# ----------------------------------------------------------------------------
-HTML_FORM_TEMPLATE = r"""
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="utf-8">
-    <title>Formulário de Avaliação PHOENIX APPRAISAL</title>
-    <style>
-        body {
-            margin: 40px;
-            background: #000033; 
-            font-family: Arial, sans-serif;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        h1 {
-            margin-bottom: 20px;
-            text-align: center;
-            color: #ffffff;
-        }
-        form {
-            display: block;
-            width: 80%;
-            max-width: 640px;
-            margin: 0 auto; 
-            background: #ffffff; 
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0px 0px 20px rgba(0,0,0,0.3);
-            text-align: left;
-            color: #000;
-        }
-        .dark-mode form {
-            background: #2f2f2f !important;
-            color: #ffffff !important;
-        }
-        .dark-mode form label {
-            color: #ffffff !important;
-        }
-        .dark-mode .input-change::placeholder {
-            color: #000000 !important;
-        }
-        .toggle-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 14px 24px;
-            border-radius: 8px;
-            font-weight: bold;
-            border: none;
-            cursor: pointer;
-            color: #ffffff;
-            background-color: #1e90ff;
-            font-size: 16px;
-            box-shadow: 0px 0px 8px rgba(0,0,0,0.3);
-        }
-        .toggle-btn:hover {
-            filter: brightness(1.1);
-        }
-        label {
-            display: block;
-            font-weight: bold;
-            margin-top: 15px;
-            margin-bottom: 5px;
-        }
-        .input-change {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px;
-            margin: auto;
-            font-size: 14px;
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        input[type="file"].file-green {
-            width: 100%;
-        }
-        input[type="file"].file-green::-webkit-file-upload-button {
-            background-color: #006400;
-            color: #ffffff;
-            padding: 10px 20px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        input[type="file"].file-green::file-selector-button {
-            background-color: #006400;
-            color: #ffffff;
-            padding: 10px 20px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .btn {
-            margin-top: 20px;
-            padding: 15px 30px;
-            font-size: 16px;
-            font-weight: bold;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            color: #fff;
-            background-color: #006400; 
-        }
-        .btn:hover {
-            filter: brightness(1.2);
-        }
-        .center-btn {
-            text-align: center;
-        }
-        .restricoes-container {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin-top: 15px;
-            border-radius: 5px;
-            background: #f0f0f0;
-            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        hr {
-            margin: 20px 0;
-        }
-        .subtitle {
-            margin-top: 30px;
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        .notice {
-            font-size: 0.9em;
-            color: #555;
-        }
-        .small-explanation {
-            font-size: 13px;
-            line-height: 1.3em;
-            text-align: justify;
-            text-justify: inter-word;
-            margin-bottom: 5px;
-            width: 100%;
-        }
+# # ----------------------------------------------------------------------------
+# # TEMPLATE HTML COM FUNDO VERDE INCLUSIVE PARA DROPDOWNS
+# # ----------------------------------------------------------------------------
+# HTML_FORM_TEMPLATE = r"""
+# <!DOCTYPE html>
+# <html lang="pt-BR">
+# <head>
+#     <meta charset="utf-8">
+#     <title>Formulário de Avaliação PHOENIX APPRAISAL</title>
+#     <style>
+#         body {
+#             margin: 40px;
+#             background: #000033; 
+#             font-family: Arial, sans-serif;
+#             text-align: center;
+#             transition: all 0.3s ease;
+#         }
+#         h1 {
+#             margin-bottom: 20px;
+#             text-align: center;
+#             color: #ffffff;
+#         }
+#         form {
+#             display: block;
+#             width: 80%;
+#             max-width: 640px;
+#             margin: 0 auto; 
+#             background: #ffffff; 
+#             padding: 30px;
+#             border-radius: 8px;
+#             box-shadow: 0px 0px 20px rgba(0,0,0,0.3);
+#             text-align: left;
+#             color: #000;
+#         }
+#         .dark-mode form {
+#             background: #2f2f2f !important;
+#             color: #ffffff !important;
+#         }
+#         .dark-mode form label {
+#             color: #ffffff !important;
+#         }
+#         .dark-mode .input-change::placeholder {
+#             color: #000000 !important;
+#         }
+#         .toggle-btn {
+#             position: fixed;
+#             top: 20px;
+#             right: 20px;
+#             padding: 14px 24px;
+#             border-radius: 8px;
+#             font-weight: bold;
+#             border: none;
+#             cursor: pointer;
+#             color: #ffffff;
+#             background-color: #1e90ff;
+#             font-size: 16px;
+#             box-shadow: 0px 0px 8px rgba(0,0,0,0.3);
+#         }
+#         .toggle-btn:hover {
+#             filter: brightness(1.1);
+#         }
+#         label {
+#             display: block;
+#             font-weight: bold;
+#             margin-top: 15px;
+#             margin-bottom: 5px;
+#         }
+#         .input-change {
+#             width: 100%;
+#             box-sizing: border-box;
+#             padding: 10px;
+#             margin: auto;
+#             font-size: 14px;
+#             background: #f0f0f0;
+#             border: 1px solid #ccc;
+#             border-radius: 3px;
+#             box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
+#         }
+#         input[type="file"].file-green {
+#             width: 100%;
+#         }
+#         input[type="file"].file-green::-webkit-file-upload-button {
+#             background-color: #006400;
+#             color: #ffffff;
+#             padding: 10px 20px;
+#             border: none;
+#             font-weight: bold;
+#             cursor: pointer;
+#             border-radius: 5px;
+#         }
+#         input[type="file"].file-green::file-selector-button {
+#             background-color: #006400;
+#             color: #ffffff;
+#             padding: 10px 20px;
+#             border: none;
+#             font-weight: bold;
+#             cursor: pointer;
+#             border-radius: 5px;
+#         }
+#         .btn {
+#             margin-top: 20px;
+#             padding: 15px 30px;
+#             font-size: 16px;
+#             font-weight: bold;
+#             border: none;
+#             border-radius: 5px;
+#             cursor: pointer;
+#             color: #fff;
+#             background-color: #006400; 
+#         }
+#         .btn:hover {
+#             filter: brightness(1.2);
+#         }
+#         .center-btn {
+#             text-align: center;
+#         }
+#         .restricoes-container {
+#             border: 1px solid #ccc;
+#             padding: 15px;
+#             margin-top: 15px;
+#             border-radius: 5px;
+#             background: #f0f0f0;
+#             box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
+#         }
+#         hr {
+#             margin: 20px 0;
+#         }
+#         .subtitle {
+#             margin-top: 30px;
+#             font-weight: bold;
+#             font-size: 1.1em;
+#         }
+#         .notice {
+#             font-size: 0.9em;
+#             color: #555;
+#         }
+#         .small-explanation {
+#             font-size: 13px;
+#             line-height: 1.3em;
+#             text-align: justify;
+#             text-justify: inter-word;
+#             margin-bottom: 5px;
+#             width: 100%;
+#         }
 
-        /* Forçar cor verde se autofill em inputs do Chrome */
-        input:-webkit-autofill {
-            background-color: #ccffcc !important;
-            transition: background-color 5000s ease-in-out 0s;
-        }
-        input:-webkit-autofill:focus {
-            background-color: #ccffcc !important;
-        }
-    </style>
-</head>
-<body>
+#         /* Forçar cor verde se autofill em inputs do Chrome */
+#         input:-webkit-autofill {
+#             background-color: #ccffcc !important;
+#             transition: background-color 5000s ease-in-out 0s;
+#         }
+#         input:-webkit-autofill:focus {
+#             background-color: #ccffcc !important;
+#         }
+#     </style>
+# </head>
+# <body>
 
-    <button class="toggle-btn" onclick="toggleDarkMode()">
-        Alternar Modo
-    </button>
+#     <button class="toggle-btn" onclick="toggleDarkMode()">
+#         Alternar Modo
+#     </button>
 
-    <h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
+#     <h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
 
-    <form method="post" enctype="multipart/form-data">
+#     <form method="post" enctype="multipart/form-data">
 
-        <label>INSIRA AQUI SUA PLANILHA DE AMOSTRAS (Excel):</label>
-        <input type="file" name="planilha_excel" class="input-change file-green" required>
+#         <label>INSIRA AQUI SUA PLANILHA DE AMOSTRAS (Excel):</label>
+#         <input type="file" name="planilha_excel" class="input-change file-green" required>
 
-        <label>Informe o nome completo do proprietário do imóvel:</label>
-        <input type="text" name="nome_proprietario" class="input-change" placeholder="Ex: José da Silva" required>
+#         <label>Informe o nome completo do proprietário do imóvel:</label>
+#         <input type="text" name="nome_proprietario" class="input-change" placeholder="Ex: José da Silva" required>
 
-        <label>Existem outros proprietários? (Sim ou Não):</label>
-        <select name="outros_proprietarios" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
+#         <label>Existem outros proprietários? (Sim ou Não):</label>
+#         <select name="outros_proprietarios" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
 
-        <label>Deseja incluir telefone do proprietário? (Sim ou Não):</label>
-        <select name="incluir_tel" id="incluirTelSelect" class="input-change" onchange="toggleTelefoneCampo()">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <div id="telefoneCampo" style="display:none;">
-          <label>Digite o telefone do proprietário:</label>
-          <input type="text" name="telefone_proprietario" class="input-change" placeholder="Ex: (47) 99999-8888">
-        </div>
+#         <label>Deseja incluir telefone do proprietário? (Sim ou Não):</label>
+#         <select name="incluir_tel" id="incluirTelSelect" class="input-change" onchange="toggleTelefoneCampo()">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <div id="telefoneCampo" style="display:none;">
+#           <label>Digite o telefone do proprietário:</label>
+#           <input type="text" name="telefone_proprietario" class="input-change" placeholder="Ex: (47) 99999-8888">
+#         </div>
 
-        <label>Deseja incluir email do proprietário? (Sim ou Não):</label>
-        <select name="incluir_mail" id="incluirMailSelect" class="input-change" onchange="toggleEmailCampo()">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <div id="emailCampo" style="display:none;">
-          <label>Digite o email do proprietário:</label>
-          <input type="text" name="email_proprietario" class="input-change" placeholder="Ex: exemplo@dominio.com">
-        </div>
+#         <label>Deseja incluir email do proprietário? (Sim ou Não):</label>
+#         <select name="incluir_mail" id="incluirMailSelect" class="input-change" onchange="toggleEmailCampo()">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <div id="emailCampo" style="display:none;">
+#           <label>Digite o email do proprietário:</label>
+#           <input type="text" name="email_proprietario" class="input-change" placeholder="Ex: exemplo@dominio.com">
+#         </div>
 
-        <label>Informe o nome do solicitante do laudo:</label>
-        <input type="text" name="nome_solicitante" class="input-change" placeholder="Ex: Prefeitura Municipal de Joinville-SC">
+#         <label>Informe o nome do solicitante do laudo:</label>
+#         <input type="text" name="nome_solicitante" class="input-change" placeholder="Ex: Prefeitura Municipal de Joinville-SC">
 
-        <label>Informe o nome do avaliador responsável:</label>
-        <input type="text" name="nome_avaliador" class="input-change" placeholder="Ex: Eng. Civil Paulo Roberto">
+#         <label>Informe o nome do avaliador responsável:</label>
+#         <input type="text" name="nome_avaliador" class="input-change" placeholder="Ex: Eng. Civil Paulo Roberto">
 
-        <label>Informe o registro profissional do avaliador:</label>
-        <input type="text" name="registro_avaliador" class="input-change" placeholder="Ex: CREA SP 45.678/D">
+#         <label>Informe o registro profissional do avaliador:</label>
+#         <input type="text" name="registro_avaliador" class="input-change" placeholder="Ex: CREA SP 45.678/D">
 
-        <label>Qual tipo de imóvel está sendo avaliado?</label>
-        <select name="tipo_imovel_escolhido" class="input-change">
-            <option value="" disabled selected>Selecione</option>
-            <option value="Apartamento residencial">Apartamento residencial</option>
-            <option value="Casa residencial">Casa residencial</option>
-            <option value="Terreno urbano">Terreno urbano</option>
-            <option value="Gleba urbana">Gleba urbana</option>
-            <option value="Terreno rural">Terreno rural</option>
-            <option value="Gleba rural">Gleba rural</option>
-        </select>
+#         <label>Qual tipo de imóvel está sendo avaliado?</label>
+#         <select name="tipo_imovel_escolhido" class="input-change">
+#             <option value="" disabled selected>Selecione</option>
+#             <option value="Apartamento residencial">Apartamento residencial</option>
+#             <option value="Casa residencial">Casa residencial</option>
+#             <option value="Terreno urbano">Terreno urbano</option>
+#             <option value="Gleba urbana">Gleba urbana</option>
+#             <option value="Terreno rural">Terreno rural</option>
+#             <option value="Gleba rural">Gleba rural</option>
+#         </select>
 
-        <label>Qual a finalidade do laudo?</label>
-        <select name="finalidade_lido" id="finalidadeSelect" class="input-change"
-                onchange="atualizarAreaLabel(); exibirRestricoesSeNecessario(); exibirCampoOutraFinalidade();">
-            <option value="" disabled selected>Selecione</option>
-            <option value="Desapropriação">Desapropriação</option>
-            <option value="Garantia bancária">Garantia bancária</option>
-            <option value="Inventário e partilha">Inventário e partilha</option>
-            <option value="Obtenção do preço de mercado">Obtenção do preço de mercado</option>
-            <option value="Locação">Locação</option>
-            <option value="Regularização fiscal">Regularização fiscal</option>
-            <option value="Seguros patrimoniais">Seguros patrimoniais</option>
-            <option value="Servidão administrativa">Servidão administrativa</option>
-            <option value="Outra">Outra</option>
-        </select>
-        <div id="outraFinalidadeCampo" style="display:none;">
-          <label>Descreva a finalidade:</label>
-          <input type="text" name="finalidade_descricao" class="input-change" placeholder="Ex: Avaliação judicial específica">
-        </div>
+#         <label>Qual a finalidade do laudo?</label>
+#         <select name="finalidade_lido" id="finalidadeSelect" class="input-change"
+#                 onchange="atualizarAreaLabel(); exibirRestricoesSeNecessario(); exibirCampoOutraFinalidade();">
+#             <option value="" disabled selected>Selecione</option>
+#             <option value="Desapropriação">Desapropriação</option>
+#             <option value="Garantia bancária">Garantia bancária</option>
+#             <option value="Inventário e partilha">Inventário e partilha</option>
+#             <option value="Obtenção do preço de mercado">Obtenção do preço de mercado</option>
+#             <option value="Locação">Locação</option>
+#             <option value="Regularização fiscal">Regularização fiscal</option>
+#             <option value="Seguros patrimoniais">Seguros patrimoniais</option>
+#             <option value="Servidão administrativa">Servidão administrativa</option>
+#             <option value="Outra">Outra</option>
+#         </select>
+#         <div id="outraFinalidadeCampo" style="display:none;">
+#           <label>Descreva a finalidade:</label>
+#           <input type="text" name="finalidade_descricao" class="input-change" placeholder="Ex: Avaliação judicial específica">
+#         </div>
 
 
-        <label id="areaLabel">Insira a área total do imóvel a ser avaliado (m²)</label>
-        <div id="areaInfoBox" style="display:none; margin:5px 0 15px 0; padding:10px; border:1px solid #b20000; border-radius:5px; background-color:#ffe6e6; color:#b20000; font-size:13px;">
-          <strong>IMPORTANTE:</strong> Para desapropriação/servidão, a área que você digitar aqui será utilizada para todos os cálculos, independente da área na planilha.
-        </div>
+#         <label id="areaLabel">Insira a área total do imóvel a ser avaliado (m²)</label>
+#         <div id="areaInfoBox" style="display:none; margin:5px 0 15px 0; padding:10px; border:1px solid #b20000; border-radius:5px; background-color:#ffe6e6; color:#b20000; font-size:13px;">
+#           <strong>IMPORTANTE:</strong> Para desapropriação/servidão, a área que você digitar aqui será utilizada para todos os cálculos, independente da área na planilha.
+#         </div>
         
-        <input type="text" name="area_parcial" class="input-change" placeholder="Ex: 29.567,89">
+#         <input type="text" name="area_parcial" class="input-change" placeholder="Ex: 29.567,89">
 
-        <!-- RESTRIÇÕES -->
-        <div id="restricoesSectionContainer" style="display:none;">
-          <hr>
-          <div class="subtitle">Múltiplas Restrições</div>
-          <p class="notice">Insira todas as restrições desejadas. Ao clicar em "Adicionar Restrição", outra aparecerá.</p>
-          <div id="restricoesSection"></div>
-          <button type="button" class="btn" onclick="addRestricao()">Adicionar Restrição</button>
-          <hr>
-        </div>
+#         <!-- RESTRIÇÕES -->
+#         <div id="restricoesSectionContainer" style="display:none;">
+#           <hr>
+#           <div class="subtitle">Múltiplas Restrições</div>
+#           <p class="notice">Insira todas as restrições desejadas. Ao clicar em "Adicionar Restrição", outra aparecerá.</p>
+#           <div id="restricoesSection"></div>
+#           <button type="button" class="btn" onclick="addRestricao()">Adicionar Restrição</button>
+#           <hr>
+#         </div>
 
-        <div class="subtitle">FATORES DE HOMOGENEIZAÇÃO DAS AMOSTRAS</div>
+#         <div class="subtitle">FATORES DE HOMOGENEIZAÇÃO DAS AMOSTRAS</div>
 
-        <label>Fator Área</label>
-        <p class="small-explanation">
-          Tem como objetivo adequar o valor da amostra à área do avaliando, aplicando ((Área da amostra /
-          Área do avaliando)^(0,25)), atenuando grandes distorções (Abunahman, Ed. Pini).
-        </p>
-        <label>Usar fator Área? (Sim ou Não)</label>
-        <select name="usar_fator_area" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Área</label>
+#         <p class="small-explanation">
+#           Tem como objetivo adequar o valor da amostra à área do avaliando, aplicando ((Área da amostra /
+#           Área do avaliando)^(0,25)), atenuando grandes distorções (Abunahman, Ed. Pini).
+#         </p>
+#         <label>Usar fator Área? (Sim ou Não)</label>
+#         <select name="usar_fator_area" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Oferta</label>
-        <p class="small-explanation">
-          Ajusta os valores para 0,90 se há indicação clara de oferta abundante. Caso contrário, 1,00. Este
-          fator previne distorções em cenários com alto estoque de imóveis.
-        </p>
-        <label>Usar fator Oferta? (Sim ou Não)</label>
-        <select name="usar_fator_oferta" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Oferta</label>
+#         <p class="small-explanation">
+#           Ajusta os valores para 0,90 se há indicação clara de oferta abundante. Caso contrário, 1,00. Este
+#           fator previne distorções em cenários com alto estoque de imóveis.
+#         </p>
+#         <label>Usar fator Oferta? (Sim ou Não)</label>
+#         <select name="usar_fator_oferta" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Aproveitamento</label>
-        <p class="small-explanation">
-          Se urbano, adota-se 1,00; se rural, 0,80. Metodologia adaptada de João Ruy Canteiro (Ed. Pini),
-          considerando o potencial construtivo do imóvel.
-        </p>
-        <label>Usar fator Aproveitamento? (Sim ou Não)</label>
-        <select name="usar_fator_aproveitamento" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Aproveitamento</label>
+#         <p class="small-explanation">
+#           Se urbano, adota-se 1,00; se rural, 0,80. Metodologia adaptada de João Ruy Canteiro (Ed. Pini),
+#           considerando o potencial construtivo do imóvel.
+#         </p>
+#         <label>Usar fator Aproveitamento? (Sim ou Não)</label>
+#         <select name="usar_fator_aproveitamento" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Localização</label>
-        <p class="small-explanation">
-          Se amostras e avaliando estão na mesma região (~1 km), fator=1,00; caso contrário, utiliza-se
-          fórmula adaptada de Martins & Martins (2014, p.341) baseada na distância.
-        </p>
-        <label>O imóvel avaliando está na mesma região (~1km) das amostras? (Sim ou Não)</label>
-        <select name="localizacao_mesma_regiao" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Localização</label>
+#         <p class="small-explanation">
+#           Se amostras e avaliando estão na mesma região (~1 km), fator=1,00; caso contrário, utiliza-se
+#           fórmula adaptada de Martins & Martins (2014, p.341) baseada na distância.
+#         </p>
+#         <label>O imóvel avaliando está na mesma região (~1km) das amostras? (Sim ou Não)</label>
+#         <select name="localizacao_mesma_regiao" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Topografia</label>
-        <p class="small-explanation">
-          Se a topografia for boa, emprega-se 1,10; caso contrário, 1,00. Adaptação de João R. Canteiro
-          (Ed. Pini), refletindo o relevo do terreno.
-        </p>
-        <label>Usar fator Topografia? (Sim ou Não)</label>
-        <select name="usar_fator_topografia" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Topografia</label>
+#         <p class="small-explanation">
+#           Se a topografia for boa, emprega-se 1,10; caso contrário, 1,00. Adaptação de João R. Canteiro
+#           (Ed. Pini), refletindo o relevo do terreno.
+#         </p>
+#         <label>Usar fator Topografia? (Sim ou Não)</label>
+#         <select name="usar_fator_topografia" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Pedologia</label>
-        <p class="small-explanation">
-          Caso o solo seja alagável, aplica-se 0,70 (depreciação de 30%). Se normal, 1,00. Critério baseado
-          em João R. Canteiro (Ed. Pini).
-        </p>
-        <label>Usar fator Pedologia? (Sim ou Não)</label>
-        <select name="usar_fator_pedologia" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Pedologia</label>
+#         <p class="small-explanation">
+#           Caso o solo seja alagável, aplica-se 0,70 (depreciação de 30%). Se normal, 1,00. Critério baseado
+#           em João R. Canteiro (Ed. Pini).
+#         </p>
+#         <label>Usar fator Pedologia? (Sim ou Não)</label>
+#         <select name="usar_fator_pedologia" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Pavimentação</label>
-        <p class="small-explanation">
-          Presença de pavimentação mantém fator 1,00; ausência reduz para 0,90. Segue o critério de
-          Mendes Sobrinho, indicando 10% de desvalorização.
-        </p>
-        <label>Usar fator Pavimentação? (Sim ou Não)</label>
-        <select name="usar_fator_pavimentacao" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Pavimentação</label>
+#         <p class="small-explanation">
+#           Presença de pavimentação mantém fator 1,00; ausência reduz para 0,90. Segue o critério de
+#           Mendes Sobrinho, indicando 10% de desvalorização.
+#         </p>
+#         <label>Usar fator Pavimentação? (Sim ou Não)</label>
+#         <select name="usar_fator_pavimentacao" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Esquina</label>
-        <p class="small-explanation">
-          Terrenos em esquina recebem fator 1,10; os demais, 1,00. Conforme Thofehrn (2008), há um
-          acréscimo limitado a 10% para compensar recuos.
-        </p>
-        <label>Usar fator Esquina? (Sim ou Não)</label>
-        <select name="usar_fator_esquina" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Esquina</label>
+#         <p class="small-explanation">
+#           Terrenos em esquina recebem fator 1,10; os demais, 1,00. Conforme Thofehrn (2008), há um
+#           acréscimo limitado a 10% para compensar recuos.
+#         </p>
+#         <label>Usar fator Esquina? (Sim ou Não)</label>
+#         <select name="usar_fator_esquina" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Fator Acessibilidade</label>
-        <p class="small-explanation">
-          Boa acessibilidade, fator 1,00; em caso de acesso difícil, 0,90. Adaptado do critério de Mendes
-          Sobrinho, demonstrando 10% de depreciação.
-        </p>
-        <label>Usar fator Acessibilidade? (Sim ou Não)</label>
-        <select name="usar_fator_acessibilidade" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-        <hr>
+#         <label>Fator Acessibilidade</label>
+#         <p class="small-explanation">
+#           Boa acessibilidade, fator 1,00; em caso de acesso difícil, 0,90. Adaptado do critério de Mendes
+#           Sobrinho, demonstrando 10% de depreciação.
+#         </p>
+#         <label>Usar fator Acessibilidade? (Sim ou Não)</label>
+#         <select name="usar_fator_acessibilidade" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="sim">Sim</option>
+#           <option value="nao">Não</option>
+#         </select>
+#         <hr>
 
-        <label>Número da matrícula (documentação do imóvel):</label>
-        <input type="text" name="num_doc" class="input-change" placeholder="Ex: 12.345">
+#         <label>Número da matrícula (documentação do imóvel):</label>
+#         <input type="text" name="num_doc" class="input-change" placeholder="Ex: 12.345">
 
-        <label>Nome do cartório:</label>
-        <input type="text" name="nome_cartorio" class="input-change" placeholder="Ex: Ofício de Registros Públicos">
+#         <label>Nome do cartório:</label>
+#         <input type="text" name="nome_cartorio" class="input-change" placeholder="Ex: Ofício de Registros Públicos">
 
-        <label>Nome da comarca:</label>
-        <input type="text" name="nome_comarca" class="input-change" placeholder="Ex: Joinville-SC">
+#         <label>Nome da comarca:</label>
+#         <input type="text" name="nome_comarca" class="input-change" placeholder="Ex: Joinville-SC">
 
-        <label>Endereço completo do imóvel:</label>
-        <input type="text" name="endereco_imovel" class="input-change"
-               placeholder="Ex: Rua Dr. Plácido Olimpio de Oliveira, 1277 - Anita Garibaldi - Joinville-SC">
+#         <label>Endereço completo do imóvel:</label>
+#         <input type="text" name="endereco_imovel" class="input-change"
+#                placeholder="Ex: Rua Dr. Plácido Olimpio de Oliveira, 1277 - Anita Garibaldi - Joinville-SC">
 
-        <hr>
-        <div class="subtitle">Diagnóstico de Mercado</div>
+#         <hr>
+#         <div class="subtitle">Diagnóstico de Mercado</div>
 
-        <label>Estrutura</label>
-        <p class="small-explanation">
-          Pode ser BOA (facilidade de encontrar imóveis similares na região) ou LIMITADA (dificuldade).
-        </p>
-        <select name="estrutura_escolha" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="BOA">BOA</option>
-          <option value="LIMITADA">LIMITADA</option>
-        </select>
-        <hr>
+#         <label>Estrutura</label>
+#         <p class="small-explanation">
+#           Pode ser BOA (facilidade de encontrar imóveis similares na região) ou LIMITADA (dificuldade).
+#         </p>
+#         <select name="estrutura_escolha" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="BOA">BOA</option>
+#           <option value="LIMITADA">LIMITADA</option>
+#         </select>
+#         <hr>
 
-        <label>Conduta</label>
-        <p class="small-explanation">
-          DESESTAGNADO (boa movimentação do mercado) ou ESTAGNADA (pouca movimentação).
-        </p>
-        <select name="conduta_escolha" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="DESESTAGNADO">DESESTAGNADO</option>
-          <option value="ESTAGNADA">ESTAGNADA</option>
-        </select>
-        <hr>
+#         <label>Conduta</label>
+#         <p class="small-explanation">
+#           DESESTAGNADO (boa movimentação do mercado) ou ESTAGNADA (pouca movimentação).
+#         </p>
+#         <select name="conduta_escolha" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="DESESTAGNADO">DESESTAGNADO</option>
+#           <option value="ESTAGNADA">ESTAGNADA</option>
+#         </select>
+#         <hr>
 
-        <label>Desempenho</label>
-        <p class="small-explanation">
-          ALTO (grande atratividade comercial), MÉDIO (atratividade moderada) ou BAIXO (baixa atratividade).
-        </p>
-        <select name="desempenho_escolha" class="input-change">
-          <option value="" disabled selected>Selecione</option>
-          <option value="ALTO">ALTO</option>
-          <option value="MÉDIO">MÉDIO</option>
-          <option value="BAIXO">BAIXO</option>
-        </select>
+#         <label>Desempenho</label>
+#         <p class="small-explanation">
+#           ALTO (grande atratividade comercial), MÉDIO (atratividade moderada) ou BAIXO (baixa atratividade).
+#         </p>
+#         <select name="desempenho_escolha" class="input-change">
+#           <option value="" disabled selected>Selecione</option>
+#           <option value="ALTO">ALTO</option>
+#           <option value="MÉDIO">MÉDIO</option>
+#           <option value="BAIXO">BAIXO</option>
+#         </select>
 
-        <hr>
-        <div class="subtitle">Selecione as fotos do imóvel (múltiplas):</div>
-        <input type="file" name="fotos_imovel" class="input-change file-green" multiple>
+#         <hr>
+#         <div class="subtitle">Selecione as fotos do imóvel (múltiplas):</div>
+#         <input type="file" name="fotos_imovel" class="input-change file-green" multiple>
 
 
 
-        <label>Selecione arquivo de imagem do logo (se desejar):</label>
-        <input type="file" name="arquivo_logo" class="input-change file-green">
+#         <label>Selecione arquivo de imagem do logo (se desejar):</label>
+#         <input type="file" name="arquivo_logo" class="input-change file-green">
 
-        <br><br>
-        <div class="center-btn">
-          <button type="submit" class="btn">Gerar Laudo</button>
-        </div>
+#         <br><br>
+#         <div class="center-btn">
+#           <button type="submit" class="btn">Gerar Laudo</button>
+#         </div>
 
-    </form>
+#     </form>
 
-    <script>
-      function toggleDarkMode() {
-          document.body.classList.toggle("dark-mode");
-      }
+#     <script>
+#       function toggleDarkMode() {
+#           document.body.classList.toggle("dark-mode");
+#       }
 
-    function atualizarAreaLabel() {
-        const finalidadeSelect = document.getElementById("finalidadeSelect");
-        const valor = (finalidadeSelect.value || "").trim().toLowerCase();
-        const areaLabel = document.getElementById("areaLabel");
-        const areaInput = document.querySelector('input[name="area_parcial"]');
+#     function atualizarAreaLabel() {
+#         const finalidadeSelect = document.getElementById("finalidadeSelect");
+#         const valor = (finalidadeSelect.value || "").trim().toLowerCase();
+#         const areaLabel = document.getElementById("areaLabel");
+#         const areaInput = document.querySelector('input[name="area_parcial"]');
     
-        if (valor.includes("desapropria")) {
-            areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong> - Esta é a área que será utilizada para cálculo final indenizatório";
-            areaLabel.style.color = "#b20000"; // vermelho escuro
-            if (areaInput) areaInput.style.borderColor = "#b20000";
-        } else if (valor.includes("servid")) {
-            areaLabel.innerHTML = "<strong>ÁREA TOTAL DE INTERESSE (m²)</strong> - Esta é a área que será utilizada para cálculo final indenizatório";
-            areaLabel.style.color = "#b20000"; // vermelho escuro  
-            if (areaInput) areaInput.style.borderColor = "#b20000";
-        } else {
-            areaLabel.innerHTML = "Insira a área total do imóvel a ser avaliado (m²)";
-            areaLabel.style.color = ""; // cor padrão
-            if (areaInput) areaInput.style.borderColor = "";
-        }
-    }
+#         if (valor.includes("desapropria")) {
+#             areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong> - Esta é a área que será utilizada para cálculo final indenizatório";
+#             areaLabel.style.color = "#b20000"; // vermelho escuro
+#             if (areaInput) areaInput.style.borderColor = "#b20000";
+#         } else if (valor.includes("servid")) {
+#             areaLabel.innerHTML = "<strong>ÁREA TOTAL DE INTERESSE (m²)</strong> - Esta é a área que será utilizada para cálculo final indenizatório";
+#             areaLabel.style.color = "#b20000"; // vermelho escuro  
+#             if (areaInput) areaInput.style.borderColor = "#b20000";
+#         } else {
+#             areaLabel.innerHTML = "Insira a área total do imóvel a ser avaliado (m²)";
+#             areaLabel.style.color = ""; // cor padrão
+#             if (areaInput) areaInput.style.borderColor = "";
+#         }
+#     }
 
     
-    // Modificar a função exibirRestricoesSeNecessario para também ajustar o comportamento da área
-    function exibirRestricoesSeNecessario() {
-        const select = document.getElementById("finalidadeSelect");
-        const valor = (select.value || "").trim().toLowerCase();
-        const restricoesContainer = document.getElementById("restricoesSectionContainer");
-        const areaInput = document.getElementById("area_parcial"); // Assumindo que o campo de área tem este id
+#     // Modificar a função exibirRestricoesSeNecessario para também ajustar o comportamento da área
+#     function exibirRestricoesSeNecessario() {
+#         const select = document.getElementById("finalidadeSelect");
+#         const valor = (select.value || "").trim().toLowerCase();
+#         const restricoesContainer = document.getElementById("restricoesSectionContainer");
+#         const areaInput = document.getElementById("area_parcial"); // Assumindo que o campo de área tem este id
         
-        // Definir cor de fundo laranja para o container de restrições
-        restricoesContainer.style.backgroundColor = "#ffe8cc"; // Fundo laranja claro
-        restricoesContainer.style.padding = "15px";
-        restricoesContainer.style.borderRadius = "8px";
-        restricoesContainer.style.marginTop = "20px";
-        restricoesContainer.style.marginBottom = "20px";
-        restricoesContainer.style.border = "2px solid #ff8c00"; // Borda laranja
+#         // Definir cor de fundo laranja para o container de restrições
+#         restricoesContainer.style.backgroundColor = "#ffe8cc"; // Fundo laranja claro
+#         restricoesContainer.style.padding = "15px";
+#         restricoesContainer.style.borderRadius = "8px";
+#         restricoesContainer.style.marginTop = "20px";
+#         restricoesContainer.style.marginBottom = "20px";
+#         restricoesContainer.style.border = "2px solid #ff8c00"; // Borda laranja
         
-        // Mostrar imediatamente se for desapropriação ou servidão
+#         // Mostrar imediatamente se for desapropriação ou servidão
         
-        if (valor.includes("desapropria") || valor.includes("servid") || valor.includes("regulariza")) {       
+#         if (valor.includes("desapropria") || valor.includes("servid") || valor.includes("regulariza")) {       
         
-            // Mostrar o container de restrições
-            restricoesContainer.style.display = "block";
+#             // Mostrar o container de restrições
+#             restricoesContainer.style.display = "block";
             
-            // Marcar o campo de área como sendo a área de interesse (não a da planilha)
-            if (areaInput) {
-                areaInput.setAttribute("data-use-for-calculation", "true");
-            }
+#             // Marcar o campo de área como sendo a área de interesse (não a da planilha)
+#             if (areaInput) {
+#                 areaInput.setAttribute("data-use-for-calculation", "true");
+#             }
             
-            // Aplicar destaque aos campos
-            const camposRestricoes = restricoesContainer.querySelectorAll('.input-change');
-            camposRestricoes.forEach(campo => {
-                // Verificar estado inicial
-                if (campo.value.trim() !== '') {
-                    campo.style.backgroundColor = '#ccffcc'; // Verde se já tiver valor
-                }
+#             // Aplicar destaque aos campos
+#             const camposRestricoes = restricoesContainer.querySelectorAll('.input-change');
+#             camposRestricoes.forEach(campo => {
+#                 // Verificar estado inicial
+#                 if (campo.value.trim() !== '') {
+#                     campo.style.backgroundColor = '#ccffcc'; // Verde se já tiver valor
+#                 }
                 
-                // Adicionar listeners para mudanças
-                campo.addEventListener('input', () => {
-                    if (campo.value.trim() !== '') {
-                        campo.style.backgroundColor = '#ccffcc'; // Verde quando preenchido
-                    } else {
-                        campo.style.backgroundColor = '#f0f0f0'; // Cor padrão quando vazio
-                    }
-                });
-            });
+#                 // Adicionar listeners para mudanças
+#                 campo.addEventListener('input', () => {
+#                     if (campo.value.trim() !== '') {
+#                         campo.style.backgroundColor = '#ccffcc'; // Verde quando preenchido
+#                     } else {
+#                         campo.style.backgroundColor = '#f0f0f0'; // Cor padrão quando vazio
+#                     }
+#                 });
+#             });
             
-            // Observar novos campos adicionados
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.addedNodes.length) {
-                        const novosCampos = restricoesContainer.querySelectorAll('.input-change:not([data-observed])');
-                        novosCampos.forEach(campo => {
-                            campo.setAttribute('data-observed', 'true');
-                            if (campo.value.trim() !== '') {
-                                campo.style.backgroundColor = '#ccffcc';
-                            }
-                            campo.addEventListener('input', () => {
-                                if (campo.value.trim() !== '') {
-                                    campo.style.backgroundColor = '#ccffcc';
-                                } else {
-                                    campo.style.backgroundColor = '#f0f0f0';
-                                }
-                            });
-                        });
-                    }
-                });
-            });
+#             // Observar novos campos adicionados
+#             const observer = new MutationObserver(function(mutations) {
+#                 mutations.forEach(function(mutation) {
+#                     if (mutation.addedNodes.length) {
+#                         const novosCampos = restricoesContainer.querySelectorAll('.input-change:not([data-observed])');
+#                         novosCampos.forEach(campo => {
+#                             campo.setAttribute('data-observed', 'true');
+#                             if (campo.value.trim() !== '') {
+#                                 campo.style.backgroundColor = '#ccffcc';
+#                             }
+#                             campo.addEventListener('input', () => {
+#                                 if (campo.value.trim() !== '') {
+#                                     campo.style.backgroundColor = '#ccffcc';
+#                                 } else {
+#                                     campo.style.backgroundColor = '#f0f0f0';
+#                                 }
+#                             });
+#                         });
+#                     }
+#                 });
+#             });
             
-            observer.observe(restricoesContainer, { childList: true, subtree: true });
-        } else {
-            restricoesContainer.style.display = "none";
+#             observer.observe(restricoesContainer, { childList: true, subtree: true });
+#         } else {
+#             restricoesContainer.style.display = "none";
             
-            // Remover o atributo para casos que não são desapropriação ou servidão
-            if (areaInput) {
-                areaInput.removeAttribute("data-use-for-calculation");
-            }
-        }
-    }
+#             // Remover o atributo para casos que não são desapropriação ou servidão
+#             if (areaInput) {
+#                 areaInput.removeAttribute("data-use-for-calculation");
+#             }
+#         }
+#     }
     
-    // Executar a função quando a página carrega
-    document.addEventListener('DOMContentLoaded', exibirRestricoesSeNecessario);
+#     // Executar a função quando a página carrega
+#     document.addEventListener('DOMContentLoaded', exibirRestricoesSeNecessario);
 
 
 
 
-// Adicionar esta linha para executar a função quando a página carrega
-document.addEventListener('DOMContentLoaded', exibirRestricoesSeNecessario);
+# // Adicionar esta linha para executar a função quando a página carrega
+# document.addEventListener('DOMContentLoaded', exibirRestricoesSeNecessario);
 
-      function toggleTelefoneCampo() {
-          const telSelect = document.getElementById("incluirTelSelect");
-          const telCampo = document.getElementById("telefoneCampo");
-          if (telSelect.value === "sim") {
-              telCampo.style.display = "block";
-          } else {
-              telCampo.style.display = "none";
-          }
-      }
+#       function toggleTelefoneCampo() {
+#           const telSelect = document.getElementById("incluirTelSelect");
+#           const telCampo = document.getElementById("telefoneCampo");
+#           if (telSelect.value === "sim") {
+#               telCampo.style.display = "block";
+#           } else {
+#               telCampo.style.display = "none";
+#           }
+#       }
 
-      function toggleEmailCampo() {
-          const mailSelect = document.getElementById("incluirMailSelect");
-          const mailCampo = document.getElementById("emailCampo");
-          if (mailSelect.value === "sim") {
-              mailCampo.style.display = "block";
-          } else {
-              mailCampo.style.display = "none";
-          }
-      }
+#       function toggleEmailCampo() {
+#           const mailSelect = document.getElementById("incluirMailSelect");
+#           const mailCampo = document.getElementById("emailCampo");
+#           if (mailSelect.value === "sim") {
+#               mailCampo.style.display = "block";
+#           } else {
+#               mailCampo.style.display = "none";
+#           }
+#       }
 
-      function exibirCampoOutraFinalidade() {
-          const finalidade = document.getElementById("finalidadeSelect").value;
-          const outraCampo = document.getElementById("outraFinalidadeCampo");
-          if (finalidade === "Outra") {
-              outraCampo.style.display = "block";
-          } else {
-              outraCampo.style.display = "none";
-          }
-      }
+#       function exibirCampoOutraFinalidade() {
+#           const finalidade = document.getElementById("finalidadeSelect").value;
+#           const outraCampo = document.getElementById("outraFinalidadeCampo");
+#           if (finalidade === "Outra") {
+#               outraCampo.style.display = "block";
+#           } else {
+#               outraCampo.style.display = "none";
+#           }
+#       }
 
-      let restricaoCount = 0;
-      function addRestricao() {
-        restricaoCount++;
-        const container = document.getElementById('restricoesSection');
-        const divR = document.createElement('div');
-        divR.className = "restricoes-container";
-        divR.innerHTML = `
-          <label>Tipo de restrição (ex: APP, Servidão, Outro) [${restricaoCount}]:</label>
-          <input type="text" name="tipo_restricao_${restricaoCount}" class="input-change" placeholder="Ex: APP ou Servidão">
+#       let restricaoCount = 0;
+#       function addRestricao() {
+#         restricaoCount++;
+#         const container = document.getElementById('restricoesSection');
+#         const divR = document.createElement('div');
+#         divR.className = "restricoes-container";
+#         divR.innerHTML = `
+#           <label>Tipo de restrição (ex: APP, Servidão, Outro) [${restricaoCount}]:</label>
+#           <input type="text" name="tipo_restricao_${restricaoCount}" class="input-change" placeholder="Ex: APP ou Servidão">
 
-          <label>Área (m²) com essa restrição [${restricaoCount}]:</label>
-          <input type="text" name="area_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 500.0">
+#           <label>Área (m²) com essa restrição [${restricaoCount}]:</label>
+#           <input type="text" name="area_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 500.0">
 
-          <label>Porcentagem de depreciação (ex: 66) [${restricaoCount}]:</label>
-          <input type="text" name="depreciacao_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 66">
-        `;
-        container.appendChild(divR);
-      }
+#           <label>Porcentagem de depreciação (ex: 66) [${restricaoCount}]:</label>
+#           <input type="text" name="depreciacao_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 66">
+#         `;
+#         container.appendChild(divR);
+#       }
 
-      // Faz todos os campos input-change (incluindo select) ficarem verdes se preenchidos
+#       // Faz todos os campos input-change (incluindo select) ficarem verdes se preenchidos
       
       
-    document.addEventListener('DOMContentLoaded', function() {
-        // ... outros códigos existentes ...
+#     document.addEventListener('DOMContentLoaded', function() {
+#         // ... outros códigos existentes ...
         
-        // Executar funções importantes na carga da página
-        atualizarAreaLabel();
-        exibirRestricoesSeNecessario();
-    });      
+#         // Executar funções importantes na carga da página
+#         atualizarAreaLabel();
+#         exibirRestricoesSeNecessario();
+#     });      
       
       
-          atualizarAreaLabel();
-          exibirRestricoesSeNecessario();
-          exibirCampoOutraFinalidade();
+#           atualizarAreaLabel();
+#           exibirRestricoesSeNecessario();
+#           exibirCampoOutraFinalidade();
 
-          const allFields = document.querySelectorAll('.input-change');
+#           const allFields = document.querySelectorAll('.input-change');
 
-          function checkFill(elem) {
-              // Se for SELECT e o value != "", fica verde
-              if (elem.tagName === 'SELECT') {
-                  if (elem.value.trim() !== '') {
-                      elem.style.backgroundColor = '#ccffcc';
-                  } else {
-                      elem.style.backgroundColor = '#f0f0f0';
-                  }
-              } else {
-                  // Para inputs text/file
-                  if (elem.value.trim() !== '') {
-                      elem.style.backgroundColor = '#ccffcc';
-                  } else {
-                      elem.style.backgroundColor = '#f0f0f0';
-                  }
-              }
-          }
+#           function checkFill(elem) {
+#               // Se for SELECT e o value != "", fica verde
+#               if (elem.tagName === 'SELECT') {
+#                   if (elem.value.trim() !== '') {
+#                       elem.style.backgroundColor = '#ccffcc';
+#                   } else {
+#                       elem.style.backgroundColor = '#f0f0f0';
+#                   }
+#               } else {
+#                   // Para inputs text/file
+#                   if (elem.value.trim() !== '') {
+#                       elem.style.backgroundColor = '#ccffcc';
+#                   } else {
+#                       elem.style.backgroundColor = '#f0f0f0';
+#                   }
+#               }
+#           }
 
-          // Verifica periodicamente (para capturar autofill)
-          setInterval(() => {
-              allFields.forEach(f => checkFill(f));
-          }, 1000);
+#           // Verifica periodicamente (para capturar autofill)
+#           setInterval(() => {
+#               allFields.forEach(f => checkFill(f));
+#           }, 1000);
 
-          allFields.forEach(field => {
-              // Se já vier preenchido
-              checkFill(field);
+#           allFields.forEach(field => {
+#               // Se já vier preenchido
+#               checkFill(field);
 
-              // Monitorar eventos
-              field.addEventListener('input',   () => checkFill(field));
-              field.addEventListener('change',  () => checkFill(field));
-              field.addEventListener('focusout',() => checkFill(field));
-          });
+#               // Monitorar eventos
+#               field.addEventListener('input',   () => checkFill(field));
+#               field.addEventListener('change',  () => checkFill(field));
+#               field.addEventListener('focusout',() => checkFill(field));
+#           });
 
-      });
-    </script>
+#       });
+#     </script>
 
 
-    <script>
+#     <script>
 
-    function atualizarAreaLabel() {
-        const finalidadeSelect = document.getElementById('finalidadeSelect');
-        const valor = (finalidadeSelect.value || "").trim().toLowerCase();
-        const areaLabel = document.getElementById('areaLabel');
-        const areaInput = document.querySelector('input[name="area_parcial"]');
-        const infoBox = document.getElementById('areaInfoBox');
+#     function atualizarAreaLabel() {
+#         const finalidadeSelect = document.getElementById('finalidadeSelect');
+#         const valor = (finalidadeSelect.value || "").trim().toLowerCase();
+#         const areaLabel = document.getElementById('areaLabel');
+#         const areaInput = document.querySelector('input[name="area_parcial"]');
+#         const infoBox = document.getElementById('areaInfoBox');
         
-        // Resetar estilos primeiro
-        areaLabel.style.fontWeight = "normal";
-        areaLabel.style.color = "";
-        if (areaInput) {
-            areaInput.style.borderColor = "";
-            areaInput.style.backgroundColor = "#f0f0f0";
-            areaInput.placeholder = "Será validada com a planilha";
-        }
+#         // Resetar estilos primeiro
+#         areaLabel.style.fontWeight = "normal";
+#         areaLabel.style.color = "";
+#         if (areaInput) {
+#             areaInput.style.borderColor = "";
+#             areaInput.style.backgroundColor = "#f0f0f0";
+#             areaInput.placeholder = "Será validada com a planilha";
+#         }
         
-        // Definir comportamento com base na finalidade
-        if (valor.includes("desapropria")) {
-            // Destacar visualmente
-            areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong>";
-            areaLabel.style.color = "#b20000"; // vermelho escuro
-            if (areaInput) {
-                areaInput.style.borderColor = "#b20000";
-                areaInput.style.borderWidth = "2px";
-                areaInput.style.fontWeight = "bold";
-                areaInput.placeholder = "Ex: 1.250,00";
-            }
+#         // Definir comportamento com base na finalidade
+#         if (valor.includes("desapropria")) {
+#             // Destacar visualmente
+#             areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong>";
+#             areaLabel.style.color = "#b20000"; // vermelho escuro
+#             if (areaInput) {
+#                 areaInput.style.borderColor = "#b20000";
+#                 areaInput.style.borderWidth = "2px";
+#                 areaInput.style.fontWeight = "bold";
+#                 areaInput.placeholder = "Ex: 1.250,00";
+#             }
             
-            // Mostrar caixa de informação
-            if (infoBox) {
-                infoBox.style.display = "block";
-                infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área que você digitar aqui substituirá a área total da planilha para todos os cálculos de valor e restrições.";
-            }
+#             // Mostrar caixa de informação
+#             if (infoBox) {
+#                 infoBox.style.display = "block";
+#                 infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área que você digitar aqui substituirá a área total da planilha para todos os cálculos de valor e restrições.";
+#             }
             
-        } else if (valor.includes("servid")) {
-            // Destacar visualmente
-            areaLabel.innerHTML = "<strong>ÁREA DE INTERESSE PARA SERVIDÃO (m²)</strong>";
-            areaLabel.style.color = "#b20000"; // vermelho escuro
-            if (areaInput) {
-                areaInput.style.borderColor = "#b20000";
-                areaInput.style.borderWidth = "2px";
-                areaInput.style.fontWeight = "bold";
-                areaInput.placeholder = "Ex: 3.500,00";
-            }
+#         } else if (valor.includes("servid")) {
+#             // Destacar visualmente
+#             areaLabel.innerHTML = "<strong>ÁREA DE INTERESSE PARA SERVIDÃO (m²)</strong>";
+#             areaLabel.style.color = "#b20000"; // vermelho escuro
+#             if (areaInput) {
+#                 areaInput.style.borderColor = "#b20000";
+#                 areaInput.style.borderWidth = "2px";
+#                 areaInput.style.fontWeight = "bold";
+#                 areaInput.placeholder = "Ex: 3.500,00";
+#             }
             
-            // Mostrar caixa de informação
-            if (infoBox) {
-                infoBox.style.display = "block";
-                infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área que você digitar aqui substituirá a área total da planilha para todos os cálculos de valor e restrições.";
-            }
+#             // Mostrar caixa de informação
+#             if (infoBox) {
+#                 infoBox.style.display = "block";
+#                 infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área que você digitar aqui substituirá a área total da planilha para todos os cálculos de valor e restrições.";
+#             }
             
-        } else {
-            // Finalidades comuns - usar área da planilha
-            areaLabel.innerHTML = "Área total do imóvel a ser avaliado (m²)";
+#         } else {
+#             // Finalidades comuns - usar área da planilha
+#             areaLabel.innerHTML = "Área total do imóvel a ser avaliado (m²)";
             
-            // Esconder caixa de informação
-            if (infoBox) {
-                infoBox.style.display = "none";
-            }
-        }
-    }
+#             // Esconder caixa de informação
+#             if (infoBox) {
+#                 infoBox.style.display = "none";
+#             }
+#         }
+#     }
     
-    // Executar na carga da página e quando o select for alterado
-    window.addEventListener('DOMContentLoaded', function() {
-        // Adicionar a caixa de informação se não existir
-        if (!document.getElementById('areaInfoBox')) {
-            const infoBox = document.createElement('div');
-            infoBox.id = 'areaInfoBox';
-            infoBox.style.display = 'none';
-            infoBox.style.margin = '5px 0 15px 0';
-            infoBox.style.padding = '10px';
-            infoBox.style.border = '1px solid #b20000';
-            infoBox.style.borderRadius = '5px';
-            infoBox.style.backgroundColor = '#ffe6e6';
-            infoBox.style.color = '#b20000';
-            infoBox.style.fontSize = '13px';
+#     // Executar na carga da página e quando o select for alterado
+#     window.addEventListener('DOMContentLoaded', function() {
+#         // Adicionar a caixa de informação se não existir
+#         if (!document.getElementById('areaInfoBox')) {
+#             const infoBox = document.createElement('div');
+#             infoBox.id = 'areaInfoBox';
+#             infoBox.style.display = 'none';
+#             infoBox.style.margin = '5px 0 15px 0';
+#             infoBox.style.padding = '10px';
+#             infoBox.style.border = '1px solid #b20000';
+#             infoBox.style.borderRadius = '5px';
+#             infoBox.style.backgroundColor = '#ffe6e6';
+#             infoBox.style.color = '#b20000';
+#             infoBox.style.fontSize = '13px';
             
-            // Inserir após o label da área
-            const areaLabel = document.getElementById('areaLabel');
-            if (areaLabel && areaLabel.parentNode) {
-                areaLabel.parentNode.insertBefore(infoBox, areaLabel.nextSibling);
-            }
-        }
+#             // Inserir após o label da área
+#             const areaLabel = document.getElementById('areaLabel');
+#             if (areaLabel && areaLabel.parentNode) {
+#                 areaLabel.parentNode.insertBefore(infoBox, areaLabel.nextSibling);
+#             }
+#         }
         
-        // Executar inicialmente
-        atualizarAreaLabel();
+#         // Executar inicialmente
+#         atualizarAreaLabel();
         
-        // Garantir que o evento de mudança no select funcione
-        const finalidadeSelect = document.getElementById('finalidadeSelect');
-        if (finalidadeSelect) {
-            finalidadeSelect.addEventListener('change', atualizarAreaLabel);
-        }
-    });
+#         // Garantir que o evento de mudança no select funcione
+#         const finalidadeSelect = document.getElementById('finalidadeSelect');
+#         if (finalidadeSelect) {
+#             finalidadeSelect.addEventListener('change', atualizarAreaLabel);
+#         }
+#     });
 
-</body>
-</html>
-"""
+# </body>
+# </html>
+# """
 
 
 # ----------------------------------------------------------------------------
