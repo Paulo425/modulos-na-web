@@ -4000,101 +4000,101 @@ def _to_float(valor):
 # --------------------------------------------------------------
 # 2. FUNÇÃO PRINCIPAL
 # --------------------------------------------------------------
-def ler_planilha_excel(caminho_arquivo_excel: str,
-                       raio_limite_km: float = 150.0):
-    """
-    Lê o Excel e devolve:
-      (dataframe_amostras, dict_avaliando)
+# def ler_planilha_excel(caminho_arquivo_excel: str,
+#                        raio_limite_km: float = 150.0):
+#     """
+#     Lê o Excel e devolve:
+#       (dataframe_amostras, dict_avaliando)
 
-    Garante:
-      • coluna ‘DISTANCIA CENTRO’ calculada (haversine até o centro)
-      • amostras > `raio_limite_km` ou com dados faltantes são removidas
-      • colunas numéricas higienizadas (_to_float)
-      • ‘VALOR UNITARIO’ sempre recalculado em R$/m²
-    ------------------------------------------------------------------
-    Requer:
-      _parse_coord(lat/long)           → float ou pd.NA
-      haversine_km(lat1, lon1, lat2, lon2)
-      geopy.Nominatim
-    """
+#     Garante:
+#       • coluna ‘DISTANCIA CENTRO’ calculada (haversine até o centro)
+#       • amostras > `raio_limite_km` ou com dados faltantes são removidas
+#       • colunas numéricas higienizadas (_to_float)
+#       • ‘VALOR UNITARIO’ sempre recalculado em R$/m²
+#     ------------------------------------------------------------------
+#     Requer:
+#       _parse_coord(lat/long)           → float ou pd.NA
+#       haversine_km(lat1, lon1, lat2, lon2)
+#       geopy.Nominatim
+#     """
 
-    # 1) Carrega e limpa linhas completamente vazias
-    df = pd.read_excel(caminho_arquivo_excel, engine="openpyxl")
-    df.dropna(how="all", inplace=True)
-    df.reset_index(drop=True, inplace=True)
+#     # 1) Carrega e limpa linhas completamente vazias
+#     df = pd.read_excel(caminho_arquivo_excel, engine="openpyxl")
+#     df.dropna(how="all", inplace=True)
+#     df.reset_index(drop=True, inplace=True)
 
-    # 2) Converte colunas numéricas (string → float)
-    for col in ("VALOR TOTAL", "AREA TOTAL", "VALOR UNITARIO"):
-        if col in df.columns:
-            df[col] = df[col].apply(_to_float)
+#     # 2) Converte colunas numéricas (string → float)
+#     for col in ("VALOR TOTAL", "AREA TOTAL", "VALOR UNITARIO"):
+#         if col in df.columns:
+#             df[col] = df[col].apply(_to_float)
 
-    # 3) Separa avaliado (última linha) e amostras
-    dados_avaliando    = df.iloc[-1].to_dict()
-    dataframe_amostras = df.iloc[:-1].copy()
+#     # 3) Separa avaliado (última linha) e amostras
+#     dados_avaliando    = df.iloc[-1].to_dict()
+#     dataframe_amostras = df.iloc[:-1].copy()
 
-    # 4) Recalcula VALOR UNITARIO (R$/m²) para as amostras
-    if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
-        dataframe_amostras["VALOR UNITARIO"] = (
-            dataframe_amostras["VALOR TOTAL"] /
-            dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
-        )
+#     # 4) Recalcula VALOR UNITARIO (R$/m²) para as amostras
+#     if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
+#         dataframe_amostras["VALOR UNITARIO"] = (
+#             dataframe_amostras["VALOR TOTAL"] /
+#             dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
+#         )
 
-    # 5) Extrai coordenadas do avaliado
-    lat_av = _parse_coord(dados_avaliando.get("LATITUDE"))
-    lon_av = _parse_coord(dados_avaliando.get("LONGITUDE"))
+#     # 5) Extrai coordenadas do avaliado
+#     lat_av = _parse_coord(dados_avaliando.get("LATITUDE"))
+#     lon_av = _parse_coord(dados_avaliando.get("LONGITUDE"))
 
-    # 6) Obtém centro da cidade via Nominatim
-    from geopy.geocoders import Nominatim
-    geoloc = Nominatim(user_agent="aval-geo")
-    nome_cidade = str(dados_avaliando.get("CIDADE", "")).strip()
-    if not nome_cidade:
-        raise ValueError("Coluna 'CIDADE' do avaliado está vazia!")
+#     # 6) Obtém centro da cidade via Nominatim
+#     from geopy.geocoders import Nominatim
+#     geoloc = Nominatim(user_agent="aval-geo")
+#     nome_cidade = str(dados_avaliando.get("CIDADE", "")).strip()
+#     if not nome_cidade:
+#         raise ValueError("Coluna 'CIDADE' do avaliado está vazia!")
 
-    loc = geoloc.geocode(f"{nome_cidade}, Brazil", timeout=10)
-    if loc is None:
-        raise RuntimeError(f"Não encontrei a cidade “{nome_cidade}” no Nominatim")
+#     loc = geoloc.geocode(f"{nome_cidade}, Brazil", timeout=10)
+#     if loc is None:
+#         raise RuntimeError(f"Não encontrei a cidade “{nome_cidade}” no Nominatim")
 
-    lat_ctr, lon_ctr = loc.latitude, loc.longitude
+#     lat_ctr, lon_ctr = loc.latitude, loc.longitude
 
-    # 7) Calcula distâncias (haversine)
-    dados_avaliando["DISTANCIA CENTRO"] = haversine_km(lat_av, lon_av, lat_ctr, lon_ctr)
+#     # 7) Calcula distâncias (haversine)
+#     dados_avaliando["DISTANCIA CENTRO"] = haversine_km(lat_av, lon_av, lat_ctr, lon_ctr)
 
-    dataframe_amostras["LAT_PARS"] = dataframe_amostras["LATITUDE"].apply(_parse_coord)
-    dataframe_amostras["LON_PARS"] = dataframe_amostras["LONGITUDE"].apply(_parse_coord)
+#     dataframe_amostras["LAT_PARS"] = dataframe_amostras["LATITUDE"].apply(_parse_coord)
+#     dataframe_amostras["LON_PARS"] = dataframe_amostras["LONGITUDE"].apply(_parse_coord)
 
-    dataframe_amostras["DISTANCIA CENTRO"] = dataframe_amostras.apply(
-        lambda r: haversine_km(r["LAT_PARS"], r["LON_PARS"], lat_ctr, lon_ctr), axis=1
-    )
+#     dataframe_amostras["DISTANCIA CENTRO"] = dataframe_amostras.apply(
+#         lambda r: haversine_km(r["LAT_PARS"], r["LON_PARS"], lat_ctr, lon_ctr), axis=1
+#     )
 
-    # 8) Remove amostras fora do raio ou com dados inválidos
-    mask_excluir = (
-        (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
-        (dataframe_amostras["DISTANCIA CENTRO"].isna())           |
-        (dataframe_amostras["VALOR TOTAL"].isna())                |
-        (dataframe_amostras["AREA TOTAL"].isna())                 |
-        (dataframe_amostras["AREA TOTAL"] == 0)
-    )
+#     # 8) Remove amostras fora do raio ou com dados inválidos
+#     mask_excluir = (
+#         (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
+#         (dataframe_amostras["DISTANCIA CENTRO"].isna())           |
+#         (dataframe_amostras["VALOR TOTAL"].isna())                |
+#         (dataframe_amostras["AREA TOTAL"].isna())                 |
+#         (dataframe_amostras["AREA TOTAL"] == 0)
+#     )
 
-    if mask_excluir.any():
-        print("\n⚠️  Amostras removidas (distância > "
-              f"{raio_limite_km:.0f} km, coord. ausente ou números inválidos):")
-        print(dataframe_amostras.loc[mask_excluir,
-              ["AM", "DISTANCIA CENTRO"]].to_string(index=False))
-        dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
+#     if mask_excluir.any():
+#         print("\n⚠️  Amostras removidas (distância > "
+#               f"{raio_limite_km:.0f} km, coord. ausente ou números inválidos):")
+#         print(dataframe_amostras.loc[mask_excluir,
+#               ["AM", "DISTANCIA CENTRO"]].to_string(index=False))
+#         dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
 
-    # 9) LOG de conferência
-    print("\n-- Distância de cada amostra até o centro --")
-    for _, row in dataframe_amostras.sort_values("DISTANCIA CENTRO").iterrows():
-        am_id = str(row.get("AM", row.name + 1)).zfill(2)
-        print(f"AM {am_id}: {row['DISTANCIA CENTRO']:,.3f} km".replace(",", "."))
+#     # 9) LOG de conferência
+#     print("\n-- Distância de cada amostra até o centro --")
+#     for _, row in dataframe_amostras.sort_values("DISTANCIA CENTRO").iterrows():
+#         am_id = str(row.get("AM", row.name + 1)).zfill(2)
+#         print(f"AM {am_id}: {row['DISTANCIA CENTRO']:,.3f} km".replace(",", "."))
 
-    print(f"\nIMÓVEL AVALIADO: {dados_avaliando['DISTANCIA CENTRO']:,.3f} km "
-          f"do centro de {nome_cidade}\n")
+#     print(f"\nIMÓVEL AVALIADO: {dados_avaliando['DISTANCIA CENTRO']:,.3f} km "
+#           f"do centro de {nome_cidade}\n")
 
-    # 10) Limpa colunas auxiliares
-    dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
+#     # 10) Limpa colunas auxiliares
+#     dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
 
-    return dataframe_amostras, dados_avaliando
+#     return dataframe_amostras, dados_avaliando
 
 
 
@@ -7992,43 +7992,87 @@ app.secret_key = "segredo-flask-123"
 ###############################################################################
 # LEITURA DA PLANILHA EXCEL
 ###############################################################################
-def ler_planilha_excel(caminho_arquivo_excel):
-    """
-    Lê a planilha Excel com as amostras de mercado.
-    Retorna (dataframe_amostras, dados_avaliando).
-    """
-    # ----------------------------------------------------  leitura & limpeza
-    df_full = pd.read_excel(caminho_arquivo_excel)          # alias pd OK
-    df_full.dropna(how='all', inplace=True)
-    df_full.reset_index(drop=True, inplace=True)
+def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0):
+    import pandas as pd
+    from math import radians, sin, cos, sqrt, atan2
+    from geopy.geocoders import Nominatim
 
-    df_full["VALOR TOTAL"] = df_full["VALOR TOTAL"].astype(float)
-    df_full["AREA TOTAL"]  = df_full["AREA TOTAL"].astype(float)
+    def _to_float(v):
+        if isinstance(v, str):
+            v = v.replace(".", "").replace(",", ".").strip()
+        try:
+            return float(v)
+        except:
+            return pd.NA
 
-    # ----------------------------------------------------  separa linhas
-    dados_avaliando    = df_full.iloc[-1].to_dict()
-    dataframe_amostras = df_full.iloc[:-1].copy()
+    def _parse_coord(coord):
+        try:
+            if isinstance(coord, str):
+                coord = coord.replace(",", ".").strip()
+            return float(coord)
+        except:
+            return pd.NA
 
-    # ====================================================  distância (km)
-    lat_av = dados_avaliando.get("LATITUDE")
-    lon_av = dados_avaliando.get("LONGITUDE")
+    def haversine_km(lat1, lon1, lat2, lon2):
+        if pd.isna(lat1) or pd.isna(lon1) or pd.isna(lat2) or pd.isna(lon2):
+            return pd.NA
+        R = 6371.0
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+        a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return R * c
 
-    if pd.notna(lat_av) and pd.notna(lon_av):              # ← ponto 1
-        dataframe_amostras["DISTANCIA CENTRO"] = dataframe_amostras.apply(
-            lambda linha: haversine_km(                    # ← ponto 2
-                linha.get("LATITUDE"),  linha.get("LONGITUDE"),
-                lat_av,                 lon_av
-            ),
-            axis=1
+    df = pd.read_excel(caminho_arquivo_excel)
+    df.dropna(how="all", inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
+    for col in ("VALOR TOTAL", "AREA TOTAL", "VALOR UNITARIO"):
+        if col in df.columns:
+            df[col] = df[col].apply(_to_float)
+
+    dados_avaliando = df.iloc[-1].to_dict()
+    dataframe_amostras = df.iloc[:-1].copy()
+
+    if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
+        dataframe_amostras["VALOR UNITARIO"] = (
+            dataframe_amostras["VALOR TOTAL"] / dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
         )
-        dados_avaliando["DISTANCIA CENTRO"] = 0.0
-    else:
-        dataframe_amostras["DISTANCIA CENTRO"] = 0.0
-        dados_avaliando["DISTANCIA CENTRO"]    = 0.0
-    # ====================================================  fim distância
 
-    print("Dados do avaliando:", dados_avaliando)
+    lat_av = _parse_coord(dados_avaliando.get("LATITUDE"))
+    lon_av = _parse_coord(dados_avaliando.get("LONGITUDE"))
+
+    nome_cidade = str(dados_avaliando.get("CIDADE", "")).strip()
+    if nome_cidade:
+        try:
+            geoloc = Nominatim(user_agent="aval-geo")
+            loc = geoloc.geocode(f"{nome_cidade}, Brazil", timeout=10)
+            lat_ctr, lon_ctr = loc.latitude, loc.longitude if loc else (lat_av, lon_av)
+        except:
+            lat_ctr, lon_ctr = lat_av, lon_av
+    else:
+        lat_ctr, lon_ctr = lat_av, lon_av
+
+    dados_avaliando["DISTANCIA CENTRO"] = haversine_km(lat_av, lon_av, lat_ctr, lon_ctr)
+
+    dataframe_amostras["LAT_PARS"] = dataframe_amostras["LATITUDE"].apply(_parse_coord)
+    dataframe_amostras["LON_PARS"] = dataframe_amostras["LONGITUDE"].apply(_parse_coord)
+    dataframe_amostras["DISTANCIA CENTRO"] = dataframe_amostras.apply(
+        lambda r: haversine_km(r["LAT_PARS"], r["LON_PARS"], lat_ctr, lon_ctr), axis=1
+    )
+
+    mask_excluir = (
+        (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
+        (dataframe_amostras["DISTANCIA CENTRO"].isna()) |
+        (dataframe_amostras["VALOR TOTAL"].isna()) |
+        (dataframe_amostras["AREA TOTAL"].isna()) |
+        (dataframe_amostras["AREA TOTAL"] == 0)
+    )
+    dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
+    dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
+
     return dataframe_amostras, dados_avaliando
+
 
 
 ###############################################################################
