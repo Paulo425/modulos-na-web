@@ -640,6 +640,24 @@ def gerar_mapa_amostras(
     dpi      : int   = 700,
     sharp    : int   = 2,            # 0=rápido · 1=4× · 2=16× tiles
 ):
+
+    def _placeholder(path_png: str, msg="Mapa não disponível") -> str:
+            from PIL import Image, ImageDraw, ImageFont
+            W, H = int(width_in * 300), int(height_in * 300)
+            img  = Image.new("RGB", (W, H), "#f0f0f0")
+            draw = ImageDraw.Draw(img)
+            try:
+                font = ImageFont.truetype("arial.ttf", 46)
+            except Exception:
+                font = ImageFont.load_default()
+            draw.multiline_text(
+                (W // 2, H // 2),
+                textwrap.fill(msg, 40),
+                fill="#333", font=font,
+                align="center", anchor="mm"
+            )
+            img.save(path_png, dpi=(300, 300))
+            return str(Path(path_png).resolve())
     # ------------------------------------------------------------------ #
     # IMPORTS
     # ------------------------------------------------------------------ #
@@ -662,23 +680,7 @@ def gerar_mapa_amostras(
     # ------------------------------------------------------------------ #
     # HELPERS
     # ------------------------------------------------------------------ #
-    def _placeholder(path_png: str, msg="Mapa não disponível") -> str:
-        from PIL import Image, ImageDraw, ImageFont
-        W, H = int(width_in * 300), int(height_in * 300)
-        img  = Image.new("RGB", (W, H), "#f0f0f0")
-        draw = ImageDraw.Draw(img)
-        try:
-            font = ImageFont.truetype("arial.ttf", 46)
-        except Exception:
-            font = ImageFont.load_default()
-        draw.multiline_text(
-            (W // 2, H // 2),
-            textwrap.fill(msg, 40),
-            fill="#333", font=font,
-            align="center", anchor="mm"
-        )
-        img.save(path_png, dpi=(300, 300))
-        return str(Path(path_png).resolve())
+    
 
     def _p(v):
         """Converte número/str → float ou None."""
