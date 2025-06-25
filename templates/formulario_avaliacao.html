@@ -337,6 +337,7 @@
                name="area_parcial"
                class="input-change"
                placeholder="Ex: 29.567,89">
+        <div id="areaInfoBox" style="display:none;"></div>
 
 
         <!-- RESTRIÇÕES -->
@@ -624,192 +625,97 @@
 
 {% block scripts %}
 <script>
-    function toggleTelefoneCampo() {
+function toggleTelefoneCampo() {
     const incluirTelSelect = document.getElementById("incluirTelSelect");
     const telefoneCampo = document.getElementById("telefoneCampo");
     telefoneCampo.style.display = incluirTelSelect.value === "sim" ? "block" : "none";
-    }
+}
 
-    function toggleEmailCampo() {
-        const incluirMailSelect = document.getElementById("incluirMailSelect");
-        const emailCampo = document.getElementById("emailCampo");
-        emailCampo.style.display = incluirMailSelect.value === "sim" ? "block" : "none";
-    }
+function toggleEmailCampo() {
+    const incluirMailSelect = document.getElementById("incluirMailSelect");
+    const emailCampo = document.getElementById("emailCampo");
+    emailCampo.style.display = incluirMailSelect.value === "sim" ? "block" : "none";
+}
 
-    function exibirCampoOutraFinalidade() {
-        // Se houver um campo "outra finalidade", adicione a lógica aqui
-    }
+function exibirRestricoesSeNecessario() {
+    const finalidadeSelect = document.getElementById("finalidadeSelect");
+    const restricoesContainer = document.getElementById("restricoesSectionContainer");
+    restricoesContainer.style.display = finalidadeSelect.value.includes("Desapropriação") ? "block" : "none";
+}
 
-    function exibirRestricoesSeNecessario() {
-        const finalidadeSelect = document.getElementById("finalidadeSelect");
-        const restricoesContainer = document.getElementById("restricoesSectionContainer");
-        restricoesContainer.style.display = finalidadeSelect.value.includes("Desapropriação") ? "block" : "none";
-    }
+function addRestricao() {
+    const restricoesSection = document.getElementById("restricoesSection");
+    const div = document.createElement("div");
+    div.className = "restricoes-container";
+    div.innerHTML = `
+        <label>Descrição da restrição:</label>
+        <input type="text" name="restricoes[]" class="input-change">
+        <label>Arquivo relacionado:</label>
+        <input type="file" name="arquivos_restricoes[]" class="input-change file-green">
+    `;
+    restricoesSection.appendChild(div);
+}
 
-    function addRestricao() {
-        const restricoesSection = document.getElementById("restricoesSection");
-        const div = document.createElement("div");
-        div.className = "restricoes-container";
-        div.innerHTML = `
-            <label>Descrição da restrição:</label>
-            <input type="text" name="restricoes[]" class="input-change">
-            <label>Arquivo relacionado:</label>
-            <input type="file" name="arquivos_restricoes[]" class="input-change file-green">
-        `;
-        restricoesSection.appendChild(div);
-    }
+function atualizarAreaLabel() {
+    const finalidadeSelect = document.getElementById("finalidadeSelect");
+    const valor = (finalidadeSelect.value || "").trim().toLowerCase();
+    const areaLabel = document.getElementById("areaLabel");
+    const areaInput = document.getElementById('areaInput');
+    const infoBox = document.getElementById("areaInfoBox");
 
-    // Inicializações corretas no DOMContentLoaded
-    document.addEventListener('DOMContentLoaded', function() {
-        toggleTelefoneCampo();
-        toggleEmailCampo();
+    if (valor.includes("desapropria")) {
+        areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong>";
+        areaLabel.style.color = "#b20000";
+        areaInput.style.borderColor = "#b20000";
+        areaInput.style.borderWidth = "2px";
+        areaInput.style.fontWeight = "bold";
+        areaInput.placeholder = "Ex: 1.250,00";
+        infoBox.style.display = "block";
+        infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área digitada substituirá a planilha.";
+    } else if (valor.includes("servid")) {
+        areaLabel.innerHTML = "<strong>ÁREA DE INTERESSE PARA SERVIDÃO (m²)</strong>";
+        areaLabel.style.color = "#b20000";
+        areaInput.style.borderColor = "#b20000";
+        areaInput.style.borderWidth = "2px";
+        areaInput.style.fontWeight = "bold";
+        areaInput.placeholder = "Ex: 3.500,00";
+        infoBox.style.display = "block";
+        infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área digitada substituirá a planilha.";
+    } else {
+        areaLabel.innerHTML = "Área total do imóvel a ser avaliado (m²)";
+        areaLabel.style.color = "";
+        areaInput.style.borderColor = "";
+        infoBox.style.display = "none";
+    }
+}
+
+const addHighlightListener = inp => {
+    const handler = () => inp.classList.toggle('filled', inp.files.length > 0);
+    handler(); 
+    inp.addEventListener('change', handler);
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    toggleTelefoneCampo();
+    toggleEmailCampo();
+    exibirRestricoesSeNecessario();
+    atualizarAreaLabel();
+
+    document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
+    document.querySelectorAll('.input-change').forEach(field => {
+        const checkFill = () => field.classList.toggle('filled', field.value.trim() !== '');
+        checkFill();
+        field.addEventListener('input', checkFill);
+        field.addEventListener('change', checkFill);
+    });
+
+    document.getElementById("incluirTelSelect").addEventListener("change", toggleTelefoneCampo);
+    document.getElementById("incluirMailSelect").addEventListener("change", toggleEmailCampo);
+    document.getElementById("finalidadeSelect").addEventListener("change", () => {
+        atualizarAreaLabel();
         exibirRestricoesSeNecessario();
     });
-
-
-        /* -------- Fotos -------- */
-        function clearFotos(){
-            const inp=document.querySelector('#fotoWrapper input[type="file"]');
-            if(inp){ inp.value=''; inp.classList.remove('filled'); }
-        }
-       
-        
-        <!-- ===========================================================
-         🅖  JAVASCRIPT GENÉRICO  (re-usa funções de highlight / clear)
-        =========================================================== -->
-       
-       
-        
-        
-        /* inicial: aplica a todos os inputs já existentes na página */
-        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
-        
-        /* ------------------------- IMÓVEL AVALIANDO ------------------------- */
-        function addImovInput(){
-            const wrap = document.getElementById('imovWrapper');
-            const add  = document.getElementById('addImovBtn');
-            const novo = document.createElement('input');
-            novo.type='file'; novo.name='fotos_imovel_adicionais';
-            novo.className='input-change file-orange';
-            wrap.insertBefore(novo, add);
-            addHighlightListener(novo);
-        }
-        function clearImovs(){
-            const wrap = document.getElementById('imovWrapper');
-            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
-            const base = document.createElement('input');
-            base.type='file'; base.name='fotos_imovel_adicionais';
-            base.className='input-change file-orange';
-            wrap.insertBefore(base, wrap.firstChild);
-            addHighlightListener(base);
-        }
-        
-        /* ------------------------- PROPRIETÁRIO(S) ------------------------- */
-        function addPropInput(){
-            const wrap=document.getElementById('propWrapper');
-            const add =document.getElementById('addPropBtn');
-            const novo=document.createElement('input');
-            novo.type='file'; novo.name='doc_proprietario';
-            novo.className='input-change file-orange';
-            wrap.insertBefore(novo, add);
-            addHighlightListener(novo);
-        }
-        function clearProps(){
-            const wrap=document.getElementById('propWrapper');
-            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
-            const base=document.createElement('input');
-            base.type='file'; base.name='doc_proprietario';
-            base.className='input-change file-orange';
-            wrap.insertBefore(base, wrap.firstChild);
-            addHighlightListener(base);
-        }
-        
-        /* ------------------------- PLANTAS ------------------------- */
-        function addPlantaInput(){
-            const wrap=document.getElementById('plantaWrapper');
-            const add =document.getElementById('addPlantaBtn');
-            const novo=document.createElement('input');
-            novo.type='file'; novo.name='doc_planta';
-            novo.className='input-change file-orange';
-            wrap.insertBefore(novo, add);
-            addHighlightListener(novo);
-        }
-        function clearPlantas(){
-            const wrap=document.getElementById('plantaWrapper');
-            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
-            const base=document.createElement('input');
-            base.type='file'; base.name='doc_planta';
-            base.className='input-change file-orange';
-            wrap.insertBefore(base, wrap.firstChild);
-            addHighlightListener(base);
-        }
-        
-        /* ------------------------- LOGO ------------------------- */
-        function clearLogo(){
-            const inp=document.querySelector('#logoWrapper input[type="file"]');
-            if(inp){ inp.value=""; inp.classList.remove('filled'); }
-        }
-        
-    function toggleDarkMode() {
-        document.body.classList.toggle("dark-mode");
-    }
-
-    function atualizarAreaLabel() {
-        const finalidadeSelect = document.getElementById("finalidadeSelect");
-        const valor = (finalidadeSelect.value || "").trim().toLowerCase();
-        const areaLabel = document.getElementById("areaLabel");
-        const areaInput = document.querySelector('input[name="area_parcial"]');
-        const infoBox = document.getElementById("areaInfoBox");
-
-        if (valor.includes("desapropria")) {
-            areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong>";
-            areaLabel.style.color = "#b20000";
-            if (areaInput) {
-                areaInput.style.borderColor = "#b20000";
-                areaInput.style.borderWidth = "2px";
-                areaInput.style.fontWeight = "bold";
-                areaInput.placeholder = "Ex: 1.250,00";
-            }
-            infoBox.style.display = "block";
-            infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área digitada substituirá a planilha.";
-        } else if (valor.includes("servid")) {
-            areaLabel.innerHTML = "<strong>ÁREA DE INTERESSE PARA SERVIDÃO (m²)</strong>";
-            areaLabel.style.color = "#b20000";
-            if (areaInput) {
-                areaInput.style.borderColor = "#b20000";
-                areaInput.style.borderWidth = "2px";
-                areaInput.style.fontWeight = "bold";
-                areaInput.placeholder = "Ex: 3.500,00";
-            }
-            infoBox.style.display = "block";
-            infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área digitada substituirá a planilha.";
-        } else {
-            areaLabel.innerHTML = "Área total do imóvel a ser avaliado (m²)";
-            areaLabel.style.color = "";
-            areaInput.style.borderColor = "";
-            infoBox.style.display = "none";
-        }
-    }
-
-  
-    const addHighlightListener = inp => {
-        const handler = () => inp.classList.toggle('filled', inp.files.length > 0);
-        handler(); 
-        inp.addEventListener('change', handler);
-    };
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
-        document.querySelectorAll('.input-change').forEach(field => {
-            const checkFill = () => field.classList.toggle('filled', field.value.trim() !== '');
-            checkFill();
-            field.addEventListener('input', checkFill);
-            field.addEventListener('change', checkFill);
-        });
-    });
-
-
-
-    // Inclua aqui as outras funções JavaScript originais, SEM duplicação
-    // (toggleTelefoneCampo, toggleEmailCampo, exibirCampoOutraFinalidade, addRestricao etc.)
+});
 </script>
 {% endblock %}
+
