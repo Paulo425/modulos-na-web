@@ -627,6 +627,9 @@ def gerar_avaliacao():
             log_path = os.path.join(BASE_DIR, 'static', 'logs', log_filename)
             os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
+            log_path_relativo = f'logs/{log_filename}'
+
+
             # Configuração do logger específico para esta execução
             logger = logging.getLogger(f"avaliacoes_{id_execucao}")
             logger.setLevel(logging.INFO)
@@ -780,7 +783,7 @@ def gerar_avaliacao():
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
-                           log_path=log_path_relativo if log_path_relativo else None)
+                           log_path=log_path_relativo if os.path.exists(log_path) else None)
 
 
 
