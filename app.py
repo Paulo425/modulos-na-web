@@ -783,7 +783,7 @@ def gerar_avaliacao():
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
-                           log_path=log_path_relativo if os.path.exists(log_path) else None)
+                           log_path=log_path_relativo)
 
 
 
