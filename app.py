@@ -607,17 +607,6 @@ from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 @app.route("/avaliacoes", methods=["GET", "POST"])
 def gerar_avaliacao():
 
-    log_filename = f"avaliacao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    log_path = os.path.join(BASE_DIR, 'static', 'logs', log_filename)
-
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
-
-    logging.basicConfig(
-        filename=log_path,
-        level=logging.INFO,
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        filemode='w'
-    )
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
@@ -633,7 +622,21 @@ def gerar_avaliacao():
             pasta_execucao = f'avaliacao_{id_execucao}'
             pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
             os.makedirs(pasta_temp, exist_ok=True)
+            # Criação correta do log
+            log_filename = f"avaliacao_{id_execucao}.log"
+            log_path = os.path.join(BASE_DIR, 'static', 'logs', log_filename)
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
+            # Configuração do logger específico para esta execução
+            logger = logging.getLogger(f"avaliacoes_{id_execucao}")
+            logger.setLevel(logging.INFO)
+            handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
+            formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+            handler.setFormatter(formatter)
+            if logger.hasHandlers():
+                logger.handlers.clear()
+            logger.addHandler(handler)
+            
             # 2. Salvar arquivos recebidos
             caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
             request.files["planilha_excel"].save(caminho_planilha)
@@ -757,26 +760,27 @@ def gerar_avaliacao():
             nome_zip = f"relatorio_avaliacao_{id_execucao}.zip"
             caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos', nome_zip)
             with zipfile.ZipFile(caminho_zip, 'w') as zipf:
-                print(f"✅ ZIP criado em: {caminho_zip}")
-                logging.info(f"✅ ZIP criado em: {caminho_zip}")
-
+                logger.info(f"✅ ZIP criado em: {caminho_zip}")
                 for root, dirs, files in os.walk(pasta_temp):
                     for file in files:
                         zipf.write(os.path.join(root, file), arcname=file)
-            logging.info("✅ Relatório gerado com sucesso!")
+
+            logger.info("✅ Relatório gerado com sucesso!")
             resultado = "✅ Relatório gerado com sucesso!"
             zip_download = nome_zip
 
+            # Definir o caminho relativo ao log para o HTML
+            log_path_relativo = f'logs/{log_filename}'
+
         except Exception as e:
             erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
-            logging.error(f"❌ Erro durante o processamento: {type(e).__name__} - {e}\n{traceback.format_exc()}")
-    print("ZIP disponível para download:", zip_download)
+            logger.error(erro_execucao)
 
     return render_template("formulario_avaliacao.html",
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
-                           log_path=f'logs/{log_filename}' if os.path.exists(log_path) else None)
+                           log_path=log_path_relativo if log_path_relativo else None)
 
 
 
