@@ -623,7 +623,7 @@ def gerar_avaliacao():
             pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
             os.makedirs(pasta_temp, exist_ok=True)
             # Criação correta do log
-            log_filename = f"avaliacao_{id_execucao}.log"
+            log_filename = f"avaliacao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
             log_path = os.path.join(BASE_DIR, 'static', 'logs', log_filename)
             os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
