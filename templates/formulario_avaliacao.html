@@ -228,6 +228,24 @@
             color:#000;                /* ← texto preto SEMPRE */
         }
         .wrapper-3d input[type=file].filled{ background-color:var(--green-fill); }
+        .wrapper-3d input[type=file].filled { 
+        background-color: var(--green-fill) !important; 
+        }
+        .input-change.filled {
+        background-color: #ccffcc !important;
+        }
+        input[type="file"].file-green::-webkit-file-upload-button,
+        input[type="file"].file-green::file-selector-button {
+            background-color: #006400 !important;
+            color: #ffffff !important;
+            padding: 10px 20px !important;
+            border: none !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+            border-radius: 5px !important;
+        }
+
+
 </style>   
 {% endblock %}
 
@@ -660,12 +678,8 @@
          🅖  JAVASCRIPT GENÉRICO  (re-usa funções de highlight / clear)
         =========================================================== -->
        
-        /* -------- util: aplica / remove classe “filled” para fundo verde -------- */
-        const addHighlightListener = inp=>{
-            const handler = ()=> inp.classList.toggle('filled', inp.files.length>0);
-            handler();            // executa já
-            inp.addEventListener('change', handler);
-        };
+       
+        
         
         /* inicial: aplica a todos os inputs já existentes na página */
         document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
@@ -777,21 +791,23 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        atualizarAreaLabel();
-        exibirRestricoesSeNecessario();
-
-        const allFields = document.querySelectorAll('.input-change');
-        function checkFill(elem) {
-            elem.style.backgroundColor = elem.value.trim() !== '' ? '#ccffcc' : '#f0f0f0';
-        }
-        allFields.forEach(field => {
-            checkFill(field);
-            field.addEventListener('input', () => checkFill(field));
-            field.addEventListener('change', () => checkFill(field));
+  
+    const addHighlightListener = inp => {
+        const handler = () => inp.classList.toggle('filled', inp.files.length > 0);
+        handler(); 
+        inp.addEventListener('change', handler);
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
+        document.querySelectorAll('.input-change').forEach(field => {
+            const checkFill = () => field.classList.toggle('filled', field.value.trim() !== '');
+            checkFill();
+            field.addEventListener('input', checkFill);
+            field.addEventListener('change', checkFill);
         });
-        setInterval(() => allFields.forEach(checkFill), 1000);
     });
+
+
 
     // Inclua aqui as outras funções JavaScript originais, SEM duplicação
     // (toggleTelefoneCampo, toggleEmailCampo, exibirCampoOutraFinalidade, addRestricao etc.)
