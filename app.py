@@ -25,6 +25,8 @@ from usuarios_mysql import (
 import logging
 import sys
 import uuid
+import logging, traceback
+from datetime import datetime
 
 logging.basicConfig(
     level=logging.INFO,
@@ -604,6 +606,18 @@ from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 
 @app.route("/avaliacoes", methods=["GET", "POST"])
 def gerar_avaliacao():
+
+    log_filename = f"avaliacao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    log_path = os.path.join(BASE_DIR, 'static', 'logs', log_filename)
+
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+    logging.basicConfig(
+        filename=log_path,
+        level=logging.INFO,
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        filemode='w'
+    )
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
@@ -749,20 +763,20 @@ def gerar_avaliacao():
                 for root, dirs, files in os.walk(pasta_temp):
                     for file in files:
                         zipf.write(os.path.join(root, file), arcname=file)
-
+            logging.info("✅ Relatório gerado com sucesso!")
             resultado = "✅ Relatório gerado com sucesso!"
             zip_download = nome_zip
 
         except Exception as e:
             erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
-
+            logging.error(f"❌ Erro durante o processamento: {type(e).__name__} - {e}\n{traceback.format_exc()}")
     print("ZIP disponível para download:", zip_download)
 
     return render_template("formulario_avaliacao.html",
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
-                           log_path=None)
+                           log_path=f'logs/{log_filename}' if os.path.exists(log_path) else None)
 
 
 
