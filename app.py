@@ -743,6 +743,9 @@ def gerar_avaliacao():
             nome_zip = f"relatorio_avaliacao_{id_execucao}.zip"
             caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos', nome_zip)
             with zipfile.ZipFile(caminho_zip, 'w') as zipf:
+                print(f"✅ ZIP criado em: {caminho_zip}")
+                logging.info(f"✅ ZIP criado em: {caminho_zip}")
+
                 for root, dirs, files in os.walk(pasta_temp):
                     for file in files:
                         zipf.write(os.path.join(root, file), arcname=file)
@@ -753,6 +756,7 @@ def gerar_avaliacao():
         except Exception as e:
             erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
 
+    print("ZIP disponível para download:", zip_download)
 
     return render_template("formulario_avaliacao.html",
                            resultado=resultado,

@@ -249,30 +249,35 @@
 </style>   
 {% endblock %}
 
-{% if resultado %}
-<div class="alert alert-success text-center mt-3">
-    {{ resultado|safe }}
-    {% if zip_download %}
-        <br>
-        <a href="{{ url_for('static', filename='arquivos/' + zip_download) }}" 
-           class="btn btn-success mt-2"
-           id="botaoZip"
-           download>
-            📥 Baixar Arquivo ZIP
-        </a>
-    {% endif %}
-</div>
-{% endif %}
-
-{% if erro %}
-<div class="alert alert-danger text-center mt-3">
-    {{ erro|safe }}
-</div>
-{% endif %}
-
-
 {% block conteudo %}
 <div class="container mt-5">
+    {% if resultado %}
+    <div class="alert alert-success text-center mt-3">
+        {{ resultado|safe }}
+        {% if zip_download %}
+            <br>
+            <a href="{{ url_for('static', filename='arquivos/' + zip_download) }}" 
+              class="btn btn-success mt-2"
+              id="botaoZip"
+              download>
+                📥 Baixar Arquivo ZIP
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if erro %}
+    <div class="alert alert-danger text-center mt-3">
+        {{ erro|safe }}
+    </div>
+    {% endif %}
+
+
+    {% if log_path %}
+        <a href="{{ url_for('static', filename=log_path) }}" class="btn btn-info mt-2" download>
+            📋 Baixar Log da Execução
+        </a>
+    {% endif %}
 
     <button class="toggle-btn" onclick="toggleDarkMode()">Alternar Modo</button>
 
