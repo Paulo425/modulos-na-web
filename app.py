@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from subprocess import Popen, DEVNULL, STDOUT
 import os
 import json
 import subprocess
@@ -602,27 +603,25 @@ def gerar_memorial_angulo_az():
                            log_path=log_relativo)
 
 
-#ROTA PARA O ANGULO_P1_P2
+
+
 @app.route('/memorial_angulo_p1_p2', methods=['GET', 'POST'])
 def gerar_memorial_angulo_p1_p2():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
     resultado = erro_execucao = log_relativo = None
-    zip_download = None
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
         id_execucao = str(uuid.uuid4())[:8]
         diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
-
         os.makedirs(diretorio_tmp, exist_ok=True)
 
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
         caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
-        caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
-
+        caminho_dxf = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
 
         log_filename = datetime.now().strftime("log_ANGULO_P1_P2_%Y%m%d_%H%M%S.log")
         log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
@@ -631,52 +630,26 @@ def gerar_memorial_angulo_p1_p2():
         log_relativo = f"static/logs/{log_filename}"
 
         try:
-            processo = Popen(
+            Popen(
                 ["python", os.path.join(BASE_DIR, "executaveis_angulo_p1_p2", "main.py"),
                  cidade, caminho_excel, caminho_dxf],
-                stdout=PIPE, stderr=subprocess.STDOUT, text=True
+                stdout=DEVNULL, stderr=STDOUT, stdin=DEVNULL,
+                close_fds=True,
+                start_new_session=True
             )
 
-            log_lines = []
-            with open(log_path, 'w', encoding='utf-8') as log_file:
-                for linha in processo.stdout:
-                    log_file.write(linha)
-                    if len(log_lines) < 500:
-                        log_lines.append(linha)
-                    print("🖨️", linha.strip())
-
-            processo.wait()
-
-            if processo.returncode == 0:
-                resultado = "✅ Processamento concluído com sucesso!"
-            else:
-                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
-
+            resultado = "✅ Processamento iniciado com sucesso! Verifique os arquivos após alguns minutos."
         except Exception as e:
-            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+            erro_execucao = f"❌ Erro inesperado ao iniciar processamento:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
-        finally:
-            os.remove(caminho_excel)
-            os.remove(caminho_dxf)
+        # NÃO REMOVA IMEDIATAMENTE OS ARQUIVOS
+        # Deixe o subprocesso cuidar disso após seu uso completo.
 
-        # 🔍 Verificação do ZIP após o processamento
-        try:
-            zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(zip_dir) if f.lower().endswith('.zip')]
-            if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(zip_dir, x)), reverse=True)
-                zip_download = arquivos_zip[0]
-                print(f"✅ ANGULO_P1_P2 ZIP disponível para download: {zip_download}")
-            else:
-                print("⚠️ Nenhum ZIP encontrado no diretório público.")
-        except Exception as e:
-            print(f"❌ Erro ao verificar ZIP: {e}")
-            zip_download = None
     return render_template("formulario_angulo_p1_p2.html",
                            resultado=resultado,
                            erro=erro_execucao,
-                           zip_download=zip_download,
                            log_path=log_relativo)
+
 
 # ✅ ROTA PARA O MÓDULO DE AVALIAÇÕES
 

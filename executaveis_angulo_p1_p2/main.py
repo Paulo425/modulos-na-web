@@ -111,6 +111,13 @@ def main():
     except Exception as e:
         print(f"❌ Erro ao copiar ZIPs: {e}")
 
+    # final do seu main.py após todas as etapas concluídas
+    try:
+        os.remove(variaveis["arquivo_excel_recebido"])
+        os.remove(variaveis["arquivo_dxf_recebido"])
+        logging.info("✅ Arquivos temporários removidos com sucesso.")
+    except Exception as e:
+        logging.error(f"❌ Erro ao remover arquivos temporários: {e}")
 
 
 
