@@ -10,7 +10,6 @@ import os
 import ezdxf
 import time
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-import locale
 from decimal import Decimal, getcontext
 import pandas as pd
 from docx.shared import Pt
@@ -75,7 +74,7 @@ def ensure_counterclockwise(points):
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
 # Configurar locale para português do Brasil
-locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # Para sistemas Linux ou Mac
+#locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # Para sistemas Linux ou Mac
 # locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')  # Para Windows, caso necessário
 
 # Obter data atual formatada em português
