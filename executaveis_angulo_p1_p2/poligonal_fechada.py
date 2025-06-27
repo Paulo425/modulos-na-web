@@ -1,6 +1,5 @@
 import math
 import csv
-import pythoncom
 import pandas as pd
 import glob
 import re
@@ -8,7 +7,6 @@ from docx import Document
 from docx.shared import Inches
 from datetime import datetime
 import os
-import comtypes.client
 import ezdxf
 import time
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
