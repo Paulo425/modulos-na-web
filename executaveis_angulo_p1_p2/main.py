@@ -10,6 +10,8 @@ from unir_poligonais import main_unir_poligonais
 
 import shutil
 import uuid
+import subprocess
+
 
 # ✅ 1. Caminho base
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -74,7 +76,6 @@ def main():
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
-        caminho_template,
         uuid_str
     )
 
