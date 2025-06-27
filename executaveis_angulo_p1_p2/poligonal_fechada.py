@@ -22,16 +22,20 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
-try:
-    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # Para Render (Linux)
-except locale.Error:
-    try:
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')  # Para Windows
-    except locale.Error:
-        locale.setlocale(locale.LC_TIME, 'C')  # Fallback universal
+# Configuração manual para nomes dos meses em português (independente do locale)
+MESES_PT_BR = [
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+]
 
-# Obter data atual formatada
-data_atual = datetime.now().strftime("%d de %B de %Y")
+def obter_data_formatada(data):
+    dia = data.day
+    mes = MESES_PT_BR[data.month - 1]
+    ano = data.year
+    return f"{dia:02d} de {mes} de {ano}"
+
+# Obter data atual formatada manualmente
+data_atual = obter_data_formatada(datetime.now())
 
 LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
