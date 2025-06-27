@@ -16,6 +16,7 @@ import pandas as pd
 from docx.shared import Pt
 import openpyxl
 from openpyxl.styles import Alignment, Font
+import logging 
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
