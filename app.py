@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from subprocess import Popen, DEVNULL, STDOUT
+from subprocess import Popen, PIPE, STDOUT
 import os
 import json
 import subprocess
@@ -12,6 +13,7 @@ import shutil
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import traceback
+import sys 
 
 from usuarios_mysql import (
     salvar_usuario_mysql,
@@ -629,18 +631,36 @@ def gerar_memorial_angulo_p1_p2():
         log_path = os.path.join(log_dir_absoluto, log_filename)
         log_relativo = f"static/logs/{log_filename}"
 
+       
+
         try:
-            Popen(
-                ["python", os.path.join(BASE_DIR, "executaveis_angulo_p1_p2", "main.py"),
-                 cidade, caminho_excel, caminho_dxf],
-                stdout=DEVNULL, stderr=STDOUT, stdin=DEVNULL,
-                close_fds=True,
-                start_new_session=True
+            processo = Popen(
+                [sys.executable, os.path.join(BASE_DIR, "executaveis_angulo_p1_p2", "main.py"),
+                cidade, caminho_excel, caminho_dxf],
+                stdout=PIPE, stderr=STDOUT, text=True
             )
 
-            resultado = "✅ Processamento iniciado com sucesso! Verifique os arquivos após alguns minutos."
+            log_lines = []
+            with open(log_path, 'w', encoding='utf-8') as log_file:
+                for linha in processo.stdout:
+                    log_file.write(linha)
+                    if len(log_lines) < 500:
+                        log_lines.append(linha)
+                    print("🖨️", linha.strip())
+
+            processo.wait()
+
+            if processo.returncode == 0:
+                resultado = "✅ Processamento concluído com sucesso!"
+            else:
+                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+
         except Exception as e:
-            erro_execucao = f"❌ Erro inesperado ao iniciar processamento:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+
+        finally:
+            os.remove(caminho_excel)
+            os.remove(caminho_dxf)
 
         # NÃO REMOVA IMEDIATAMENTE OS ARQUIVOS
         # Deixe o subprocesso cuidar disso após seu uso completo.
