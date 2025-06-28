@@ -117,9 +117,14 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
             doc_fechado_path = doc_fechado[0]
             nome_base = os.path.splitext(os.path.basename(doc_fechado_path))[0]
             nome_base = nome_base.replace(f"{uuid_str}_FECHADA_{tipo}_", "").replace(f"FECHADA_{tipo}_", "")
+            
+            # 🔵 Este log deve estar aqui dentro
+            logger.info(f"📝 Nome base para arquivos finais: {nome_base}")
+
         else:
             logger.error(f"❌ Documento FECHADA para o tipo {tipo} não encontrado.")
             continue
+
 
         
         # Correção aqui 👇
