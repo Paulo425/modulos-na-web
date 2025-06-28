@@ -98,13 +98,14 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
         dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}_*.dxf"))
         dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_*.dxf"))
 
-
         if not (doc_aberto and doc_fechado and dxf_aberto and dxf_fechado):
             logger.warning(f"⚠️ Arquivos incompletos para tipo {tipo}. Pulando...")
             continue
 
-        nome_base = os.path.splitext(os.path.basename(doc_fechado[0]))[0].replace('FECHADA_', '').replace(tipo, '').strip('_')
-
+        # Correção aqui 👇
+        nome_base = os.path.splitext(os.path.basename(doc_fechado[0]))[0].replace(f"{uuid_str}_FECHADA_{tipo}_", "")
+        
+        # Correção aqui 👇
         output_dxf_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.dxf")
         output_docx_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.docx")
 
@@ -127,4 +128,5 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
         unificar_dxf(dxf_aberto[0], dxf_fechado[0], output_dxf_path)
 
     logger.info("✅ Unificação concluída para todos os tipos disponíveis.")
+
 

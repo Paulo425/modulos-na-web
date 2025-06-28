@@ -20,26 +20,29 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(messa
 logger.addHandler(file_handler)
 
 def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
-
     print(f"\n📦 Compactando arquivos no diretório: {diretorio}")
     logger.info(f"Iniciando montagem dos pacotes ZIP")
 
     tipos = ["ETE", "REM", "SER", "ACE"]
 
     for tipo in tipos:
-        print(f"🔍 Buscando arquivos do tipo: {tipo}")
-        logger.info(f"Buscando arquivos do tipo: {tipo}")
+        logger.info(f"🔍 Buscando arquivos do tipo: {tipo}")
 
-        arquivos_dxf = glob.glob(os.path.join(diretorio, f"{uuid_str}_{tipo}_*_FINAL.dxf"))
-        arquivos_docx = glob.glob(os.path.join(diretorio, f"{uuid_str}_{tipo}_*_FINAL.docx"))
-        arquivos_excel_aberta = glob.glob(os.path.join(diretorio, f"{uuid_str}_ABERTA_{tipo}_*.xlsx"))
-        arquivos_excel_fechada = glob.glob(os.path.join(diretorio, f"{uuid_str}_FECHADA_{tipo}_*.xlsx"))
+        padrao_dxf = f"{uuid_str}_{tipo}_*_FINAL.dxf"
+        padrao_docx = f"{uuid_str}_{tipo}_*_FINAL.docx"
+        padrao_excel_aberta = f"{uuid_str}_ABERTA_{tipo}_*.xlsx"
+        padrao_excel_fechada = f"{uuid_str}_FECHADA_{tipo}_*.xlsx"
 
+        arquivos_dxf = glob.glob(os.path.join(diretorio, padrao_dxf))
+        arquivos_docx = glob.glob(os.path.join(diretorio, padrao_docx))
+        arquivos_excel_aberta = glob.glob(os.path.join(diretorio, padrao_excel_aberta))
+        arquivos_excel_fechada = glob.glob(os.path.join(diretorio, padrao_excel_fechada))
 
-        print(f"   - DXF FINAL encontrados: {len(arquivos_dxf)}")
-        print(f"   - DOCX FINAL encontrados: {len(arquivos_docx)}")
-        print(f"   - XLSX ABERTA encontrados: {len(arquivos_excel_aberta)}")
-        print(f"   - XLSX FECHADA encontrados: {len(arquivos_excel_fechada)}")
+        logger.info(f"📂 Arquivos encontrados para {tipo}:")
+        logger.info(f"   DXF FINAL: {arquivos_dxf}")
+        logger.info(f"   DOCX FINAL: {arquivos_docx}")
+        logger.info(f"   XLSX ABERTA: {arquivos_excel_aberta}")
+        logger.info(f"   XLSX FECHADA: {arquivos_excel_fechada}")
 
         if arquivos_dxf and arquivos_docx and arquivos_excel_aberta and arquivos_excel_fechada:
             nome_zip = f"{uuid_str}_{cidade_formatada}_{tipo}.zip"
@@ -52,19 +55,17 @@ def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
                     zipf.write(arquivos_excel_aberta[0], os.path.basename(arquivos_excel_aberta[0]))
                     zipf.write(arquivos_excel_fechada[0], os.path.basename(arquivos_excel_fechada[0]))
 
-                print(f"🗜️ ZIP salvo em: {caminho_zip}")
-                logger.info(f"ZIP criado: {caminho_zip}")
+                logger.info(f"🗜️ ZIP salvo em: {caminho_zip}")
 
             except Exception as e:
-                print(f"❌ Erro ao criar ZIP: {e}")
-                logger.error(f"Erro ao criar ZIP {caminho_zip}: {e}")
+                logger.error(f"❌ Erro ao criar ZIP {caminho_zip}: {e}")
         else:
-            print(f"⚠️ Arquivos incompletos ou não encontrados para o tipo {tipo}")
             logger.warning(
-                f"Incompleto: {tipo} - "
-                f"DXF={bool(arquivos_dxf)}, DOCX={bool(arquivos_docx)}, "
-                f"XLSX ABERTA={bool(arquivos_excel_aberta)}, XLSX FECHADA={bool(arquivos_excel_fechada)}"
+                f"⚠️ Incompleto para {tipo}: "
+                f"DXF FINAL encontrado={bool(arquivos_dxf)}, DOCX FINAL encontrado={bool(arquivos_docx)}, "
+                f"XLSX ABERTA encontrado={bool(arquivos_excel_aberta)}, XLSX FECHADA encontrado={bool(arquivos_excel_fechada)}"
             )
+
 
 
 
