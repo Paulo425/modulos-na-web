@@ -613,6 +613,7 @@ def gerar_memorial_angulo_p1_p2():
         return redirect(url_for('login'))
 
     resultado = erro_execucao = log_relativo = None
+    zip_download = None
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
@@ -662,12 +663,24 @@ def gerar_memorial_angulo_p1_p2():
             os.remove(caminho_excel)
             os.remove(caminho_dxf)
 
-        # NÃO REMOVA IMEDIATAMENTE OS ARQUIVOS
-        # Deixe o subprocesso cuidar disso após seu uso completo.
+        # 🔍 Verificação correta do ZIP após o processamento
+        try:
+            zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
+            arquivos_zip = [f for f in os.listdir(zip_dir) if f.lower().endswith('.zip')]
+            if arquivos_zip:
+                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(zip_dir, x)), reverse=True)
+                zip_download = arquivos_zip[0]
+                print(f"✅ ZIP disponível para download: {zip_download}")
+            else:
+                print("⚠️ Nenhum ZIP encontrado no diretório público.")
+        except Exception as e:
+            print(f"❌ Erro ao verificar ZIP: {e}")
+            zip_download = None
 
     return render_template("formulario_angulo_p1_p2.html",
                            resultado=resultado,
                            erro=erro_execucao,
+                           zip_download=zip_download,
                            log_path=log_relativo)
 
 
@@ -863,9 +876,9 @@ def gerar_avaliacao():
 def memoriais_azimute_p1_p2():
     return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_P1_P2")
 
-@app.route('/memoriais-angulos-internos-p1-p2')
-def memoriais_angulos_internos_p1_p2():
-    return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
+# @app.route('/memoriais-angulos-internos-p1-p2')
+# def memoriais_angulos_internos_p1_p2():
+#     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
    
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
