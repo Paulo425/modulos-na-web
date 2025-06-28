@@ -719,7 +719,12 @@ def create_memorial_descritivo(doc, lines, proprietario, matricula, caminho_salv
         return None
 
     dxf_file_path = dxf_file_path.strip('"')
-    dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_POLIGONAL_COM_AMARRACAO_{matricula}.dxf")
+    dxf_output_path = os.path.join(
+        diretorio_concluido,
+        f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf"
+    )
+
+    logger.info(f"✅ DXF FECHADA salvo corretamente: {dxf_output_path}")
 
     try:
         doc_dxf = ezdxf.readfile(dxf_file_path)
@@ -1318,7 +1323,12 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
         distancia_az_v1 = calculate_distance(ponto_amarracao, v1)
 
         # Caminho do Excel de saída
-        excel_file_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.xlsx")
+        excel_file_path = os.path.join(
+            diretorio_concluido,
+            f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
+        )
+
+        logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
 
         # 🛠 Criar memorial e Excel
         create_memorial_descritivo(
@@ -1329,7 +1339,13 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
         # 📄 Gerar DOCX
         if excel_file_path:
             # template_path = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
-            output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
+            output_path_docx = os.path.join(
+                diretorio_concluido,
+                f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx"
+            )
+
+            logger.info(f"✅ DOCX FECHADA salvo corretamente: {output_path_docx}")
+
             assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
 
             desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"

@@ -91,16 +91,16 @@ def unificar_dxf(dxf_aberto_path, dxf_fechado_path, output_dxf_unificado):
         logger.error(f"❌ Erro ao unificar DXFs: {e}")
 
 
-def main_unir_poligonais(diretorio_concluido):
+def main_unir_poligonais(diretorio_concluido, uuid_str):
     tipos = ['ETE', 'REM', 'SER', 'ACE']
 
     for tipo in tipos:
         logger.info(f"🚩 Iniciando processo para o tipo: {tipo}")
 
-        doc_aberto = glob.glob(os.path.join(diretorio_concluido, f"*ABERTA*{tipo}*.docx"))
-        doc_fechado = glob.glob(os.path.join(diretorio_concluido, f"*FECHADA*{tipo}*.docx"))
-        dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"*ABERTA*{tipo}*.dxf"))
-        dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"*FECHADA*{tipo}*.dxf"))
+        doc_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}_*.docx"))
+        doc_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_*.docx"))
+        dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}_*.dxf"))
+        dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_*.dxf"))
 
         logger.info(f"📂 DOC aberto: {doc_aberto}")
         logger.info(f"📂 DOC fechado: {doc_fechado}")
@@ -112,10 +112,11 @@ def main_unir_poligonais(diretorio_concluido):
             continue
 
         doc_fechado_path = doc_fechado[0]
-        nome_base = os.path.splitext(os.path.basename(doc_fechado_path))[0].replace('FECHADA_', '').replace(tipo, '').strip('_')
 
-        output_dxf_path = os.path.join(diretorio_concluido, f"{tipo}_{nome_base}_FINAL.dxf")
-        output_docx_path = os.path.join(diretorio_concluido, f"{tipo}_{nome_base}_FINAL.docx")
+        nome_base = os.path.splitext(os.path.basename(doc_fechado_path))[0].replace(f"{uuid_str}_FECHADA_{tipo}_", "")
+
+        output_dxf_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.dxf")
+        output_docx_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.docx")
 
         logger.info(f"📝 Preparando criação dos arquivos finais: DXF={output_dxf_path}, DOCX={output_docx_path}")
 
@@ -135,3 +136,4 @@ def main_unir_poligonais(diretorio_concluido):
         logger.info(f"✅ Arquivos finais criados para {tipo}")
 
     logger.info("✅ Processo de unificação concluído.")
+

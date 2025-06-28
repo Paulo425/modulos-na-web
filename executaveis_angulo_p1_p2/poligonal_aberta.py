@@ -557,9 +557,9 @@ def main_poligonal_aberta(arquivo_excel_recebido, arquivo_dxf_recebido, diretori
     dxf_filename = os.path.splitext(os.path.basename(dxf_file_path))[0]  # Obtém o nome base do DXF
 
     # 🔹 Alteração aqui, adicionando "ABERTA_" aos nomes dos arquivos:
-    output_excel_path = os.path.join(output_folder, f"{uuid_str}_ABERTA_{tipo}_Memorial_{dxf_filename}.xlsx")
-    output_doc_path = os.path.join(output_folder, f"{uuid_str}_ABERTA_{tipo}_Memorial_{dxf_filename}.docx")
-    output_dxf_path = os.path.join(output_folder, f"{uuid_str}_ABERTA_{tipo}_Poligonal_{dxf_filename}.dxf")
+    output_excel_path = os.path.join(output_folder, f"{uuid_str}_ABERTA_{tipo}_{dxf_filename}.xlsx")
+    output_doc_path = os.path.join(output_folder, f"{uuid_str}_ABERTA_{tipo}_{dxf_filename}.docx")
+    output_dxf_path = os.path.join(output_folder, f"{uuid_str}_ABERTA_{tipo}_{dxf_filename}.dxf")
 
 
     process_poligonal_aberta_e_fechada(
