@@ -81,8 +81,7 @@ def main():
 
     # 🔸 NOVA Etapa: Unir poligonais
     main_unir_poligonais(
-        variaveis["diretorio_concluido"],
-        uuid_str
+        variaveis["diretorio_concluido"]
     )
 
     # Etapa existente
