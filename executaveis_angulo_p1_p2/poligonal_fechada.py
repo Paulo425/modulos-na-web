@@ -36,17 +36,6 @@ def obter_data_formatada(data):
 # Obter data atual formatada manualmente
 data_atual = obter_data_formatada(datetime.now())
 
-LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
-os.makedirs(LOG_DIR, exist_ok=True)
-
-log_path = os.path.join(LOG_DIR, f"exec_aberta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-
-logging.basicConfig(
-    filename=log_path,
-    filemode='w',
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-)
 logger = logging.getLogger(__name__)
 
 def is_clockwise(points):
