@@ -26,15 +26,28 @@ LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
 log_path = os.path.join(LOG_DIR, f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 
-# ✅ 4. Configura logger
-logging.basicConfig(
-    filename=log_path,
-    filemode='w',
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-)
+# Configura logging para arquivo e console (stream)
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
-# ✅ 5. Habilita UTF-8 no console
+# Handler para arquivo
+file_handler = logging.FileHandler(log_path, encoding='utf-8')
+file_handler.setLevel(logging.DEBUG)
+
+# Handler para console (StreamHandler)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.DEBUG)
+
+# Formatação comum aos dois handlers
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Adiciona handlers ao logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+# ✅ 4. Habilita UTF-8 no console
 try:
     sys.stdout.reconfigure(encoding='utf-8')
 except Exception:
