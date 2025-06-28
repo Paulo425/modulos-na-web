@@ -30,7 +30,12 @@ def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
         arquivos_excel_aberta = glob.glob(os.path.join(diretorio, f"*ABERTA*{tipo}*.xlsx"))
         arquivos_excel_fechada = glob.glob(os.path.join(diretorio, f"*FECHADA*{tipo}*.xlsx"))
 
-        logger.info(f"📂 Encontrados para {tipo}: DXF={arquivos_dxf}, DOCX={arquivos_docx}, XLSX ABERTA={arquivos_excel_aberta}, XLSX FECHADA={arquivos_excel_fechada}")
+        # 🚨 Aqui fica o bloco detalhado de logs!
+        logger.info(f"🔍 Resultados da busca para tipo {tipo}:")
+        logger.info(f"   📂 DXF FINAL: {arquivos_dxf}")
+        logger.info(f"   📂 DOCX FINAL: {arquivos_docx}")
+        logger.info(f"   📂 XLSX ABERTA: {arquivos_excel_aberta}")
+        logger.info(f"   📂 XLSX FECHADA: {arquivos_excel_fechada}")
 
         if arquivos_dxf and arquivos_docx and arquivos_excel_aberta and arquivos_excel_fechada:
             nome_zip = f"{uuid_str}_{cidade_formatada}_{tipo}.zip"
