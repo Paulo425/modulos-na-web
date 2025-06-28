@@ -37,6 +37,7 @@ def obter_data_formatada(data):
 data_atual = obter_data_formatada(datetime.now())
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Garanta que está em DEBUG
 
 def is_clockwise(points):
     """

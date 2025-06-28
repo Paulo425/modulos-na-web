@@ -30,21 +30,8 @@ except locale.Error:
 # Obter data atual formatada
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
-
-LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
-os.makedirs(LOG_DIR, exist_ok=True)
-
-log_path = os.path.join(LOG_DIR, f"exec_aberta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-
-logging.basicConfig(
-    filename=log_path,
-    filemode='w',
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-)
 logger = logging.getLogger(__name__)
-
-
+logger.setLevel(logging.DEBUG)  # Garanta que está em DEBUG
 
 # 🔹 Função para definir a fonte padrão
 def set_default_font(doc):

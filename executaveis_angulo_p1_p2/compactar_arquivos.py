@@ -8,12 +8,8 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
 
-logging.basicConfig(
-    filename=os.path.join(LOG_DIR, f"zip_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Garanta que está em DEBUG
 
 def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
     logger.info(f"📦 Iniciando montagem dos pacotes ZIP no diretório: {diretorio}")
