@@ -93,10 +93,10 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
     tipos = ['ETE', 'REM', 'SER', 'ACE']
 
     for tipo in tipos:
-        doc_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA*{tipo}*.docx"))
-        doc_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA*{tipo}*.docx"))
-        dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA*{tipo}*.dxf"))
-        dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA*{tipo}*.dxf"))
+        doc_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}*.docx"))
+        doc_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}*.docx"))
+        dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}*.dxf"))
+        dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}*.dxf"))
 
         if not (doc_aberto and doc_fechado and dxf_aberto and dxf_fechado):
             logger.warning(f"⚠️ Arquivos incompletos para tipo {tipo}. Pulando...")
