@@ -93,10 +93,10 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
     tipos = ['ETE', 'REM', 'SER', 'ACE']
 
     for tipo in tipos:
-        doc_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}_*.docx"))
-        doc_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_*.docx"))
-        dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}_*.dxf"))
-        dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_*.dxf"))
+        doc_aberto = glob.glob(os.path.join(diretorio_concluido, f"*ABERTA*{tipo}*.docx"))
+        doc_fechado = glob.glob(os.path.join(diretorio_concluido, f"*FECHADA*{tipo}*.docx"))
+        dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"*ABERTA*{tipo}*.dxf"))
+        dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"*FECHADA*{tipo}*.dxf"))
 
         logger.info(f"📂 DOC ABERTO encontrado: {doc_aberto}")
         logger.info(f"📂 DOC FECHADO encontrado: {doc_fechado}")
@@ -113,7 +113,14 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
             continue
 
         # Correção aqui 👇
-        nome_base = os.path.splitext(os.path.basename(doc_fechado[0]))[0].replace(f"{uuid_str}_FECHADA_{tipo}_", "")
+        if doc_fechado:
+            doc_fechado_path = doc_fechado[0]
+            nome_base = os.path.splitext(os.path.basename(doc_fechado_path))[0]
+            nome_base = nome_base.replace(f"{uuid_str}_FECHADA_{tipo}_", "").replace(f"FECHADA_{tipo}_", "")
+        else:
+            logger.error(f"❌ Documento FECHADA para o tipo {tipo} não encontrado.")
+            continue
+
         
         # Correção aqui 👇
         output_dxf_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.dxf")
