@@ -88,7 +88,7 @@ def unificar_dxf(dxf_aberto_path, dxf_fechado_path, output_dxf_unificado):
     dxf_unificado.saveas(output_dxf_unificado)
     logger.info(f"✅ DXF unificado salvo em: {output_dxf_unificado}")
 
-# Função principal final otimizada com UUID
+# Função principal final otimizada com UUID (🚨 Código corrigido aqui!)
 def main_unir_poligonais(diretorio_concluido, uuid_str):
     tipos = ['ETE', 'REM', 'SER', 'ACE']
 
@@ -98,57 +98,28 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
         dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"*ABERTA*{tipo}*.dxf"))
         dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"*FECHADA*{tipo}*.dxf"))
 
-        logger.info(f"📂 DOC ABERTO encontrado: {doc_aberto}")
-        logger.info(f"📂 DOC FECHADO encontrado: {doc_fechado}")
-        logger.info(f"📂 DXF ABERTO encontrado: {dxf_aberto}")
-        logger.info(f"📂 DXF FECHADO encontrado: {dxf_fechado}")
-
-        logger.info(f"📝 Nome base para arquivos finais: {nome_base}")
-        logger.info(f"📝 Gerando DXF FINAL em: {output_dxf_path}")
-        logger.info(f"📝 Gerando DOCX FINAL em: {output_docx_path}")
-
-
         if not (doc_aberto and doc_fechado and dxf_aberto and dxf_fechado):
             logger.warning(f"⚠️ Arquivos incompletos para tipo {tipo}. Pulando...")
             continue
 
-        # Correção aqui 👇
-        if doc_fechado:
-            doc_fechado_path = doc_fechado[0]
-            nome_base = os.path.splitext(os.path.basename(doc_fechado_path))[0]
-            nome_base = nome_base.replace(f"{uuid_str}_FECHADA_{tipo}_", "").replace(f"FECHADA_{tipo}_", "")
-            
-            # 🔵 Este log deve estar aqui dentro
-            logger.info(f"📝 Nome base para arquivos finais: {nome_base}")
+        doc_fechado_path = doc_fechado[0]
+        nome_base = os.path.splitext(os.path.basename(doc_fechado_path))[0]
+        nome_base = nome_base.replace(f"{uuid_str}_FECHADA_{tipo}_", "").replace(f"FECHADA_{tipo}_", "")
 
-        else:
-            logger.error(f"❌ Documento FECHADA para o tipo {tipo} não encontrado.")
-            continue
+        # 🚩 Logs posicionados corretamente aqui:
+        logger.info(f"📝 Nome base para arquivos finais: {nome_base}")
 
-
-        
-        # Correção aqui 👇
         output_dxf_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.dxf")
         output_docx_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.docx")
 
+        # 🚩 Logs posicionados corretamente aqui:
+        logger.info(f"📝 Gerando DXF FINAL em: {output_dxf_path}")
+        logger.info(f"📝 Gerando DOCX FINAL em: {output_docx_path}")
 
         paragrafo_inicial = "Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000."
         paragrafo_final = "Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000."
 
-        logger.info(f"🚩 Processando tipo {tipo}")
-
         conteudo_aberto = extrair_conteudo_docx(doc_aberto[0])
-
-
-        logger.info(f"📂 DOC ABERTO encontrado: {doc_aberto}")
-        logger.info(f"📂 DOC FECHADO encontrado: {doc_fechado}")
-        logger.info(f"📂 DXF ABERTO encontrado: {dxf_aberto}")
-        logger.info(f"📂 DXF FECHADO encontrado: {dxf_fechado}")
-
-        logger.info(f"📝 Nome base para arquivos finais: {nome_base}")
-        logger.info(f"📝 Gerando DXF FINAL em: {output_dxf_path}")
-        logger.info(f"📝 Gerando DOCX FINAL em: {output_docx_path}")
-
 
         inserir_conteudo_entre_paragrafos_com_template(
             TEMPLATE_PADRAO,
@@ -162,5 +133,3 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
         unificar_dxf(dxf_aberto[0], dxf_fechado[0], output_dxf_path)
 
     logger.info("✅ Unificação concluída para todos os tipos disponíveis.")
-
-
