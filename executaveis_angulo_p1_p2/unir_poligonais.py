@@ -106,15 +106,8 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
         nome_base = os.path.splitext(os.path.basename(doc_fechado_path))[0]
         nome_base = nome_base.replace(f"{uuid_str}_FECHADA_{tipo}_", "").replace(f"FECHADA_{tipo}_", "")
 
-        # 🚩 Logs posicionados corretamente aqui:
-        logger.info(f"📝 Nome base para arquivos finais: {nome_base}")
-
         output_dxf_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.dxf")
         output_docx_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.docx")
-
-        # 🚩 Logs posicionados corretamente aqui:
-        logger.info(f"📝 Gerando DXF FINAL em: {output_dxf_path}")
-        logger.info(f"📝 Gerando DOCX FINAL em: {output_docx_path}")
 
         paragrafo_inicial = "Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000."
         paragrafo_final = "Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000."
@@ -133,3 +126,4 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
         unificar_dxf(dxf_aberto[0], dxf_fechado[0], output_dxf_path)
 
     logger.info("✅ Unificação concluída para todos os tipos disponíveis.")
+
