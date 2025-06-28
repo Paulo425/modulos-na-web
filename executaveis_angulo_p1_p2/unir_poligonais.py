@@ -1,23 +1,21 @@
 import os
-import gc
+import glob
+import logging
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import ezdxf
-import glob
-import logging
 from ezdxf.addons import Importer
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 TEMPLATE_PADRAO = os.path.join(BASE_DIR, 'templates', 'template_padrao.docx')
 
-logger = logging.getLogger(__name__)
 
-# Função otimizada para extrair conteúdo DOCX
 def extrair_conteudo_docx(docx_path):
-    logger.info(f"📂 Extraindo conteúdo de: {docx_path}")
     if not os.path.exists(docx_path):
-        logger.error("❌ Arquivo DOCX não encontrado.")
+        logger.error(f"❌ Arquivo DOCX não encontrado: {docx_path}")
         return []
 
     doc = Document(docx_path)
@@ -25,10 +23,10 @@ def extrair_conteudo_docx(docx_path):
         (p.text, p.alignment, [(run.text, run.bold, run.italic, run.font.size, run.font.name) for run in p.runs])
         for p in doc.paragraphs
     ]
-    logger.info(f"📌 {len(conteudo)} parágrafos extraídos do DOCX.")
+    logger.info(f"📌 Conteúdo DOCX extraído: {len(conteudo)} parágrafos.")
     return conteudo
 
-# Função otimizada para inserir conteúdo entre parágrafos com template
+
 def inserir_conteudo_entre_paragrafos_com_template(template_path, doc_fechado_path, conteudo_aberto,
                                                    output_docx_path, paragrafo_inicial, paragrafo_final):
     doc_final = Document(template_path)
@@ -65,45 +63,52 @@ def inserir_conteudo_entre_paragrafos_com_template(template_path, doc_fechado_pa
             ja_inserido = True
 
     doc_final.save(output_docx_path)
-    logger.info(f"✅ Documento final salvo em: {output_docx_path}")
+    logger.info(f"✅ Documento DOCX final salvo em: {output_docx_path}")
 
-# Função otimizada para unificar DXFs
+
 def unificar_dxf(dxf_aberto_path, dxf_fechado_path, output_dxf_unificado):
-    dxf_aberto = ezdxf.readfile(dxf_aberto_path)
-    dxf_fechado = ezdxf.readfile(dxf_fechado_path)
+    try:
+        dxf_aberto = ezdxf.readfile(dxf_aberto_path)
+        dxf_fechado = ezdxf.readfile(dxf_fechado_path)
 
-    dxf_unificado = ezdxf.new(dxfversion='R2010')
-    importer_aberto = Importer(dxf_aberto, dxf_unificado)
-    importer_aberto.import_modelspace()
-    importer_aberto.finalize()
+        dxf_unificado = ezdxf.new(dxfversion='R2010')
 
-    importer_fechado = Importer(dxf_fechado, dxf_unificado)
-    importer_fechado.import_modelspace()
-    importer_fechado.finalize()
+        importer_aberto = Importer(dxf_aberto, dxf_unificado)
+        importer_aberto.import_modelspace()
+        importer_aberto.finalize()
 
-    auditor = dxf_unificado.audit()
-    if auditor.errors:
-        logger.warning(f"⚠️ Problemas corrigidos pelo auditor DXF: {auditor.errors}")
+        importer_fechado = Importer(dxf_fechado, dxf_unificado)
+        importer_fechado.import_modelspace()
+        importer_fechado.finalize()
 
-    dxf_unificado.saveas(output_dxf_unificado)
-    logger.info(f"✅ DXF unificado salvo em: {output_dxf_unificado}")
+        auditor = dxf_unificado.audit()
+        if auditor.errors:
+            logger.warning(f"⚠️ Problemas corrigidos pelo auditor DXF: {auditor.errors}")
 
-# Função principal final otimizada com UUID (🚨 Código corrigido aqui!)
+        dxf_unificado.saveas(output_dxf_unificado)
+        logger.info(f"✅ DXF unificado salvo em: {output_dxf_unificado}")
+    except Exception as e:
+        logger.error(f"❌ Erro ao unificar DXFs: {e}")
+
+
 def main_unir_poligonais(diretorio_concluido):
     tipos = ['ETE', 'REM', 'SER', 'ACE']
 
     for tipo in tipos:
-        logger.info(f"🚩 Tipo atual: {tipo}")
+        logger.info(f"🚩 Iniciando processo para o tipo: {tipo}")
 
         doc_aberto = glob.glob(os.path.join(diretorio_concluido, f"*ABERTA*{tipo}*.docx"))
         doc_fechado = glob.glob(os.path.join(diretorio_concluido, f"*FECHADA*{tipo}*.docx"))
         dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"*ABERTA*{tipo}*.dxf"))
         dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"*FECHADA*{tipo}*.dxf"))
 
-        logger.info(f"📂 Encontrados - DOC aberto: {doc_aberto}, DOC fechado: {doc_fechado}, DXF aberto: {dxf_aberto}, DXF fechado: {dxf_fechado}")
+        logger.info(f"📂 DOC aberto: {doc_aberto}")
+        logger.info(f"📂 DOC fechado: {doc_fechado}")
+        logger.info(f"📂 DXF aberto: {dxf_aberto}")
+        logger.info(f"📂 DXF fechado: {dxf_fechado}")
 
         if not (doc_aberto and doc_fechado and dxf_aberto and dxf_fechado):
-            logger.warning(f"⚠️ Arquivos incompletos para tipo {tipo}. Pulando...")
+            logger.warning(f"⚠️ Arquivos incompletos para {tipo}. Pulando...")
             continue
 
         doc_fechado_path = doc_fechado[0]
@@ -112,7 +117,7 @@ def main_unir_poligonais(diretorio_concluido):
         output_dxf_path = os.path.join(diretorio_concluido, f"{tipo}_{nome_base}_FINAL.dxf")
         output_docx_path = os.path.join(diretorio_concluido, f"{tipo}_{nome_base}_FINAL.docx")
 
-        logger.info(f"✅ Preparando criação de arquivos finais: DXF={output_dxf_path}, DOCX={output_docx_path}")
+        logger.info(f"📝 Preparando criação dos arquivos finais: DXF={output_dxf_path}, DOCX={output_docx_path}")
 
         conteudo_aberto = extrair_conteudo_docx(doc_aberto[0])
 
@@ -125,12 +130,8 @@ def main_unir_poligonais(diretorio_concluido):
             "Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000."
         )
 
-        logger.info(f"✅ Documento DOCX criado em: {output_docx_path}")
-
         unificar_dxf(dxf_aberto[0], dxf_fechado[0], output_dxf_path)
 
-        logger.info(f"✅ Arquivo DXF criado em: {output_dxf_path}")
+        logger.info(f"✅ Arquivos finais criados para {tipo}")
 
-    logger.info("✅ Unificação concluída para todos os tipos disponíveis.")
-
-
+    logger.info("✅ Processo de unificação concluído.")
