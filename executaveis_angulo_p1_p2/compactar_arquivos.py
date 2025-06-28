@@ -31,8 +31,8 @@ def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
         # Padrão para arquivos DXF e DOCX finais (unificados)
-        padrao_dxf_final = os.path.join(diretorio, f"{uuid_str}_{tipo}_*_FINAL.dxf")
-        padrao_docx_final = os.path.join(diretorio, f"{uuid_str}_{tipo}_*_FINAL.docx")
+        arquivos_dxf = glob.glob(os.path.join(diretorio, f"{uuid_str}_{tipo}*_FINAL.dxf"))
+        arquivos_docx = glob.glob(os.path.join(diretorio, f"{uuid_str}_{tipo}*_FINAL.docx"))
 
         # Padrões para arquivos Excel ABERTA e FECHADA
         padrao_excel_aberta = os.path.join(diretorio, f"{uuid_str}_ABERTA_{tipo}_*.xlsx")
