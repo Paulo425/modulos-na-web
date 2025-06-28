@@ -98,6 +98,16 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
         dxf_aberto = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}_*.dxf"))
         dxf_fechado = glob.glob(os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_*.dxf"))
 
+        logger.info(f"📂 DOC ABERTO encontrado: {doc_aberto}")
+        logger.info(f"📂 DOC FECHADO encontrado: {doc_fechado}")
+        logger.info(f"📂 DXF ABERTO encontrado: {dxf_aberto}")
+        logger.info(f"📂 DXF FECHADO encontrado: {dxf_fechado}")
+
+        logger.info(f"📝 Nome base para arquivos finais: {nome_base}")
+        logger.info(f"📝 Gerando DXF FINAL em: {output_dxf_path}")
+        logger.info(f"📝 Gerando DOCX FINAL em: {output_docx_path}")
+
+
         if not (doc_aberto and doc_fechado and dxf_aberto and dxf_fechado):
             logger.warning(f"⚠️ Arquivos incompletos para tipo {tipo}. Pulando...")
             continue
@@ -109,12 +119,24 @@ def main_unir_poligonais(diretorio_concluido, uuid_str):
         output_dxf_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.dxf")
         output_docx_path = os.path.join(diretorio_concluido, f"{uuid_str}_{tipo}_{nome_base}_FINAL.docx")
 
+
         paragrafo_inicial = "Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000."
         paragrafo_final = "Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000."
 
         logger.info(f"🚩 Processando tipo {tipo}")
 
         conteudo_aberto = extrair_conteudo_docx(doc_aberto[0])
+
+
+        logger.info(f"📂 DOC ABERTO encontrado: {doc_aberto}")
+        logger.info(f"📂 DOC FECHADO encontrado: {doc_fechado}")
+        logger.info(f"📂 DXF ABERTO encontrado: {dxf_aberto}")
+        logger.info(f"📂 DXF FECHADO encontrado: {dxf_fechado}")
+
+        logger.info(f"📝 Nome base para arquivos finais: {nome_base}")
+        logger.info(f"📝 Gerando DXF FINAL em: {output_dxf_path}")
+        logger.info(f"📝 Gerando DOCX FINAL em: {output_docx_path}")
+
 
         inserir_conteudo_entre_paragrafos_com_template(
             TEMPLATE_PADRAO,
