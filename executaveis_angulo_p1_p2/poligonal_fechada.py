@@ -708,9 +708,9 @@ def calculate_angular_turn(p1, p2, p3):
 
 
 
-def create_memorial_descritivo(doc, lines, proprietario, matricula, caminho_salvar, confrontantes,
+def create_memorial_descritivo(uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes,
                                ponto_amarracao, dxf_file_path, area_dxf, azimute, v1, msp,
-                               base_filename, excel_file_path, tipo=None,giro_angular_v1_dms=None, uuid_str=None):
+                               base_filename, excel_file_path, tipo=None,giro_angular_v1_dms=None):
     """
     Cria o memorial descritivo e atualiza o DXF com base no ponto de amarração real (anterior ao V1).
     """
@@ -933,6 +933,7 @@ def generate_final_text(df, rua, confrontantes):
 
 
 def create_memorial_document(
+    uuid_str,
     proprietario,
     matricula,
     matricula_texto,
@@ -952,7 +953,7 @@ def create_memorial_document(
     area_dxf,
     desc_ponto_amarracao,
     perimeter_dxf,
-    giro_angular_v1_dms, uuid_str=None
+    giro_angular_v1_dms
 ):
 
     try:
@@ -1332,8 +1333,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
         # 🛠 Criar memorial e Excel
         create_memorial_descritivo(
-            doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
-            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms=giro_angular_v1_dms, uuid_str=uuid_str
+            uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
+            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms=giro_angular_v1_dms
         )
 
         # 📄 Gerar DOCX
@@ -1351,6 +1352,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"
 
             create_memorial_document(
+                uuid_str=uuid_str,
                 proprietario=proprietario,
                 matricula=matricula,  # usado para salvar arquivos
                 matricula_texto=matricula_texto,  # usado no Word
@@ -1371,7 +1373,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
                 desc_ponto_amarracao=desc_ponto_amarracao,
                 perimeter_dxf=perimeter_dxf,
                 giro_angular_v1_dms=giro_angular_v1_dms,
-                uuid_str=uuid_str
+               
             )
 
 
