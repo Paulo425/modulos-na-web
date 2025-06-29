@@ -1393,6 +1393,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     else:
         logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento.")
         pythoncom.CoUninitialize()
+    #atualizado agora
 
 
 
