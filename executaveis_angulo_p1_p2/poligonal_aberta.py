@@ -525,14 +525,16 @@ def main_poligonal_aberta(uuid_str, excel_path, dxf_path, diretorio_preparado, d
         return
     
     # Busca dinâmica do arquivo confrontante correto na pasta PREPARADO
-    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_ABERTA_{tipo}_*.xlsx")
-    arquivos_encontrados = glob.glob(padrao_busca)
-    
+    padrao_aberta = os.path.join(diretorio_preparado, f"{uuid_str}_ABERTA_*_{tipo}.xlsx")
+
+    arquivos_encontrados = glob.glob(padrao_aberta)
+
     if not arquivos_encontrados:
-        logger.info(f"❌ Arquivo de confrontantes não encontrado com o padrão: {padrao_busca}")
+        logger.info(f"❌ Arquivo de confrontantes não encontrado com o padrão: {padrao_aberta}")
         return
-    
+
     confrontantes_file_path = arquivos_encontrados[0]  # Definido automaticamente!
+
    
     #confrontantes_file_path = input("Digite o caminho do arquivo de confrontantes (Excel): ").strip('"')
     #desc_ponto_P1 = input("Descreva o ponto P1: ")
