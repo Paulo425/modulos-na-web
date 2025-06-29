@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 def preparar_planilhas(arquivo_recebido, diretorio_preparado):
-    def processar_planilha(df, coluna_codigo, identificador, diretorio_destino):
+    def processar_planilha(df, coluna_codigo, identificador, diretorio_destino, id_execucao):
         if coluna_codigo not in df.columns:
             mensagem = f"⚠️ Coluna '{coluna_codigo}' não encontrada na planilha '{identificador}'."
             print(mensagem)
@@ -25,10 +25,11 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
         df_v = df[df[coluna_codigo].astype(str).str.match(r'^[Vv][0-9]*$', na=False)][[coluna_codigo, "Confrontante"]]
         df_outros = df[~df[coluna_codigo].astype(str).str.match(r'^[Vv][0-9]*$', na=False)]
 
-        df_v.to_excel(os.path.join(diretorio_destino, f"FECHADA_{identificador}.xlsx"), index=False)
-        df_outros.to_excel(os.path.join(diretorio_destino, f"ABERTA_{identificador}.xlsx"), index=False)
-        logger.info(f"✅ Planilhas FECHADA e ABERTA geradas para identificador: {identificador}")
-        print(f"✅ Planilhas FECHADA e ABERTA geradas para: {identificador}")
+        df_v.to_excel(os.path.join(diretorio_destino, f"{uuid_str}_FECHADA_{identificador}.xlsx"), index=False)
+        df_outros.to_excel(os.path.join(diretorio_destino, f"{uuid_str}_ABERTA_{identificador}.xlsx"), index=False)
+
+        logger.info(f"✅ Planilhas FECHADA e ABERTA geradas com UUID para identificador: {identificador}")
+        print(f"✅ Planilhas FECHADA e ABERTA geradas com UUID para: {identificador}")
 
     xls = pd.ExcelFile(arquivo_recebido)
     for sheet_name, sufixo in [("ETE", "ETE"), ("Confrontantes_Remanescente", "REM"),
