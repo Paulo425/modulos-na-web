@@ -1248,7 +1248,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.info("❌ Não foi possível determinar automaticamente o tipo (ETE, REM, SER ou ACE).")
         return
 
-    padrao_fechada = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_*_{tipo}.xlsx")
+    padrao_fechada = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+
     arquivos_encontrados = glob.glob(padrao_fechada)
     if not arquivos_encontrados:
         logger.info(f"❌ Arquivo de confrontantes não encontrado com o padrão: {padrao_fechada}")
