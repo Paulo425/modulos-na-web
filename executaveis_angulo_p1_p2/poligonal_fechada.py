@@ -708,9 +708,12 @@ def calculate_angular_turn(p1, p2, p3):
 
 
 
-def create_memorial_descritivo(uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes,
-                               ponto_amarracao, dxf_file_path, area_dxf, azimute, v1, msp,
-                               base_filename, excel_file_path, tipo=None,giro_angular_v1_dms=None):
+dcreate_memorial_descritivo(
+        uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
+        dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
+        giro_angular_v1_dms=giro_angular_v1_dms,
+        diretorio_concluido=caminho_salvar  # Correção feita aqui!
+    )
     """
     Cria o memorial descritivo e atualiza o DXF com base no ponto de amarração real (anterior ao V1).
     """
@@ -1231,7 +1234,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     desc_ponto_Az = dados_imovel.get("AZ", "").strip()
 
     # Diretório para salvar resultados
-    caminho_salvar = diretorio_concluido
+    diretorio_concluido = caminho_salvar
     os.makedirs(caminho_salvar, exist_ok=True)
 
     # Identifica tipo (SER, REM, etc)
