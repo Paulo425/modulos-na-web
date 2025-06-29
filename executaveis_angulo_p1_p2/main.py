@@ -73,24 +73,24 @@ def main():
 
     variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, BASE_DIR, uuid_str)
 
-    # Etapa existente
     main_poligonal_fechada(
+        uuid_str,
         variaveis["arquivo_excel_recebido"],
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
-        caminho_template,
-        uuid_str
+        caminho_template
     )
 
-    # 🔸 NOVA Etapa: Poligonal aberta (padrão similar à fechada)
+
     main_poligonal_aberta(
+        uuid_str,
         variaveis["arquivo_excel_recebido"],
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
-        variaveis["diretorio_concluido"],
-        uuid_str
+        variaveis["diretorio_concluido"]
     )
+
 
     # 🔸 NOVA Etapa: Unir poligonais
     main_unir_poligonais(

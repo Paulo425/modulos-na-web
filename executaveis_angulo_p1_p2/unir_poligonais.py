@@ -91,7 +91,7 @@ def unificar_dxf(dxf_aberto_path, dxf_fechado_path, output_dxf_unificado):
         logger.error(f"❌ Erro ao unificar DXFs: {e}")
 
 
-def main_unir_poligonais(diretorio_concluido, uuid_str):
+def main_unir_poligonais(uuid_str, diretorio_concluido):
     tipos = ['ETE', 'REM', 'SER', 'ACE']
 
     for tipo in tipos:

@@ -498,7 +498,7 @@ def process_poligonal_aberta_e_fechada(dxf_file_path, output_file_path, output_e
         logger.error(f"❌ Erro ao processar o DXF: {e}")
         
 # 🔹 Função principal
-def main_poligonal_aberta(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, uuid_str):
+def main_poligonal_aberta(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido):
     logger.info("🔹 Executando poligonal aberta com as variáveis definidas:")
     logger.info(f"Excel: {arquivo_excel_recebido}")
     logger.info(f"DXF: {arquivo_dxf_recebido}")
