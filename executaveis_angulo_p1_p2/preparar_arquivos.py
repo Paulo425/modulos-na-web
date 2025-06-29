@@ -37,7 +37,7 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
         if sheet_name in xls.sheet_names:
             df = pd.read_excel(xls, sheet_name=sheet_name)
             identificador = f"{os.path.splitext(os.path.basename(arquivo_recebido))[0]}_{sufixo}"
-            processar_planilha(df, "Código", identificador, diretorio_preparado)
+            processar_planilha(df, "Código", identificador, diretorio_preparado, id_execucao)
         else:
             mensagem = f"⚠️ Planilha '{sheet_name}' não encontrada no arquivo Excel."
             print(mensagem)
