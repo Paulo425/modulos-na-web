@@ -14,8 +14,8 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def preparar_planilhas(arquivo_recebido, diretorio_preparado):
-    def processar_planilha(df, coluna_codigo, identificador, diretorio_destino, id_execucao):
+def preparar_planilhas(arquivo_recebido, diretorio_preparado, uuid_str):
+    def processar_planilha(df, coluna_codigo, identificador, diretorio_destino, uuid_str):
         if coluna_codigo not in df.columns:
             mensagem = f"⚠️ Coluna '{coluna_codigo}' não encontrada na planilha '{identificador}'."
             print(mensagem)
@@ -37,17 +37,17 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
         if sheet_name in xls.sheet_names:
             df = pd.read_excel(xls, sheet_name=sheet_name)
             identificador = f"{os.path.splitext(os.path.basename(arquivo_recebido))[0]}_{sufixo}"
-            processar_planilha(df, "Código", identificador, diretorio_preparado, id_execucao)
+            processar_planilha(df, "Código", identificador, diretorio_preparado, uuid_str)
         else:
             mensagem = f"⚠️ Planilha '{sheet_name}' não encontrada no arquivo Excel."
             print(mensagem)
             logger.warning(mensagem)
 
-def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir, id_execucao):
+def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir, uuid_str):
     try:
         cidade_formatada = cidade.replace(" ", "_")
 
-        TMP_DIR = os.path.join(base_dir, 'tmp', id_execucao)
+        TMP_DIR = os.path.join(base_dir, 'tmp', uuid_str)
         os.makedirs(TMP_DIR, exist_ok=True)
 
         RECEBIDO = os.path.join(TMP_DIR, "RECEBIDO")
