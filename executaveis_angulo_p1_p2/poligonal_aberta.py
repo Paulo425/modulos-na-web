@@ -500,12 +500,12 @@ def process_poligonal_aberta_e_fechada(dxf_file_path, output_file_path, output_e
 # 🔹 Função principal
 def main_poligonal_aberta(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido):
     logger.info("🔹 Executando poligonal aberta com as variáveis definidas:")
-    logger.info(f"Excel: {arquivo_excel_recebido}")
-    logger.info(f"DXF: {arquivo_dxf_recebido}")
+    logger.info(f"Excel: {excel_path}")
+    logger.info(f"DXF: {dxf_path}")
     logger.info(f"Preparado: {diretorio_preparado}")
     logger.info(f"Concluído: {diretorio_concluido}")
 
-    dxf_file_path = arquivo_dxf_recebido
+    dxf_file_path = dxf_path
     output_folder = diretorio_concluido
 
     diretorio_confrontantes = diretorio_preparado
@@ -546,7 +546,7 @@ def main_poligonal_aberta(uuid_str, excel_path, dxf_path, diretorio_preparado, d
 
     # 🔹 Extração do ponto P1 a partir da aba 'Dados_do_Imóvel' (campo 'AZ')
     try:
-        df_dados_imovel = pd.read_excel(arquivo_excel_recebido, sheet_name='Dados_do_Imóvel', header=None)
+        df_dados_imovel = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None)
         dados_dict = dict(zip(df_dados_imovel.iloc[:, 0], df_dados_imovel.iloc[:, 1]))
         desc_ponto_P1 = dados_dict.get("AZ", "").strip()
         logger.info(f"📌 Descrição do ponto P1 (AZ) extraída da aba Dados_do_Imóvel: {desc_ponto_P1}")
