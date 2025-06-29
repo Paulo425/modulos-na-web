@@ -708,12 +708,12 @@ def calculate_angular_turn(p1, p2, p3):
 
 
 
-dcreate_memorial_descritivo(
+def create_memorial_descritivo(
         uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
         dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
         giro_angular_v1_dms=giro_angular_v1_dms,
         diretorio_concluido=caminho_salvar  # Correção feita aqui!
-    )
+    ):
     """
     Cria o memorial descritivo e atualiza o DXF com base no ponto de amarração real (anterior ao V1).
     """
