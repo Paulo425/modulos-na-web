@@ -1235,7 +1235,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     os.makedirs(caminho_salvar, exist_ok=True)
 
     # Identifica tipo (SER, REM, etc)
-    dxf_filename = os.path.basename(arquivo_dxf_recebido).upper()
+    dxf_filename = os.path.basename(dxf_path).upper()
     if "ETE" in dxf_filename:
         tipo = "ETE"
     elif "REM" in dxf_filename:
@@ -1260,7 +1260,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # DXF limpo
     # ⚠️ Substitui a limpeza anterior por apenas conversão R2010
     dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
-    dxf_file_path = limpar_dxf_e_converter_r2010(arquivo_dxf_recebido, dxf_limpo_path)
+    dxf_file_path = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
 
 
     # 🔍 Buscar planilha que COMEÇA com ABERTA_{TIPO} no diretório CONCLUIDO
