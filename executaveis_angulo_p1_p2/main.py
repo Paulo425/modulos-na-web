@@ -60,12 +60,10 @@ def main():
 
     cidade = sys.argv[1]
     uuid_str = str(uuid.uuid4())[:8]
-    cidade_formatada = cidade.replace(" ", "_")  # 🔧 Adicione esta linha
+    cidade_formatada = cidade.replace(" ", "_")
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
-    #BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
-
 
     if not os.path.exists(caminho_template):
         print(f"Template '{caminho_template}' não encontrado.")
@@ -73,6 +71,17 @@ def main():
 
     variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, BASE_DIR, uuid_str)
 
+    # 🔷 Iniciando: Processamento Poligonal Aberta (corrigido)
+    main_poligonal_aberta(
+        uuid_str,
+        variaveis["arquivo_excel_recebido"],
+        variaveis["arquivo_dxf_recebido"],
+        variaveis["diretorio_preparado"],
+        variaveis["diretorio_concluido"]
+       
+    )
+
+    # 🔷 Iniciando: Processamento Poligonal Fechada
     main_poligonal_fechada(
         uuid_str,
         variaveis["arquivo_excel_recebido"],
@@ -82,29 +91,22 @@ def main():
         caminho_template
     )
 
-
-    main_poligonal_aberta(
-        uuid_str,
-        variaveis["arquivo_excel_recebido"],
-        variaveis["arquivo_dxf_recebido"],
-        variaveis["diretorio_preparado"],
-        variaveis["diretorio_concluido"]
-    )
-
-
-    # 🔸 NOVA Etapa: Unir poligonais
+    # 🔸 Unir poligonais
     main_unir_poligonais(
         variaveis["diretorio_concluido"],
         uuid_str
     )
 
-    # Etapa existente
-    main_compactar_arquivos(variaveis["diretorio_concluido"], cidade_formatada, uuid_str)
+    # Compactação final
+    main_compactar_arquivos(
+        variaveis["diretorio_concluido"],
+        cidade_formatada,
+        uuid_str
+    )
 
     print("✅ [main.py] Compactação finalizada com sucesso!")
 
-    # 🔁 Copiar ZIPs para static/arquivos e exibir debug
-    # ✅ Copiar todos os ZIPs que realmente existem
+    # Copiar ZIPs para static/arquivos
     try:
         zips_copiados = 0
         pasta_origem = variaveis["diretorio_concluido"]
@@ -123,6 +125,7 @@ def main():
             print("⚠️ Nenhum ZIP encontrado para copiar.")
     except Exception as e:
         print(f"❌ Erro ao copiar ZIPs: {e}")
+
 
     
 

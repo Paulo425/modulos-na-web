@@ -1248,7 +1248,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.info("❌ Não foi possível determinar automaticamente o tipo (ETE, REM, SER ou ACE).")
         return
 
-    padrao_fechada = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+    padrao_fechada = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}*.xlsx")
 
     arquivos_encontrados = glob.glob(padrao_fechada)
     if not arquivos_encontrados:
@@ -1264,7 +1264,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
 
     # 🔍 Buscar planilha que COMEÇA com ABERTA_{TIPO} no diretório CONCLUIDO
-    padrao_aberta = os.path.join(diretorio_concluido, f"ABERTA_{tipo}*.xlsx")
+    padrao_aberta = os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}*.xlsx")
     planilhas_aberta = glob.glob(padrao_aberta)
 
     if not planilhas_aberta:
