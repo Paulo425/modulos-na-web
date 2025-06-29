@@ -70,7 +70,7 @@ def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir, uuid_str):
         shutil.copy(caminho_dxf, destino_dxf)
         print(f"✅ Arquivo DXF copiado para: {destino_dxf}")
 
-        preparar_planilhas(destino_excel, PREPARADO)
+        preparar_planilhas(destino_excel, PREPARADO, uuid_str)
 
         return {
             "arquivo_excel_recebido": destino_excel,
