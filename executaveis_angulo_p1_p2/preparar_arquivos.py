@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 def preparar_planilhas(arquivo_recebido, diretorio_preparado, uuid_str):
-    def processar_planilha(df, coluna_codigo, identificador, diretorio_destino, uuid_str):
+    def processar_planilha(df, coluna_codigo, sufixo, diretorio_destino, uuid_str):
         if coluna_codigo not in df.columns:
             mensagem = f"⚠️ Coluna '{coluna_codigo}' não encontrada na planilha '{identificador}'."
             print(mensagem)
@@ -29,8 +29,8 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado, uuid_str):
         df_outros.to_excel(os.path.join(diretorio_destino, f"{uuid_str}_ABERTA_{sufixo}.xlsx"), index=False)
 
 
-        logger.info(f"✅ Planilhas FECHADA e ABERTA geradas com UUID para identificador: {identificador}")
-        print(f"✅ Planilhas FECHADA e ABERTA geradas com UUID para: {identificador}")
+        logger.info(f"✅ Planilhas FECHADA e ABERTA geradas com UUID para identificador: {sufixo}")
+        print(f"✅ Planilhas FECHADA e ABERTA geradas com UUID para: {sufixo}")
 
     xls = pd.ExcelFile(arquivo_recebido)
     for sheet_name, sufixo in [("ETE", "ETE"), ("Confrontantes_Remanescente", "REM"),
@@ -38,7 +38,7 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado, uuid_str):
         if sheet_name in xls.sheet_names:
             df = pd.read_excel(xls, sheet_name=sheet_name)
             identificador = f"{os.path.splitext(os.path.basename(arquivo_recebido))[0]}_{sufixo}"
-            processar_planilha(df, "Código", identificador, diretorio_preparado, uuid_str)
+            processar_planilha(df, "Código", sufixo, diretorio_preparado, uuid_str)
         else:
             mensagem = f"⚠️ Planilha '{sheet_name}' não encontrada no arquivo Excel."
             print(mensagem)
