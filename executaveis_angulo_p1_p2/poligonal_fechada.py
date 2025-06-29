@@ -1214,7 +1214,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
 
     # Carrega dados do imóvel
-    dados_imovel_excel_path = arquivo_excel_recebido
+    dados_imovel_excel_path = excel_path
     dados_imovel_df = pd.read_excel(dados_imovel_excel_path, sheet_name='Dados_do_Imóvel', header=None)
     dados_imovel = dict(zip(dados_imovel_df.iloc[:, 0], dados_imovel_df.iloc[:, 1]))
 
