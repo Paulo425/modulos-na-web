@@ -25,8 +25,9 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado, uuid_str):
         df_v = df[df[coluna_codigo].astype(str).str.match(r'^[Vv][0-9]*$', na=False)][[coluna_codigo, "Confrontante"]]
         df_outros = df[~df[coluna_codigo].astype(str).str.match(r'^[Vv][0-9]*$', na=False)]
 
-        df_v.to_excel(os.path.join(diretorio_destino, f"{uuid_str}_FECHADA_{identificador}.xlsx"), index=False)
-        df_outros.to_excel(os.path.join(diretorio_destino, f"{uuid_str}_ABERTA_{identificador}.xlsx"), index=False)
+        df_v.to_excel(os.path.join(diretorio_destino, f"{uuid_str}_FECHADA_{sufixo}.xlsx"), index=False)
+        df_outros.to_excel(os.path.join(diretorio_destino, f"{uuid_str}_ABERTA_{sufixo}.xlsx"), index=False)
+
 
         logger.info(f"✅ Planilhas FECHADA e ABERTA geradas com UUID para identificador: {identificador}")
         print(f"✅ Planilhas FECHADA e ABERTA geradas com UUID para: {identificador}")
