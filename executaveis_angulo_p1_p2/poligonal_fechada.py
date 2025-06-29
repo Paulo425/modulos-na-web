@@ -1248,7 +1248,7 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
         return
 
     # Confrontantes
-    padrao_busca = os.path.join(diretorio_preparado, f"FECHADA_*_{tipo}.xlsx")
+    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}_*.xlsx")
     arquivos_encontrados = glob.glob(padrao_busca)
     if not arquivos_encontrados:
         logger.info(f"❌ Arquivo de confrontantes não encontrado com o padrão: {padrao_busca}")

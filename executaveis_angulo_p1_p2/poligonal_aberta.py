@@ -525,7 +525,7 @@ def main_poligonal_aberta(arquivo_excel_recebido, arquivo_dxf_recebido, diretori
         return
     
     # Busca dinâmica do arquivo confrontante correto na pasta PREPARADO
-    padrao_busca = os.path.join(diretorio_confrontantes, f"ABERTA_*_{tipo}.xlsx")
+    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_ABERTA_{tipo}_*.xlsx")
     arquivos_encontrados = glob.glob(padrao_busca)
     
     if not arquivos_encontrados:
