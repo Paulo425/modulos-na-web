@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2 class="text-primary">Gerar memorial_azimute_p1_p2</h2>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="text-muted me-2">👤 {{ session['usuario'] }}</span>
+            {% if log_path %}
+            <a href="/{{ log_path }}" class="btn btn-outline-secondary" download>
+                🧾 Baixar Log da Execução
+            </a>
+            {% endif %}
+            <a href="/logout" class="btn btn-outline-danger">🔒 Logout</a>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('spinner').style.display='block'">
+        <div class="mb-3">
+            <label for="cidade" class="form-label">Cidade:</label>
+            <input type="text" class="form-control" id="cidade" name="cidade" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="excel" class="form-label">Arquivo Excel:</label>
+            <div class="input-group">
+                <input type="file" class="form-control" name="excel" id="excel" accept=".xlsx" required>
+                <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#infoExcel">
+                    ℹ️
+                </button>
+            </div>
+            <div class="collapse mt-1" id="infoExcel">
+                <div class="alert alert-secondary">
+                    Deve conter a aba <strong>Dados_do_Imóvel</strong> e uma aba com os confrontantes, como <strong>Confrontantes_Servidao</strong>.<br>
+                    As colunas devem ser: <strong>Código</strong> e <strong>Confrontante</strong> com valores do tipo <code>V1, V2, ..., Vn</code>.
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="dxf" class="form-label">Arquivo DXF:</label>
+            <div class="input-group">
+                <input type="file" class="form-control" name="dxf" id="dxf" accept=".dxf" required>
+                <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#infoDxf">
+                    ℹ️
+                </button>
+            </div>
+            <div class="collapse mt-1" id="infoDxf">
+                <div class="alert alert-secondary">
+                    O nome deve conter o tipo e matrícula (Ex: <code>SER_Mat_12345.dxf</code>).<br>
+                    O DXF deve estar no formato 2010 e conter uma única polilinha fechada com o ponto Az inserido.
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">Executar</button>
+        </div>
+    </form>
+
+    <div id="spinner" class="text-center mt-3" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Processando...</span>
+        </div>
+        <p class="mt-2">Aguarde. Gerando arquivos...</p>
+    </div>
+
+    <hr>
+
+    {% if resultado %}
+    <div class="alert alert-success mt-4 text-center">
+        {{ resultado | safe }}
+    </div>
+    {% endif %}
+    {#
+    {% if zip_download %}
+        <p style="text-align: center; color: darkgreen;">
+            🧪 DEBUG: Nome do ZIP → <strong>{{ zip_download }}</strong>
+        </p>
+    {% else %}
+        <p style="text-align: center; color: red;">
+            ❌ DEBUG: Nenhum ZIP detectado
+        </p>
+    {% endif %}
+    #}
+    {% if erro %}
+    <div class="alert alert-danger mt-4">
+        {{ erro | safe }}
+    </div>
+    {% endif %}
+
+    {#	
+    <p class="text-center text-primary">
+        🔍 Valor de zip_download: <strong>{{ zip_download }}</strong>
+    </p>
+    #}
+
+    {% if zip_download %}
+    <div class="mt-4 text-center">
+        <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
+            📦 Baixar ZIP Gerado
+        </a>
+    </div>
+{% endif %}  {# ✅ FECHANDO corretamente o bloco IF #}
+</div>
+{% endblock %}
+
