@@ -71,7 +71,7 @@ from docx.oxml.shared import OxmlElement
 from lxml import etree
 import logging
 
-
+logger = logging.getLogger(__name__)
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
