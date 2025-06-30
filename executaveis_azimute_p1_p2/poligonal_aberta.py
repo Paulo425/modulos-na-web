@@ -437,9 +437,17 @@ def process_poligonal_aberta_e_fechada(dxf_file_path, output_file_path, output_e
         pontos = []
         for entity in msp.query('POINT'):
             pontos.append((entity.dxf.location.x, entity.dxf.location.y))
-
+        if pontos and rotulos and len(pontos) != len(rotulos):
+            logger.warning(
+                f"⚠️ Quantidade inconsistente entre POINTs ({len(pontos)}) e TEXTs ({len(rotulos)}). "
+                f"A associação pode não refletir corretamente a ordem dos vértices."
+            )
         # 🔹 Executar associação correta
-        pontos_rotulados = associar_pontos_rotulos(pontos, rotulos)
+        if not pontos and rotulos:
+            logger.warning("⚠️ Nenhum POINT encontrado. Usando coordenadas diretamente dos TEXTs.")
+            pontos_rotulados = list(rotulos.items())
+        else:
+            pontos_rotulados = associar_pontos_rotulos(pontos, rotulos)
 
         # 🔹 Finalmente, criar a lista correta de pontos já na ordem (sem os rótulos)
         pontos_abertos = [coord for _, coord in pontos_rotulados]
