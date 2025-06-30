@@ -330,164 +330,164 @@ def gerar_grafico_densidade_kernel(valores_homogeneizados, nome_arquivo):
     plt.close()
 
 
-###############################################################################
-# APLICAÇÃO DO CRITÉRIO DE CHAUVENET (NOVO MÉTODO DE SANEAMENTO)
-###############################################################################
-def aplicar_chauvenet_e_filtrar(dataframe_amostras, limiar=1.0, usar_log=True, fator_mad=2.5):
-    """
-    Aplica (1) Log (opcional), (2) Critério de Chauvenet e (3) Filtro robusto via MAD.
-    Retorna os dados filtrados e estatísticas básicas.
+# ###############################################################################
+# # APLICAÇÃO DO CRITÉRIO DE CHAUVENET (NOVO MÉTODO DE SANEAMENTO)
+# ###############################################################################
+# def aplicar_chauvenet_e_filtrar(dataframe_amostras, limiar=1.0, usar_log=True, fator_mad=2.5):
+#     """
+#     Aplica (1) Log (opcional), (2) Critério de Chauvenet e (3) Filtro robusto via MAD.
+#     Retorna os dados filtrados e estatísticas básicas.
 
-    Retorno:
-    --------
-    (
-        dataframe_valido,           # DataFrame sem outliers (Chauvenet + MAD)
-        indices_excluidos,          # Lista final de índices excluídos
-        amostras_excluidas,         # Lista de identificações das amostras excluídas
-        media_final,
-        desvio_padrao_final,
-        menor_valor_final,
-        maior_valor_final,
-        mediana_valor_final
-    )
-    """
-    import math
-    from math import erf
-    import numpy as np
+#     Retorno:
+#     --------
+#     (
+#         dataframe_valido,           # DataFrame sem outliers (Chauvenet + MAD)
+#         indices_excluidos,          # Lista final de índices excluídos
+#         amostras_excluidas,         # Lista de identificações das amostras excluídas
+#         media_final,
+#         desvio_padrao_final,
+#         menor_valor_final,
+#         maior_valor_final,
+#         mediana_valor_final
+#     )
+#     """
+#     import math
+#     from math import erf
+#     import numpy as np
     
-    # Se a coluna "VALOR TOTAL" não existir ou estiver vazia, retorne vazio
-    if "VALOR TOTAL" not in dataframe_amostras.columns or len(dataframe_amostras) == 0:
-        return (
-            dataframe_amostras.copy(),
-            [],
-            [],
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0
-        )
+#     # Se a coluna "VALOR TOTAL" não existir ou estiver vazia, retorne vazio
+#     if "VALOR TOTAL" not in dataframe_amostras.columns or len(dataframe_amostras) == 0:
+#         return (
+#             dataframe_amostras.copy(),
+#             [],
+#             [],
+#             0.0,
+#             0.0,
+#             0.0,
+#             0.0,
+#             0.0
+#         )
     
-    # Cria uma cópia para não alterar o DataFrame original
-    df_copy = dataframe_amostras.copy().reset_index(drop=True)
+#     # Cria uma cópia para não alterar o DataFrame original
+#     df_copy = dataframe_amostras.copy().reset_index(drop=True)
     
-    # 1) Verifica se é possível usar log
-    valores = df_copy["VALOR TOTAL"].values.astype(float)
-    pode_usar_log = usar_log and np.all(valores > 0)
+#     # 1) Verifica se é possível usar log
+#     valores = df_copy["VALOR TOTAL"].values.astype(float)
+#     pode_usar_log = usar_log and np.all(valores > 0)
     
-    if pode_usar_log:
-        # Transformação log
-        valores_transformados = np.log(valores)
-    else:
-        valores_transformados = valores
+#     if pode_usar_log:
+#         # Transformação log
+#         valores_transformados = np.log(valores)
+#     else:
+#         valores_transformados = valores
     
-    # 2) Critério de Chauvenet no domínio transformado
-    media_ch = np.mean(valores_transformados)
-    desvio_ch = np.std(valores_transformados, ddof=1)
-    n = len(valores_transformados)
+#     # 2) Critério de Chauvenet no domínio transformado
+#     media_ch = np.mean(valores_transformados)
+#     desvio_ch = np.std(valores_transformados, ddof=1)
+#     n = len(valores_transformados)
     
-    indices_validos_chauvenet = []
-    indices_excluidos_chauvenet = []
+#     indices_validos_chauvenet = []
+#     indices_excluidos_chauvenet = []
     
-    for idx, vt in enumerate(valores_transformados):
-        if desvio_ch > 0:
-            z = abs(vt - media_ch) / desvio_ch
-        else:
-            z = 0.0
-        prob_in = 0.5 * (1 + erf(z / math.sqrt(2)))
-        crit_chauvenet = n * prob_in
+#     for idx, vt in enumerate(valores_transformados):
+#         if desvio_ch > 0:
+#             z = abs(vt - media_ch) / desvio_ch
+#         else:
+#             z = 0.0
+#         prob_in = 0.5 * (1 + erf(z / math.sqrt(2)))
+#         crit_chauvenet = n * prob_in
 
-        if crit_chauvenet > limiar:
-            indices_validos_chauvenet.append(idx)
-        else:
-            indices_excluidos_chauvenet.append(idx)
+#         if crit_chauvenet > limiar:
+#             indices_validos_chauvenet.append(idx)
+#         else:
+#             indices_excluidos_chauvenet.append(idx)
     
-    df_chauvenet = df_copy.iloc[indices_validos_chauvenet].copy().reset_index(drop=True)
+#     df_chauvenet = df_copy.iloc[indices_validos_chauvenet].copy().reset_index(drop=True)
     
-    # Lista de amostras excluídas pelo Chauvenet
-    amostras_excl_chauvenet = []
-    if "AM" in df_copy.columns:
-        for idx_exc in indices_excluidos_chauvenet:
-            amostras_excl_chauvenet.append(str(df_copy.iloc[idx_exc]["AM"]))
-    else:
-        for idx_exc in indices_excluidos_chauvenet:
-            amostras_excl_chauvenet.append(f"Linha#{idx_exc+1}")
+#     # Lista de amostras excluídas pelo Chauvenet
+#     amostras_excl_chauvenet = []
+#     if "AM" in df_copy.columns:
+#         for idx_exc in indices_excluidos_chauvenet:
+#             amostras_excl_chauvenet.append(str(df_copy.iloc[idx_exc]["AM"]))
+#     else:
+#         for idx_exc in indices_excluidos_chauvenet:
+#             amostras_excl_chauvenet.append(f"Linha#{idx_exc+1}")
     
-    # 3) Filtro robusto via MAD (Median Absolute Deviation)
-    val_chauv = df_chauvenet["VALOR TOTAL"].values.astype(float)
-    if pode_usar_log:
-        val_chauv_transf = np.log(val_chauv)
-    else:
-        val_chauv_transf = val_chauv
+#     # 3) Filtro robusto via MAD (Median Absolute Deviation)
+#     val_chauv = df_chauvenet["VALOR TOTAL"].values.astype(float)
+#     if pode_usar_log:
+#         val_chauv_transf = np.log(val_chauv)
+#     else:
+#         val_chauv_transf = val_chauv
     
-    if len(val_chauv_transf) > 0:
-        mediana_tf = np.median(val_chauv_transf)
-        mad_raw = np.median(np.abs(val_chauv_transf - mediana_tf))
-        if mad_raw == 0:
-            # Se der zero (pouca variação), evita divisão por zero
-            mad_raw = 1e-9
-    else:
-        mediana_tf = 0.0
-        mad_raw = 1e-9
+#     if len(val_chauv_transf) > 0:
+#         mediana_tf = np.median(val_chauv_transf)
+#         mad_raw = np.median(np.abs(val_chauv_transf - mediana_tf))
+#         if mad_raw == 0:
+#             # Se der zero (pouca variação), evita divisão por zero
+#             mad_raw = 1e-9
+#     else:
+#         mediana_tf = 0.0
+#         mad_raw = 1e-9
     
-    indices_validos_mad = []
-    indices_excluidos_mad = []
+#     indices_validos_mad = []
+#     indices_excluidos_mad = []
     
-    for idx_m, vtf in enumerate(val_chauv_transf):
-        z_rob = (vtf - mediana_tf) / (mad_raw * 1.4826)
-        if abs(z_rob) > fator_mad:
-            indices_excluidos_mad.append(idx_m)
-        else:
-            indices_validos_mad.append(idx_m)
+#     for idx_m, vtf in enumerate(val_chauv_transf):
+#         z_rob = (vtf - mediana_tf) / (mad_raw * 1.4826)
+#         if abs(z_rob) > fator_mad:
+#             indices_excluidos_mad.append(idx_m)
+#         else:
+#             indices_validos_mad.append(idx_m)
     
-    df_mad = df_chauvenet.iloc[indices_validos_mad].copy().reset_index(drop=True)
+#     df_mad = df_chauvenet.iloc[indices_validos_mad].copy().reset_index(drop=True)
 
-    # Identificações excluídas pelo MAD 
-    amostras_excl_mad = []
-    for idx_m2 in indices_excluidos_mad:
-        idx_original_mad = df_chauvenet.index[idx_m2]
-        if "AM" in df_copy.columns:
-            amostras_excl_mad.append(str(df_copy.loc[idx_original_mad, "AM"]))
-        else:
-            amostras_excl_mad.append(f"Linha#{idx_original_mad+1}")
+#     # Identificações excluídas pelo MAD 
+#     amostras_excl_mad = []
+#     for idx_m2 in indices_excluidos_mad:
+#         idx_original_mad = df_chauvenet.index[idx_m2]
+#         if "AM" in df_copy.columns:
+#             amostras_excl_mad.append(str(df_copy.loc[idx_original_mad, "AM"]))
+#         else:
+#             amostras_excl_mad.append(f"Linha#{idx_original_mad+1}")
     
-    # 4) Combinar exclusões: Chauvenet OU MAD
-    set_chauv = set(indices_excluidos_chauvenet)
-    indices_excl_mad_original = [df_chauvenet.index[idxk] for idxk in indices_excluidos_mad]
-    set_mad = set(indices_excl_mad_original)
-    set_excl_total = set_chauv.union(set_mad)
-    indices_excluidos_final = sorted(list(set_excl_total))
-    set_amostras_final = set(amostras_excl_chauvenet).union(set(amostras_excl_mad))
-    list_amostras_excluidas_total = sorted(set_amostras_final)
+#     # 4) Combinar exclusões: Chauvenet OU MAD
+#     set_chauv = set(indices_excluidos_chauvenet)
+#     indices_excl_mad_original = [df_chauvenet.index[idxk] for idxk in indices_excluidos_mad]
+#     set_mad = set(indices_excl_mad_original)
+#     set_excl_total = set_chauv.union(set_mad)
+#     indices_excluidos_final = sorted(list(set_excl_total))
+#     set_amostras_final = set(amostras_excl_chauvenet).union(set(amostras_excl_mad))
+#     list_amostras_excluidas_total = sorted(set_amostras_final)
     
-    df_valido_final = df_mad.reset_index(drop=True)
+#     df_valido_final = df_mad.reset_index(drop=True)
     
-    # 6) Estatísticas finais (no domínio original: "VALOR TOTAL")
-    array_final = df_valido_final["VALOR TOTAL"].values.astype(float)
+#     # 6) Estatísticas finais (no domínio original: "VALOR TOTAL")
+#     array_final = df_valido_final["VALOR TOTAL"].values.astype(float)
     
-    if len(array_final) > 0:
-        media_final = np.mean(array_final)
-        desvio_padrao_final = np.std(array_final, ddof=1)
-        menor_valor_final = array_final.min()
-        maior_valor_final = array_final.max()
-        mediana_valor_final = np.median(array_final)
-    else:
-        media_final = 0.0
-        desvio_padrao_final = 0.0
-        menor_valor_final = 0.0
-        maior_valor_final = 0.0
-        mediana_valor_final = 0.0
+#     if len(array_final) > 0:
+#         media_final = np.mean(array_final)
+#         desvio_padrao_final = np.std(array_final, ddof=1)
+#         menor_valor_final = array_final.min()
+#         maior_valor_final = array_final.max()
+#         mediana_valor_final = np.median(array_final)
+#     else:
+#         media_final = 0.0
+#         desvio_padrao_final = 0.0
+#         menor_valor_final = 0.0
+#         maior_valor_final = 0.0
+#         mediana_valor_final = 0.0
     
-    return (
-        df_valido_final,
-        indices_excluidos_final,
-        list_amostras_excluidas_total,
-        media_final,
-        desvio_padrao_final,
-        menor_valor_final,
-        maior_valor_final,
-        mediana_valor_final
-    )
+#     return (
+#         df_valido_final,
+#         indices_excluidos_final,
+#         list_amostras_excluidas_total,
+#         media_final,
+#         desvio_padrao_final,
+#         menor_valor_final,
+#         maior_valor_final,
+#         mediana_valor_final
+#     )
 
 
 ###############################################################################
@@ -3036,6 +3036,9 @@ def main():
     # =================================================== ▒ LER PLANILHA
     barra_progresso.update(1)
     dataframe_amostras, dados_avaliando = ler_planilha_excel(caminho_planilha)
+    df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
+    print(df_amostras.head())
+    print(dados_imovel)
     area_total_planilha = float(dados_avaliando.get("AREA TOTAL", 0))
 
     # Se ainda não definimos area_disponivel (caso “mercado”), usamos a da planilha
@@ -3068,11 +3071,15 @@ def main():
      media_chauvenet, desvio_chauvenet, menor_valor_chauvenet,
      maior_valor_chauvenet, mediana_chauvenet) = aplicar_chauvenet_e_filtrar(dataframe_amostras)
     barra_progresso.update(1)
+    print("Filtrado:", dataframe_amostras_filtrado.head())
+    print("Média:", media_chauvenetia, "Mediana:", mediana_chauvenet)
+
 
     valores_homogeneizados_validos = homogeneizar_amostras(
         dataframe_amostras_filtrado, dados_avaliando,
         fatores_do_usuario, finalidade_lida
     )
+    print("Homogeneizadas:", valores_homogeneizados_validos)
     lista_valores_originais_iniciais = dataframe_amostras_filtrado["VALOR TOTAL"].tolist()
 
     arquivo_aderencia = "grafico_aderencia_totais.png"
@@ -5286,6 +5293,10 @@ def gerar_relatorio_avaliacao_com_template(
     caminho_template=r"modelo-azul1.docx",
     nome_arquivo_word="RELATORIO_AVALIACAO_COMPLETO.DOCX"
 ):
+    # Insira logs aqui para depuração detalhada:
+    logging.info(f"Valores originais recebidos: {valores_originais_iniciais}")
+    logging.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
+    logging.info(f"Área parcial afetada recebida: {area_parcial_afetada}")
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
     area_disponivel = area_parcial_afetada
@@ -5757,7 +5768,8 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return R * c
 
-    df = pd.read_excel(caminho_arquivo_excel)
+    df = pd.read_excel(caminho_arquivo_excel, engine='openpyxl')
+    print(df.head()) 
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
