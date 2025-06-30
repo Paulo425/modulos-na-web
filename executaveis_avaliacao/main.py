@@ -5768,7 +5768,7 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return R * c
 
-    df = pd.read_excel(caminho_arquivo_excel, engine='openpyxl')
+    df = pd.read_excel(caminho_arquivo_excel)
     print(df.head()) 
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
