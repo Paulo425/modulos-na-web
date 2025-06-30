@@ -756,7 +756,7 @@ def gerar_memorial_azimute_p1_p2():
             print(f"❌ Erro ao verificar ZIP: {e}")
             zip_download = None
 
-    return render_template("formulario_angulo_p1_p2.html",
+    return render_template("formulario_azimute_p1_p2.html",
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
