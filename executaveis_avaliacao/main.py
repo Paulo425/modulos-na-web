@@ -5753,10 +5753,11 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
     def _parse_coord(coord):
         try:
             if isinstance(coord, str):
-                coord = coord.replace(",", ".").strip()
+                coord = coord.replace("°", "").replace(",", ".").strip()
             return float(coord)
         except:
             return pd.NA
+
 
     def haversine_km(lat1, lon1, lat2, lon2):
         if pd.isna(lat1) or pd.isna(lon1) or pd.isna(lat2) or pd.isna(lon2):
