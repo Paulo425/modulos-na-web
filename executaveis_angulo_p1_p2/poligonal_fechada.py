@@ -711,12 +711,16 @@ def calculate_angular_turn(p1, p2, p3):
 def create_memorial_descritivo(
         uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
         dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-        giro_angular_v1_dms=giro_angular_v1_dms,
-        diretorio_concluido=caminho_salvar  # Correção feita aqui!
+        giro_angular_v1_dms,
+        diretorio_concluido=None
     ):
     """
     Cria o memorial descritivo e atualiza o DXF com base no ponto de amarração real (anterior ao V1).
     """
+
+    if diretorio_concluido is None:
+        diretorio_concluido = caminho_salvar
+
     if not lines:
         logger.info("Nenhuma linha disponível para criar o memorial descritivo.")
         return None
@@ -1337,7 +1341,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         # 🛠 Criar memorial e Excel
         create_memorial_descritivo(
             uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
-            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms=giro_angular_v1_dms
+            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms
         )
 
         # 📄 Gerar DOCX
