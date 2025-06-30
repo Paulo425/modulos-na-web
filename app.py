@@ -884,7 +884,8 @@ def gerar_avaliacao():
             zip_download = nome_zip
 
             # Definir o caminho relativo ao log para o HTML
-            log_path_relativo = f'logs/{log_filename}'
+            log_path_relativo = f'logs/{os.path.basename(log_path)}'
+
 
         except Exception as e:
             erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
