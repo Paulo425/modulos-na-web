@@ -1220,6 +1220,7 @@ def sanitize_filename(filename):
 def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
 
     caminho_salvar = diretorio_concluido 
+    template_path = caminho_template 
     # Carrega dados do imóvel
     dados_imovel_excel_path = excel_path
     dados_imovel_df = pd.read_excel(dados_imovel_excel_path, sheet_name='Dados_do_Imóvel', header=None)
