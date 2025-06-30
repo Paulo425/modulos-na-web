@@ -747,18 +747,7 @@ def gerar_avaliacao():
             os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
             log_path_relativo = f'logs/{log_filename}'
-
-
-            # Configuração do logger específico para esta execução
-            logger = logging.getLogger(f"avaliacoes_{id_execucao}")
-            logger.setLevel(logging.INFO)
-            handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
-            formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-            handler.setFormatter(formatter)
-            if logger.hasHandlers():
-                logger.handlers.clear()
-            logger.addHandler(handler)
-            
+                      
             # 2. Salvar arquivos recebidos
             caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
             request.files["planilha_excel"].save(caminho_planilha)
@@ -847,11 +836,11 @@ def gerar_avaliacao():
             )
 
             df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
-            logging.info(df_amostras.head())
-            logging.info(dados_imovel)
+            logger.info(f"df_amostras.head():\n{df_amostras.head()}")
+            logger.info(f"dados_imovel: {dados_imovel}")
             df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_amostras)
-            logging.info("Filtrado:", df_filtrado.head())
-            logging.info("Média:", media, "Mediana:", mediana)
+            logger.info(f"df_filtrado.head():\n{df_filtrado.head()}")
+            logger.info(f"Média: {media}, Mediana: {mediana}")
             homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
 
             img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
@@ -859,8 +848,8 @@ def gerar_avaliacao():
             gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
             gerar_grafico_dispersao_mediana(homog, img2)
 
-            logging.info("Enviando para relatório (valores originais):", df_filtrado["VALOR TOTAL"].tolist())
-            logging.info("Homogeneizados válidos:", homog)
+            logger.info(f"Enviando para relatório (valores originais): {df_filtrado['VALOR TOTAL'].tolist()}")
+            logger.info(f"Homogeneizados válidos: {homog}")
 
             gerar_relatorio_avaliacao_com_template(
                 dados_avaliando=dados_imovel,
