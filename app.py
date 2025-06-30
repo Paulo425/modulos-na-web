@@ -742,12 +742,7 @@ def gerar_avaliacao():
             pasta_execucao = f'avaliacao_{id_execucao}'
             pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
             os.makedirs(pasta_temp, exist_ok=True)
-            # Criação correta do log
-            log_filename = f"avaliacao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-            log_path = os.path.join(BASE_DIR, 'static', 'logs', log_filename)
-            os.makedirs(os.path.dirname(log_path), exist_ok=True)
-
-            log_path_relativo = f'logs/{log_filename}'
+                    
                       
             # 2. Salvar arquivos recebidos
             caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
