@@ -93,8 +93,9 @@ def main():
 
     # 🔸 Unir poligonais
     main_unir_poligonais(
+        uuid_str,
         variaveis["diretorio_concluido"],
-        uuid_str
+        caminho_template
     )
 
     # Compactação final
