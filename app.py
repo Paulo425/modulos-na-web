@@ -15,6 +15,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import traceback
 import sys 
 
+
 from usuarios_mysql import (
     salvar_usuario_mysql,
     buscar_usuario_mysql,
@@ -691,6 +692,39 @@ from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 @app.route("/avaliacoes", methods=["GET", "POST"])
 def gerar_avaliacao():
 
+
+    # Defina o log_path como você fez:
+    LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
+    os.makedirs(LOG_DIR, exist_ok=True)
+    log_path = os.path.join(LOG_DIR, f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    log_path_relativo = f'logs/{os.path.basename(log_path)}'
+
+    # Configuração avançada de logging (arquivo + console)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    # Remove handlers existentes (evita duplicações)
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # Handler para arquivo
+    file_handler = logging.FileHandler(log_path, encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+
+    # Handler para console (StreamHandler)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.DEBUG)
+
+    # Formatação comum aos dois handlers
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    # Adiciona handlers ao logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
@@ -868,7 +902,7 @@ def gerar_avaliacao():
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
-                           log_path=log_path_relativo)
+                           log_path=log_path_relativo if os.path.exists(log_path) else None)
 
 
 
