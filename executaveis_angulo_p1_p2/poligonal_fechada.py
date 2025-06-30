@@ -1219,7 +1219,7 @@ def sanitize_filename(filename):
         
 def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
 
-
+    caminho_salvar = diretorio_concluido 
     # Carrega dados do imóvel
     dados_imovel_excel_path = excel_path
     dados_imovel_df = pd.read_excel(dados_imovel_excel_path, sheet_name='Dados_do_Imóvel', header=None)
@@ -1238,7 +1238,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     desc_ponto_Az = dados_imovel.get("AZ", "").strip()
 
     # Diretório para salvar resultados
-    diretorio_concluido = caminho_salvar
+    
     os.makedirs(caminho_salvar, exist_ok=True)
 
     # Identifica tipo (SER, REM, etc)
