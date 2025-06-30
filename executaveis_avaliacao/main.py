@@ -8,7 +8,7 @@ import contextily as ctx  # Adicionar no início do arquivo
 import pandas as pd  # Adicionar no início do arquivo
 import os
 import math
-import pandas
+import pandas as pd
 import numpy
 import matplotlib.pyplot as plt
 import matplotlib.ticker
@@ -69,7 +69,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL, WD_ROW_HEIGHT
 from docx.oxml.ns import nsdecls, qn
 from docx.oxml.shared import OxmlElement
 from lxml import etree
-
+import logging
 
 
 ###############################################################################
