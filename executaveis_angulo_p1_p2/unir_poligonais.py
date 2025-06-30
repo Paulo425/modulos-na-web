@@ -10,7 +10,7 @@ from ezdxf.addons import Importer
 logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-TEMPLATE_PADRAO = os.path.join(BASE_DIR, 'templates', 'template_padrao.docx')
+TEMPLATE_PADRAO = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
 
 
 def extrair_conteudo_docx(docx_path):
