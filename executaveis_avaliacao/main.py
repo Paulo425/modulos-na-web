@@ -2848,7 +2848,7 @@ def main():
 
     root_plan.destroy()
     if not caminho_planilha:
-        logging.info("Nenhuma planilha selecionada. Encerrando."); return
+        logger.info("Nenhuma planilha selecionada. Encerrando."); return
 
     # ================================================================= ▒ ENTRADAS
     nome_proprietario = input("Informe o nome completo do proprietário do imóvel: ").strip()
@@ -2960,7 +2960,7 @@ def main():
         # TRAVA IMEDIATA: se já sabemos area_disponivel (>0), nunca deixa exceder
         if area_disponivel > 0 and soma_areas_restricoes + area_rest > area_disponivel:
             exced = soma_areas_restricoes + area_rest - area_disponivel
-            logging.warning(f"A soma das áreas de restrição excede a área disponível "
+            logger.warning(f"A soma das áreas de restrição excede a área disponível "
                   f"em {exced:.2f} m². Digite um valor menor.\n")
             continue
 
@@ -3008,7 +3008,7 @@ def main():
     })
 
     # =================================================== ▒ DIAGNÓSTICO DE MERCADO
-    logging.info("\n=== DIAGNÓSTICO DE MERCADO ===")
+    logger.info("\n=== DIAGNÓSTICO DE MERCADO ===")
     print("Estrutura:\n 1) BOA\n 2) LIMITADA")
     while True:
         e = input("Escolha (1 ou 2): ").strip()
@@ -3059,9 +3059,9 @@ def main():
     
     
     if soma_areas_restricoes > area_disponivel:
-        logging.warning(f"\nATENÇÃO: A soma das áreas restritas ({soma_areas_restricoes:.2f} m²) "
+        logger.warning(f"\nATENÇÃO: A soma das áreas restritas ({soma_areas_restricoes:.2f} m²) "
               f"ultrapassa a área de interesse ({area_disponivel:.2f} m²).")
-        logging.info("Encerrando o script, pois os dados estão inconsistentes.")
+        logger.info("Encerrando o script, pois os dados estão inconsistentes.")
         return
 
     barra_progresso.update(1)
@@ -5294,9 +5294,9 @@ def gerar_relatorio_avaliacao_com_template(
     nome_arquivo_word="RELATORIO_AVALIACAO_COMPLETO.DOCX"
 ):
     # Insira logs aqui para depuração detalhada:
-    logging.info(f"Valores originais recebidos: {valores_originais_iniciais}")
-    logging.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
-    logging.info(f"Área parcial afetada recebida: {area_parcial_afetada}")
+    logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
+    logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
+    logger.info(f"Área parcial afetada recebida: {area_parcial_afetada}")
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
     area_disponivel = area_parcial_afetada
@@ -5565,10 +5565,10 @@ def gerar_relatorio_avaliacao_com_template(
     # (desapropriação/servidão → área digitada // outros → área da planilha)
     if finalidade_do_laudo in ["desapropriacao", "servidao"]:
         area_disponivel = area_parcial_afetada  # Área digitada pelo usuário no formulário 
-        logging.info(f"DEBUG: Usando área do usuário: {area_disponivel} m²")  # Para verificação
+        logger.info(f"DEBUG: Usando área do usuário: {area_disponivel} m²")  # Para verificação
     else:
         area_disponivel = area_total_lida  # Área da planilha
-        logging.info(f"DEBUG: Usando área da planilha: {area_disponivel} m²")  # Para verificação
+        logger.info(f"DEBUG: Usando área da planilha: {area_disponivel} m²")  # Para verificação
   
 
     restricoes_usuario = fatores_do_usuario.get("restricoes", [])
@@ -5807,6 +5807,13 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         lambda r: haversine_km(r["LAT_PARS"], r["LON_PARS"], lat_ctr, lon_ctr), axis=1
     )
 
+    logger.info(f"✅ Linhas antes do filtro crítico: {len(dataframe_amostras)}")
+    logger.info(f"Valores nulos em 'VALOR TOTAL': {dataframe_amostras['VALOR TOTAL'].isna().sum()}")
+    logger.info(f"Valores nulos em 'AREA TOTAL': {dataframe_amostras['AREA TOTAL'].isna().sum()}")
+    logger.info(f"Valores nulos em 'DISTANCIA CENTRO': {dataframe_amostras['DISTANCIA CENTRO'].isna().sum()}")
+
+    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras.head())
+
     mask_excluir = (
         (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
         (dataframe_amostras["DISTANCIA CENTRO"].isna()) |
@@ -5814,8 +5821,15 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         (dataframe_amostras["AREA TOTAL"].isna()) |
         (dataframe_amostras["AREA TOTAL"] == 0)
     )
+    logger.info("Máscara de exclusão:\n", mask_excluir.head())
+    logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir].head())
     dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
+    logger.info(f"✅ Linhas após o filtro crítico: {len(dataframe_amostras)}")
     dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
+
+    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras)
+    logger.info("Mascara de exclusão:\n", mask_excluir)
+    logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir])
 
     return dataframe_amostras, dados_avaliando
 
