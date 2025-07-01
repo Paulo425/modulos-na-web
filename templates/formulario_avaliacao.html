@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 
 {% block head %}
+
+
 <style>
-    body {
+        body {
             margin: 40px;
             background: #000033; 
             font-family: Arial, sans-serif;
@@ -137,7 +139,7 @@
             width: 100%;
         }
 
-        /* Forçar cor verde se autofill em inputs do Chrome         */
+        /* Forçar cor verde se autofill em inputs do Chrome */
         input:-webkit-autofill {
             background-color: #ccffcc !important;
             transition: background-color 5000s ease-in-out 0s;
@@ -145,8 +147,12 @@
         input:-webkit-autofill:focus {
             background-color: #ccffcc !important;
         }
-
-:root{
+         /*      <!-- ===========================================================
+         🅐  VARIÁVEIS E ESTILO GLOBAL  ─ paleta + efeitos 3-D “neumórficos”
+             (sem comentários dentro de TAGs  ⇢ evita quebrar o HTML)
+        =========================================================== -->*/
+        
+        :root{
             /* paleta base */
             --laranja-claro : #ffeede;
             --laranja-escuro: #ff8c00;
@@ -228,63 +234,16 @@
             color:#000;                /* ← texto preto SEMPRE */
         }
         .wrapper-3d input[type=file].filled{ background-color:var(--green-fill); }
-        .wrapper-3d input[type=file].filled { 
-        background-color: var(--green-fill) !important; 
-        }
-        .input-change.filled {
-        background-color: #ccffcc !important;
-        }
-        input[type="file"].file-green::-webkit-file-upload-button,
-        input[type="file"].file-green::file-selector-button {
-            background-color: #006400 !important;
-            color: #ffffff !important;
-            padding: 10px 20px !important;
-            border: none !important;
-            font-weight: bold !important;
-            cursor: pointer !important;
-            border-radius: 5px !important;
-        }
+        
+    </style> 
 
-
-</style>   
-{% endblock %}
-
-{% block conteudo %}
-<div class="container mt-5">
-    {% if resultado %}
-    <div class="alert alert-success text-center mt-3">
-        {{ resultado|safe }}
-        {% if zip_download %}
-            <br>
-            <a href="{{ url_for('static', filename='arquivos/' + zip_download) }}" 
-              class="btn btn-success mt-2"
-              id="botaoZip"
-              download>
-                📥 Baixar Arquivo ZIP
-            </a>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    {% if erro %}
-    <div class="alert alert-danger text-center mt-3">
-        {{ erro|safe }}
-    </div>
-    {% endif %}
-
-
-    {% if log_path %}
-        <a href="{{ url_for('static', filename=log_path) }}" class="btn btn-info mt-2" download>
-            📋 Baixar Log da Execução
-        </a>
-    {% endif %}
-
-    <button class="toggle-btn" onclick="toggleDarkMode()">Alternar Modo</button>
+<button class="toggle-btn" onclick="toggleDarkMode()">
+        Alternar Modo
+    </button>
 
     <h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
 
     <form method="post" enctype="multipart/form-data">
-      
 
         <label>INSIRA AQUI SUA PLANILHA DE AMOSTRAS (Excel):</label>
         <input type="file" name="planilha_excel" class="input-change file-green" required>
@@ -364,7 +323,6 @@
                name="area_parcial"
                class="input-change"
                placeholder="Ex: 29.567,89">
-        <div id="areaInfoBox" style="display:none;"></div>
 
 
         <!-- RESTRIÇÕES -->
@@ -546,7 +504,7 @@
         </select>
 
 
-          
+         
         
         <!-- ===========================================================
          🅑  FOTOS DO IMÓVEL  (multiple ⇒ sem “+”)
@@ -603,7 +561,7 @@
                     onclick="clearProps()">Limpar</button>
         </div>
         
-        <!-- ===========================================================
+       <!-- ===========================================================
          🅔  PLANTAS / MEMORIAIS
         =========================================================== -->
         <div class="subtitle">Adicione Plantas e Memoriais Descritivos do Avaliando:</div>
@@ -647,102 +605,420 @@
         
     </form>
 
-</div>
-{% endblock %}
 
-{% block scripts %}
-<script>
-function toggleTelefoneCampo() {
-    const incluirTelSelect = document.getElementById("incluirTelSelect");
-    const telefoneCampo = document.getElementById("telefoneCampo");
-    telefoneCampo.style.display = incluirTelSelect.value === "sim" ? "block" : "none";
-}
+        /*<!-- ===========================================================
+         🅖  JAVASCRIPT  (highlight verde + add / clear)
+        =========================================================== -->*/
+        <script>
+        /* ----------  ajuda visual: verde quando houver arquivo ---------- */
+        const highlight = inp=>{
+            const update=()=>inp.classList.toggle('filled',inp.files.length>0);
+            update(); inp.addEventListener('change',update);
+        };
+        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(highlight);
+        
+        /* -------- IMÓVEL -------- */
+        function addImovInput(){
+            const w=imovWrapper, btn=addImovBtn;
+            const n=document.createElement('input');
+            n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
+            w.insertBefore(n,btn); highlight(n);
+        }
+        function clearImovs(){
+            imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+            const b=document.createElement('input');
+            b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
+            imovWrapper.insertBefore(b,imovWrapper.firstChild); highlight(b);
+        }
+        
+        /* -------- PROPRIETÁRIO -------- */
+        function addPropInput(){
+            const w=propWrapper, btn=addPropBtn;
+            const n=document.createElement('input');
+            n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
+            w.insertBefore(n,btn); highlight(n);
+        }
+        function clearProps(){
+            propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+            const b=document.createElement('input');
+            b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
+            propWrapper.insertBefore(b,propWrapper.firstChild); highlight(b);
+        }
+        
+        /* -------- PLANTA -------- */
+        function addPlantaInput(){
+            const w=plantaWrapper, btn=addPlantaBtn;
+            const n=document.createElement('input');
+            n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
+            w.insertBefore(n,btn); highlight(n);
+        }
+        function clearPlantas(){
+            plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+            const b=document.createElement('input');
+            b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
+            plantaWrapper.insertBefore(b,plantaWrapper.firstChild); highlight(b);
+        }
+        
+        /* -------- LOGO -------- */
+        function clearLogo(){
+            const inp=document.querySelector('#logoWrapper input[type="file"]');
+            if(inp){ inp.value=''; inp.classList.remove('filled'); }
+        }
+        
+        /* -------- Fotos -------- */
+        function clearFotos(){
+            const inp=document.querySelector('#fotoWrapper input[type="file"]');
+            if(inp){ inp.value=''; inp.classList.remove('filled'); }
+        }
+        
 
-function toggleEmailCampo() {
-    const incluirMailSelect = document.getElementById("incluirMailSelect");
-    const emailCampo = document.getElementById("emailCampo");
-    emailCampo.style.display = incluirMailSelect.value === "sim" ? "block" : "none";
-}
+        
+        /*<!-- ===========================================================
+         🅖  JAVASCRIPT — funções de adicionar / limpar + destaque verde
+        =========================================================== -->*/
+        
+        const addHL = inp=>{
+            const t=()=>inp.classList.toggle('filled',inp.files.length>0);
+            t(); inp.addEventListener('change',t);
+        };
+        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHL);
+        
+        /* ---------- IMÓVEL ---------- */
+        function addImovInput(){
+            const w=imovWrapper,a=addImovBtn;
+            const n=document.createElement('input');
+            n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
+            w.insertBefore(n,a); addHL(n);
+        }
+        function clearImovs(){
+            imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+            const b=document.createElement('input');
+            b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
+            imovWrapper.insertBefore(b,imovWrapper.firstChild); addHL(b);
+        }
+        /* ---------- PROPRIETÁRIO ---------- */
+        function addPropInput(){
+            const w=propWrapper,a=addPropBtn;
+            const n=document.createElement('input');
+            n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
+            w.insertBefore(n,a); addHL(n);
+        }
+        function clearProps(){
+            propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+            const b=document.createElement('input');
+            b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
+            propWrapper.insertBefore(b,propWrapper.firstChild); addHL(b);
+        }
+        /* ---------- PLANTA ---------- */
+        function addPlantaInput(){
+            const w=plantaWrapper,a=addPlantaBtn;
+            const n=document.createElement('input');
+            n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
+            w.insertBefore(n,a); addHL(n);
+        }
+        function clearPlantas(){
+            plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+            const b=document.createElement('input');
+            b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
+            plantaWrapper.insertBefore(b,plantaWrapper.firstChild); addHL(b);
+        }
+        /* ---------- LOGO ---------- */
+        function clearLogo(){
+            const inp=document.querySelector('#logoWrapper input[type="file"]');
+            if(inp){ inp.value=""; inp.classList.remove('filled'); }
+        }
+        
+      
+        
+        
+        <!-- ===========================================================
+         🅖  JAVASCRIPT GENÉRICO  (re-usa funções de highlight / clear)
+        =========================================================== -->
+        
+        /* -------- util: aplica / remove classe “filled” para fundo verde -------- */
+        const addHighlightListener = inp=>{
+            const handler = ()=> inp.classList.toggle('filled', inp.files.length>0);
+            handler();            /* executa já  */
+            inp.addEventListener('change', handler);
+        };
+        
+        /* inicial: aplica a todos os inputs já existentes na página */
+        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
+        
+        /* ------------------------- IMÓVEL AVALIANDO ------------------------- */
+        function addImovInput(){
+            const wrap = document.getElementById('imovWrapper');
+            const add  = document.getElementById('addImovBtn');
+            const novo = document.createElement('input');
+            novo.type='file'; novo.name='fotos_imovel_adicionais';
+            novo.className='input-change file-orange';
+            wrap.insertBefore(novo, add);
+            addHighlightListener(novo);
+        }
+        function clearImovs(){
+            const wrap = document.getElementById('imovWrapper');
+            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
+            const base = document.createElement('input');
+            base.type='file'; base.name='fotos_imovel_adicionais';
+            base.className='input-change file-orange';
+            wrap.insertBefore(base, wrap.firstChild);
+            addHighlightListener(base);
+        }
+        
+        /* ------------------------- PROPRIETÁRIO(S) ------------------------- */
+        function addPropInput(){
+            const wrap=document.getElementById('propWrapper');
+            const add =document.getElementById('addPropBtn');
+            const novo=document.createElement('input');
+            novo.type='file'; novo.name='doc_proprietario';
+            novo.className='input-change file-orange';
+            wrap.insertBefore(novo, add);
+            addHighlightListener(novo);
+        }
+        function clearProps(){
+            const wrap=document.getElementById('propWrapper');
+            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
+            const base=document.createElement('input');
+            base.type='file'; base.name='doc_proprietario';
+            base.className='input-change file-orange';
+            wrap.insertBefore(base, wrap.firstChild);
+            addHighlightListener(base);
+        }
+        
+        /* ------------------------- PLANTAS ------------------------- */
+        function addPlantaInput(){
+            const wrap=document.getElementById('plantaWrapper');
+            const add =document.getElementById('addPlantaBtn');
+            const novo=document.createElement('input');
+            novo.type='file'; novo.name='doc_planta';
+            novo.className='input-change file-orange';
+            wrap.insertBefore(novo, add);
+            addHighlightListener(novo);
+        }
+        function clearPlantas(){
+            const wrap=document.getElementById('plantaWrapper');
+            wrap.querySelectorAll('input[type="file"]').forEach(el=>el.remove());
+            const base=document.createElement('input');
+            base.type='file'; base.name='doc_planta';
+            base.className='input-change file-orange';
+            wrap.insertBefore(base, wrap.firstChild);
+            addHighlightListener(base);
+        }
+        
+        /* ------------------------- LOGO ------------------------- */
+        function clearLogo(){
+            const inp=document.querySelector('#logoWrapper input[type="file"]');
+            if(inp){ inp.value=""; inp.classList.remove('filled'); }
+        }
+        
+      function toggleDarkMode() {
+          document.body.classList.toggle("dark-mode");
+      }
 
-function exibirRestricoesSeNecessario() {
-    const finalidadeSelect = document.getElementById("finalidadeSelect");
-    const restricoesContainer = document.getElementById("restricoesSectionContainer");
-    restricoesContainer.style.display = finalidadeSelect.value.includes("Desapropriação") ? "block" : "none";
-}
-
-function addRestricao() {
-    const restricoesSection = document.getElementById("restricoesSection");
-    const div = document.createElement("div");
-    div.className = "restricoes-container";
-    div.innerHTML = `
-        <label>Descrição da restrição:</label>
-        <input type="text" name="restricoes[]" class="input-change">
-        <label>Arquivo relacionado:</label>
-        <input type="file" name="arquivos_restricoes[]" class="input-change file-green">
-    `;
-    restricoesSection.appendChild(div);
-}
-
-function atualizarAreaLabel() {
-    const finalidadeSelect = document.getElementById("finalidadeSelect");
-    const valor = (finalidadeSelect.value || "").trim().toLowerCase();
-    const areaLabel = document.getElementById("areaLabel");
-    const areaInput = document.getElementById('areaInput');
-    const infoBox = document.getElementById("areaInfoBox");
-
-    if (valor.includes("desapropria")) {
-        areaLabel.innerHTML = "<strong>ÁREA A SER DESAPROPRIADA (m²)</strong>";
-        areaLabel.style.color = "#b20000";
-        areaInput.style.borderColor = "#b20000";
-        areaInput.style.borderWidth = "2px";
-        areaInput.style.fontWeight = "bold";
-        areaInput.placeholder = "Ex: 1.250,00";
-        infoBox.style.display = "block";
-        infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área digitada substituirá a planilha.";
-    } else if (valor.includes("servid")) {
-        areaLabel.innerHTML = "<strong>ÁREA DE INTERESSE PARA SERVIDÃO (m²)</strong>";
-        areaLabel.style.color = "#b20000";
-        areaInput.style.borderColor = "#b20000";
-        areaInput.style.borderWidth = "2px";
-        areaInput.style.fontWeight = "bold";
-        areaInput.placeholder = "Ex: 3.500,00";
-        infoBox.style.display = "block";
-        infoBox.innerHTML = "<strong>IMPORTANTE:</strong> A área digitada substituirá a planilha.";
-    } else {
-        areaLabel.innerHTML = "Área total do imóvel a ser avaliado (m²)";
-        areaLabel.style.color = "";
-        areaInput.style.borderColor = "";
-        infoBox.style.display = "none";
+    function atualizarAreaLabel() {
+        const finalidadeSelect = document.getElementById("finalidadeSelect");
+        const valor        = (finalidadeSelect.value || "").trim().toLowerCase();
+        const areaLabel    = document.getElementById("areaLabel");
+        const areaInput    = document.querySelector('input[name="area_parcial"]');
+    
+        if (valor.includes("desapropria")) {
+            /* —— DESAPROPRIAÇÃO —— */
+            areaLabel.innerHTML = "<strong>Área a ser desapropriada (m²)</strong> - Informe apenas a área que será desapropriada.";
+            areaLabel.style.color = "#b20000";          /* vermelho-escuro */
+            if (areaInput) {
+                areaInput.style.borderColor = "#b20000";
+                areaInput.style.fontWeight  = "bold";
+            }
+    
+        } else if (valor.includes("servid") || valor.includes("regulariza")) {
+            /* —— SERVIDÃO ou REGULARIZAÇÃO —— */
+            areaLabel.innerHTML = "<strong>Área total de Interesse (m²)</strong> - Informe apenas a área total atingida";
+            areaLabel.style.color = "#b20000";          /* vermelho-escuro */
+            if (areaInput) {
+                areaInput.style.borderColor = "#b20000";
+                areaInput.style.fontWeight  = "bold";
+            }
+    
+        } else {
+            /* —— Demais finalidades —— */
+            areaLabel.innerHTML = "Insira a área total do imóvel a ser avaliado (m²) - Será validada com a planilha";
+            areaLabel.style.color = "";                 /* cor padrão */
+            if (areaInput) {
+                areaInput.style.borderColor = "";
+                areaInput.style.fontWeight  = "normal";
+            }
+        }
     }
-}
 
-const addHighlightListener = inp => {
-    const handler = () => inp.classList.toggle('filled', inp.files.length > 0);
-    handler(); 
-    inp.addEventListener('change', handler);
-};
 
-document.addEventListener('DOMContentLoaded', () => {
-    toggleTelefoneCampo();
-    toggleEmailCampo();
-    exibirRestricoesSeNecessario();
-    atualizarAreaLabel();
 
-    document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHighlightListener);
-    document.querySelectorAll('.input-change').forEach(field => {
-        const checkFill = () => field.classList.toggle('filled', field.value.trim() !== '');
-        checkFill();
-        field.addEventListener('input', checkFill);
-        field.addEventListener('change', checkFill);
-    });
+        /* ===========================================================
+           Função • exibirRestricoesSeNecessario()
+           -----------------------------------------------------------
+           Exibe o quadro “Múltiplas Restrições” e aplica destaque
+           quando a finalidade for: Desapropriação, Servidão **ou**
+           Regularização do Imóvel.
+           =========================================================== */
+        function exibirRestricoesSeNecessario() {
+        
+            /* ---------- referências principais ---------- */
+            const select              = document.getElementById("finalidadeSelect");
+            const valor               = (select.value || "").trim().toLowerCase();
+            const restricoesContainer = document.getElementById("restricoesSectionContainer");
+        
+            /* ---------- aparência base do container ---------- */
+            restricoesContainer.style.backgroundColor = "#ffe8cc";   /* laranja‐claro */
+            restricoesContainer.style.padding        = "15px";
+            restricoesContainer.style.borderRadius   = "8px";
+            restricoesContainer.style.marginTop      = "20px";
+            restricoesContainer.style.marginBottom   = "20px";
+            restricoesContainer.style.border         = "2px solid #ff8c00";
+        
+            /* ---------- decidir se deve mostrar ---------- */
+            const mostrar = valor.includes("desapropria") ||
+                            valor.includes("servid")      ||
+                            valor.includes("regulariza");
+        
+            if (mostrar) {
+                /* ======== MOSTRAR QUADRO ======== */
+                restricoesContainer.style.display = "block";
+        
+                /* ----- aviso permanente (cria só uma vez) ----- */
+                if (!document.getElementById("avisoAreaRestricoes")) {
+                    const aviso = document.createElement("div");
+                    aviso.id   = "avisoAreaRestricoes";
+                    aviso.innerHTML =
+                      "<strong>ATENÇÃO:</strong> As restrições indicadas abaixo incidem exclusivamente sobre a área de interesse (área desapropriada, de servidão ou a ser regularizada) e não sobre a área total documentada da propriedade.";
+                    Object.assign(aviso.style, {
+                        color:"#b20000",
+                        backgroundColor:"#ffe6e6",
+                        padding:"10px",
+                        marginBottom:"15px",
+                        border:"1px solid #b20000",
+                        borderRadius:"5px",
+                        fontSize:"14px",
+                        fontWeight:"bold"
+                    });
+                    restricoesContainer.prepend(aviso);
+                }
+        
+                /* ---------- função de destaque verde ---------- */
+                const aplicarHighlight = campo => {
+                    const atualiza = () =>
+                      campo.style.backgroundColor = campo.value.trim() ? "#ccffcc" : "#f0f0f0";
+                    atualiza();
+                    campo.addEventListener("input", atualiza);
+                };
+        
+                /* destaca inputs já existentes */
+                restricoesContainer
+                    .querySelectorAll(".input-change")
+                    .forEach(aplicarHighlight);
+        
+                /* observa novos inputs adicionados dinamicamente */
+                new MutationObserver(muts => {
+                    muts.forEach(m => {
+                        m.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) { /* elemento */
+                                if (node.classList.contains("input-change")) {
+                                    aplicarHighlight(node);
+                                }
+                                node
+                                  .querySelectorAll?.(".input-change")
+                                  .forEach(aplicarHighlight);
+                            }
+                        });
+                    });
+                }).observe(restricoesContainer, { childList:true, subtree:true });
+        
+            } else {
+                /* ======== OCULTAR QUADRO ======== */
+                restricoesContainer.style.display = "none";
+            }
+        }
+            
+    
 
-    document.getElementById("incluirTelSelect").addEventListener("change", toggleTelefoneCampo);
-    document.getElementById("incluirMailSelect").addEventListener("change", toggleEmailCampo);
-    document.getElementById("finalidadeSelect").addEventListener("change", () => {
-        atualizarAreaLabel();
-        exibirRestricoesSeNecessario();
-    });
-});
-</script>
+      function toggleTelefoneCampo() {
+          const telSelect = document.getElementById("incluirTelSelect");
+          const telCampo = document.getElementById("telefoneCampo");
+          if (telSelect.value === "sim") {
+              telCampo.style.display = "block";
+          } else {
+              telCampo.style.display = "none";
+          }
+      }
+
+      function toggleEmailCampo() {
+          const mailSelect = document.getElementById("incluirMailSelect");
+          const mailCampo = document.getElementById("emailCampo");
+          if (mailSelect.value === "sim") {
+              mailCampo.style.display = "block";
+          } else {
+              mailCampo.style.display = "none";
+          }
+      }
+
+      let restricaoCount = 0;
+      function addRestricao() {
+        restricaoCount++;
+        const container = document.getElementById('restricoesSection');
+        const divR = document.createElement('div');
+        divR.className = "restricoes-container";
+        divR.innerHTML = `
+          <label>Tipo de restrição (ex: APP, Servidão, Outro) [${restricaoCount}]:</label>
+          <input type="text" name="tipo_restricao_${restricaoCount}" class="input-change" placeholder="Ex: APP ou Servidão">
+
+          <label>Área (m²) com essa restrição [${restricaoCount}]:</label>
+          <input type="text" name="area_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 500.0">
+
+          <label>Porcentagem de depreciação (ex: 66) [${restricaoCount}]:</label>
+          <input type="text" name="depreciacao_restricao_${restricaoCount}" class="input-change" placeholder="Ex: 66">
+        `;
+        container.appendChild(divR);
+      }
+
+      /* Faz todos os campos input-change (incluindo select) ficarem verdes se preenchidos */
+      document.addEventListener('DOMContentLoaded', function() {
+          atualizarAreaLabel();
+          exibirRestricoesSeNecessario();
+
+          const allFields = document.querySelectorAll('.input-change');
+
+          function checkFill(elem) {
+              /* Se for SELECT e o value != "", fica verde */
+              if (elem.tagName === 'SELECT') {
+                  if (elem.value.trim() !== '') {
+                      elem.style.backgroundColor = '#ccffcc';
+                  } else {
+                      elem.style.backgroundColor = '#f0f0f0';
+                  }
+              } else {
+                  /* Para inputs text/file*/
+                  if (elem.value.trim() !== '') {
+                      elem.style.backgroundColor = '#ccffcc';
+                  } else {
+                      elem.style.backgroundColor = '#f0f0f0';
+                  }
+              }
+          }
+
+          /* Verifica periodicamente (para capturar autofill) */
+          setInterval(() => {
+              allFields.forEach(f => checkFill(f));
+          }, 1000);
+
+          allFields.forEach(field => {
+              /* Se já vier preenchido */
+              checkFill(field);
+
+              /* Monitorar eventos */
+              field.addEventListener('input',   () => checkFill(field));
+              field.addEventListener('change',  () => checkFill(field));
+              field.addEventListener('focusout',() => checkFill(field));
+          });
+
+      });
+    </script>
 {% endblock %}
 
