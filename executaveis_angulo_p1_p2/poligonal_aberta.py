@@ -429,6 +429,10 @@ def process_poligonal_aberta_e_fechada(dxf_file_path, output_file_path, output_e
         msp = doc.modelspace()
 
         # 🔹 Coletar pontos (sem rótulos)
+        # 🔹 Coletar apenas os pontos da poligonal aberta
+        rotulos = {}
+        for entity in msp.query('TEXT'):
+            rotulos[entity.dxf.text.strip()] = (entity.dxf.insert.x, entity.dxf.insert.y)
         pontos = []
         for entity in msp.query('POINT'):
             pontos.append((entity.dxf.location.x, entity.dxf.location.y))
