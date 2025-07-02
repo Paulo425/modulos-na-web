@@ -5153,14 +5153,19 @@ def gerar_relatorio_avaliacao_com_template(
     # ------------------------------------------------------------------
     # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO
     # ------------------------------------------------------------------
-    caminho_mapa = gerar_mapa_amostras(dataframe_amostras_filtrado, dados_avaliando)
+    pasta_saida = f"/opt/render/project/src/static/arquivos/avaliacao_{uuid_atual}/"
+    os.makedirs(pasta_saida, exist_ok=True)
+
+    caminho_mapa = os.path.join(pasta_saida, "mapa_amostras.png")
+
+    gerar_mapa_amostras(dataframe_amostras_filtrado, dados_avaliando, nome_png=caminho_mapa)
     # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
     if os.path.exists(caminho_mapa):
         logger.info(f"✅ MAPA AMOSTRAS encontrado: {caminho_mapa}")
     else:
         logger.warning(f"❌ MAPA AMOSTRAS NÃO encontrado: {caminho_mapa}")
     
-    if caminho_mapa:
+    if caminho_mapa and os.path.exists(caminho_mapa):  # <- ESSA É A LINHA CORRIGIDA
         substituir_placeholder_por_imagem(
             documento, "[MAPAAMOSTRAS]", caminho_mapa, largura=Inches(6)
         )
