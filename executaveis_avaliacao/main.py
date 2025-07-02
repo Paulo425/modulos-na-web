@@ -5521,38 +5521,38 @@ def gerar_relatorio_avaliacao_com_template(
             lista_todos_os_fatores          # << novo argumento
     )  
     
-# 📌 Verificação sugerida para identificar se as fotos estão no caminho correto:
-for caminho in caminhos_fotos_avaliando:
-    if os.path.exists(caminho):
-        logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
-    else:
-        logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
+    # 📌 Verificação sugerida para identificar se as fotos estão no caminho correto:
+    for caminho in caminhos_fotos_avaliando:
+        if os.path.exists(caminho):
+            logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
+        else:
+            logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
 
-for caminho in caminhos_fotos_adicionais:
-    if os.path.exists(caminho):
-        logger.info(f"✅ Documento adicional (matrícula) encontrado: {caminho}")
-    else:
-        logger.warning(f"❌ Documento adicional (matrícula) NÃO encontrado: {caminho}")
+    for caminho in caminhos_fotos_adicionais:
+        if os.path.exists(caminho):
+            logger.info(f"✅ Documento adicional (matrícula) encontrado: {caminho}")
+        else:
+            logger.warning(f"❌ Documento adicional (matrícula) NÃO encontrado: {caminho}")
 
-for caminho in caminhos_fotos_proprietario:
-    if os.path.exists(caminho):
-        logger.info(f"✅ Documento do proprietário encontrado: {caminho}")
-    else:
-        logger.warning(f"❌ Documento do proprietário NÃO encontrado: {caminho}")
+    for caminho in caminhos_fotos_proprietario:
+        if os.path.exists(caminho):
+            logger.info(f"✅ Documento do proprietário encontrado: {caminho}")
+        else:
+            logger.warning(f"❌ Documento do proprietário NÃO encontrado: {caminho}")
 
-for caminho in caminhos_fotos_planta:
-    if os.path.exists(caminho):
-        logger.info(f"✅ Documento de planta encontrado: {caminho}")
-    else:
-        logger.warning(f"❌ Documento de planta NÃO encontrado: {caminho}")
+    for caminho in caminhos_fotos_planta:
+        if os.path.exists(caminho):
+            logger.info(f"✅ Documento de planta encontrado: {caminho}")
+        else:
+            logger.warning(f"❌ Documento de planta NÃO encontrado: {caminho}")
 
-# Verificar se o logo existe
-caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
-if caminho_logo:
-    if os.path.exists(caminho_logo):
-        logger.info(f"✅ Logo encontrado: {caminho_logo}")
-    else:
-        logger.warning(f"❌ Logo NÃO encontrado: {caminho_logo}")
+    # Verificar se o logo existe
+    caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
+    if caminho_logo:
+        if os.path.exists(caminho_logo):
+            logger.info(f"✅ Logo encontrado: {caminho_logo}")
+        else:
+            logger.warning(f"❌ Logo NÃO encontrado: {caminho_logo}")
 
     # Inserir fotos
     inserir_fotos_no_placeholder(documento, "[FOTOS]", caminhos_fotos_avaliando)
