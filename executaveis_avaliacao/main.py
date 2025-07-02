@@ -2173,7 +2173,6 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     Insere as fotos no local do placeholder organizadas em blocos de até 4 (2x2).
     """
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    bloco_fotos = []
     largura_imagem = Inches(3)
 
     paragrafo_alvo = None
@@ -2182,14 +2181,14 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
             paragrafo_alvo = paragrafo
             break
 
+    # Se não encontrou o placeholder, retorne imediatamente (importante!)
     if not paragrafo_alvo:
         return
 
     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
-    bloco_fotos = []
+    bloco_fotos = []  # ← inicializada no lugar correto!
 
-    # Função interna para inserir quatro fotos
     def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
         qtd_fotos = len(lista_caminhos)
         tabela_fotos = documento.add_table(rows=2, cols=2)
@@ -2204,6 +2203,7 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
                     run_image = par.add_run()
                     try:
                         run_image.add_picture(caminho, width=largura_imagem)
+                        logger.info(f"✅ Imagem inserida: {caminho}")
                     except Exception as e:
                         logger.error(f"Erro ao inserir imagem: {caminho}, erro: {e}")
                     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -2212,6 +2212,7 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
         paragrafo_referencia._p.addnext(tabela_fotos._element)
         inserir_paragrafo_apos(paragrafo_referencia, "")
 
+    # IMPORTANTE: este loop deve ficar DENTRO do escopo principal da função.
     for i, caminho_foto in enumerate(caminhos_fotos, start=1):
         bloco_fotos.append(caminho_foto)
         if (i % 4) == 0:
@@ -2219,6 +2220,7 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
             bloco_fotos = []
     if bloco_fotos:
         inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
+
 
 
 
