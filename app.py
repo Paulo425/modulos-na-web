@@ -947,7 +947,8 @@ def gerar_avaliacao():
                 caminhos_fotos_proprietario=fotos_proprietario,
                 caminhos_fotos_planta=fotos_planta,
                 caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
-                nome_arquivo_word=caminho_docx
+                nome_arquivo_word=caminho_docx,
+                uuid_atual=id_execucao
             )
 
             # 5. Gerar ZIP

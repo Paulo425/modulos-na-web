@@ -5127,7 +5127,8 @@ def gerar_relatorio_avaliacao_com_template(
     caminhos_fotos_proprietario,
     caminhos_fotos_planta,
     caminho_template=r"modelo-azul1.docx",
-    nome_arquivo_word="RELATORIO_AVALIACAO_COMPLETO.DOCX"
+    nome_arquivo_word="RELATORIO_AVALIACAO_COMPLETO.DOCX",
+    uuid_atual
 ):
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
