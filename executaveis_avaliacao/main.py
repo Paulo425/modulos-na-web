@@ -2171,6 +2171,7 @@ def inserir_fundamentacao_e_enquadramento(
 def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     bloco_fotos = []  # Inicialização OBRIGATÓRIA
+    logger.info("🚨 bloco_fotos FOI INICIALIZADO corretamente!")
     largura_imagem = Inches(3)
 
     paragrafo_alvo = None
@@ -2209,6 +2210,8 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
         inserir_paragrafo_apos(paragrafo_alvo, "")
 
     for caminho_foto in caminhos_fotos:
+        if bloco_fotos is None:
+            logger.error("🚨 bloco_fotos está None!")
         bloco_fotos.append(caminho_foto)
         if len(bloco_fotos) == 4:
             inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
