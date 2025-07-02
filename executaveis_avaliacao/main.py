@@ -2168,27 +2168,27 @@ def inserir_fundamentacao_e_enquadramento(
 
 #     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
-    def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
-        qtd_fotos = len(lista_caminhos)
-        tabela_fotos = documento.add_table(rows=2, cols=2)
-        tabela_fotos.style = "Table Grid"
+def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
+    qtd_fotos = len(lista_caminhos)
+    tabela_fotos = documento.add_table(rows=2, cols=2)
+    tabela_fotos.style = "Table Grid"
 
-        indice_foto = 0
-        for linha_idx in range(2):
-            for col_idx in range(2):
-                if indice_foto < qtd_fotos:
-                    caminho = lista_caminhos[indice_foto]
-                    par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
-                    run_image = par.add_run()
-                    try:
-                        run_image.add_picture(caminho, width=largura_imagem)
-                    except:
-                        pass
-                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    indice_foto += 1
+    indice_foto = 0
+    for linha_idx in range(2):
+        for col_idx in range(2):
+            if indice_foto < qtd_fotos:
+                caminho = lista_caminhos[indice_foto]
+                par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
+                run_image = par.add_run()
+                try:
+                    run_image.add_picture(caminho, width=largura_imagem)
+                except:
+                    pass
+                par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                indice_foto += 1
 
-        paragrafo_referencia._p.addnext(tabela_fotos._element)
-        inserir_paragrafo_apos(paragrafo_referencia, "")
+    paragrafo_referencia._p.addnext(tabela_fotos._element)
+    inserir_paragrafo_apos(paragrafo_referencia, "")
 
     for i, caminho_foto in enumerate(caminhos_fotos, start=1):
         bloco_fotos.append(caminho_foto)
