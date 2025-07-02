@@ -742,6 +742,8 @@ def gerar_mapa_amostras(
 
 from pdf2image import convert_from_path
 
+from pdf2image import convert_from_path
+
 def salvar_pdf_como_png(caminho_pdf, caminho_png, dpi=300):
     try:
         paginas = convert_from_path(caminho_pdf, dpi=dpi)
@@ -751,7 +753,8 @@ def salvar_pdf_como_png(caminho_pdf, caminho_png, dpi=300):
         else:
             logger.error(f"⚠️ Nenhuma página encontrada no PDF: {caminho_pdf}")
     except Exception as e:
-        logger.error(f"❌ Falha ao converter PDF→PNG ({caminho_pdf}): {e}")
+        logger.error(f"❌ Falha ao converter PDF→PNG ({caminho_pdf}): {e}", exc_info=True)
+
 
 ###############################################################################
 # TABELA DE AMOSTRAS HOMOGENEIZADAS
