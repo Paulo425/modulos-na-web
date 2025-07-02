@@ -8,3 +8,4 @@ services:
       pip install --upgrade pip && pip install -r requirements.txt
     startCommand: python app.py
     autoDeploy: true
+# atualização para forçar deploy 02-07-2025 às 15:00
