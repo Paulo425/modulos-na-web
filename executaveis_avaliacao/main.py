@@ -2175,19 +2175,18 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     largura_imagem = Inches(3)
 
+    bloco_fotos = []  # ← Aqui é a posição correta!
+
     paragrafo_alvo = None
     for paragrafo in documento.paragraphs:
         if placeholder in paragrafo.text:
             paragrafo_alvo = paragrafo
             break
 
-    # Se não encontrou o placeholder, retorne imediatamente (importante!)
     if not paragrafo_alvo:
         return
 
     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
-
-    bloco_fotos = []  # ← inicializada no lugar correto!
 
     def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
         qtd_fotos = len(lista_caminhos)
@@ -2212,12 +2211,13 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
         paragrafo_referencia._p.addnext(tabela_fotos._element)
         inserir_paragrafo_apos(paragrafo_referencia, "")
 
-    # IMPORTANTE: este loop deve ficar DENTRO do escopo principal da função.
+    # Este loop ficará corretamente após a inicialização de bloco_fotos
     for i, caminho_foto in enumerate(caminhos_fotos, start=1):
         bloco_fotos.append(caminho_foto)
         if (i % 4) == 0:
             inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
             bloco_fotos = []
+
     if bloco_fotos:
         inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
 
