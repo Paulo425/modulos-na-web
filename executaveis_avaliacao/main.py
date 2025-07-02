@@ -73,20 +73,18 @@ from lxml import etree
 import logging
 
 
+
 logger = logging.getLogger(__name__)
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
  
- def inserir_paragrafo_apos(paragrafo, texto=''):
-    """
-    Insere um novo parágrafo imediatamente após 'paragrafo_referencia',
-    retornando o objeto docx.Paragraph do novo parágrafo criado.
-    """
+def inserir_paragrafo_apos(paragrafo, texto=''):
     novo_p = paragrafo._p.addnext(paragrafo._element.__class__('w:p'))
     novo_paragrafo = Paragraph(novo_p, paragrafo._parent)
     novo_paragrafo.add_run(texto)
     return novo_paragrafo
+
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
