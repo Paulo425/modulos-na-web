@@ -73,18 +73,22 @@ from lxml import etree
 import logging
 
 
+from docx.oxml import OxmlElement
+
+
 
 logger = logging.getLogger(__name__)
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
  
-def inserir_paragrafo_apos(paragrafo, texto=''):
-    novo_p = paragrafo._p.addnext(paragrafo._element.__class__('w:p'))
+ddef inserir_paragrafo_apos(paragrafo, texto=''):
+    novo_p = OxmlElement('w:p')
+    paragrafo._p.addnext(novo_p)
     novo_paragrafo = Paragraph(novo_p, paragrafo._parent)
-    novo_paragrafo.add_run(texto)
+    if texto:
+        novo_paragrafo.add_run(texto)
     return novo_paragrafo
-
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
