@@ -77,19 +77,16 @@ logger = logging.getLogger(__name__)
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
-def inserir_paragrafo_apos(paragrafo_referencia, texto="", estilo=None):
+ 
+ def inserir_paragrafo_apos(paragrafo, texto=''):
     """
     Insere um novo parágrafo imediatamente após 'paragrafo_referencia',
     retornando o objeto docx.Paragraph do novo parágrafo criado.
     """
-    elemento_paragrafo_novo = OxmlElement("w:p")
-    paragrafo_referencia._p.addnext(elemento_paragrafo_novo)
-    paragrafo_novo = Paragraph(elemento_paragrafo_novo, paragrafo_referencia._parent)
-    if texto:
-        paragrafo_novo.add_run(texto)
-    if estilo:
-        paragrafo_novo.style = estilo
-    return paragrafo_novo
+    novo_p = paragrafo._p.addnext(paragrafo._element.__class__('w:p'))
+    novo_paragrafo = Paragraph(novo_p, paragrafo._parent)
+    novo_paragrafo.add_run(texto)
+    return novo_paragrafo
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
