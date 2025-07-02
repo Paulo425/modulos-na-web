@@ -740,9 +740,7 @@ def gerar_mapa_amostras(
     plt.close(fig)
     return str(Path(nome_png).resolve())
 
-from pdf2image import convert_from_path
 
-from pdf2image import convert_from_path
 
 def salvar_pdf_como_png(caminho_pdf, caminho_png, dpi=300):
     try:
@@ -2202,39 +2200,69 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
 
     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
-    # Função interna claramente isolada
     def inserir_quatro_fotos(documento, paragrafo_referencia, fotos, largura_imagem):
-        qtd_fotos = len(fotos)
-        tabela_fotos = documento.add_table(rows=2, cols=2)
-        tabela_fotos.style = "Table Grid"
+    qtd_fotos = len(fotos)
+    tabela_fotos = documento.add_table(rows=2, cols=2)
+    tabela_fotos.style = "Table Grid"
 
-        indice_foto = 0
-        for linha_idx in range(2):
-            for col_idx in range(2):
-                if indice_foto < qtd_fotos:
-                    caminho = fotos[indice_foto]
-                    par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
-                    run_image = par.add_run()
+    indice_foto = 0
+    for linha_idx in range(2):
+        for col_idx in range(2):
+            if indice_foto < qtd_fotos:
+                caminho = fotos[indice_foto]
+                par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
+                run_image = par.add_run()
+                
+                # 👉 Verificação CIRÚRGICA da existência antes da inserção:
+                if os.path.exists(caminho):
                     try:
                         run_image.add_picture(caminho, width=largura_imagem)
-                        logger.info(f"✅ Imagem inserida: {caminho}")
+                        logger.info(f"✅ Imagem inserida com sucesso: {caminho}")
                     except Exception as e:
-                        logger.error(f"Erro ao inserir imagem: {caminho}, erro: {e}")
-                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    indice_foto += 1
+                        logger.error(f"❌ Erro ao inserir imagem ({caminho}): {e}")
+                else:
+                    logger.warning(f"⚠️ Arquivo NÃO encontrado no caminho informado: {caminho}")
 
-        paragrafo_referencia._p.addnext(tabela_fotos._element)
-        inserir_paragrafo_apos(paragrafo_referencia, "")
+                par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                indice_foto += 1
 
-    # Loop claramente isolado com variável única (sem redefinição)
-    for idx, caminho_foto in enumerate(caminhos_fotos, start=1):
-        fotos_para_inserir.append(caminho_foto)
-        if (idx % 4) == 0:
-            inserir_quatro_fotos(documento, paragrafo_alvo, fotos_para_inserir, largura_imagem)
-            fotos_para_inserir = []
+    paragrafo_referencia._p.addnext(tabela_fotos._element)
+    inserir_paragrafo_apos(paragrafo_referencia, "")
 
-    if fotos_para_inserir:
-        inserir_quatro_fotos(documento, paragrafo_alvo, fotos_para_inserir, largura_imagem)
+
+    # Função interna claramente isolada
+    # def inserir_quatro_fotos(documento, paragrafo_referencia, fotos, largura_imagem):
+    #     qtd_fotos = len(fotos)
+    #     tabela_fotos = documento.add_table(rows=2, cols=2)
+    #     tabela_fotos.style = "Table Grid"
+
+    #     indice_foto = 0
+    #     for linha_idx in range(2):
+    #         for col_idx in range(2):
+    #             if indice_foto < qtd_fotos:
+    #                 caminho = fotos[indice_foto]
+    #                 par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
+    #                 run_image = par.add_run()
+    #                 try:
+    #                     run_image.add_picture(caminho, width=largura_imagem)
+    #                     logger.info(f"✅ Imagem inserida: {caminho}")
+    #                 except Exception as e:
+    #                     logger.error(f"Erro ao inserir imagem: {caminho}, erro: {e}")
+    #                 par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    #                 indice_foto += 1
+
+    #     paragrafo_referencia._p.addnext(tabela_fotos._element)
+    #     inserir_paragrafo_apos(paragrafo_referencia, "")
+
+    # # Loop claramente isolado com variável única (sem redefinição)
+    # for idx, caminho_foto in enumerate(caminhos_fotos, start=1):
+    #     fotos_para_inserir.append(caminho_foto)
+    #     if (idx % 4) == 0:
+    #         inserir_quatro_fotos(documento, paragrafo_alvo, fotos_para_inserir, largura_imagem)
+    #         fotos_para_inserir = []
+
+    # if fotos_para_inserir:
+    #     inserir_quatro_fotos(documento, paragrafo_alvo, fotos_para_inserir, largura_imagem)
 
 
 
