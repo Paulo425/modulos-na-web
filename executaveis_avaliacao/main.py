@@ -2187,6 +2187,8 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
 
     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
+    bloco_fotos = []
+
     # Função interna para inserir quatro fotos
     def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
         qtd_fotos = len(lista_caminhos)
@@ -2202,15 +2204,14 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
                     run_image = par.add_run()
                     try:
                         run_image.add_picture(caminho, width=largura_imagem)
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.error(f"Erro ao inserir imagem: {caminho}, erro: {e}")
                     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     indice_foto += 1
 
         paragrafo_referencia._p.addnext(tabela_fotos._element)
         inserir_paragrafo_apos(paragrafo_referencia, "")
 
-    # ESTE LOOP DEVE ESTAR DENTRO DA FUNÇÃO PRINCIPAL (CORRIGIDO AQUI)
     for i, caminho_foto in enumerate(caminhos_fotos, start=1):
         bloco_fotos.append(caminho_foto)
         if (i % 4) == 0:
