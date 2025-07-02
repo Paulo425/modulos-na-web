@@ -32,8 +32,9 @@ import uuid
 import logging, traceback
 from datetime import datetime
 from pdf2image import convert_from_bytes
-from PIL import Image
 import io
+from PIL import Image, UnidentifiedImageError
+           
 
 
 logging.basicConfig(
@@ -831,6 +832,8 @@ def gerar_avaliacao():
 
             
 
+            
+
             def salvar_multiplos(nome_form, prefixo):
                 caminhos = []
                 arquivos = request.files.getlist(nome_form)
@@ -842,17 +845,24 @@ def gerar_avaliacao():
                         nome = secure_filename(f"{prefixo}_{i}.png")
                         caminho = os.path.join(pasta_temp, nome)
 
+                        dados_arquivo = arq.read()
+
                         if extensao == "pdf":
-                            # Conversão do PDF para PNG
-                            imagens = convert_from_bytes(arq.read(), dpi=200)
-                            if imagens:
-                                imagens[0].save(caminho, "PNG")
-                                logger.info(f"✅ PDF convertido e salvo como PNG: {caminho}")
+                            try:
+                                imagens = convert_from_bytes(dados_arquivo, dpi=200)
+                                if imagens:
+                                    imagens[0].save(caminho, "PNG")
+                                    logger.info(f"✅ PDF convertido e salvo como PNG: {caminho}")
+                            except Exception as e:
+                                logger.error(f"❌ Falha ao converter PDF: {arq.filename} – {e}")
                         else:
-                            # Se já for imagem (png, jpg, jpeg)
-                            imagem = Image.open(io.BytesIO(arq.read()))
-                            imagem.save(caminho, "PNG")
-                            logger.info(f"✅ Imagem salva: {caminho}")
+                            try:
+                                imagem = Image.open(io.BytesIO(dados_arquivo))
+                                imagem.save(caminho, "PNG")
+                                logger.info(f"✅ Imagem salva: {caminho}")
+                            except UnidentifiedImageError:
+                                logger.error(f"❌ Arquivo não é uma imagem válida: {arq.filename}")
+                                continue  # pula esse arquivo e não adiciona ao caminho
 
                         caminhos.append(caminho)
                 return caminhos
