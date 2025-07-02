@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker
 import unicodedata
 import scipy.stats
+from pdf2image import convert_from_path
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
@@ -739,6 +740,18 @@ def gerar_mapa_amostras(
     plt.close(fig)
     return str(Path(nome_png).resolve())
 
+from pdf2image import convert_from_path
+
+def salvar_pdf_como_png(caminho_pdf, caminho_png, dpi=300):
+    try:
+        paginas = convert_from_path(caminho_pdf, dpi=dpi)
+        if paginas:
+            paginas[0].save(caminho_png, 'PNG')
+            logger.info(f"✅ PDF convertido com sucesso: {caminho_pdf} → {caminho_png}")
+        else:
+            logger.error(f"⚠️ Nenhuma página encontrada no PDF: {caminho_pdf}")
+    except Exception as e:
+        logger.error(f"❌ Falha ao converter PDF→PNG ({caminho_pdf}): {e}")
 
 ###############################################################################
 # TABELA DE AMOSTRAS HOMOGENEIZADAS
@@ -5538,16 +5551,38 @@ def gerar_relatorio_avaliacao_com_template(
 
 
     # Inserir fotos adicionais (novo conjunto)
+    #inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
+    # Converter PDFs para PNG antes da inserção (documentação adicional)
+    caminhos_fotos_adicionais = [
+        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
+        for caminho in caminhos_fotos_adicionais
+    ]
+
+    # Inserir fotos adicionais (novo conjunto)
     inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
 
 
     # ——— NOVO • documentação do PROPRIETÁRIO ———
+    #inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
+    # Converter PDFs para PNG (documentação do proprietário)
+    caminhos_fotos_proprietario = [
+        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
+        for caminho in caminhos_fotos_proprietario
+    ]
+
+    # documentação do PROPRIETÁRIO
     inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
 
-
     # ——— NOVO • documentação da PLANTA ———
-    inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
+    #inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
+    # Converter PDFs para PNG (documentação da planta)
+    caminhos_fotos_planta = [
+        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
+        for caminho in caminhos_fotos_planta
+    ]
 
+    # documentação da PLANTA
+    inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
   
     # Logo
     caminho_logo = fatores_do_usuario.get("caminhoLogo", "")

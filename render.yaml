@@ -3,6 +3,8 @@ services:
     name: decopa-backend
     env: python
     region: oregon  # ou "southamerica" se quiser latência menor no Brasil
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    buildCommand: |
+      apt-get update && apt-get install -y poppler-utils
+      pip install --upgrade pip && pip install -r requirements.txt
     startCommand: python app.py
     autoDeploy: true
