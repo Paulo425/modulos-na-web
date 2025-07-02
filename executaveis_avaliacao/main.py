@@ -2168,28 +2168,49 @@ def inserir_fundamentacao_e_enquadramento(
 
 #     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
-def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
-    qtd_fotos = len(lista_caminhos)
-    tabela_fotos = documento.add_table(rows=2, cols=2)
-    tabela_fotos.style = "Table Grid"
+def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
+    """
+    Insere as fotos no local do placeholder organizadas em blocos de até 4 (2x2).
+    """
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    bloco_fotos = []
+    largura_imagem = Inches(3)
 
-    indice_foto = 0
-    for linha_idx in range(2):
-        for col_idx in range(2):
-            if indice_foto < qtd_fotos:
-                caminho = lista_caminhos[indice_foto]
-                par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
-                run_image = par.add_run()
-                try:
-                    run_image.add_picture(caminho, width=largura_imagem)
-                except:
-                    pass
-                par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                indice_foto += 1
+    paragrafo_alvo = None
+    for paragrafo in documento.paragraphs:
+        if placeholder in paragrafo.text:
+            paragrafo_alvo = paragrafo
+            break
 
-    paragrafo_referencia._p.addnext(tabela_fotos._element)
-    inserir_paragrafo_apos(paragrafo_referencia, "")
+    if not paragrafo_alvo:
+        return
 
+    paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
+
+    # Função interna para inserir quatro fotos
+    def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
+        qtd_fotos = len(lista_caminhos)
+        tabela_fotos = documento.add_table(rows=2, cols=2)
+        tabela_fotos.style = "Table Grid"
+
+        indice_foto = 0
+        for linha_idx in range(2):
+            for col_idx in range(2):
+                if indice_foto < qtd_fotos:
+                    caminho = lista_caminhos[indice_foto]
+                    par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
+                    run_image = par.add_run()
+                    try:
+                        run_image.add_picture(caminho, width=largura_imagem)
+                    except:
+                        pass
+                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    indice_foto += 1
+
+        paragrafo_referencia._p.addnext(tabela_fotos._element)
+        inserir_paragrafo_apos(paragrafo_referencia, "")
+
+    # ESTE LOOP DEVE ESTAR DENTRO DA FUNÇÃO PRINCIPAL (CORRIGIDO AQUI)
     for i, caminho_foto in enumerate(caminhos_fotos, start=1):
         bloco_fotos.append(caminho_foto)
         if (i % 4) == 0:
@@ -2197,6 +2218,7 @@ def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largur
             bloco_fotos = []
     if bloco_fotos:
         inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
+
 
 
 ###############################################################################
