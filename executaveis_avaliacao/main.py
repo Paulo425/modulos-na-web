@@ -5131,6 +5131,12 @@ def gerar_relatorio_avaliacao_com_template(
     # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO
     # ------------------------------------------------------------------
     caminho_mapa = gerar_mapa_amostras(dataframe_amostras_filtrado, dados_avaliando)
+    # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
+    if os.path.exists(caminho_mapa):
+        logger.info(f"✅ MAPA AMOSTRAS encontrado: {caminho_mapa}")
+    else:
+        logger.warning(f"❌ MAPA AMOSTRAS NÃO encontrado: {caminho_mapa}")
+    
     if caminho_mapa:
         substituir_placeholder_por_imagem(
             documento, "[MAPAAMOSTRAS]", caminho_mapa, largura=Inches(6)
@@ -5304,6 +5310,11 @@ def gerar_relatorio_avaliacao_com_template(
     # Gráfico KDE
     nome_arquivo_grafico_kernel = "grafico_kernel.png"
     gerar_grafico_densidade_kernel(valores_homogeneizados_validos, nome_arquivo_grafico_kernel)
+    # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
+    if os.path.exists(nome_arquivo_grafico_kernel):
+        logger.info(f"✅ Gráfico Kernel encontrado: {nome_arquivo_grafico_kernel}")
+    else:
+        logger.warning(f"❌ Gráfico Kernel NÃO encontrado: {nome_arquivo_grafico_kernel}")
     substituir_placeholder_por_imagem(documento, "[graficoKernel]", nome_arquivo_grafico_kernel, largura=Inches(5))
 
     # Tabela de amostras homogeneizadas
@@ -5510,6 +5521,38 @@ def gerar_relatorio_avaliacao_com_template(
             lista_todos_os_fatores          # << novo argumento
     )  
     
+# 📌 Verificação sugerida para identificar se as fotos estão no caminho correto:
+for caminho in caminhos_fotos_avaliando:
+    if os.path.exists(caminho):
+        logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
+    else:
+        logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
+
+for caminho in caminhos_fotos_adicionais:
+    if os.path.exists(caminho):
+        logger.info(f"✅ Documento adicional (matrícula) encontrado: {caminho}")
+    else:
+        logger.warning(f"❌ Documento adicional (matrícula) NÃO encontrado: {caminho}")
+
+for caminho in caminhos_fotos_proprietario:
+    if os.path.exists(caminho):
+        logger.info(f"✅ Documento do proprietário encontrado: {caminho}")
+    else:
+        logger.warning(f"❌ Documento do proprietário NÃO encontrado: {caminho}")
+
+for caminho in caminhos_fotos_planta:
+    if os.path.exists(caminho):
+        logger.info(f"✅ Documento de planta encontrado: {caminho}")
+    else:
+        logger.warning(f"❌ Documento de planta NÃO encontrado: {caminho}")
+
+# Verificar se o logo existe
+caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
+if caminho_logo:
+    if os.path.exists(caminho_logo):
+        logger.info(f"✅ Logo encontrado: {caminho_logo}")
+    else:
+        logger.warning(f"❌ Logo NÃO encontrado: {caminho_logo}")
 
     # Inserir fotos
     inserir_fotos_no_placeholder(documento, "[FOTOS]", caminhos_fotos_avaliando)

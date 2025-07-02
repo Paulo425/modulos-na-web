@@ -824,6 +824,7 @@ def gerar_avaliacao():
             # 2. Salvar arquivos recebidos
             caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
             request.files["planilha_excel"].save(caminho_planilha)
+            logger.info(f"✅ Planilha salva: {caminho_planilha} - {'existe' if os.path.exists(caminho_planilha) else 'NÃO existe'}")
 
             def salvar_multiplos(nome_form, prefixo):
                 caminhos = []
@@ -833,6 +834,8 @@ def gerar_avaliacao():
                         nome = secure_filename(f"{prefixo}_{i}.png")
                         caminho = os.path.join(pasta_temp, nome)
                         arq.save(caminho)
+                        existe = os.path.exists(caminho)
+                        logger.info(f"✅ Arquivo '{nome}' salvo: {caminho} - {'existe' if existe else 'NÃO existe'}")
                         caminhos.append(caminho)
                 return caminhos
 
@@ -846,7 +849,7 @@ def gerar_avaliacao():
             if logo and logo.filename:
                 caminho_logo = os.path.join(pasta_temp, "logo.png")
                 logo.save(caminho_logo)
-
+                logger.info(f"✅ Logo salvo: {caminho_logo} - {'existe' if os.path.exists(caminho_logo) else 'NÃO existe'}")
             # 3. Inputs simples
             f = request.form
             def chk(nome): return f.get(nome, "").lower() == "sim"
