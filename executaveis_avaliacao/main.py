@@ -2169,11 +2169,8 @@ def inserir_fundamentacao_e_enquadramento(
 #     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
 def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
-    """
-    Insere as fotos no local do placeholder organizadas em blocos de até 4 (2x2).
-    """
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    bloco_fotos = []
+    bloco_fotos = []  # Inicialização OBRIGATÓRIA
     largura_imagem = Inches(3)
 
     paragrafo_alvo = None
@@ -2188,9 +2185,8 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     # Limpa o placeholder do texto original.
     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
-    # Função interna para inserir exatamente 4 fotos.
-    def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
-        qtd_fotos = len(lista_caminhos)
+    def inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem):
+        qtd_fotos = len(bloco_fotos)
         tabela_fotos = documento.add_table(rows=2, cols=2)
         tabela_fotos.style = "Table Grid"
 
@@ -2198,7 +2194,7 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
         for linha_idx in range(2):
             for col_idx in range(2):
                 if indice_foto < qtd_fotos:
-                    caminho = lista_caminhos[indice_foto]
+                    caminho = bloco_fotos[indice_foto]
                     par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
                     run_image = par.add_run()
                     try:
@@ -2209,23 +2205,18 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
                     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     indice_foto += 1
 
-        # Insere a tabela logo após o parágrafo de referência.
-        paragrafo_referencia._p.addnext(tabela_fotos._element)
-        inserir_paragrafo_apos(paragrafo_referencia, "")
+        paragrafo_alvo._p.addnext(tabela_fotos._element)
+        inserir_paragrafo_apos(paragrafo_alvo, "")
 
-    # Agora, finalmente, inicializamos o bloco_fotos antes do loop de inserção
-    #bloco_fotos = []
-
-    # Inserção das fotos usando blocos de 4 (2x2)
-    for i, caminho_foto in enumerate(caminhos_fotos, start=1):
+    for caminho_foto in caminhos_fotos:
         bloco_fotos.append(caminho_foto)
         if len(bloco_fotos) == 4:
             inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
-            bloco_fotos = []  # Reinicia bloco após inserir 4 fotos
+            bloco_fotos = []
 
-    # Insere fotos que sobraram (menos de 4)
     if bloco_fotos:
         inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
+
 
 
 
