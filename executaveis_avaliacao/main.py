@@ -72,6 +72,7 @@ from docx.oxml.shared import OxmlElement
 from lxml import etree
 import logging
 
+
 logger = logging.getLogger(__name__)
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
@@ -2182,13 +2183,13 @@ def inserir_fundamentacao_e_enquadramento(
 
 #     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
-def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    
-    # Variáveis renomeadas para eliminar conflitos
-    fotos_para_inserir = []
-    largura_imagem = Inches(3)
 
+
+def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura_imagem=Inches(3)):
+    """
+    Insere as fotos no local do placeholder organizadas em blocos de até 4 (2x2).
+    """
+    # Buscar o placeholder no documento
     paragrafo_alvo = None
     for paragrafo in documento.paragraphs:
         if placeholder in paragrafo.text:
@@ -2196,38 +2197,47 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
             break
 
     if not paragrafo_alvo:
+        logger.warning(f"⚠️ Placeholder {placeholder} não encontrado no documento.")
         return
 
-    paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
+    # Limpa o placeholder
+    paragrafo_alvo.text = ""
 
-    def inserir_quatro_fotos(documento, paragrafo_referencia, fotos, largura_imagem):
-        qtd_fotos = len(fotos)
+    # Divide as imagens em blocos de até 4 imagens
+    blocos_fotos = [caminhos_fotos[i:i+4] for i in range(0, len(caminhos_fotos), 4)]
+
+    for bloco in blocos_fotos:
         tabela_fotos = documento.add_table(rows=2, cols=2)
         tabela_fotos.style = "Table Grid"
 
         indice_foto = 0
-        for linha_idx in range(2):
-            for col_idx in range(2):
-                if indice_foto < qtd_fotos:
-                    caminho = fotos[indice_foto]
-                    par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
-                    run_image = par.add_run()
-                    
-                    # 👉 Verificação CIRÚRGICA da existência antes da inserção:
-                    if os.path.exists(caminho):
+        for linha in range(2):
+            for coluna in range(2):
+                if indice_foto < len(bloco):
+                    caminho_img = bloco[indice_foto]
+                    if os.path.exists(caminho_img):
+                        celula = tabela_fotos.cell(linha, coluna)
+                        paragrafo_celula = celula.paragraphs[0]
+                        run = paragrafo_celula.add_run()
                         try:
-                            run_image.add_picture(caminho, width=largura_imagem)
-                            logger.info(f"✅ Imagem inserida com sucesso: {caminho}")
+                            run.add_picture(caminho_img, width=largura_imagem)
+                            paragrafo_celula.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                            logger.info(f"✅ Imagem inserida com sucesso: {caminho_img}")
                         except Exception as e:
-                            logger.error(f"❌ Erro ao inserir imagem ({caminho}): {e}")
+                            logger.error(f"❌ Falha ao inserir imagem {caminho_img}: {e}")
                     else:
-                        logger.warning(f"⚠️ Arquivo NÃO encontrado no caminho informado: {caminho}")
+                        logger.warning(f"⚠️ Imagem não encontrada no caminho informado: {caminho_img}")
 
-                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     indice_foto += 1
 
-        paragrafo_referencia._p.addnext(tabela_fotos._element)
-        inserir_paragrafo_apos(paragrafo_referencia, "")
+        # Insere a tabela após o parágrafo do placeholder
+        paragrafo_alvo._p.addnext(tabela_fotos._element)
+        inserir_paragrafo_apos(paragrafo_alvo, "")
+
+def inserir_paragrafo_apos(paragrafo, texto):
+    novo_paragrafo = paragrafo.insert_paragraph_after(texto)
+    return novo_paragrafo
+
 
 
     # Função interna claramente isolada
