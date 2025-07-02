@@ -2149,24 +2149,24 @@ def inserir_fundamentacao_e_enquadramento(
 ###############################################################################
 # INSERIR FOTOS
 ###############################################################################
-def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
-    """
-    Insere as fotos no local do placeholder [FOTOS] organizadas em blocos de até 4 (2x2).
-    """
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    bloco_fotos = []
-    largura_imagem = Inches(3)
+# def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
+#     """
+#     Insere as fotos no local do placeholder [FOTOS] organizadas em blocos de até 4 (2x2).
+#     """
+#     from docx.enum.text import WD_ALIGN_PARAGRAPH
+#     bloco_fotos = []
+#     largura_imagem = Inches(3)
 
-    paragrafo_alvo = None
-    for paragrafo in documento.paragraphs:
-        if placeholder in paragrafo.text:
-            paragrafo_alvo = paragrafo
-            break
+#     paragrafo_alvo = None
+#     for paragrafo in documento.paragraphs:
+#         if placeholder in paragrafo.text:
+#             paragrafo_alvo = paragrafo
+#             break
 
-    if not paragrafo_alvo:
-        return
+#     if not paragrafo_alvo:
+#         return
 
-    paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
+#     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
     def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
         qtd_fotos = len(lista_caminhos)
@@ -4576,9 +4576,9 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     Insere as fotos no local do placeholder [FOTOS] organizadas em blocos de até 4 (2x2).
     """
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    bloco_fotos = []
-    largura_imagem = Inches(3)
+    from docx.shared import Inches
 
+    # Localiza o placeholder
     paragrafo_alvo = None
     for paragrafo in documento.paragraphs:
         if placeholder in paragrafo.text:
@@ -4586,9 +4586,52 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
             break
 
     if not paragrafo_alvo:
+        logger.warning(f"❌ Placeholder '{placeholder}' não encontrado.")
         return
 
-    paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
+    paragrafo_alvo.text = ""  # limpa placeholder para inserir imagens
+
+    # Cria tabela para organizar imagens (2 colunas por linha)
+    imagens_por_linha = 2
+    largura_imagem = Inches(3)
+    tabela = documento.add_table(rows=0, cols=imagens_por_linha)
+    linha_atual = None
+
+    for i, caminho_foto in enumerate(caminhos_fotos):
+        if i % imagens_por_linha == 0:
+            linha_atual = tabela.add_row().cells
+
+        # Insere imagem se o caminho for válido
+        if os.path.exists(caminho_foto):
+            paragrafo_celula = linha_atual[i % imagens_por_linha].paragraphs[0]
+            run = paragrafo_celula.add_run()
+            run.add_picture(caminho_foto, width=largura_imagem)
+            paragrafo_celula.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            logger.info(f"✅ Imagem inserida: {caminho_foto}")
+        else:
+            logger.warning(f"❌ Arquivo não encontrado: {caminho_foto}")
+
+    # Move a tabela criada para o local do placeholder
+    paragrafo_alvo._p.addnext(tabela._tbl)
+
+# def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
+#     """
+#     Insere as fotos no local do placeholder [FOTOS] organizadas em blocos de até 4 (2x2).
+#     """
+#     from docx.enum.text import WD_ALIGN_PARAGRAPH
+#     bloco_fotos = []
+#     largura_imagem = Inches(3)
+
+#     paragrafo_alvo = None
+#     for paragrafo in documento.paragraphs:
+#         if placeholder in paragrafo.text:
+#             paragrafo_alvo = paragrafo
+#             break
+
+#     if not paragrafo_alvo:
+#         return
+
+#     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
     def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
         qtd_fotos = len(lista_caminhos)
