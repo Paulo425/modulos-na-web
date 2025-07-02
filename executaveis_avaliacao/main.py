@@ -2170,7 +2170,9 @@ def inserir_fundamentacao_e_enquadramento(
 
 def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    bloco_fotos_temp = []  # novo nome, sem conflito algum!
+    
+    # Variáveis renomeadas para eliminar conflitos
+    fotos_para_inserir = []
     largura_imagem = Inches(3)
 
     paragrafo_alvo = None
@@ -2184,8 +2186,9 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
 
     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
-    def inserir_quatro_fotos(documento, paragrafo_alvo, lista_fotos, largura_imagem):
-        qtd_fotos = len(lista_fotos)
+    # Função interna claramente isolada
+    def inserir_quatro_fotos(documento, paragrafo_referencia, fotos, largura_imagem):
+        qtd_fotos = len(fotos)
         tabela_fotos = documento.add_table(rows=2, cols=2)
         tabela_fotos.style = "Table Grid"
 
@@ -2193,7 +2196,7 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
         for linha_idx in range(2):
             for col_idx in range(2):
                 if indice_foto < qtd_fotos:
-                    caminho = lista_fotos[indice_foto]
+                    caminho = fotos[indice_foto]
                     par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
                     run_image = par.add_run()
                     try:
@@ -2204,17 +2207,19 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
                     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     indice_foto += 1
 
-        paragrafo_alvo._p.addnext(tabela_fotos._element)
-        inserir_paragrafo_apos(paragrafo_alvo, "")
+        paragrafo_referencia._p.addnext(tabela_fotos._element)
+        inserir_paragrafo_apos(paragrafo_referencia, "")
 
-    for caminho_foto in caminhos_fotos:
-        bloco_fotos_temp.append(caminho_foto)  # use a nova variável!
-        if len(bloco_fotos_temp) == 4:
-            inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos_temp, largura_imagem)
-            bloco_fotos_temp = []
+    # Loop claramente isolado com variável única (sem redefinição)
+    for idx, caminho_foto in enumerate(caminhos_fotos, start=1):
+        fotos_para_inserir.append(caminho_foto)
+        if (idx % 4) == 0:
+            inserir_quatro_fotos(documento, paragrafo_alvo, fotos_para_inserir, largura_imagem)
+            fotos_para_inserir = []
 
-    if bloco_fotos_temp:
-        inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos_temp, largura_imagem)
+    if fotos_para_inserir:
+        inserir_quatro_fotos(documento, paragrafo_alvo, fotos_para_inserir, largura_imagem)
+
 
 
 
