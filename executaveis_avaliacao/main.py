@@ -2233,10 +2233,6 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura
         paragrafo_alvo._p.addnext(tabela_fotos._element)
         inserir_paragrafo_apos(paragrafo_alvo, "")
 
-def inserir_paragrafo_apos(paragrafo, texto):
-    novo_paragrafo = paragrafo.insert_paragraph_after(texto)
-    return novo_paragrafo
-
 
 
     # Função interna claramente isolada
