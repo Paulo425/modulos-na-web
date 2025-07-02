@@ -939,6 +939,7 @@ def gerar_avaliacao():
                 valores_homogeneizados_validos=homog,
                 caminho_imagem_aderencia=img1,
                 caminho_imagem_dispersao=img2,
+                uuid_atual=id_execucao,  # <- incluir corretamente aqui
                 finalidade_do_laudo="mercado",
                 area_parcial_afetada=area_parcial,
                 fatores_do_usuario=fatores_usuario,
@@ -947,8 +948,7 @@ def gerar_avaliacao():
                 caminhos_fotos_proprietario=fotos_proprietario,
                 caminhos_fotos_planta=fotos_planta,
                 caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
-                nome_arquivo_word=caminho_docx,
-                uuid_atual=id_execucao
+                nome_arquivo_word=caminho_docx
             )
 
             # 5. Gerar ZIP
