@@ -23,6 +23,14 @@ scipy==1.13.1
 pdf2image
 geopandas
 contextily
+Pillow
+matplotlib
+seaborn
+requests
+loguru
+PyPDF2
+
+
 
 
 
