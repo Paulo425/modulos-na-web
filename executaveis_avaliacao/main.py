@@ -2175,8 +2175,6 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     largura_imagem = Inches(3)
 
-    bloco_fotos = []  # ← Aqui é a posição correta!
-
     paragrafo_alvo = None
     for paragrafo in documento.paragraphs:
         if placeholder in paragrafo.text:
@@ -2184,10 +2182,12 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
             break
 
     if not paragrafo_alvo:
-        return
+        return  # Se não houver placeholder, não faz nada.
 
+    # Limpa o placeholder do texto original.
     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
+    # Função interna para inserir exatamente 4 fotos.
     def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
         qtd_fotos = len(lista_caminhos)
         tabela_fotos = documento.add_table(rows=2, cols=2)
@@ -2208,18 +2208,24 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
                     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     indice_foto += 1
 
+        # Insere a tabela logo após o parágrafo de referência.
         paragrafo_referencia._p.addnext(tabela_fotos._element)
         inserir_paragrafo_apos(paragrafo_referencia, "")
 
-    # Este loop ficará corretamente após a inicialização de bloco_fotos
+    # Agora, finalmente, inicializamos o bloco_fotos antes do loop de inserção
+    bloco_fotos = []
+
+    # Inserção das fotos usando blocos de 4 (2x2)
     for i, caminho_foto in enumerate(caminhos_fotos, start=1):
         bloco_fotos.append(caminho_foto)
-        if (i % 4) == 0:
+        if len(bloco_fotos) == 4:
             inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
-            bloco_fotos = []
+            bloco_fotos = []  # Reinicia bloco após inserir 4 fotos
 
+    # Insere fotos que sobraram (menos de 4)
     if bloco_fotos:
         inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
+
 
 
 
