@@ -2201,33 +2201,33 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
 
     def inserir_quatro_fotos(documento, paragrafo_referencia, fotos, largura_imagem):
-    qtd_fotos = len(fotos)
-    tabela_fotos = documento.add_table(rows=2, cols=2)
-    tabela_fotos.style = "Table Grid"
+        qtd_fotos = len(fotos)
+        tabela_fotos = documento.add_table(rows=2, cols=2)
+        tabela_fotos.style = "Table Grid"
 
-    indice_foto = 0
-    for linha_idx in range(2):
-        for col_idx in range(2):
-            if indice_foto < qtd_fotos:
-                caminho = fotos[indice_foto]
-                par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
-                run_image = par.add_run()
-                
-                # 👉 Verificação CIRÚRGICA da existência antes da inserção:
-                if os.path.exists(caminho):
-                    try:
-                        run_image.add_picture(caminho, width=largura_imagem)
-                        logger.info(f"✅ Imagem inserida com sucesso: {caminho}")
-                    except Exception as e:
-                        logger.error(f"❌ Erro ao inserir imagem ({caminho}): {e}")
-                else:
-                    logger.warning(f"⚠️ Arquivo NÃO encontrado no caminho informado: {caminho}")
+        indice_foto = 0
+        for linha_idx in range(2):
+            for col_idx in range(2):
+                if indice_foto < qtd_fotos:
+                    caminho = fotos[indice_foto]
+                    par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
+                    run_image = par.add_run()
+                    
+                    # 👉 Verificação CIRÚRGICA da existência antes da inserção:
+                    if os.path.exists(caminho):
+                        try:
+                            run_image.add_picture(caminho, width=largura_imagem)
+                            logger.info(f"✅ Imagem inserida com sucesso: {caminho}")
+                        except Exception as e:
+                            logger.error(f"❌ Erro ao inserir imagem ({caminho}): {e}")
+                    else:
+                        logger.warning(f"⚠️ Arquivo NÃO encontrado no caminho informado: {caminho}")
 
-                par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                indice_foto += 1
+                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    indice_foto += 1
 
-    paragrafo_referencia._p.addnext(tabela_fotos._element)
-    inserir_paragrafo_apos(paragrafo_referencia, "")
+        paragrafo_referencia._p.addnext(tabela_fotos._element)
+        inserir_paragrafo_apos(paragrafo_referencia, "")
 
 
     # Função interna claramente isolada
