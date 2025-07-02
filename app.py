@@ -31,6 +31,9 @@ import sys
 import uuid
 import logging, traceback
 from datetime import datetime
+from pdf2image import convert_from_bytes
+from PIL import Image
+import io
 
 
 logging.basicConfig(
@@ -826,16 +829,31 @@ def gerar_avaliacao():
             request.files["planilha_excel"].save(caminho_planilha)
             logger.info(f"✅ Planilha salva: {caminho_planilha} - {'existe' if os.path.exists(caminho_planilha) else 'NÃO existe'}")
 
+            
+
             def salvar_multiplos(nome_form, prefixo):
                 caminhos = []
                 arquivos = request.files.getlist(nome_form)
                 for i, arq in enumerate(arquivos):
                     if arq and arq.filename:
+                        extensao = arq.filename.rsplit('.', 1)[-1].lower()
+                        
+                        # Ajuste de nome e caminho
                         nome = secure_filename(f"{prefixo}_{i}.png")
                         caminho = os.path.join(pasta_temp, nome)
-                        arq.save(caminho)
-                        existe = os.path.exists(caminho)
-                        logger.info(f"✅ Arquivo '{nome}' salvo: {caminho} - {'existe' if existe else 'NÃO existe'}")
+
+                        if extensao == "pdf":
+                            # Conversão do PDF para PNG
+                            imagens = convert_from_bytes(arq.read(), dpi=200)
+                            if imagens:
+                                imagens[0].save(caminho, "PNG")
+                                logger.info(f"✅ PDF convertido e salvo como PNG: {caminho}")
+                        else:
+                            # Se já for imagem (png, jpg, jpeg)
+                            imagem = Image.open(io.BytesIO(arq.read()))
+                            imagem.save(caminho, "PNG")
+                            logger.info(f"✅ Imagem salva: {caminho}")
+
                         caminhos.append(caminho)
                 return caminhos
 
