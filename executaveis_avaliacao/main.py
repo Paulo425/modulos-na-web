@@ -73,8 +73,7 @@ from lxml import etree
 import logging
 
 
-from docx.oxml import OxmlElement
-
+from docx.oxml.shared import OxmlElement 
 
 
 logger = logging.getLogger(__name__)
