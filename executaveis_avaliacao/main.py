@@ -2173,6 +2173,7 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
     Insere as fotos no local do placeholder organizadas em blocos de até 4 (2x2).
     """
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    bloco_fotos = []
     largura_imagem = Inches(3)
 
     paragrafo_alvo = None
@@ -2213,7 +2214,7 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
         inserir_paragrafo_apos(paragrafo_referencia, "")
 
     # Agora, finalmente, inicializamos o bloco_fotos antes do loop de inserção
-    bloco_fotos = []
+    #bloco_fotos = []
 
     # Inserção das fotos usando blocos de 4 (2x2)
     for i, caminho_foto in enumerate(caminhos_fotos, start=1):
