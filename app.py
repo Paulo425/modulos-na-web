@@ -766,7 +766,7 @@ def gerar_memorial_azimute_p1_p2():
                            zip_download=zip_download,
                            log_path=log_relativo)
 
-# ✅ ROTA PARA O MÓDULO DE AVALIAÇÕES
+# ✅ ROTA PARA O MÓDULO DE AVALIAÇÕES DE IMOVEIS E PROPRIEDADES
 
 from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 
@@ -834,20 +834,43 @@ def gerar_avaliacao():
 
             
 
-            def salvar_multiplos(tipo, nome_base):
-                arquivos = request.files.getlist(tipo)
+            def salvar_multiplos(nome_form, prefixo):
                 caminhos = []
+                arquivos = request.files.getlist(nome_form)
                 for i, arq in enumerate(arquivos):
-                    nome_arquivo = f"{nome_base}_{i}.png"
-                    caminho = os.path.join(diretorio_salvar, nome_arquivo)
+                    if arq and arq.filename:
+                        extensao = arq.filename.rsplit('.', 1)[-1].lower()
+                        
+                        # Ajuste de nome e caminho
+                        nome = secure_filename(f"{prefixo}_{i}.png")
+                        caminho = os.path.join(pasta_temp, nome)
 
-                    # 👉 Abre a imagem com PIL para otimizar tamanho e qualidade
-                    imagem = Image.open(io.BytesIO(arq.read()))
-                    imagem.thumbnail((1024, 1024))  # Redimensiona mantendo proporção
-                    imagem.save(caminho, optimize=True, quality=70)  # Qualidade ajustada para economia de espaço
+                        dados_arquivo = arq.read()
 
-                    caminhos.append(caminho)
+                        if extensao == "pdf":
+                            try:
+                                imagens = convert_from_bytes(dados_arquivo, dpi=200)
+                                if imagens:
+                                    imagens[0].save(caminho, "PNG")
+                                    logger.info(f"✅ PDF convertido e salvo como PNG: {caminho}")
+                            except Exception as e:
+                                logger.error(f"❌ Falha ao converter PDF: {arq.filename} – {e}")
+                        else:
+                            try:
+                                imagem = Image.open(io.BytesIO(dados_arquivo))
+
+                                # 👉 Alteração cirúrgica aqui:
+                                imagem.thumbnail((1024, 1024))  # Redimensiona mantendo proporção
+                                imagem.save(caminho, optimize=True, quality=70)  # Salva otimizada
+
+                                logger.info(f"✅ Imagem salva: {caminho}")
+                            except UnidentifiedImageError:
+                                logger.error(f"❌ Arquivo não é uma imagem válida: {arq.filename}")
+                                continue  # pula esse arquivo e não adiciona ao caminho
+
+                        caminhos.append(caminho)
                 return caminhos
+
 
 
             fotos_imovel = salvar_multiplos("fotos_imovel", "foto_imovel")
