@@ -31,6 +31,10 @@ import sys
 import uuid
 import logging, traceback
 from datetime import datetime
+from pdf2image import convert_from_bytes
+import io
+from PIL import Image, UnidentifiedImageError
+           
 
 
 logging.basicConfig(
@@ -824,15 +828,42 @@ def gerar_avaliacao():
             # 2. Salvar arquivos recebidos
             caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
             request.files["planilha_excel"].save(caminho_planilha)
+            logger.info(f"✅ Planilha salva: {caminho_planilha} - {'existe' if os.path.exists(caminho_planilha) else 'NÃO existe'}")
+
+            
+
+            
 
             def salvar_multiplos(nome_form, prefixo):
                 caminhos = []
                 arquivos = request.files.getlist(nome_form)
                 for i, arq in enumerate(arquivos):
                     if arq and arq.filename:
+                        extensao = arq.filename.rsplit('.', 1)[-1].lower()
+                        
+                        # Ajuste de nome e caminho
                         nome = secure_filename(f"{prefixo}_{i}.png")
                         caminho = os.path.join(pasta_temp, nome)
-                        arq.save(caminho)
+
+                        dados_arquivo = arq.read()
+
+                        if extensao == "pdf":
+                            try:
+                                imagens = convert_from_bytes(dados_arquivo, dpi=200)
+                                if imagens:
+                                    imagens[0].save(caminho, "PNG")
+                                    logger.info(f"✅ PDF convertido e salvo como PNG: {caminho}")
+                            except Exception as e:
+                                logger.error(f"❌ Falha ao converter PDF: {arq.filename} – {e}")
+                        else:
+                            try:
+                                imagem = Image.open(io.BytesIO(dados_arquivo))
+                                imagem.save(caminho, "PNG")
+                                logger.info(f"✅ Imagem salva: {caminho}")
+                            except UnidentifiedImageError:
+                                logger.error(f"❌ Arquivo não é uma imagem válida: {arq.filename}")
+                                continue  # pula esse arquivo e não adiciona ao caminho
+
                         caminhos.append(caminho)
                 return caminhos
 
@@ -846,7 +877,7 @@ def gerar_avaliacao():
             if logo and logo.filename:
                 caminho_logo = os.path.join(pasta_temp, "logo.png")
                 logo.save(caminho_logo)
-
+                logger.info(f"✅ Logo salvo: {caminho_logo} - {'existe' if os.path.exists(caminho_logo) else 'NÃO existe'}")
             # 3. Inputs simples
             f = request.form
             def chk(nome): return f.get(nome, "").lower() == "sim"
@@ -936,6 +967,7 @@ def gerar_avaliacao():
                 valores_homogeneizados_validos=homog,
                 caminho_imagem_aderencia=img1,
                 caminho_imagem_dispersao=img2,
+                uuid_atual=id_execucao,  # <- incluir corretamente aqui
                 finalidade_do_laudo="mercado",
                 area_parcial_afetada=area_parcial,
                 fatores_do_usuario=fatores_usuario,

@@ -2,7 +2,9 @@ services:
   - type: web
     name: decopa-backend
     env: python
-    region: oregon  # ou "southamerica" se quiser latência menor no Brasil
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    region: oregon
+    buildCommand: |
+      apt-get update && apt-get install -y poppler-utils libgdal-dev python3-gdal
+      pip install --upgrade pip && pip install -r requirements.txt
     startCommand: python app.py
     autoDeploy: true

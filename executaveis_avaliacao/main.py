@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker
 import unicodedata
 import scipy.stats
+from pdf2image import convert_from_path
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
@@ -71,23 +72,22 @@ from docx.oxml.shared import OxmlElement
 from lxml import etree
 import logging
 
+
+from docx.oxml.shared import OxmlElement 
+
+
 logger = logging.getLogger(__name__)
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
-def inserir_paragrafo_apos(paragrafo_referencia, texto="", estilo=None):
-    """
-    Insere um novo parágrafo imediatamente após 'paragrafo_referencia',
-    retornando o objeto docx.Paragraph do novo parágrafo criado.
-    """
-    elemento_paragrafo_novo = OxmlElement("w:p")
-    paragrafo_referencia._p.addnext(elemento_paragrafo_novo)
-    paragrafo_novo = Paragraph(elemento_paragrafo_novo, paragrafo_referencia._parent)
+ 
+def inserir_paragrafo_apos(paragrafo, texto=''):
+    novo_p = OxmlElement('w:p')
+    paragrafo._p.addnext(novo_p)
+    novo_paragrafo = Paragraph(novo_p, paragrafo._parent)
     if texto:
-        paragrafo_novo.add_run(texto)
-    if estilo:
-        paragrafo_novo.style = estilo
-    return paragrafo_novo
+        novo_paragrafo.add_run(texto)
+    return novo_paragrafo
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
@@ -738,6 +738,19 @@ def gerar_mapa_amostras(
     fig.savefig(nome_png, dpi=dpi, bbox_inches="tight", pad_inches=0)
     plt.close(fig)
     return str(Path(nome_png).resolve())
+
+
+
+def salvar_pdf_como_png(caminho_pdf, caminho_png, dpi=300):
+    try:
+        paginas = convert_from_path(caminho_pdf, dpi=dpi)
+        if paginas:
+            paginas[0].save(caminho_png, 'PNG')
+            logger.info(f"✅ PDF convertido com sucesso: {caminho_pdf} → {caminho_png}")
+        else:
+            logger.error(f"⚠️ Nenhuma página encontrada no PDF: {caminho_pdf}")
+    except Exception as e:
+        logger.error(f"❌ Falha ao converter PDF→PNG ({caminho_pdf}): {e}", exc_info=True)
 
 
 ###############################################################################
@@ -2149,14 +2162,32 @@ def inserir_fundamentacao_e_enquadramento(
 ###############################################################################
 # INSERIR FOTOS
 ###############################################################################
-def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
-    """
-    Insere as fotos no local do placeholder [FOTOS] organizadas em blocos de até 4 (2x2).
-    """
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    bloco_fotos = []
-    largura_imagem = Inches(3)
+# def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
+#     """
+#     Insere as fotos no local do placeholder [FOTOS] organizadas em blocos de até 4 (2x2).
+#     """
+#     from docx.enum.text import WD_ALIGN_PARAGRAPH
+#     bloco_fotos = []
+#     largura_imagem = Inches(3)
 
+#     paragrafo_alvo = None
+#     for paragrafo in documento.paragraphs:
+#         if placeholder in paragrafo.text:
+#             paragrafo_alvo = paragrafo
+#             break
+
+#     if not paragrafo_alvo:
+#         return
+
+#     paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
+
+
+
+def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura_imagem=Inches(3)):
+    """
+    Insere as fotos no local do placeholder organizadas em blocos de até 4 (2x2).
+    """
+    # Buscar o placeholder no documento
     paragrafo_alvo = None
     for paragrafo in documento.paragraphs:
         if placeholder in paragrafo.text:
@@ -2164,39 +2195,85 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
             break
 
     if not paragrafo_alvo:
+        logger.warning(f"⚠️ Placeholder {placeholder} não encontrado no documento.")
         return
 
-    paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
+    # Limpa o placeholder
+    paragrafo_alvo.text = ""
 
-    def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
-        qtd_fotos = len(lista_caminhos)
+    # Divide as imagens em blocos de até 4 imagens
+    blocos_fotos = [caminhos_fotos[i:i+4] for i in range(0, len(caminhos_fotos), 4)]
+
+    for bloco in blocos_fotos:
         tabela_fotos = documento.add_table(rows=2, cols=2)
         tabela_fotos.style = "Table Grid"
 
         indice_foto = 0
-        for linha_idx in range(2):
-            for col_idx in range(2):
-                if indice_foto < qtd_fotos:
-                    caminho = lista_caminhos[indice_foto]
-                    par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
-                    run_image = par.add_run()
-                    try:
-                        run_image.add_picture(caminho, width=largura_imagem)
-                    except:
-                        pass
-                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for linha in range(2):
+            for coluna in range(2):
+                if indice_foto < len(bloco):
+                    caminho_img = bloco[indice_foto]
+                    if os.path.exists(caminho_img):
+                        celula = tabela_fotos.cell(linha, coluna)
+                        paragrafo_celula = celula.paragraphs[0]
+                        run = paragrafo_celula.add_run()
+                        try:
+                            run.add_picture(caminho_img, width=largura_imagem)
+                            paragrafo_celula.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                            logger.info(f"✅ Imagem inserida com sucesso: {caminho_img}")
+                        except Exception as e:
+                            logger.error(f"❌ Falha ao inserir imagem {caminho_img}: {e}")
+                    else:
+                        logger.warning(f"⚠️ Imagem não encontrada no caminho informado: {caminho_img}")
+
                     indice_foto += 1
 
-        paragrafo_referencia._p.addnext(tabela_fotos._element)
-        inserir_paragrafo_apos(paragrafo_referencia, "")
+        # Insere a tabela após o parágrafo do placeholder
+        paragrafo_alvo._p.addnext(tabela_fotos._element)
+        inserir_paragrafo_apos(paragrafo_alvo, "")
 
-    for i, caminho_foto in enumerate(caminhos_fotos, start=1):
-        bloco_fotos.append(caminho_foto)
-        if (i % 4) == 0:
-            inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
-            bloco_fotos = []
-    if bloco_fotos:
-        inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
+
+
+    # Função interna claramente isolada
+    # def inserir_quatro_fotos(documento, paragrafo_referencia, fotos, largura_imagem):
+    #     qtd_fotos = len(fotos)
+    #     tabela_fotos = documento.add_table(rows=2, cols=2)
+    #     tabela_fotos.style = "Table Grid"
+
+    #     indice_foto = 0
+    #     for linha_idx in range(2):
+    #         for col_idx in range(2):
+    #             if indice_foto < qtd_fotos:
+    #                 caminho = fotos[indice_foto]
+    #                 par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
+    #                 run_image = par.add_run()
+    #                 try:
+    #                     run_image.add_picture(caminho, width=largura_imagem)
+    #                     logger.info(f"✅ Imagem inserida: {caminho}")
+    #                 except Exception as e:
+    #                     logger.error(f"Erro ao inserir imagem: {caminho}, erro: {e}")
+    #                 par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    #                 indice_foto += 1
+
+    #     paragrafo_referencia._p.addnext(tabela_fotos._element)
+    #     inserir_paragrafo_apos(paragrafo_referencia, "")
+
+    # # Loop claramente isolado com variável única (sem redefinição)
+    # for idx, caminho_foto in enumerate(caminhos_fotos, start=1):
+    #     fotos_para_inserir.append(caminho_foto)
+    #     if (idx % 4) == 0:
+    #         inserir_quatro_fotos(documento, paragrafo_alvo, fotos_para_inserir, largura_imagem)
+    #         fotos_para_inserir = []
+
+    # if fotos_para_inserir:
+    #     inserir_quatro_fotos(documento, paragrafo_alvo, fotos_para_inserir, largura_imagem)
+
+
+
+
+
+
+
 
 
 ###############################################################################
@@ -4568,57 +4645,7 @@ def inserir_tabela_classificacao_de_precisao(documento, marcador, amplitude_ic80
                 exec_novo.font.name = "Arial"
                 exec_novo.font.size = Pt(10)
             break
-###############################################################################
-# INSERIR FOTOS
-###############################################################################
-def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos):
-    """
-    Insere as fotos no local do placeholder [FOTOS] organizadas em blocos de até 4 (2x2).
-    """
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    bloco_fotos = []
-    largura_imagem = Inches(3)
 
-    paragrafo_alvo = None
-    for paragrafo in documento.paragraphs:
-        if placeholder in paragrafo.text:
-            paragrafo_alvo = paragrafo
-            break
-
-    if not paragrafo_alvo:
-        return
-
-    paragrafo_alvo.text = paragrafo_alvo.text.replace(placeholder, "")
-
-    def inserir_quatro_fotos(documento, paragrafo_referencia, lista_caminhos, largura_imagem):
-        qtd_fotos = len(lista_caminhos)
-        tabela_fotos = documento.add_table(rows=2, cols=2)
-        tabela_fotos.style = "Table Grid"
-
-        indice_foto = 0
-        for linha_idx in range(2):
-            for col_idx in range(2):
-                if indice_foto < qtd_fotos:
-                    caminho = lista_caminhos[indice_foto]
-                    par = tabela_fotos.rows[linha_idx].cells[col_idx].paragraphs[0]
-                    run_image = par.add_run()
-                    try:
-                        run_image.add_picture(caminho, width=largura_imagem)
-                    except:
-                        pass
-                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    indice_foto += 1
-
-        paragrafo_referencia._p.addnext(tabela_fotos._element)
-        inserir_paragrafo_apos(paragrafo_referencia, "")
-
-    for i, caminho_foto in enumerate(caminhos_fotos, start=1):
-        bloco_fotos.append(caminho_foto)
-        if (i % 4) == 0:
-            inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
-            bloco_fotos = []
-    if bloco_fotos:
-        inserir_quatro_fotos(documento, paragrafo_alvo, bloco_fotos, largura_imagem)
 
 
 ###############################################################################
@@ -5096,15 +5123,16 @@ def gerar_relatorio_avaliacao_com_template(
     valores_homogeneizados_validos,
     caminho_imagem_aderencia,
     caminho_imagem_dispersao,
-    finalidade_do_laudo,
-    area_parcial_afetada,          # ← chega com esse nome
-    fatores_do_usuario,
-    caminhos_fotos_avaliando,
-    caminhos_fotos_adicionais,
-    caminhos_fotos_proprietario,
-    caminhos_fotos_planta,
-    caminho_template=r"modelo-azul1.docx",
-    nome_arquivo_word="RELATORIO_AVALIACAO_COMPLETO.DOCX"
+    uuid_atual,  # <- coloque aqui ANTES dos argumentos com padrão
+    finalidade_do_laudo="mercado",
+    area_parcial_afetada=0,
+    fatores_do_usuario=None,
+    caminhos_fotos_avaliando=None,
+    caminhos_fotos_adicionais=None,
+    caminhos_fotos_proprietario=None,
+    caminhos_fotos_planta=None,
+    caminho_template="template.docx",
+    nome_arquivo_word="relatorio.docx"
 ):
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
@@ -5130,8 +5158,19 @@ def gerar_relatorio_avaliacao_com_template(
     # ------------------------------------------------------------------
     # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO
     # ------------------------------------------------------------------
-    caminho_mapa = gerar_mapa_amostras(dataframe_amostras_filtrado, dados_avaliando)
-    if caminho_mapa:
+    pasta_saida = f"/opt/render/project/src/static/arquivos/avaliacao_{uuid_atual}/"
+    os.makedirs(pasta_saida, exist_ok=True)
+
+    caminho_mapa = os.path.join(pasta_saida, "mapa_amostras.png")
+
+    gerar_mapa_amostras(dataframe_amostras_filtrado, dados_avaliando, nome_png=caminho_mapa)
+    # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
+    if os.path.exists(caminho_mapa):
+        logger.info(f"✅ MAPA AMOSTRAS encontrado: {caminho_mapa}")
+    else:
+        logger.warning(f"❌ MAPA AMOSTRAS NÃO encontrado: {caminho_mapa}")
+    
+    if caminho_mapa and os.path.exists(caminho_mapa):  # <- ESSA É A LINHA CORRIGIDA
         substituir_placeholder_por_imagem(
             documento, "[MAPAAMOSTRAS]", caminho_mapa, largura=Inches(6)
         )
@@ -5304,6 +5343,11 @@ def gerar_relatorio_avaliacao_com_template(
     # Gráfico KDE
     nome_arquivo_grafico_kernel = "grafico_kernel.png"
     gerar_grafico_densidade_kernel(valores_homogeneizados_validos, nome_arquivo_grafico_kernel)
+    # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
+    if os.path.exists(nome_arquivo_grafico_kernel):
+        logger.info(f"✅ Gráfico Kernel encontrado: {nome_arquivo_grafico_kernel}")
+    else:
+        logger.warning(f"❌ Gráfico Kernel NÃO encontrado: {nome_arquivo_grafico_kernel}")
     substituir_placeholder_por_imagem(documento, "[graficoKernel]", nome_arquivo_grafico_kernel, largura=Inches(5))
 
     # Tabela de amostras homogeneizadas
@@ -5510,22 +5554,76 @@ def gerar_relatorio_avaliacao_com_template(
             lista_todos_os_fatores          # << novo argumento
     )  
     
+    # 📌 Verificação sugerida para identificar se as fotos estão no caminho correto:
+    for caminho in caminhos_fotos_avaliando:
+        if os.path.exists(caminho):
+            logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
+        else:
+            logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
+
+    for caminho in caminhos_fotos_adicionais:
+        if os.path.exists(caminho):
+            logger.info(f"✅ Documento adicional (matrícula) encontrado: {caminho}")
+        else:
+            logger.warning(f"❌ Documento adicional (matrícula) NÃO encontrado: {caminho}")
+
+    for caminho in caminhos_fotos_proprietario:
+        if os.path.exists(caminho):
+            logger.info(f"✅ Documento do proprietário encontrado: {caminho}")
+        else:
+            logger.warning(f"❌ Documento do proprietário NÃO encontrado: {caminho}")
+
+    for caminho in caminhos_fotos_planta:
+        if os.path.exists(caminho):
+            logger.info(f"✅ Documento de planta encontrado: {caminho}")
+        else:
+            logger.warning(f"❌ Documento de planta NÃO encontrado: {caminho}")
+
+    # Verificar se o logo existe
+    caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
+    if caminho_logo:
+        if os.path.exists(caminho_logo):
+            logger.info(f"✅ Logo encontrado: {caminho_logo}")
+        else:
+            logger.warning(f"❌ Logo NÃO encontrado: {caminho_logo}")
 
     # Inserir fotos
     inserir_fotos_no_placeholder(documento, "[FOTOS]", caminhos_fotos_avaliando)
 
 
     # Inserir fotos adicionais (novo conjunto)
+    #inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
+    # Converter PDFs para PNG antes da inserção (documentação adicional)
+    caminhos_fotos_adicionais = [
+        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
+        for caminho in caminhos_fotos_adicionais
+    ]
+
+    # Inserir fotos adicionais (novo conjunto)
     inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
 
 
     # ——— NOVO • documentação do PROPRIETÁRIO ———
+    #inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
+    # Converter PDFs para PNG (documentação do proprietário)
+    caminhos_fotos_proprietario = [
+        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
+        for caminho in caminhos_fotos_proprietario
+    ]
+
+    # documentação do PROPRIETÁRIO
     inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
 
-
     # ——— NOVO • documentação da PLANTA ———
-    inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
+    #inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
+    # Converter PDFs para PNG (documentação da planta)
+    caminhos_fotos_planta = [
+        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
+        for caminho in caminhos_fotos_planta
+    ]
 
+    # documentação da PLANTA
+    inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
   
     # Logo
     caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
