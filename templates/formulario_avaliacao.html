@@ -2,6 +2,8 @@
 
 {% block conteudo %}
 
+
+
 <style>
         body {
             margin: 40px;
@@ -234,19 +236,41 @@
         }
         .wrapper-3d input[type=file].filled{ background-color:var(--green-fill); }
         
+    </style> 
+{% if resultado %}
+<div class="alert alert-success text-center mt-3">
+    {{ resultado|safe }}
+    {% if zip_download %}
+        <br>
+        <a href="{{ url_for('static', filename='arquivos/' + zip_download) }}" 
+           class="btn btn-success mt-2"
+           id="botaoZip"
+           download>
+            📥 Baixar Arquivo ZIP
+        </a>
+    {% endif %}
+</div>
+{% endif %}
 
+{% if erro %}
+<div class="alert alert-danger text-center mt-3">
+    {{ erro|safe }}
+</div>
+{% endif %}
 
-    </style>
-
+{% if log_path %}
+    <a href="{{ url_for('static', filename=log_path) }}" class="btn btn-info mt-2" download>
+        📋 Baixar Log da Execução
+    </a>
+{% endif %}
 
 <button class="toggle-btn" onclick="toggleDarkMode()">
-    Alternar Modo
-</button>
+        Alternar Modo
+    </button>
 
-<h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
+    <h1>FORMULÁRIO DE AVALIAÇÃO PHOENIX APPRAISAL</h1>
 
-<form method="post" enctype="multipart/form-data">
-    {{ form.hidden_tag() }}
+    <form method="post" enctype="multipart/form-data">
 
         <label>INSIRA AQUI SUA PLANILHA DE AMOSTRAS (Excel):</label>
         <input type="file" name="planilha_excel" class="input-change file-green" required>
@@ -505,6 +529,10 @@
           <option value="MÉDIO">MÉDIO</option>
           <option value="BAIXO">BAIXO</option>
         </select>
+
+
+         
+        
         <!-- ===========================================================
          🅑  FOTOS DO IMÓVEL  (multiple ⇒ sem “+”)
         =========================================================== -->
@@ -560,7 +588,7 @@
                     onclick="clearProps()">Limpar</button>
         </div>
         
-        <!-- ===========================================================
+       <!-- ===========================================================
          🅔  PLANTAS / MEMORIAIS
         =========================================================== -->
         <div class="subtitle">Adicione Plantas e Memoriais Descritivos do Avaliando:</div>
@@ -601,134 +629,122 @@
                   style="font-size:16px;padding:14px 36px;">Gerar Laudo</button>
         </div>
         
-
-</form>
-
- 
+        
+    </form>
 
 
-
-<script>
-     <!-- ===========================================================
+        /*/*<!-- ===========================================================
          🅖  JAVASCRIPT  (highlight verde + add / clear)
-        =========================================================== -->
-        //* ----------  ajuda visual: verde quando houver arquivo ---------- */
+        =========================================================== -->*/
+        <script>
+        /* ----------  ajuda visual: verde quando houver arquivo ---------- */
         const highlight = inp=>{
             const update=()=>inp.classList.toggle('filled',inp.files.length>0);
             update(); inp.addEventListener('change',update);
         };
         document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(highlight);
         
-        //* -------- IMÓVEL -------- */
-        function addImovInput(){
-            const w=imovWrapper, btn=addImovBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
-            w.insertBefore(n,btn); highlight(n);
-        }
-        function clearImovs(){
-            imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
-            imovWrapper.insertBefore(b,imovWrapper.firstChild); highlight(b);
-        }
         
-        //* -------- PROPRIETÁRIO -------- */
-        function addPropInput(){
-            const w=propWrapper, btn=addPropBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
-            w.insertBefore(n,btn); highlight(n);
-        }
-        function clearProps(){
-            propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
-            propWrapper.insertBefore(b,propWrapper.firstChild); highlight(b);
-        }
+        // function clearImovs(){
+        //     imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+        //     const b=document.createElement('input');
+        //     b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
+        //     imovWrapper.insertBefore(b,imovWrapper.firstChild); highlight(b);
+        // }
         
-        //* -------- PLANTA -------- */
-        function addPlantaInput(){
-            const w=plantaWrapper, btn=addPlantaBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
-            w.insertBefore(n,btn); highlight(n);
-        }
-        function clearPlantas(){
-            plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
-            plantaWrapper.insertBefore(b,plantaWrapper.firstChild); highlight(b);
-        }
-        
-        //* -------- LOGO -------- */
-        function clearLogo(){
-            const inp=document.querySelector('#logoWrapper input[type="file"]');
-            if(inp){ inp.value=''; inp.classList.remove('filled'); }
-        }
-        
-        //* -------- Fotos -------- */
-        function clearFotos(){
-            const inp=document.querySelector('#fotoWrapper input[type="file"]');
-            if(inp){ inp.value=''; inp.classList.remove('filled'); }
-        }
-       
-
-        
-        /*<!-- ===========================================================
-         🅖  JAVASCRIPT — funções de adicionar / limpar + destaque verde
-        =========================================================== -->*/
-       
-        const addHL = inp=>{
-            const t=()=>inp.classList.toggle('filled',inp.files.length>0);
-            t(); inp.addEventListener('change',t);
-        };
-        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHL);
-        
-        //* ---------- IMÓVEL ---------- */
-        function addImovInput(){
-            const w=imovWrapper,a=addImovBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
-            w.insertBefore(n,a); addHL(n);
-        }
-        function clearImovs(){
-            imovWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='fotos_imovel_adicionais'; b.className='input-change file-orange';
-            imovWrapper.insertBefore(b,imovWrapper.firstChild); addHL(b);
-        }
-        //* ---------- PROPRIETÁRIO ---------- */
+        /* -------- PROPRIETÁRIO -E IMOVEL------- */
+        // function addPropInput(){
+        //     const w=propWrapper, btn=addPropBtn;
+        //     const n=document.createElement('input');
+        //     n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
+        //     w.insertBefore(n,btn); highlight(n);
+        // }
+        /* ---------- PROPRIETÁRIO ---------- */
         function addPropInput(){
             const w=propWrapper,a=addPropBtn;
             const n=document.createElement('input');
             n.type='file'; n.name='doc_proprietario'; n.className='input-change file-orange';
             w.insertBefore(n,a); addHL(n);
         }
-        function clearProps(){
-            propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
-            propWrapper.insertBefore(b,propWrapper.firstChild); addHL(b);
+        // function clearProps(){
+        //     propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+        //     const b=document.createElement('input');
+        //     b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
+        //     propWrapper.insertBefore(b,propWrapper.firstChild); highlight(b);
+        // }
+        // function clearProps(){
+        //     propWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+        //     const b=document.createElement('input');
+        //     b.type='file'; b.name='doc_proprietario'; b.className='input-change file-orange';
+        //     propWrapper.insertBefore(b,propWrapper.firstChild); addHL(b);
+        // }
+        
+        /* -------- PLANTA -------- */
+        // function addPlantaInput(){
+        //     const w=plantaWrapper, btn=addPlantaBtn;
+        //     const n=document.createElement('input');
+        //     n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
+        //     w.insertBefore(n,btn); highlight(n);
+        // }
+        // function clearPlantas(){
+        //     plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+        //     const b=document.createElement('input');
+        //     b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
+        //     plantaWrapper.insertBefore(b,plantaWrapper.firstChild); highlight(b);
+        // }
+        
+        /* -------- LOGO -------- */
+        // function clearLogo(){
+        //     const inp=document.querySelector('#logoWrapper input[type="file"]');
+        //     if(inp){ inp.value=''; inp.classList.remove('filled'); }
+        // }
+        
+        /* -------- Fotos -------- */
+        function clearFotos(){
+            const inp=document.querySelector('#fotoWrapper input[type="file"]');
+            if(inp){ inp.value=''; inp.classList.remove('filled'); }
         }
-        //* ---------- PLANTA ---------- */
-        function addPlantaInput(){
-            const w=plantaWrapper,a=addPlantaBtn;
-            const n=document.createElement('input');
-            n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
-            w.insertBefore(n,a); addHL(n);
-        }
-        function clearPlantas(){
-            plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
-            const b=document.createElement('input');
-            b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
-            plantaWrapper.insertBefore(b,plantaWrapper.firstChild); addHL(b);
-        }
-        //* ---------- LOGO ---------- */
-        function clearLogo(){
-            const inp=document.querySelector('#logoWrapper input[type="file"]');
-            if(inp){ inp.value=""; inp.classList.remove('filled'); }
-        }
+        
+
+        
+        /*<!-- ===========================================================
+         🅖  JAVASCRIPT — funções de adicionar / limpar + destaque verde
+        =========================================================== -->*/
+        
+        const addHL = inp=>{
+            const t=()=>inp.classList.toggle('filled',inp.files.length>0);
+            t(); inp.addEventListener('change',t);
+        };
+        document.querySelectorAll('.wrapper-3d input[type="file"]').forEach(addHL);
+        
+        /* ---------- IMÓVEL ---------- */
+        // function addImovInput(){
+        //     const w=document.getElementById("imovWrapper"),a=addImovBtn;
+        //     const n=document.createElement('input');
+        //     n.type='file'; n.name='fotos_imovel_adicionais'; n.className='input-change file-orange';
+        //     w.insertBefore(n,a); addHL(n);
+        // }
+        
+        
+        
+        /* ---------- PLANTA ---------- */
+        // function addPlantaInput(){
+        //     const w=plantaWrapper,a=addPlantaBtn;
+        //     const n=document.createElement('input');
+        //     n.type='file'; n.name='doc_planta'; n.className='input-change file-orange';
+        //     w.insertBefore(n,a); addHL(n);
+        // }
+        // function clearPlantas(){
+        //     plantaWrapper.querySelectorAll('input[type="file"]').forEach(e=>e.remove());
+        //     const b=document.createElement('input');
+        //     b.type='file'; b.name='doc_planta'; b.className='input-change file-orange';
+        //     plantaWrapper.insertBefore(b,plantaWrapper.firstChild); addHL(b);
+        // }
+        /* ---------- LOGO ---------- */
+        // function clearLogo(){
+        //     const inp=document.querySelector('#logoWrapper input[type="file"]');
+        //     if(inp){ inp.value=""; inp.classList.remove('filled'); }
+        // }
         
       
         
@@ -736,11 +752,11 @@
         /*<!-- ===========================================================
          🅖  JAVASCRIPT GENÉRICO  (re-usa funções de highlight / clear)
         =========================================================== -->*/
-       
-        //* -------- util: aplica / remove classe “filled” para fundo verde -------- */
+        
+        /* -------- util: aplica / remove classe “filled” para fundo verde -------- */
         const addHighlightListener = inp=>{
             const handler = ()=> inp.classList.toggle('filled', inp.files.length>0);
-            handler();            // executa já
+            handler();            /* executa já  */
             inp.addEventListener('change', handler);
         };
         
@@ -826,7 +842,7 @@
         if (valor.includes("desapropria")) {
             /* —— DESAPROPRIAÇÃO —— */
             areaLabel.innerHTML = "<strong>Área a ser desapropriada (m²)</strong> - Informe apenas a área que será desapropriada.";
-            areaLabel.style.color = "#b20000";          /* vermelho-escuro*/
+            areaLabel.style.color = "#b20000";          /* vermelho-escuro */
             if (areaInput) {
                 areaInput.style.borderColor = "#b20000";
                 areaInput.style.fontWeight  = "bold";
@@ -835,7 +851,7 @@
         } else if (valor.includes("servid") || valor.includes("regulariza")) {
             /* —— SERVIDÃO ou REGULARIZAÇÃO —— */
             areaLabel.innerHTML = "<strong>Área total de Interesse (m²)</strong> - Informe apenas a área total atingida";
-            areaLabel.style.color = "#b20000";          /* vermelho-escuro*/
+            areaLabel.style.color = "#b20000";          /* vermelho-escuro */
             if (areaInput) {
                 areaInput.style.borderColor = "#b20000";
                 areaInput.style.fontWeight  = "bold";
@@ -844,7 +860,7 @@
         } else {
             /* —— Demais finalidades —— */
             areaLabel.innerHTML = "Insira a área total do imóvel a ser avaliado (m²) - Será validada com a planilha";
-            areaLabel.style.color = "";                 /* cor padrão*/
+            areaLabel.style.color = "";                 /* cor padrão */
             if (areaInput) {
                 areaInput.style.borderColor = "";
                 areaInput.style.fontWeight  = "normal";
@@ -869,7 +885,7 @@
             const restricoesContainer = document.getElementById("restricoesSectionContainer");
         
             /* ---------- aparência base do container ---------- */
-            restricoesContainer.style.backgroundColor = "#ffe8cc";   /* laranja‐claro*/
+            restricoesContainer.style.backgroundColor = "#ffe8cc";   /* laranja‐claro */
             restricoesContainer.style.padding        = "15px";
             restricoesContainer.style.borderRadius   = "8px";
             restricoesContainer.style.marginTop      = "20px";
@@ -921,7 +937,7 @@
                 new MutationObserver(muts => {
                     muts.forEach(m => {
                         m.addedNodes.forEach(node => {
-                            if (node.nodeType === 1) {  /* elemento*/
+                            if (node.nodeType === 1) { /* elemento */
                                 if (node.classList.contains("input-change")) {
                                     aplicarHighlight(node);
                                 }
@@ -980,7 +996,7 @@
         container.appendChild(divR);
       }
 
-      /* Faz todos os campos input-change (incluindo select) ficarem verdes se preenchidos*/
+      /* Faz todos os campos input-change (incluindo select) ficarem verdes se preenchidos */
       document.addEventListener('DOMContentLoaded', function() {
           atualizarAreaLabel();
           exibirRestricoesSeNecessario();
@@ -996,7 +1012,7 @@
                       elem.style.backgroundColor = '#f0f0f0';
                   }
               } else {
-                  /* Para inputs text/file */
+                  /* Para inputs text/file*/
                   if (elem.value.trim() !== '') {
                       elem.style.backgroundColor = '#ccffcc';
                   } else {
@@ -1005,13 +1021,13 @@
               }
           }
 
-          /* Verifica periodicamente (para capturar autofill)*/
+          /* Verifica periodicamente (para capturar autofill) */
           setInterval(() => {
               allFields.forEach(f => checkFill(f));
           }, 1000);
 
           allFields.forEach(field => {
-              /* Se já vier preenchido*/
+              /* Se já vier preenchido */
               checkFill(field);
 
               /* Monitorar eventos */
@@ -1022,5 +1038,5 @@
 
       });
     </script>
-
 {% endblock %}
+
