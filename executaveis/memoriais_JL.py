@@ -51,13 +51,16 @@ def obter_data_em_portugues():
     return f"{data.day:02d} de {mes_pt} de {data.year}"
 
 
-def limpar_dxf_e_inserir_ponto_az(original_path, saida_path,log=None):
+def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
     if log is None:
         class DummyLog:
             def write(self, msg): pass
         log = DummyLog()
 
     try:
+        import math
+        import ezdxf
+
         doc_antigo = ezdxf.readfile(original_path)
         msp_antigo = doc_antigo.modelspace()
         doc_novo = ezdxf.new(dxfversion='R2010')
@@ -65,11 +68,40 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path,log=None):
 
         pontos_polilinha = None
         bulges_polilinha = None
+        ponto_inicial_real = None
 
         for entity in msp_antigo.query('LWPOLYLINE'):
             if entity.closed:
-                pontos_polilinha = [(float(x), float(y)) for x, y, *_ in entity.get_points('xyseb')]
-                bulges_polilinha = [pt[-1] for pt in entity.get_points('xyseb')]
+                pontos_polilinha_raw = entity.get_points('xyseb')
+                ponto_inicial_real = (float(pontos_polilinha_raw[0][0]), float(pontos_polilinha_raw[0][1]))
+
+                pontos_polilinha = []
+                bulges_polilinha = []
+                tolerancia = 1e-6
+
+                for pt in pontos_polilinha_raw:
+                    x, y, *_, bulge = pt
+                    x, y = float(x), float(y)
+                    if not pontos_polilinha:
+                        pontos_polilinha.append((x, y))
+                        bulges_polilinha.append(bulge)
+                    else:
+                        x_ant, y_ant = pontos_polilinha[-1]
+                        if math.hypot(x - x_ant, y - y_ant) > tolerancia:
+                            pontos_polilinha.append((x, y))
+                            bulges_polilinha.append(bulge)
+                        else:
+                            print(f"⚠️ Ponto duplicado consecutivo removido: {(x, y)}")
+
+                # Remover ponto final duplicado se necessário
+                if len(pontos_polilinha) > 2 and math.hypot(
+                    pontos_polilinha[0][0] - pontos_polilinha[-1][0],
+                    pontos_polilinha[0][1] - pontos_polilinha[-1][1]
+                ) < tolerancia:
+                    print("⚠️ Último ponto é igual ao primeiro — removendo ponto final duplicado.")
+                    pontos_polilinha.pop()
+                    bulges_polilinha.pop()
+
                 break
 
         if pontos_polilinha is None:
@@ -92,21 +124,21 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path,log=None):
             dxfattribs={'layer': 'DIVISA_PROJETADA'}
         )
 
-        # Não desenha mais o ponto Az, mas retorna as coordenadas de V1 como ponto_az válido
         ponto_az = pontos_polilinha[0]
 
         doc_novo.saveas(saida_path)
         print(f"✅ DXF limpo salvo em: {saida_path}")
         if log:
             log.write(f"✅ DXF limpo salvo em: {saida_path}\n")
-        
-        return saida_path, ponto_az  # Importante retornar o ponto V1 aqui!
+
+        return saida_path, ponto_az, ponto_inicial_real
 
     except Exception as e:
         print(f"❌ Erro ao limpar DXF: {e}")
         if log:
             log.write(f"❌ Erro ao limpar DXF: {e}\n")
-        return original_path, None
+        return original_path, None, None
+
 
 
 
@@ -608,7 +640,9 @@ def sanitize_filename(filename):
 # Função para criar memorial descritivo
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, encoding='ISO-8859-1',log=None):
+                               azimute_az_v1=None, ponto_inicial_real=None,  # ✅ Adicionado aqui
+                               encoding='ISO-8859-1', log=None):
+
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
@@ -646,18 +680,30 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         for arc in arcs:
             elementos.append(('arc', (arc['start_point'], arc['end_point'], arc['radius'], arc['length'])))
 
+    # 🔁 Reordena elementos para começar pelo ponto original do desenho (V1 real)
+    if ponto_inicial_real:
+        for i, elemento in enumerate(elementos):
+            tipo, dados = elemento
+            pt_inicial = dados[0]
+            if math.hypot(pt_inicial[0] - ponto_inicial_real[0], pt_inicial[1] - ponto_inicial_real[1]) < 1e-6:
+                elementos = [elemento] + elementos[:i] + elementos[i+1:]
+                break
+
     # Sequenciar os segmentos corretamente
     sequencia_completa = []
     ponto_atual = elementos[0][1][0]  # Primeiro ponto do primeiro segmento
+
     while elementos:
         for i, elemento in enumerate(elementos):
             tipo, dados = elemento
             start_point, end_point = dados[0], dados[1]
+
             if ponto_atual == start_point:
                 sequencia_completa.append(elemento)
                 ponto_atual = end_point
                 elementos.pop(i)
                 break
+
             elif ponto_atual == end_point:
                 # Inverte a direção do segmento para manter continuidade
                 if tipo == 'line':
@@ -668,6 +714,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 ponto_atual = start_point
                 elementos.pop(i)
                 break
+
         else:
             # Caso não encontre ponto coincidente, força o início com próximo segmento
             if elementos:
