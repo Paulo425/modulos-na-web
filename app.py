@@ -830,42 +830,25 @@ def gerar_avaliacao():
             request.files["planilha_excel"].save(caminho_planilha)
             logger.info(f"✅ Planilha salva: {caminho_planilha} - {'existe' if os.path.exists(caminho_planilha) else 'NÃO existe'}")
 
-            
+             
 
             
 
-            def salvar_multiplos(nome_form, prefixo):
+            def salvar_multiplos(tipo, nome_base):
+                arquivos = request.files.getlist(tipo)
                 caminhos = []
-                arquivos = request.files.getlist(nome_form)
                 for i, arq in enumerate(arquivos):
-                    if arq and arq.filename:
-                        extensao = arq.filename.rsplit('.', 1)[-1].lower()
-                        
-                        # Ajuste de nome e caminho
-                        nome = secure_filename(f"{prefixo}_{i}.png")
-                        caminho = os.path.join(pasta_temp, nome)
+                    nome_arquivo = f"{nome_base}_{i}.png"
+                    caminho = os.path.join(diretorio_salvar, nome_arquivo)
 
-                        dados_arquivo = arq.read()
+                    # 👉 Abre a imagem com PIL para otimizar tamanho e qualidade
+                    imagem = Image.open(io.BytesIO(arq.read()))
+                    imagem.thumbnail((1024, 1024))  # Redimensiona mantendo proporção
+                    imagem.save(caminho, optimize=True, quality=70)  # Qualidade ajustada para economia de espaço
 
-                        if extensao == "pdf":
-                            try:
-                                imagens = convert_from_bytes(dados_arquivo, dpi=200)
-                                if imagens:
-                                    imagens[0].save(caminho, "PNG")
-                                    logger.info(f"✅ PDF convertido e salvo como PNG: {caminho}")
-                            except Exception as e:
-                                logger.error(f"❌ Falha ao converter PDF: {arq.filename} – {e}")
-                        else:
-                            try:
-                                imagem = Image.open(io.BytesIO(dados_arquivo))
-                                imagem.save(caminho, "PNG")
-                                logger.info(f"✅ Imagem salva: {caminho}")
-                            except UnidentifiedImageError:
-                                logger.error(f"❌ Arquivo não é uma imagem válida: {arq.filename}")
-                                continue  # pula esse arquivo e não adiciona ao caminho
-
-                        caminhos.append(caminho)
+                    caminhos.append(caminho)
                 return caminhos
+
 
             fotos_imovel = salvar_multiplos("fotos_imovel", "foto_imovel")
             fotos_adicionais = salvar_multiplos("fotos_imovel_adicionais", "doc_adicional")
