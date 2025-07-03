@@ -741,7 +741,7 @@ def gerar_mapa_amostras(
 
 
 
-def salvar_pdf_como_png(caminho_pdf, caminho_png, dpi=300):
+def salvar_pdf_como_png(caminho_pdf, caminho_png, dpi=100):
     try:
         paginas = convert_from_path(caminho_pdf, dpi=dpi)
         if paginas:

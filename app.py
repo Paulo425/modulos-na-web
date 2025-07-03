@@ -852,7 +852,7 @@ def gerar_avaliacao():
                                 imagens = convert_from_bytes(dados_arquivo, dpi=200)
                                 if imagens:
                                     imagens[0].thumbnail((700, 700))  # 🔴 NOVO
-                                    imagens[0].save(caminho, "PNG", optimize=True, quality=60)  # 🔴 NOVO
+                                    imagens[0].save(caminho, "PNG", optimize=True, quality=50)  # 🔴 NOVO
                                     logger.info(f"✅ PDF convertido e salvo como PNG: {caminho}")
                             except Exception as e:
                                 logger.error(f"❌ Falha ao converter PDF: {arq.filename} – {e}")
