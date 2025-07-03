@@ -26,6 +26,53 @@ except locale.Error as e:
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
 
+# def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
+#     try:
+#         doc_antigo = ezdxf.readfile(original_path)
+#         msp_antigo = doc_antigo.modelspace()
+#         doc_novo = ezdxf.new(dxfversion='R2010')
+#         msp_novo = doc_novo.modelspace()
+
+#         pontos_polilinha = None
+#         bulges_polilinha = None
+
+#         for entity in msp_antigo.query('LWPOLYLINE'):
+#             if entity.closed:
+#                 pontos_polilinha = [(float(x), float(y)) for x, y, *_ in entity.get_points('xyseb')]
+#                 bulges_polilinha = [pt[-1] for pt in entity.get_points('xyseb')]
+#                 break
+
+#         if pontos_polilinha is None:
+#             raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
+
+#         if calculate_signed_area(pontos_polilinha) < 0:
+#             pontos_polilinha.reverse()
+#             bulges_polilinha.reverse()
+#             bulges_polilinha = [-b for b in bulges_polilinha]
+
+#         pontos_com_bulge = [
+#             (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
+#             for i in range(len(pontos_polilinha))
+#         ]
+
+#         msp_novo.add_lwpolyline(
+#             pontos_com_bulge,
+#             format='xyb',
+#             close=True,
+#             dxfattribs={'layer': 'DIVISA_PROJETADA'}
+#         )
+
+#         # Não desenha mais o ponto Az, mas retorna as coordenadas de V1 como ponto_az válido
+#         ponto_az = pontos_polilinha[0]
+
+#         doc_novo.saveas(saida_path)
+#         print(f"✅ DXF limpo salvo em: {saida_path}")
+        
+#         return saida_path, ponto_az  # Importante retornar o ponto V1 aqui!
+
+#     except Exception as e:
+#         print(f"❌ Erro ao limpar DXF: {e}")
+#         return original_path, None
 def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
     try:
         doc_antigo = ezdxf.readfile(original_path)
@@ -45,10 +92,10 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
         if pontos_polilinha is None:
             raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
 
+        # Garante sentido horário preservando o ponto V1
         if calculate_signed_area(pontos_polilinha) < 0:
-            pontos_polilinha.reverse()
-            bulges_polilinha.reverse()
-            bulges_polilinha = [-b for b in bulges_polilinha]
+            pontos_polilinha = [pontos_polilinha[0]] + list(reversed(pontos_polilinha[1:]))
+            bulges_polilinha = [bulges_polilinha[0]] + [-b for b in reversed(bulges_polilinha[1:])]
 
         pontos_com_bulge = [
             (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
@@ -62,13 +109,11 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
             dxfattribs={'layer': 'DIVISA_PROJETADA'}
         )
 
-        # Não desenha mais o ponto Az, mas retorna as coordenadas de V1 como ponto_az válido
-        ponto_az = pontos_polilinha[0]
-
         doc_novo.saveas(saida_path)
         print(f"✅ DXF limpo salvo em: {saida_path}")
-        
-        return saida_path, ponto_az  # Importante retornar o ponto V1 aqui!
+
+        # o retorno de ponto_az é irrelevante no contexto JL, mas mantido por compatibilidade
+        return saida_path, pontos_polilinha[0]
 
     except Exception as e:
         print(f"❌ Erro ao limpar DXF: {e}")
