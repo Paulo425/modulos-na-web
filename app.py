@@ -971,7 +971,7 @@ def gerar_avaliacao():
                 finalidade_tipo = "mercado"
 
 
-            def gerar_relatorio_avaliacao_com_template(
+            gerar_relatorio_avaliacao_com_template(
                 dados_avaliando,
                 dataframe_amostras_inicial,
                 dataframe_amostras_filtrado,
