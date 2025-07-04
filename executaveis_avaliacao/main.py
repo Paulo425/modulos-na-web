@@ -5123,9 +5123,9 @@ def gerar_relatorio_avaliacao_com_template(
     valores_homogeneizados_validos,
     caminho_imagem_aderencia,
     caminho_imagem_dispersao,
-    uuid_atual,  # <- coloque aqui ANTES dos argumentos com padrão
-    finalidade_do_laudo="mercado",
-    area_parcial_afetada=0,
+    uuid_atual,                          # obrigatório, sem valor padrão
+    finalidade_do_laudo,                # agora obrigatório também
+    area_parcial_afetada,              # idem — valor digitado deve ser usado sempre
     fatores_do_usuario=None,
     caminhos_fotos_avaliando=None,
     caminhos_fotos_adicionais=None,
@@ -5134,6 +5134,7 @@ def gerar_relatorio_avaliacao_com_template(
     caminho_template="template.docx",
     nome_arquivo_word="relatorio.docx"
 ):
+
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
     logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
