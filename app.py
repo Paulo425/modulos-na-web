@@ -972,30 +972,30 @@ def gerar_avaliacao():
 
 
             gerar_relatorio_avaliacao_com_template(
-                dados_avaliando,
-                dataframe_amostras_inicial,
-                dataframe_amostras_filtrado,
-                indices_excluidos,
-                amostras_excluidas,
-                media,
-                desvio_padrao,
-                menor_valor,
-                maior_valor,
-                mediana_valor,
-                valores_originais_iniciais,
-                valores_homogeneizados_validos,
-                caminho_imagem_aderencia,
-                caminho_imagem_dispersao,
-                uuid_atual,
-                finalidade_do_laudo,            # ← agora obrigatório
-                area_parcial_afetada,          # ← agora obrigatório
-                fatores_do_usuario=None,
-                caminhos_fotos_avaliando=None,
-                caminhos_fotos_adicionais=None,
-                caminhos_fotos_proprietario=None,
-                caminhos_fotos_planta=None,
-                caminho_template="template.docx",
-                nome_arquivo_word="relatorio.docx"
+                dados_avaliando=dados_imovel,
+                dataframe_amostras_inicial=df_amostras,
+                dataframe_amostras_filtrado=df_filtrado,
+                indices_excluidos=idx_exc,
+                amostras_excluidas=amostras_exc,
+                media=media,
+                desvio_padrao=dp,
+                menor_valor=menor,
+                maior_valor=maior,
+                mediana_valor=mediana,
+                valores_originais_iniciais=df_filtrado["VALOR TOTAL"].tolist(),
+                valores_homogeneizados_validos=homog,
+                caminho_imagem_aderencia=img1,
+                caminho_imagem_dispersao=img2,
+                uuid_atual=id_execucao,
+                finalidade_do_laudo=finalidade_tipo,
+                area_parcial_afetada=area_parcial,
+                fatores_do_usuario=fatores_usuario,
+                caminhos_fotos_avaliando=fotos_imovel,
+                caminhos_fotos_adicionais=fotos_adicionais,
+                caminhos_fotos_proprietario=fotos_proprietario,
+                caminhos_fotos_planta=fotos_planta,
+                caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
+                nome_arquivo_word=caminho_docx
             )
 
 
