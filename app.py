@@ -996,7 +996,7 @@ def gerar_avaliacao():
                 caminhos_fotos_planta=None,
                 caminho_template="template.docx",
                 nome_arquivo_word="relatorio.docx"
-            ):
+            )
 
 
             # 5. Gerar ZIP
