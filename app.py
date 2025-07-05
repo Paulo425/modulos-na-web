@@ -856,13 +856,18 @@ def gerar_avaliacao():
                                     f.write(dados_arquivo)
 
                                 pdf = fitz.open(nome_pdf_temporario)
+                                paginas_convertidas = []
                                 for p in range(pdf.page_count):
                                     pix = pdf.load_page(p).get_pixmap(dpi=200)
                                     nome_img = f"{prefixo}_{i}_{p}.png"
                                     caminho_img = os.path.join(pasta_temp, nome_img)
                                     pix.save(caminho_img)
-                                    caminhos.append(caminho_img)
-                                    logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")
+                                    paginas_convertidas.append(caminho_img)
+                                    logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")  # ← aqui dentro do for
+
+                                paginas_convertidas.sort()
+                                caminhos.extend(paginas_convertidas)
+
                                 pdf.close()
                             except Exception as e:
                                 logger.error(f"❌ Falha ao converter PDF: {arq.filename} – {e}")
@@ -1012,7 +1017,7 @@ def gerar_avaliacao():
                 nome_arquivo_word=caminho_docx
             )
 
-
+            
             # 5. Gerar ZIP
             nome_zip = f"relatorio_avaliacao_{id_execucao}.zip"
             caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos', nome_zip)
