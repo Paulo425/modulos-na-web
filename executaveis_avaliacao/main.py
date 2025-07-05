@@ -2208,11 +2208,14 @@ def inserir_fundamentacao_e_enquadramento(
 
 
 
-def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura_imagem=Inches(3)):
+def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura_imagem=Inches(3), um_por_pagina=False):
     """
-    Insere as fotos no local do placeholder organizadas em blocos de até 4 (2x2).
+    Insere as fotos no local do placeholder.
+    Se `um_por_pagina` for True, insere uma imagem por página.
+    Caso contrário, insere em blocos de 2x2.
     """
-    # Buscar o placeholder no documento
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
     paragrafo_alvo = None
     for paragrafo in documento.paragraphs:
         if placeholder in paragrafo.text:
@@ -2220,42 +2223,46 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura
             break
 
     if not paragrafo_alvo:
-        logger.warning(f"⚠️ Placeholder {placeholder} não encontrado no documento.")
+        logger.warning(f"⚠️ Placeholder {placeholder} não encontrado.")
         return
 
     # Limpa o placeholder
     paragrafo_alvo.text = ""
 
-    # Divide as imagens em blocos de até 4 imagens
-    blocos_fotos = [caminhos_fotos[i:i+4] for i in range(0, len(caminhos_fotos), 4)]
+    if um_por_pagina:
+        for caminho in caminhos_fotos:
+            if os.path.exists(caminho):
+                par = documento.add_paragraph()
+                run = par.add_run()
+                run.add_picture(caminho, width=largura_imagem)
+                par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                documento.add_page_break()
+                logger.info(f"✅ Imagem inserida em página separada: {caminho}")
+            else:
+                logger.warning(f"⚠️ Imagem não encontrada: {caminho}")
+    else:
+        blocos_fotos = [caminhos_fotos[i:i+4] for i in range(0, len(caminhos_fotos), 4)]
 
-    for bloco in blocos_fotos:
-        tabela_fotos = documento.add_table(rows=2, cols=2)
-        tabela_fotos.style = "Table Grid"
+        for bloco in blocos_fotos:
+            tabela_fotos = documento.add_table(rows=2, cols=2)
+            tabela_fotos.style = "Table Grid"
 
-        indice_foto = 0
-        for linha in range(2):
-            for coluna in range(2):
-                if indice_foto < len(bloco):
-                    caminho_img = bloco[indice_foto]
-                    if os.path.exists(caminho_img):
-                        celula = tabela_fotos.cell(linha, coluna)
-                        paragrafo_celula = celula.paragraphs[0]
-                        run = paragrafo_celula.add_run()
-                        try:
+            idx = 0
+            for linha in range(2):
+                for coluna in range(2):
+                    if idx < len(bloco):
+                        caminho_img = bloco[idx]
+                        if os.path.exists(caminho_img):
+                            celula = tabela_fotos.cell(linha, coluna)
+                            run = celula.paragraphs[0].add_run()
                             run.add_picture(caminho_img, width=largura_imagem)
-                            paragrafo_celula.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                            logger.info(f"✅ Imagem inserida com sucesso: {caminho_img}")
-                        except Exception as e:
-                            logger.error(f"❌ Falha ao inserir imagem {caminho_img}: {e}")
-                    else:
-                        logger.warning(f"⚠️ Imagem não encontrada no caminho informado: {caminho_img}")
+                            celula.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                            logger.info(f"✅ Imagem inserida em tabela: {caminho_img}")
+                        else:
+                            logger.warning(f"⚠️ Imagem não encontrada: {caminho_img}")
+                    idx += 1
+            paragrafo_alvo._p.addnext(tabela_fotos._element)
 
-                    indice_foto += 1
-
-        # Insere a tabela após o parágrafo do placeholder
-        paragrafo_alvo._p.addnext(tabela_fotos._element)
-        inserir_paragrafo_apos(paragrafo_alvo, "")
 
 
 
@@ -5607,54 +5614,54 @@ def gerar_relatorio_avaliacao_com_template(
             logger.warning(f"❌ Logo NÃO encontrado: {caminho_logo}")
 
     # Inserir fotos
-    inserir_fotos_no_placeholder(documento, "[FOTOS]", caminhos_fotos_avaliando)
+    if caminhos_fotos_avaliando:
+        inserir_fotos_no_placeholder(documento, "[FOTOS]", caminhos_fotos_avaliando)
+    else:
+        substituir_placeholder_por_texto_formatado(
+            documento,
+            "[FOTOS]",
+            "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS",
+            Pt(12),
+            True
+        )
 
 
     # Inserir fotos adicionais (novo conjunto)
-    #inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
-    # Converter PDFs para PNG antes da inserção (documentação adicional)
-    # novos_caminhos_adicionais = []
-    # for caminho in caminhos_fotos_adicionais:
-    #     if caminho.lower().endswith(".pdf"):
-    #         imagens = salvar_pdf_como_png(caminho)
-    #         novos_caminhos_adicionais.extend(imagens)
-    #     else:
-    #         novos_caminhos_adicionais.append(caminho)
-    # caminhos_fotos_adicionais = novos_caminhos_adicionais
+    if caminhos_fotos_adicionais:
+        inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais, largura_imagem=Inches(5), um_por_pagina=True)
+    else:
+        substituir_placeholder_por_texto_formatado(
+            documento,
+            "[MATRICULA]",
+            "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA",
+            Pt(12),
+            True
+        )
 
-    # Inserir fotos adicionais (novo conjunto)
-    inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
-
-
-    # ——— NOVO • documentação do PROPRIETÁRIO ———
-    #inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
-    # Converter PDFs para PNG (documentação do proprietário)
-    # novos_caminhos_proprietario = []
-    # for caminho in caminhos_fotos_proprietario:
-    #     if caminho.lower().endswith(".pdf"):
-    #         imagens = salvar_pdf_como_png(caminho)
-    #         novos_caminhos_proprietario.extend(imagens)
-    #     else:
-    #         novos_caminhos_proprietario.append(caminho)
-    # caminhos_fotos_proprietario = novos_caminhos_proprietario
 
     # documentação do PROPRIETÁRIO
-    inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
-
-    # ——— NOVO • documentação da PLANTA ———
-    #inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
-    # Converter PDFs para PNG (documentação da planta)
-    # novos_caminhos_planta = []
-    # for caminho in caminhos_fotos_planta:
-    #     if caminho.lower().endswith(".pdf"):
-    #         imagens = salvar_pdf_como_png(caminho)
-    #         novos_caminhos_planta.extend(imagens)
-    #     else:
-    #         novos_caminhos_planta.append(caminho)
-    # caminhos_fotos_planta = novos_caminhos_planta
+    if caminhos_fotos_proprietario:
+        inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario, largura_imagem=Inches(5), um_por_pagina=True)
+    else:
+        substituir_placeholder_por_texto_formatado(
+            documento,
+            "[PROPRIETARIO]",
+            "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA",
+            Pt(12),
+            True
+        )
 
     # documentação da PLANTA
-    inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
+    if caminhos_fotos_planta:
+        inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta, largura_imagem=Inches(5), um_por_pagina=True)
+    else:
+        substituir_placeholder_por_texto_formatado(
+            documento,
+            "[PLANTA]",
+            "PLANTA DO IMÓVEL NÃO FORNECIDA",
+            Pt(12),
+            True
+        )
   
     # Logo
     caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
