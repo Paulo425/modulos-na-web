@@ -5179,6 +5179,18 @@ def gerar_relatorio_avaliacao_com_template(
     # Carregar template
     documento = Document(caminho_template)
 
+    cidade_nome = fatores_do_usuario.get("cidade", "CIDADE NÃO INFORMADA").strip().upper()
+    data_formatada = datetime.now().strftime("%d-%m-%Y")
+
+    substituir_placeholder_por_texto_formatado(
+        documento,
+        "[cidade]",
+        f"{cidade_nome}, {data_formatada}",
+        Pt(12),
+        False
+    )
+
+
     
     # ------------------------------------------------------------------
     # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO

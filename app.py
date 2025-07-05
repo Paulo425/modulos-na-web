@@ -911,6 +911,7 @@ def gerar_avaliacao():
                     "fator": (100.0 - perc) / 100.0
                 })
                 i += 1
+            cidade = f.get("cidade", "").strip()
 
             fatores_usuario = {
                 "nomeSolicitante": f.get("nome_solicitante"),
@@ -938,7 +939,10 @@ def gerar_avaliacao():
                 "conduta_escolha": f.get("conduta_escolha", "").upper(),
                 "desempenho_escolha": f.get("desempenho_escolha", "").upper(),
                 "caminhoLogo": caminho_logo,
-                "restricoes": restricoes
+                "restricoes": restricoes,
+                "cidade": f.get("cidade", "").strip()
+
+
             }
 
             try:
