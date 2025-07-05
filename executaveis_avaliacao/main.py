@@ -3013,11 +3013,83 @@ def main():
     fatores_do_usuario["caminhoLogo"] = caminho_logo  # já definido a partir de request.files["arquivo_logo"]
 
 
-    # placeholders para listas que, se não usadas,
-    # devem existir para evitar NameError
-    caminhos_fotos_adicionais   = []
+    # 1. DOCUMENTOS ADICIONAIS (matrícula etc.)
+    caminhos_fotos_adicionais = []
+
+    for n, arq in enumerate(request.files.getlist("fotos_imovel_adicionais")):
+        if not arq or not arq.filename:
+            continue
+
+        ext = Path(arq.filename).suffix.lower()
+
+        if ext == ".pdf":
+            nome_pdf = Path(f"static/temp/matricula_{n}.pdf")
+            arq.save(nome_pdf)
+
+            pdf = fitz.open(nome_pdf)
+            for p in range(pdf.page_count):
+                pix = pdf.load_page(p).get_pixmap(dpi=300)
+                nome_png = Path(f"static/temp/matricula_{n}_{p}.png")
+                pix.save(nome_png)
+                caminhos_fotos_adicionais.append(str(nome_png))
+            pdf.close()
+        else:
+            nome_img = Path(f"static/temp/matricula_{n}{ext}")
+            arq.save(nome_img)
+            caminhos_fotos_adicionais.append(str(nome_img))
+
+
+    # 2. DOCUMENTOS DO PROPRIETÁRIO
     caminhos_fotos_proprietario = []
-    caminhos_fotos_planta       = []
+
+    for n, arq in enumerate(request.files.getlist("doc_proprietario")):
+        if not arq or not arq.filename:
+            continue
+
+        ext = Path(arq.filename).suffix.lower()
+
+        if ext == ".pdf":
+            nome_pdf = Path(f"static/temp/proprietario_{n}.pdf")
+            arq.save(nome_pdf)
+
+            pdf = fitz.open(nome_pdf)
+            for p in range(pdf.page_count):
+                pix = pdf.load_page(p).get_pixmap(dpi=300)
+                nome_png = Path(f"static/temp/proprietario_{n}_{p}.png")
+                pix.save(nome_png)
+                caminhos_fotos_proprietario.append(str(nome_png))
+            pdf.close()
+        else:
+            nome_img = Path(f"static/temp/proprietario_{n}{ext}")
+            arq.save(nome_img)
+            caminhos_fotos_proprietario.append(str(nome_img))
+
+
+    # 3. DOCUMENTAÇÃO DA PLANTA
+    caminhos_fotos_planta = []
+
+    for n, arq in enumerate(request.files.getlist("doc_planta")):
+        if not arq or not arq.filename:
+            continue
+
+        ext = Path(arq.filename).suffix.lower()
+
+        if ext == ".pdf":
+            nome_pdf = Path(f"static/temp/doc_planta_{n}.pdf")
+            arq.save(nome_pdf)
+
+            pdf = fitz.open(nome_pdf)
+            for p in range(pdf.page_count):
+                pix = pdf.load_page(p).get_pixmap(dpi=300)
+                nome_png = Path(f"static/temp/doc_planta_{n}_{p}.png")
+                pix.save(nome_png)
+                caminhos_fotos_planta.append(str(nome_png))
+            pdf.close()
+        else:
+            nome_img = Path(f"static/temp/doc_planta_{n}{ext}")
+            arq.save(nome_img)
+            caminhos_fotos_planta.append(str(nome_img))
+
 
     
 
@@ -5620,14 +5692,14 @@ def gerar_relatorio_avaliacao_com_template(
     # Inserir fotos adicionais (novo conjunto)
     #inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
     # Converter PDFs para PNG antes da inserção (documentação adicional)
-    novos_caminhos_adicionais = []
-    for caminho in caminhos_fotos_adicionais:
-        if caminho.lower().endswith(".pdf"):
-            imagens = salvar_pdf_como_png(caminho)
-            novos_caminhos_adicionais.extend(imagens)
-        else:
-            novos_caminhos_adicionais.append(caminho)
-    caminhos_fotos_adicionais = novos_caminhos_adicionais
+    # novos_caminhos_adicionais = []
+    # for caminho in caminhos_fotos_adicionais:
+    #     if caminho.lower().endswith(".pdf"):
+    #         imagens = salvar_pdf_como_png(caminho)
+    #         novos_caminhos_adicionais.extend(imagens)
+    #     else:
+    #         novos_caminhos_adicionais.append(caminho)
+    # caminhos_fotos_adicionais = novos_caminhos_adicionais
 
     # Inserir fotos adicionais (novo conjunto)
     inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
@@ -5636,14 +5708,14 @@ def gerar_relatorio_avaliacao_com_template(
     # ——— NOVO • documentação do PROPRIETÁRIO ———
     #inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
     # Converter PDFs para PNG (documentação do proprietário)
-    novos_caminhos_proprietario = []
-    for caminho in caminhos_fotos_proprietario:
-        if caminho.lower().endswith(".pdf"):
-            imagens = salvar_pdf_como_png(caminho)
-            novos_caminhos_proprietario.extend(imagens)
-        else:
-            novos_caminhos_proprietario.append(caminho)
-    caminhos_fotos_proprietario = novos_caminhos_proprietario
+    # novos_caminhos_proprietario = []
+    # for caminho in caminhos_fotos_proprietario:
+    #     if caminho.lower().endswith(".pdf"):
+    #         imagens = salvar_pdf_como_png(caminho)
+    #         novos_caminhos_proprietario.extend(imagens)
+    #     else:
+    #         novos_caminhos_proprietario.append(caminho)
+    # caminhos_fotos_proprietario = novos_caminhos_proprietario
 
     # documentação do PROPRIETÁRIO
     inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
@@ -5651,14 +5723,14 @@ def gerar_relatorio_avaliacao_com_template(
     # ——— NOVO • documentação da PLANTA ———
     #inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
     # Converter PDFs para PNG (documentação da planta)
-    novos_caminhos_planta = []
-    for caminho in caminhos_fotos_planta:
-        if caminho.lower().endswith(".pdf"):
-            imagens = salvar_pdf_como_png(caminho)
-            novos_caminhos_planta.extend(imagens)
-        else:
-            novos_caminhos_planta.append(caminho)
-    caminhos_fotos_planta = novos_caminhos_planta
+    # novos_caminhos_planta = []
+    # for caminho in caminhos_fotos_planta:
+    #     if caminho.lower().endswith(".pdf"):
+    #         imagens = salvar_pdf_como_png(caminho)
+    #         novos_caminhos_planta.extend(imagens)
+    #     else:
+    #         novos_caminhos_planta.append(caminho)
+    # caminhos_fotos_planta = novos_caminhos_planta
 
     # documentação da PLANTA
     inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
