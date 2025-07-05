@@ -849,11 +849,19 @@ def gerar_avaliacao():
 
                         if extensao == "pdf":
                             try:
-                                imagens = convert_from_bytes(dados_arquivo, dpi=200)
-                                if imagens:
-                                    imagens[0].thumbnail((700, 700))  # 🔴 NOVO
-                                    imagens[0].save(caminho, "PNG", optimize=True, quality=50)  # 🔴 NOVO
-                                    logger.info(f"✅ PDF convertido e salvo como PNG: {caminho}")
+                                nome_pdf_temporario = os.path.join(pasta_temp, f"{prefixo}_{i}.pdf")
+                                with open(nome_pdf_temporario, "wb") as f:
+                                    f.write(dados_arquivo)
+
+                                pdf = fitz.open(nome_pdf_temporario)
+                                for p in range(pdf.page_count):
+                                    pix = pdf.load_page(p).get_pixmap(dpi=200)
+                                    nome_img = f"{prefixo}_{i}_{p}.png"
+                                    caminho_img = os.path.join(pasta_temp, nome_img)
+                                    pix.save(caminho_img)
+                                    caminhos.append(caminho_img)
+                                    logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")
+                                pdf.close()
                             except Exception as e:
                                 logger.error(f"❌ Falha ao converter PDF: {arq.filename} – {e}")
                         else:
