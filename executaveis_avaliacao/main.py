@@ -5279,10 +5279,11 @@ def gerar_relatorio_avaliacao_com_template(
     substituir_placeholder_por_titulo_e_valor(
         documento,
         "[finalidade]",
-        "• Finalidade do Laudo: ",
-        fatores_do_usuario.get("finalidade_descricao", ""),
+        "",  # título vazio
+        "",  # valor vazio
         Pt(11)
     )
+
 
     area_total_lida = float(dados_avaliando.get("AREA TOTAL", 0))
     area_total_str = f"{formatar_numero_brasileiro(area_total_lida)} m²"
