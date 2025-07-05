@@ -74,6 +74,8 @@ import logging
 
 
 from docx.oxml.shared import OxmlElement 
+from uuid import uuid4
+
 
 
 logger = logging.getLogger(__name__)
@@ -741,16 +743,33 @@ def gerar_mapa_amostras(
 
 
 
-def salvar_pdf_como_png(caminho_pdf, caminho_png, dpi=100):
+def salvar_pdf_como_png(caminho_pdf, pasta_saida="static/temp", dpi=100):
+    """
+    Converte todas as páginas de um PDF em imagens PNG e retorna uma lista com os caminhos das imagens.
+    """
+    caminhos_das_imagens = []
+
     try:
         paginas = convert_from_path(caminho_pdf, dpi=dpi)
-        if paginas:
-            paginas[0].save(caminho_png, 'PNG')
-            logger.info(f"✅ PDF convertido com sucesso: {caminho_pdf} → {caminho_png}")
-        else:
+
+        if not paginas:
             logger.error(f"⚠️ Nenhuma página encontrada no PDF: {caminho_pdf}")
+            return []
+
+        nome_base = os.path.splitext(os.path.basename(caminho_pdf))[0]
+
+        for i, pagina in enumerate(paginas):
+            nome_unico = f"{nome_base}_{uuid4().hex[:6]}_{i}.png"
+            caminho_imagem = os.path.join(pasta_saida, nome_unico)
+            pagina.save(caminho_imagem, 'PNG')
+            caminhos_das_imagens.append(caminho_imagem)
+
+        logger.info(f"✅ {len(caminhos_das_imagens)} página(s) convertidas de {caminho_pdf}")
+        return caminhos_das_imagens
+
     except Exception as e:
         logger.error(f"❌ Falha ao converter PDF→PNG ({caminho_pdf}): {e}", exc_info=True)
+        return []
 
 
 ###############################################################################
@@ -5595,10 +5614,14 @@ def gerar_relatorio_avaliacao_com_template(
     # Inserir fotos adicionais (novo conjunto)
     #inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
     # Converter PDFs para PNG antes da inserção (documentação adicional)
-    caminhos_fotos_adicionais = [
-        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
-        for caminho in caminhos_fotos_adicionais
-    ]
+    novos_caminhos_adicionais = []
+    for caminho in caminhos_fotos_adicionais:
+        if caminho.lower().endswith(".pdf"):
+            imagens = salvar_pdf_como_png(caminho)
+            novos_caminhos_adicionais.extend(imagens)
+        else:
+            novos_caminhos_adicionais.append(caminho)
+    caminhos_fotos_adicionais = novos_caminhos_adicionais
 
     # Inserir fotos adicionais (novo conjunto)
     inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais)
@@ -5607,10 +5630,14 @@ def gerar_relatorio_avaliacao_com_template(
     # ——— NOVO • documentação do PROPRIETÁRIO ———
     #inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
     # Converter PDFs para PNG (documentação do proprietário)
-    caminhos_fotos_proprietario = [
-        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
-        for caminho in caminhos_fotos_proprietario
-    ]
+    novos_caminhos_proprietario = []
+    for caminho in caminhos_fotos_proprietario:
+        if caminho.lower().endswith(".pdf"):
+            imagens = salvar_pdf_como_png(caminho)
+            novos_caminhos_proprietario.extend(imagens)
+        else:
+            novos_caminhos_proprietario.append(caminho)
+    caminhos_fotos_proprietario = novos_caminhos_proprietario
 
     # documentação do PROPRIETÁRIO
     inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario)
@@ -5618,10 +5645,14 @@ def gerar_relatorio_avaliacao_com_template(
     # ——— NOVO • documentação da PLANTA ———
     #inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
     # Converter PDFs para PNG (documentação da planta)
-    caminhos_fotos_planta = [
-        salvar_pdf_como_png(caminho) if caminho.lower().endswith('.pdf') else caminho
-        for caminho in caminhos_fotos_planta
-    ]
+    novos_caminhos_planta = []
+    for caminho in caminhos_fotos_planta:
+        if caminho.lower().endswith(".pdf"):
+            imagens = salvar_pdf_como_png(caminho)
+            novos_caminhos_planta.extend(imagens)
+        else:
+            novos_caminhos_planta.append(caminho)
+    caminhos_fotos_planta = novos_caminhos_planta
 
     # documentação da PLANTA
     inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta)
@@ -5638,6 +5669,21 @@ def gerar_relatorio_avaliacao_com_template(
 
     # Salvar
     documento.save(nome_arquivo_word)
+    # Limpar arquivos PNG temporários gerados a partir de PDFs
+    def limpar_arquivos_temp_png(lista_de_caminhos):
+        for caminho in lista_de_caminhos:
+            if isinstance(caminho, str) and caminho.endswith(".png") and os.path.exists(caminho):
+                try:
+                    os.remove(caminho)
+                    logger.info(f"🗑️ PNG temporário removido: {caminho}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Falha ao remover {caminho}: {e}")
+
+    # Apagar apenas os arquivos gerados a partir de PDFs
+    limpar_arquivos_temp_png([c for c in caminhos_fotos_adicionais if c.endswith(".png")])
+    limpar_arquivos_temp_png([c for c in caminhos_fotos_proprietario if c.endswith(".png")])
+    limpar_arquivos_temp_png([c for c in caminhos_fotos_planta if c.endswith(".png")])
+
     try:
         os.startfile(nome_arquivo_word)
     except:
