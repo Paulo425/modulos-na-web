@@ -876,7 +876,7 @@ def gerar_avaliacao():
                             except UnidentifiedImageError:
                                 logger.error(f"❌ Arquivo não é uma imagem válida: {arq.filename}")
                                 continue  # pula esse arquivo e não adiciona ao caminho
-TE                       
+                       
                 return caminhos
 
 
