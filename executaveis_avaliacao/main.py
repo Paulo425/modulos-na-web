@@ -75,6 +75,8 @@ import logging
 
 from docx.oxml.shared import OxmlElement 
 from uuid import uuid4
+import fitz  # PyMuPDF
+from pathlib import Path
 
 
 
@@ -743,33 +745,37 @@ def gerar_mapa_amostras(
 
 
 
-def salvar_pdf_como_png(caminho_pdf, pasta_saida="static/temp", dpi=100):
-    """
-    Converte todas as páginas de um PDF em imagens PNG e retorna uma lista com os caminhos das imagens.
-    """
-    caminhos_das_imagens = []
+import os
+import fitz  # PyMuPDF
+from uuid import uuid4
+from pathlib import Path
 
+def salvar_pdf_como_png(caminho_pdf, pasta_saida="static/temp", dpi=200):
+    """
+    Converte todas as páginas de um PDF em imagens PNG usando PyMuPDF (fitz).
+    Retorna uma lista com os caminhos dos arquivos gerados.
+    """
+    caminhos_imagens = []
     try:
-        paginas = convert_from_path(caminho_pdf, dpi=dpi)
+        pdf = fitz.open(caminho_pdf)
+        nome_base = Path(caminho_pdf).stem
 
-        if not paginas:
-            logger.error(f"⚠️ Nenhuma página encontrada no PDF: {caminho_pdf}")
-            return []
+        for i in range(pdf.page_count):
+            pagina = pdf.load_page(i)
+            pix = pagina.get_pixmap(dpi=dpi)
+            nome_arquivo = f"{nome_base}_{uuid4().hex[:6]}_{i}.png"
+            caminho_completo = os.path.join(pasta_saida, nome_arquivo)
+            pix.save(caminho_completo)
+            caminhos_imagens.append(caminho_completo)
+            logger.info(f"✅ Página {i+1}/{pdf.page_count} salva: {caminho_completo}")
 
-        nome_base = os.path.splitext(os.path.basename(caminho_pdf))[0]
-
-        for i, pagina in enumerate(paginas):
-            nome_unico = f"{nome_base}_{uuid4().hex[:6]}_{i}.png"
-            caminho_imagem = os.path.join(pasta_saida, nome_unico)
-            pagina.save(caminho_imagem, 'PNG')
-            caminhos_das_imagens.append(caminho_imagem)
-
-        logger.info(f"✅ {len(caminhos_das_imagens)} página(s) convertidas de {caminho_pdf}")
-        return caminhos_das_imagens
+        pdf.close()
+        return caminhos_imagens
 
     except Exception as e:
-        logger.error(f"❌ Falha ao converter PDF→PNG ({caminho_pdf}): {e}", exc_info=True)
+        logger.error(f"❌ Erro ao converter PDF com fitz: {e}", exc_info=True)
         return []
+
 
 
 ###############################################################################
