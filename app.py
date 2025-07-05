@@ -14,6 +14,8 @@ import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import traceback
 import sys 
+import fitz  # PyMuPDF
+
 
 
 from usuarios_mysql import (
@@ -873,6 +875,7 @@ def gerar_avaliacao():
                                 imagem.save(caminho, optimize=True, quality=70)  # Salva otimizada
 
                                 logger.info(f"✅ Imagem salva: {caminho}")
+                                caminhos.append(caminho)  # ← ESSENCIAL AQUI
                             except UnidentifiedImageError:
                                 logger.error(f"❌ Arquivo não é uma imagem válida: {arq.filename}")
                                 continue  # pula esse arquivo e não adiciona ao caminho
