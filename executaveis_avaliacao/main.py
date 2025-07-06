@@ -77,6 +77,7 @@ from docx.oxml.shared import OxmlElement
 from uuid import uuid4
 import fitz  # PyMuPDF
 from pathlib import Path
+from itertools import chain
 
 
 
@@ -2210,12 +2211,25 @@ def inserir_fundamentacao_e_enquadramento(
 
 def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura_imagem=Inches(3), um_por_pagina=False):
     """
-    Insere as fotos no local do placeholder.
+    Insere imagens no local indicado pelo marcador `placeholder`.
+
     Se `um_por_pagina` for True, insere uma imagem por página.
-    Caso contrário, insere em blocos de 2x2.
+    Caso contrário, insere as imagens em uma tabela 2x2.
+
+    Args:
+        documento: objeto Document do python-docx
+        placeholder: string, marcador no texto como [FOTOS], [PLANTA] etc.
+        caminhos_fotos: lista de caminhos (strings) para imagens .png
+        largura_imagem: largura em Inches
+        um_por_pagina: bool – define se será uma imagem por página
     """
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.text import WD_BREAK
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    import os
 
+    # Localizar o parágrafo que contém o marcador
     paragrafo_alvo = None
     for paragrafo in documento.paragraphs:
         if placeholder in paragrafo.text:
@@ -2226,22 +2240,31 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura
         logger.warning(f"⚠️ Placeholder {placeholder} não encontrado.")
         return
 
-    # Limpa o placeholder
+    # Remove o texto do marcador
     paragrafo_alvo.text = ""
 
     if um_por_pagina:
+        # Insere uma imagem por página
         for caminho in caminhos_fotos:
             if os.path.exists(caminho):
-                par = documento.add_paragraph()
-                run = par.add_run()
+                novo_par = paragrafo_alvo.insert_paragraph_after()
+                run = novo_par.add_run()
                 run.add_picture(caminho, width=largura_imagem)
-                par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                documento.add_page_break()
+                novo_par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+                # Adiciona quebra de página real
+                break_par = documento.add_paragraph()
+                break_run = break_par.add_run()
+                page_break = OxmlElement("w:br")
+                page_break.set(qn("w:type"), "page")
+                break_run._r.append(page_break)
+
                 logger.info(f"✅ Imagem inserida em página separada: {caminho}")
             else:
                 logger.warning(f"⚠️ Imagem não encontrada: {caminho}")
     else:
-        blocos_fotos = [caminhos_fotos[i:i+4] for i in range(0, len(caminhos_fotos), 4)]
+        # Insere imagens em blocos 2x2
+        blocos_fotos = [caminhos_fotos[i:i + 4] for i in range(0, len(caminhos_fotos), 4)]
 
         for bloco in blocos_fotos:
             tabela_fotos = documento.add_table(rows=2, cols=2)
@@ -2261,7 +2284,10 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura
                         else:
                             logger.warning(f"⚠️ Imagem não encontrada: {caminho_img}")
                     idx += 1
+
+            # Insere a tabela logo após o placeholder
             paragrafo_alvo._p.addnext(tabela_fotos._element)
+
 
 
 
@@ -5633,10 +5659,12 @@ def gerar_relatorio_avaliacao_com_template(
         else:
             logger.warning(f"❌ Logo NÃO encontrado: {caminho_logo}")
 
-    # Inserir fotos
+    from itertools import chain
+
+    # Inserir fotos do imóvel
     if caminhos_fotos_avaliando:
-        for grupo in caminhos_fotos_avaliando:
-            inserir_fotos_no_placeholder(documento, "[FOTOS]", grupo)
+        todas_as_fotos = list(chain.from_iterable(caminhos_fotos_avaliando))
+        inserir_fotos_no_placeholder(documento, "[FOTOS]", todas_as_fotos, largura_imagem=Inches(5), um_por_pagina=True)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
@@ -5646,14 +5674,12 @@ def gerar_relatorio_avaliacao_com_template(
             True
         )
 
+
     
-    # Inserir fotos adicionais (novo conjunto)
+    # Inserir documentos adicionais (matrícula)
     if caminhos_fotos_adicionais:
-        logger.info(f"[DEBUG] Documentos adicionais: {caminhos_fotos_adicionais}")
-        
-        # 🔁 INSERIR UM GRUPO DE IMAGENS POR VEZ
-        for grupo in caminhos_fotos_adicionais:
-            inserir_fotos_no_placeholder(documento, "[MATRICULA]", grupo, largura_imagem=Inches(5), um_por_pagina=True)
+        todas_matriculas = list(chain.from_iterable(caminhos_fotos_adicionais))
+        inserir_fotos_no_placeholder(documento, "[MATRICULA]", todas_matriculas, largura_imagem=Inches(5), um_por_pagina=True)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
@@ -5665,12 +5691,10 @@ def gerar_relatorio_avaliacao_com_template(
 
 
     
-    # documentação do PROPRIETÁRIO
+    # Inserir documentação do proprietário
     if caminhos_fotos_proprietario:
-        logger.info(f"[DEBUG] Documentos proprietário: {caminhos_fotos_proprietario}")
-        
-        for grupo in caminhos_fotos_proprietario:
-            inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", grupo, largura_imagem=Inches(5), um_por_pagina=True)
+        todos_proprietarios = list(chain.from_iterable(caminhos_fotos_proprietario))
+        inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", todos_proprietarios, largura_imagem=Inches(5), um_por_pagina=True)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
@@ -5680,12 +5704,10 @@ def gerar_relatorio_avaliacao_com_template(
             True
         )
 
-    # documentação da PLANTA
+    # Inserir documentação da planta
     if caminhos_fotos_planta:
-        logger.info(f"[DEBUG] Documentos planta: {caminhos_fotos_planta}")
-        
-        for grupo in caminhos_fotos_planta:
-            inserir_fotos_no_placeholder(documento, "[PLANTA]", grupo, largura_imagem=Inches(5), um_por_pagina=True)
+        todas_plantas = list(chain.from_iterable(caminhos_fotos_planta))
+        inserir_fotos_no_placeholder(documento, "[PLANTA]", todas_plantas, largura_imagem=Inches(5), um_por_pagina=True)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
