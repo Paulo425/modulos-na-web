@@ -5592,12 +5592,13 @@ def gerar_relatorio_avaliacao_com_template(
             lista_todos_os_fatores          # << novo argumento
     )  
     
-    # Fotos do avaliando (mantém como está pois é uma lista simples)
-    for caminho in caminhos_fotos_avaliando:
-        if os.path.exists(caminho):
-            logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
-        else:
-            logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
+    # Fotos do avaliando (agora é uma lista de listas)
+    for grupo in caminhos_fotos_avaliando:
+        for caminho in grupo:
+            if os.path.exists(caminho):
+                logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
+            else:
+                logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
 
     # Documentos adicionais (matrícula)
     for grupo in caminhos_fotos_adicionais:
