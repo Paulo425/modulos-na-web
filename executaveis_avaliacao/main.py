@@ -5634,7 +5634,8 @@ def gerar_relatorio_avaliacao_com_template(
 
     # Inserir fotos
     if caminhos_fotos_avaliando:
-        inserir_fotos_no_placeholder(documento, "[FOTOS]", caminhos_fotos_avaliando)
+        for grupo in caminhos_fotos_avaliando:
+            inserir_fotos_no_placeholder(documento, "[FOTOS]", grupo)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
