@@ -5592,30 +5592,37 @@ def gerar_relatorio_avaliacao_com_template(
             lista_todos_os_fatores          # << novo argumento
     )  
     
-    # 📌 Verificação sugerida para identificar se as fotos estão no caminho correto:
+    # Fotos do avaliando (mantém como está pois é uma lista simples)
     for caminho in caminhos_fotos_avaliando:
         if os.path.exists(caminho):
             logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
         else:
             logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
 
-    for caminho in caminhos_fotos_adicionais:
-        if os.path.exists(caminho):
-            logger.info(f"✅ Documento adicional (matrícula) encontrado: {caminho}")
-        else:
-            logger.warning(f"❌ Documento adicional (matrícula) NÃO encontrado: {caminho}")
+    # Documentos adicionais (matrícula)
+    for grupo in caminhos_fotos_adicionais:
+        for caminho in grupo:
+            if os.path.exists(caminho):
+                logger.info(f"✅ Documento adicional (matrícula) encontrado: {caminho}")
+            else:
+                logger.warning(f"❌ Documento adicional (matrícula) NÃO encontrado: {caminho}")
 
-    for caminho in caminhos_fotos_proprietario:
-        if os.path.exists(caminho):
-            logger.info(f"✅ Documento do proprietário encontrado: {caminho}")
-        else:
-            logger.warning(f"❌ Documento do proprietário NÃO encontrado: {caminho}")
+    # Documentos do proprietário
+    for grupo in caminhos_fotos_proprietario:
+        for caminho in grupo:
+            if os.path.exists(caminho):
+                logger.info(f"✅ Documento do proprietário encontrado: {caminho}")
+            else:
+                logger.warning(f"❌ Documento do proprietário NÃO encontrado: {caminho}")
 
-    for caminho in caminhos_fotos_planta:
-        if os.path.exists(caminho):
-            logger.info(f"✅ Documento de planta encontrado: {caminho}")
-        else:
-            logger.warning(f"❌ Documento de planta NÃO encontrado: {caminho}")
+    # Documentos da planta
+    for grupo in caminhos_fotos_planta:
+        for caminho in grupo:
+            if os.path.exists(caminho):
+                logger.info(f"✅ Documento de planta encontrado: {caminho}")
+            else:
+                logger.warning(f"❌ Documento de planta NÃO encontrado: {caminho}")
+
 
     # Verificar se o logo existe
     caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
@@ -5709,9 +5716,11 @@ def gerar_relatorio_avaliacao_com_template(
                     logger.warning(f"⚠️ Falha ao remover {caminho}: {e}")
 
     # Apagar apenas os arquivos gerados a partir de PDFs
-    limpar_arquivos_temp_png([c for c in caminhos_fotos_adicionais if c.endswith(".png")])
-    limpar_arquivos_temp_png([c for c in caminhos_fotos_proprietario if c.endswith(".png")])
-    limpar_arquivos_temp_png([c for c in caminhos_fotos_planta if c.endswith(".png")])
+    # Flatten antes de filtrar PNGs
+    limpar_arquivos_temp_png([c for grupo in caminhos_fotos_adicionais for c in grupo if c.endswith(".png")])
+    limpar_arquivos_temp_png([c for grupo in caminhos_fotos_proprietario for c in grupo if c.endswith(".png")])
+    limpar_arquivos_temp_png([c for grupo in caminhos_fotos_planta for c in grupo if c.endswith(".png")])
+
 
     try:
         os.startfile(nome_arquivo_word)
