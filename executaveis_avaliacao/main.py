@@ -83,6 +83,16 @@ from itertools import chain
 
 
 logger = logging.getLogger(__name__)
+
+
+def adicionar_paragrafo_apos(paragrafo):
+    """
+    Cria e retorna um novo parágrafo imediatamente após o parágrafo informado.
+    Compatível com python-docx.
+    """
+    novo_par_xml = OxmlElement('w:p')
+    paragrafo._p.addnext(novo_par_xml)
+    return Paragraph(novo_par_xml, paragrafo._parent)
 ###############################################################################
 # FUNÇÕES DE SUPORTE GERAIS
 ###############################################################################
@@ -2244,21 +2254,13 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura
     paragrafo_alvo.text = ""
 
     if um_por_pagina:
-        # Insere uma imagem por página
         for caminho in caminhos_fotos:
             if os.path.exists(caminho):
-                novo_par = paragrafo_alvo.insert_paragraph_after()
+                novo_par = adicionar_paragrafo_apos(paragrafo_alvo)
                 run = novo_par.add_run()
                 run.add_picture(caminho, width=largura_imagem)
                 novo_par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-                # Adiciona quebra de página real
-                break_par = documento.add_paragraph()
-                break_run = break_par.add_run()
-                page_break = OxmlElement("w:br")
-                page_break.set(qn("w:type"), "page")
-                break_run._r.append(page_break)
-
+                run.add_break(WD_BREAK.PAGE)  # quebra de página real
                 logger.info(f"✅ Imagem inserida em página separada: {caminho}")
             else:
                 logger.warning(f"⚠️ Imagem não encontrada: {caminho}")
