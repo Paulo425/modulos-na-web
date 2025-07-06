@@ -837,55 +837,48 @@ def gerar_avaliacao():
             
 
             def salvar_multiplos(nome_form, prefixo):
-                caminhos = []
                 arquivos = request.files.getlist(nome_form)
+                todos_grupos = []
+
                 for i, arq in enumerate(arquivos):
                     if arq and arq.filename:
                         extensao = arq.filename.rsplit('.', 1)[-1].lower()
-                        
-                        # Ajuste de nome e caminho
-                        nome = secure_filename(f"{prefixo}_{i}.png")
-                        caminho = os.path.join(pasta_temp, nome)
+                        grupo_imagens = []
 
                         dados_arquivo = arq.read()
 
                         if extensao == "pdf":
-                            try:
-                                nome_pdf_temporario = os.path.join(pasta_temp, f"{prefixo}_{i}.pdf")
-                                with open(nome_pdf_temporario, "wb") as f:
-                                    f.write(dados_arquivo)
+                            nome_pdf_temporario = os.path.join(pasta_temp, f"{prefixo}_{i}.pdf")
+                            with open(nome_pdf_temporario, "wb") as f:
+                                f.write(dados_arquivo)
 
-                                pdf = fitz.open(nome_pdf_temporario)
-                                paginas_convertidas = []
-                                for p in range(pdf.page_count):
-                                    pix = pdf.load_page(p).get_pixmap(dpi=200)
-                                    nome_img = f"{prefixo}_{i}_{p}.png"
-                                    caminho_img = os.path.join(pasta_temp, nome_img)
-                                    pix.save(caminho_img)
-                                    paginas_convertidas.append(caminho_img)
-                                    logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")  # ← aqui dentro do for
-
-                                paginas_convertidas.sort()
-                                caminhos.extend(paginas_convertidas)
-
-                                pdf.close()
-                            except Exception as e:
-                                logger.error(f"❌ Falha ao converter PDF: {arq.filename} – {e}")
+                            pdf = fitz.open(nome_pdf_temporario)
+                            for p in range(pdf.page_count):
+                                pix = pdf.load_page(p).get_pixmap(dpi=200)
+                                nome_img = f"{prefixo}_{i}_{p}.png"
+                                caminho_img = os.path.join(pasta_temp, nome_img)
+                                pix.save(caminho_img)
+                                grupo_imagens.append(caminho_img)
+                                logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")
+                            pdf.close()
                         else:
                             try:
                                 imagem = Image.open(io.BytesIO(dados_arquivo))
-
-                                # 👉 Alteração cirúrgica aqui:
-                                imagem.thumbnail((1024, 1024))  # Redimensiona mantendo proporção
-                                imagem.save(caminho, optimize=True, quality=70)  # Salva otimizada
-
-                                logger.info(f"✅ Imagem salva: {caminho}")
-                                caminhos.append(caminho)  # ← ESSENCIAL AQUI
+                                imagem.thumbnail((1024, 1024))
+                                nome_img = secure_filename(f"{prefixo}_{i}.png")
+                                caminho_img = os.path.join(pasta_temp, nome_img)
+                                imagem.save(caminho_img, optimize=True, quality=70)
+                                grupo_imagens.append(caminho_img)
+                                logger.info(f"✅ Imagem salva: {caminho_img}")
                             except UnidentifiedImageError:
-                                logger.error(f"❌ Arquivo não é uma imagem válida: {arq.filename}")
-                                continue  # pula esse arquivo e não adiciona ao caminho
-                       
-                return caminhos
+                                logger.error(f"❌ Arquivo inválido: {arq.filename}")
+                                continue
+
+                        if grupo_imagens:
+                            todos_grupos.append(grupo_imagens)
+
+                return todos_grupos
+
 
 
 

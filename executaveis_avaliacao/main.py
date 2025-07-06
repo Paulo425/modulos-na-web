@@ -5641,7 +5641,10 @@ def gerar_relatorio_avaliacao_com_template(
     # Inserir fotos adicionais (novo conjunto)
     if caminhos_fotos_adicionais:
         logger.info(f"[DEBUG] Documentos adicionais: {caminhos_fotos_adicionais}")
-        inserir_fotos_no_placeholder(documento, "[MATRICULA]", caminhos_fotos_adicionais, largura_imagem=Inches(5), um_por_pagina=True)
+        
+        # 🔁 INSERIR UM GRUPO DE IMAGENS POR VEZ
+        for grupo in caminhos_fotos_adicionais:
+            inserir_fotos_no_placeholder(documento, "[MATRICULA]", grupo, largura_imagem=Inches(5), um_por_pagina=True)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
@@ -5651,11 +5654,14 @@ def gerar_relatorio_avaliacao_com_template(
             True
         )
 
+
     
     # documentação do PROPRIETÁRIO
     if caminhos_fotos_proprietario:
         logger.info(f"[DEBUG] Documentos proprietário: {caminhos_fotos_proprietario}")
-        inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", caminhos_fotos_proprietario, largura_imagem=Inches(5), um_por_pagina=True)
+        
+        for grupo in caminhos_fotos_proprietario:
+            inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", grupo, largura_imagem=Inches(5), um_por_pagina=True)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
@@ -5668,7 +5674,9 @@ def gerar_relatorio_avaliacao_com_template(
     # documentação da PLANTA
     if caminhos_fotos_planta:
         logger.info(f"[DEBUG] Documentos planta: {caminhos_fotos_planta}")
-        inserir_fotos_no_placeholder(documento, "[PLANTA]", caminhos_fotos_planta, largura_imagem=Inches(5), um_por_pagina=True)
+        
+        for grupo in caminhos_fotos_planta:
+            inserir_fotos_no_placeholder(documento, "[PLANTA]", grupo, largura_imagem=Inches(5), um_por_pagina=True)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
