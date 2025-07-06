@@ -78,6 +78,10 @@ from uuid import uuid4
 import fitz  # PyMuPDF
 from pathlib import Path
 from itertools import chain
+from docx.enum.text import WD_BREAK
+from docx.oxml.ns import qn
+
+
 
 
 
@@ -2221,21 +2225,6 @@ def inserir_fundamentacao_e_enquadramento(
 
 
 def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura_imagem=Inches(3), um_por_pagina=False):
-    """
-    Insere imagens no local indicado pelo marcador `placeholder`.
-
-    Se `um_por_pagina` for True, insere uma imagem por página.
-    Caso contrário, insere as imagens em uma tabela 2x2.
-
-    Args:
-        documento: objeto Document do python-docx
-        placeholder: string, marcador no texto como [FOTOS], [PLANTA] etc.
-        caminhos_fotos: lista de caminhos (strings) para imagens .png
-        largura_imagem: largura em Inches
-        um_por_pagina: bool – define se será uma imagem por página
-    """
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.text import WD_BREAK
     from docx.oxml.ns import qn
     import os
 
@@ -2254,18 +2243,23 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura
     paragrafo_alvo.text = ""
 
     if um_por_pagina:
-        for caminho in caminhos_fotos:
+        for i, caminho in enumerate(caminhos_fotos):
             if os.path.exists(caminho):
                 novo_par = adicionar_paragrafo_apos(paragrafo_alvo)
                 run = novo_par.add_run()
                 run.add_picture(caminho, width=largura_imagem)
                 novo_par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run.add_break(WD_BREAK.PAGE)  # quebra de página real
+
+                # ✅ Evita página em branco após a última imagem
+                if i < len(caminhos_fotos) - 1:
+                    run.add_break(WD_BREAK.PAGE)
+
                 logger.info(f"✅ Imagem inserida em página separada: {caminho}")
+                # Atualiza o parágrafo de referência para inserir o próximo após ele
+                paragrafo_alvo = novo_par
             else:
                 logger.warning(f"⚠️ Imagem não encontrada: {caminho}")
     else:
-        # Insere imagens em blocos 2x2
         blocos_fotos = [caminhos_fotos[i:i + 4] for i in range(0, len(caminhos_fotos), 4)]
 
         for bloco in blocos_fotos:
@@ -2287,7 +2281,6 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura
                             logger.warning(f"⚠️ Imagem não encontrada: {caminho_img}")
                     idx += 1
 
-            # Insere a tabela logo após o placeholder
             paragrafo_alvo._p.addnext(tabela_fotos._element)
 
 
