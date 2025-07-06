@@ -73,11 +73,12 @@ from lxml import etree
 import logging
 
 
-from docx.oxml.shared import OxmlElement 
+
 from uuid import uuid4
 import fitz  # PyMuPDF
 from pathlib import Path
 from itertools import chain
+
 
 
 
@@ -2225,7 +2226,6 @@ def inserir_fotos_no_placeholder(documento, placeholder, caminhos_fotos, largura
     """
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.text import WD_BREAK
-    from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
     import os
 
