@@ -5659,7 +5659,7 @@ def gerar_relatorio_avaliacao_com_template(
     # Inserir fotos do imóvel
     if caminhos_fotos_avaliando:
         todas_as_fotos = list(chain.from_iterable(caminhos_fotos_avaliando))
-        inserir_fotos_no_placeholder(documento, "[FOTOS]", todas_as_fotos, largura_imagem=Inches(5), um_por_pagina=True)
+        inserir_fotos_no_placeholder(documento, "[FOTOS]", todas_as_fotos, largura_imagem=Inches(3.2), um_por_pagina=False)
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
