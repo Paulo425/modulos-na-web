@@ -308,7 +308,8 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
                     # 🚨 Adicione apenas o ponto original com bulge, NUNCA interpole:
                     boundary_points.append((x_start, y_start, bulge))
-
+                # 🔑 AGORA SIM, adicionar explicitamente o ponto inicial no final (sem bulge)
+                boundary_points.append((boundary_points[0][0], boundary_points[0][1], 0))
                 polygon_coords = [(x, y) for x, y, _ in boundary_points]
                 polygon = Polygon(polygon_coords)
                 area_dxf = polygon.area
