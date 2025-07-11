@@ -14,8 +14,6 @@ from docx import Document
 import ezdxf
 from shapely.geometry import Polygon
 
-
-
 try:
     from ezdxf.math import Vec3 as Vector
 except ImportError:
@@ -230,11 +228,12 @@ def bulge_to_arc_length(start_point, end_point, bulge):
     return arc_length, radius, angle
 
 def get_document_info_from_dxf(dxf_file_path, log=None):
-
+    
     if log is None:
         class DummyLog:
             def write(self, msg): pass
         log = DummyLog()
+
     try:
         doc = ezdxf.readfile(dxf_file_path)
         msp = doc.modelspace()
@@ -242,7 +241,6 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         lines = []
         arcs = []
         perimeter_dxf = 0
-        ponto_az = None
 
         for entity in msp.query('LWPOLYLINE'):
             if entity.is_closed:
@@ -255,52 +253,36 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                     x_start, y_start, _, _, bulge = polyline_points[i]
                     x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
 
-                    #start_point = Vec2(float(x_start), float(y_start))
                     start_point = (float(x_start), float(y_start))
-
-                    #end_point = Vec2(float(x_end), float(y_end))
                     end_point = (float(x_end), float(y_end))
 
-                    if bulge != 0:
-                        # Calcula comprimento da corda (linha entre pontos iniciais e finais)
+                    if abs(bulge) > 1e-8:
                         dx = end_point[0] - start_point[0]
                         dy = end_point[1] - start_point[1]
                         chord_length = math.hypot(dx, dy)
 
-                        # Calcula o ângulo de abertura do arco
                         angle_span_rad = 4 * math.atan(abs(bulge))
-
-                        # Calcula o raio do arco
                         radius = chord_length / (2 * math.sin(angle_span_rad / 2))
 
-                        # Encontra o ponto médio da corda
                         mid_x = (start_point[0] + end_point[0]) / 2
                         mid_y = (start_point[1] + end_point[1]) / 2
                         chord_midpoint = (mid_x, mid_y)
 
-                        # Calcula a distância do ponto médio ao centro do arco (offset perpendicular)
                         offset_dist = math.sqrt(abs(radius**2 - (chord_length / 2)**2))
-
-                        # Vetor unitário perpendicular à corda
                         perp_vector = (-dy / chord_length, dx / chord_length)
 
-                        # Determina corretamente a posição do centro com base no sinal do bulge
                         if bulge > 0:
-                            # centro à esquerda da direção start → end
                             center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
                             center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
                         else:
-                            # centro à direita da direção start → end
                             center_x = chord_midpoint[0] - perp_vector[0] * offset_dist
                             center_y = chord_midpoint[1] - perp_vector[1] * offset_dist
 
                         center = (center_x, center_y)
 
-                        # Calcula os ângulos inicial e final do arco
                         start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
                         end_angle = math.atan2(end_point[1] - center[1], end_point[0] - center[0])
 
-                        # Ajusta o ângulo final baseado na direção (bulge positivo ou negativo)
                         if bulge > 0 and end_angle < start_angle:
                             end_angle += 2 * math.pi
                         elif bulge < 0 and end_angle > start_angle:
@@ -309,16 +291,15 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                         arc_length = abs(radius * (end_angle - start_angle))
 
                         arcs.append({
-                            'start_point': (start_point[0], start_point[1]),
-                            'end_point': (end_point[0], end_point[1]),
-                            'center': (center[0], center[1]),
+                            'start_point': start_point,
+                            'end_point': end_point,
+                            'center': center,
                             'radius': radius,
                             'start_angle': math.degrees(start_angle),
                             'end_angle': math.degrees(end_angle),
                             'length': arc_length
                         })
 
-                        # Geração de pontos intermediários para precisão do desenho do arco
                         num_arc_points = 100
                         for t in range(num_arc_points + 1):
                             angle = start_angle + (end_angle - start_angle) * t / num_arc_points
@@ -326,49 +307,33 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                             arc_y = center[1] + radius * math.sin(angle)
                             boundary_points.append((arc_x, arc_y))
 
-                        segment_length = arc_length
+                        perimeter_dxf += arc_length
+
+                    else:  # Linha reta
+                        lines.append((start_point, end_point))
+                        boundary_points.append(start_point)
+                        segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])
                         perimeter_dxf += segment_length
 
-
-                # Após loop, calcular a área com Shapely
                 polygon = Polygon(boundary_points)
-                area_dxf = polygon.area  # área exata do desenho
-
+                area_dxf = polygon.area
                 break
 
         if not lines and not arcs:
-            print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
-            if log:
-                log.write("Nenhuma polilinha fechada encontrada no arquivo DXF.\n")
-            return None, [], [], 0, 0, None
+            log.write("Nenhuma polilinha fechada encontrada no arquivo DXF.\n")
+            return None, [], [], 0, 0
 
-#         for entity in msp.query('TEXT'):
-#             if "Az" in entity.dxf.text:
-#                # ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y)
-#                 ponto_az = (float(entity.dxf.insert[0]), float(entity.dxf.insert[1]))
-
-#                break
-
-#         if not ponto_az:
-#             print("Ponto Az não encontrado no arquivo DXF.")
-#             return None, lines, arcs, perimeter_dxf, area_dxf
-
-        if log:
-            log.write(f"Linhas processadas: {len(lines)}\n")
-            log.write(f"Arcos processados: {len(arcs)}\n")
-            log.write(f"Perímetro do DXF: {perimeter_dxf:.2f} metros\n")
-            log.write(f"Área do DXF: {area_dxf:.2f} metros quadrados\n")
-
-#         print(f"Ponto Az: {ponto_az}")
+        log.write(f"Linhas processadas: {len(lines)}\n")
+        log.write(f"Arcos processados: {len(arcs)}\n")
+        log.write(f"Perímetro do DXF: {perimeter_dxf:.2f} metros\n")
+        log.write(f"Área do DXF: {area_dxf:.2f} metros quadrados\n")
 
         return doc, lines, arcs, perimeter_dxf, area_dxf
 
     except Exception as e:
-        print(f"Erro ao obter informações do documento: {e}")
-        if log:
-            log.write(f"Erro ao obter informações do documento: {e}\n")
-        traceback.print_exc()
-        return None, [], [], 0, 0, None
+        log.write(f"Erro ao obter informações do documento: {e}\n")
+        return None, [], [], 0, 0
+
 
 
 
