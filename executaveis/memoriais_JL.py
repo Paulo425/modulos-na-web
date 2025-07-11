@@ -262,49 +262,51 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                     end_point = (float(x_end), float(y_end))
 
                     if bulge != 0:
-                        # Trata-se de arco
-                       # chord_length = (end_point - start_point).magnitude
+                        # Calcula comprimento da corda (linha entre pontos iniciais e finais)
                         dx = end_point[0] - start_point[0]
                         dy = end_point[1] - start_point[1]
                         chord_length = math.hypot(dx, dy)
-                        sagitta = (bulge * chord_length) / 2
-                        radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-                        angle_span_rad = 4 * math.atan(abs(bulge))
-                        arc_length = radius * angle_span_rad
 
-                        #chord_midpoint = (start_point + end_point) / 2
+                        # Calcula o ângulo de abertura do arco
+                        angle_span_rad = 4 * math.atan(abs(bulge))
+
+                        # Calcula o raio do arco
+                        radius = chord_length / (2 * math.sin(angle_span_rad / 2))
+
+                        # Encontra o ponto médio da corda
                         mid_x = (start_point[0] + end_point[0]) / 2
                         mid_y = (start_point[1] + end_point[1]) / 2
                         chord_midpoint = (mid_x, mid_y)
 
-                        offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
-#                         dx = end_point[0] - start_point[0]
-#                         dy = end_point[1] - start_point[1]
-                        dx = float(end_point[0]) - float(start_point[0])
-                        dy = float(end_point[1]) - float(start_point[1])
+                        # Calcula a distância do ponto médio ao centro do arco (offset perpendicular)
+                        offset_dist = math.sqrt(abs(radius**2 - (chord_length / 2)**2))
 
-                        #perp_vector = Vec2(-dy, dx).normalize()
-                        length = math.hypot(dx, dy)
-                        perp_vector = (-dy / length, dx / length)
+                        # Vetor unitário perpendicular à corda
+                        perp_vector = (-dy / chord_length, dx / chord_length)
 
-                        # if bulge < 0:
-                        #     #perp_vector = -perp_vector
-                        #     perp_vector = (-perp_vector[0], -perp_vector[1])
-                        # Ajuste de sinal baseado na orientação correta
-                        signed_area = calculate_signed_area([(p[0], p[1]) for p in polyline_points])
-                        if (signed_area < 0 and bulge > 0) or (signed_area > 0 and bulge < 0):
-                            perp_vector = (-perp_vector[0], -perp_vector[1])
+                        # Determina corretamente a posição do centro com base no sinal do bulge
+                        if bulge > 0:
+                            # centro à esquerda da direção start → end
+                            center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
+                            center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
+                        else:
+                            # centro à direita da direção start → end
+                            center_x = chord_midpoint[0] - perp_vector[0] * offset_dist
+                            center_y = chord_midpoint[1] - perp_vector[1] * offset_dist
 
-                        #center = chord_midpoint + perp_vector * offset_dist
-                        center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
-                        center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
                         center = (center_x, center_y)
 
-
-                        #start_angle = math.atan2(start_point.y - center.y, start_point[0] - center[0])
+                        # Calcula os ângulos inicial e final do arco
                         start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
+                        end_angle = math.atan2(end_point[1] - center[1], end_point[0] - center[0])
 
-                        end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
+                        # Ajusta o ângulo final baseado na direção (bulge positivo ou negativo)
+                        if bulge > 0 and end_angle < start_angle:
+                            end_angle += 2 * math.pi
+                        elif bulge < 0 and end_angle > start_angle:
+                            end_angle -= 2 * math.pi
+
+                        arc_length = abs(radius * (end_angle - start_angle))
 
                         arcs.append({
                             'start_point': (start_point[0], start_point[1]),
@@ -316,9 +318,9 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                             'length': arc_length
                         })
 
-                        # Pontos intermediários no arco (para precisão da área)
-                        num_arc_points = 100  # mais pontos para maior precisão
-                        for t in range(num_arc_points):
+                        # Geração de pontos intermediários para precisão do desenho do arco
+                        num_arc_points = 100
+                        for t in range(num_arc_points + 1):
                             angle = start_angle + (end_angle - start_angle) * t / num_arc_points
                             arc_x = center[0] + radius * math.cos(angle)
                             arc_y = center[1] + radius * math.sin(angle)
@@ -326,16 +328,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
                         segment_length = arc_length
                         perimeter_dxf += segment_length
-                    else:
-                        # Linha reta
-                        lines.append((start_point, end_point))
-                        boundary_points.append((start_point[0], start_point[1]))
-                       # segment_length = (end_point - start_point).magnitude
-                        dx = end_point[0] - start_point[0]
-                        dy = end_point[1] - start_point[1]
-                        segment_length = math.hypot(dx, dy)
 
-                        perimeter_dxf += segment_length
 
                 # Após loop, calcular a área com Shapely
                 polygon = Polygon(boundary_points)
