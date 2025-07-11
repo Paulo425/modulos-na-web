@@ -71,6 +71,8 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
         ponto_inicial_real = None
 
         for entity in msp_antigo.query('LWPOLYLINE'):
+            polyline_points = entity.get_points('xyseb')  # Garanta que esteja definido assim no início deste loop
+
             if entity.closed:
                 pontos_polilinha_raw = entity.get_points('xyseb')
                 ponto_inicial_real = (float(pontos_polilinha_raw[0][0]), float(pontos_polilinha_raw[0][1]))
@@ -285,10 +287,13 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                         length = math.hypot(dx, dy)
                         perp_vector = (-dy / length, dx / length)
 
-                        if bulge < 0:
-                            #perp_vector = -perp_vector
+                        # if bulge < 0:
+                        #     #perp_vector = -perp_vector
+                        #     perp_vector = (-perp_vector[0], -perp_vector[1])
+                        # Ajuste de sinal baseado na orientação correta
+                        signed_area = calculate_signed_area([(p[0], p[1]) for p in polyline_points])
+                        if (signed_area < 0 and bulge > 0) or (signed_area > 0 and bulge < 0):
                             perp_vector = (-perp_vector[0], -perp_vector[1])
-
 
                         #center = chord_midpoint + perp_vector * offset_dist
                         center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
