@@ -775,6 +775,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     # boundary_points é o conjunto original de pontos com bulge preservado
     if arcs:  # verifica se há arcos, caso contrário use a abordagem atual (somente linhas)
+        print("DEBUG BOUNDARY POINTS:", boundary_points[:5])  # imprime primeiros 5 pontos
         msp.add_lwpolyline(boundary_points, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
     else:
         # sua abordagem anterior, para linhas sem arco (se não houver boundary_points)
