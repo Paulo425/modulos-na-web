@@ -870,40 +870,41 @@ def create_memorial_document(
                 current = df.iloc[i]
                 next_index = (i + 1) % num_points
                 next_point = df.iloc[next_index]
-            
+
                 azimute = current['Azimute']
                 distancia = current['Distancia(m)']
                 confrontante = current['Confrontante']
                 destino = next_point['V']
                 coord_n = next_point['N']
                 coord_e = next_point['E']
-            
+
                 if azimute.startswith("R=") and distancia.startswith("C="):
                     texto_paragrafo = (
                         f"Deste, segue com raio de {azimute[2:]}m e distância de {distancia[2:]}m, "
                         f"confrontando neste trecho com {confrontante}, até o vértice "
                     )
+                    restante_texto = f", de coordenadas N(Y) {coord_n} e E(X) {coord_e};"
                 else:
                     texto_paragrafo = (
                         f"Deste, segue com azimute de {azimute} e distância de {distancia} m, "
                         f"confrontando neste trecho com {confrontante}, até o vértice "
                     )
-            
+                    
+                    # Adicione esta condição para verificar se o vértice seguinte é o ponto inicial
+                    if next_index == 0:
+                        restante_texto = f", origem desta descrição de coordenadas N(Y) {coord_n} e E(X) {coord_e};"
+                    else:
+                        restante_texto = f", de coordenadas N(Y) {coord_n} e E(X) {coord_e};"
+
                 # Adicionar o texto antes do vértice sem negrito
                 p = doc_word.add_paragraph(style='Normal')
                 p.add_run(texto_paragrafo)
-            
+
                 # Adicionar o vértice em negrito
                 run_v = p.add_run(destino)
-                run_v.bold = True  # Aqui define o negrito
-            
+                run_v.bold = True
+
                 # Continuar com o restante do texto sem negrito
-                restante_texto = (
-                    f", de coordenadas N(Y) {coord_n} e E(X) {coord_e};"
-                    if azimute.startswith("R=") and distancia.startswith("C=")
-                    else f", origem desta descrição de coordenadas N(Y) {coord_n} e E(X) {coord_e};"
-                )
-            
                 p.add_run(restante_texto)
 
         else:
