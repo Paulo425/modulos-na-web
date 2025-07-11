@@ -228,7 +228,6 @@ def bulge_to_arc_length(start_point, end_point, bulge):
     return arc_length, radius, angle
 
 def get_document_info_from_dxf(dxf_file_path, log=None):
-    
     if log is None:
         class DummyLog:
             def write(self, msg): pass
@@ -250,9 +249,8 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                 boundary_points = []
 
                 for i in range(num_points):
-                    x_start, y_start, bulge = polyline_points[i]  # ✅ corrigido aqui
-                    x_end, y_end, _ = polyline_points[(i + 1) % num_points]  # ✅ corrigido aqui também
-
+                    x_start, y_start, bulge = polyline_points[i]  # CORRETO ✅
+                    x_end, y_end, _ = polyline_points[(i + 1) % num_points]
 
                     start_point = (float(x_start), float(y_start))
                     end_point = (float(x_end), float(y_end))
@@ -301,28 +299,24 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                             'length': arc_length
                         })
 
-                        num_arc_points = 100
-                        for t in range(num_arc_points + 1):
-                            angle = start_angle + (end_angle - start_angle) * t / num_arc_points
-                            arc_x = center[0] + radius * math.cos(angle)
-                            arc_y = center[1] + radius * math.sin(angle)
-                            boundary_points.append((arc_x, arc_y))
-
                         perimeter_dxf += arc_length
 
                     else:  # Linha reta
                         lines.append((start_point, end_point))
-                        boundary_points.append(start_point)
                         segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])
                         perimeter_dxf += segment_length
 
-                polygon = Polygon(boundary_points)
+                    # 🚨 Adicione apenas o ponto original com bulge, NUNCA interpole:
+                    boundary_points.append((x_start, y_start, bulge))
+
+                polygon_coords = [(x, y) for x, y, _ in boundary_points]
+                polygon = Polygon(polygon_coords)
                 area_dxf = polygon.area
                 break
 
         if not lines and not arcs:
             log.write("Nenhuma polilinha fechada encontrada no arquivo DXF.\n")
-            return None, [], [], 0, 0
+            return None, [], [], 0, 0, []
 
         log.write(f"Linhas processadas: {len(lines)}\n")
         log.write(f"Arcos processados: {len(arcs)}\n")
@@ -333,7 +327,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
     except Exception as e:
         log.write(f"Erro ao obter informações do documento: {e}\n")
-        return None, [], [], 0, 0
+        return None, [], [], 0, 0, []
 
 
 
