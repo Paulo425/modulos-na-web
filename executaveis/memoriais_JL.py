@@ -250,8 +250,9 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                 boundary_points = []
 
                 for i in range(num_points):
-                    x_start, y_start, _, _, bulge = polyline_points[i]
-                    x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
+                    x_start, y_start, bulge = polyline_points[i]  # ✅ corrigido aqui
+                    x_end, y_end, _ = polyline_points[(i + 1) % num_points]  # ✅ corrigido aqui também
+
 
                     start_point = (float(x_start), float(y_start))
                     end_point = (float(x_end), float(y_end))
