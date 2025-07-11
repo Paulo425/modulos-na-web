@@ -245,22 +245,24 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
             if entity.is_closed:
                 polyline_points = entity.get_points('xyb')
                 num_points = len(polyline_points)
-
                 boundary_points = []
 
                 for i in range(num_points):
-                    x_start, y_start, bulge = polyline_points[i]  # CORRETO ✅
+                    x_start, y_start, bulge = polyline_points[i]
                     x_end, y_end, _ = polyline_points[(i + 1) % num_points]
 
                     start_point = (float(x_start), float(y_start))
                     end_point = (float(x_end), float(y_end))
 
-                    if abs(bulge) > 1e-8:
+                    # CORREÇÃO CRÍTICA AQUI:
+                    next_bulge = polyline_points[(i + 1) % num_points][2]
+
+                    if abs(next_bulge) > 1e-8:
                         dx = end_point[0] - start_point[0]
                         dy = end_point[1] - start_point[1]
                         chord_length = math.hypot(dx, dy)
 
-                        angle_span_rad = 4 * math.atan(abs(bulge))
+                        angle_span_rad = 4 * math.atan(abs(next_bulge))
                         radius = chord_length / (2 * math.sin(angle_span_rad / 2))
 
                         mid_x = (start_point[0] + end_point[0]) / 2
@@ -270,7 +272,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                         offset_dist = math.sqrt(abs(radius**2 - (chord_length / 2)**2))
                         perp_vector = (-dy / chord_length, dx / chord_length)
 
-                        if bulge > 0:
+                        if next_bulge > 0:
                             center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
                             center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
                         else:
@@ -282,9 +284,9 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                         start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
                         end_angle = math.atan2(end_point[1] - center[1], end_point[0] - center[0])
 
-                        if bulge > 0 and end_angle < start_angle:
+                        if next_bulge > 0 and end_angle < start_angle:
                             end_angle += 2 * math.pi
-                        elif bulge < 0 and end_angle > start_angle:
+                        elif next_bulge < 0 and end_angle > start_angle:
                             end_angle -= 2 * math.pi
 
                         arc_length = abs(radius * (end_angle - start_angle))
@@ -306,12 +308,8 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                         segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])
                         perimeter_dxf += segment_length
 
-                    # 🚨 Adicione apenas o ponto original com bulge, NUNCA interpole:
-                    boundary_points.append((x_start, y_start, bulge))
-                # Após terminar boundary_points, coloque aqui imediatamente:
-                print("DEBUG SEGMENTOS FINAIS COM BULGE:")
-                for i in range(len(boundary_points)):
-                    print(f"Ponto {i}: {boundary_points[i]}")
+                    # ATUALIZADO E CORRETO:
+                    boundary_points.append((x_start, y_start, next_bulge))
 
                 polygon_coords = [(x, y) for x, y, _ in boundary_points]
                 polygon = Polygon(polygon_coords)
