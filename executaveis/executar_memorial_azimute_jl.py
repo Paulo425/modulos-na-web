@@ -23,7 +23,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                 dxf_limpo_path, ponto_az, ponto_inicial_real = limpar_dxf_e_inserir_ponto_az(dxf_path, dxf_limpo_path, log=None)
 
 
-                doc, lines, arcs, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_limpo_path, log=log)
+                doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points = get_document_info_from_dxf(dxf_limpo_path, log=log)
                 if not doc or not ponto_az:
                     raise ValueError("Erro ao processar o DXF ou ponto Az não encontrado.")
 
@@ -41,6 +41,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                     caminho_salvar=caminho_salvar, excel_file_path=excel_path,
                     ponto_az=ponto_az, distance_az_v1=distance,
                     azimute_az_v1=azimuth, ponto_inicial_real=ponto_inicial_real,
+                    boundary_points=boundary_points,
                     log=log
                 )
 

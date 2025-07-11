@@ -328,7 +328,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         log.write(f"Perímetro do DXF: {perimeter_dxf:.2f} metros\n")
         log.write(f"Área do DXF: {area_dxf:.2f} metros quadrados\n")
 
-        return doc, lines, arcs, perimeter_dxf, area_dxf
+        return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
 
     except Exception as e:
         log.write(f"Erro ao obter informações do documento: {e}\n")
@@ -604,7 +604,7 @@ def sanitize_filename(filename):
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
                                azimute_az_v1=None, ponto_inicial_real=None,  # ✅ Adicionado aqui
-                               encoding='ISO-8859-1', log=None):
+                               encoding='ISO-8859-1', boundary_points=None, log=None):
 
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
@@ -773,19 +773,13 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     if log:
         log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
-#     try:
-#         v1 = segments[0]["start_point"]
-#         azimuth = calculate_azimuth(ponto_az, v1)
-#         add_azimuth_arc(doc, msp, ponto_az, v1, azimuth)
-#     except Exception as e:
-#         print(f"Erro ao adicionar Azimute ao arquivo DXF: {e}")
-
-#     try:
-#         distance_az_v1 = calculate_distance(ponto_az, v1)
-#         add_label_and_distance(doc, msp, ponto_az, v1, "", distance_az_v1)
-#     except Exception as e:
-#         print(f"Erro ao adicionar distância Az-V1 ao DXF: {e}")
-
+    # boundary_points é o conjunto original de pontos com bulge preservado
+    if arcs:  # verifica se há arcos, caso contrário use a abordagem atual (somente linhas)
+        msp.add_lwpolyline(boundary_points, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+    else:
+        # sua abordagem anterior, para linhas sem arco (se não houver boundary_points)
+        for line in lines:
+            msp.add_line(start=line[0], end=line[1], dxfattribs={"layer": "LAYOUT_MEMORIAL"})
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
         doc.saveas(dxf_output_path)
