@@ -244,7 +244,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
         for entity in msp.query('LWPOLYLINE'):
             if entity.is_closed:
-                polyline_points = entity.get_points('xyseb')
+                polyline_points = entity.get_points('xyb')
                 num_points = len(polyline_points)
 
                 boundary_points = []
