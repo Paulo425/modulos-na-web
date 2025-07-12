@@ -1040,9 +1040,9 @@ def gerar_avaliacao():
 
 
 
-@app.route('/memoriais-azimute-p1-p2')
-def memoriais_azimute_p1_p2():
-    return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_P1_P2")
+# @app.route('/memoriais-azimute-p1-p2')
+# def memoriais_azimute_p1_p2():
+#     return render_template('em_breve.html', titulo="MEMORIAIS_AZIMUTE_P1_P2")
 
 # @app.route('/memoriais-angulos-internos-p1-p2')
 # def memoriais_angulos_internos_p1_p2():
