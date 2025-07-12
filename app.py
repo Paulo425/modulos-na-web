@@ -605,7 +605,7 @@ def gerar_memorial_angulo_az():
         except Exception as e:
             print(f"❌ Erro ao verificar ZIP: {e}")
             zip_download = None
-    return render_template("formulario_AZIMUTE_AZ.html",
+    return render_template("formulario_ANGULO_AZ.html",
                            resultado=resultado,
                            erro=erro_execucao,
                            zip_download=zip_download,
