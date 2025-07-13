@@ -794,13 +794,23 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
     # boundary_points é o conjunto original de pontos com bulge preservado
-    if arcs:  # verifica se há arcos, caso contrário use a abordagem atual (somente linhas)
-        print("DEBUG BOUNDARY POINTS:", boundary_points[:5])  # imprime primeiros 5 pontos
-        msp.add_lwpolyline(boundary_points, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
-    else:
-        # sua abordagem anterior, para linhas sem arco (se não houver boundary_points)
-        for line in lines:
-            msp.add_line(start=line[0], end=line[1], dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+    # Garante que os boundary_points incluam explicitamente o valor correto de bulge
+    boundary_points_com_bulge = []
+
+    for idx, (tipo, dados) in enumerate(sequencia_completa):
+        start_pt = dados[0]
+        
+        # Se for um arco, inclui o bulge; se for linha, bulge = 0
+        if tipo == 'arc':
+            bulge = dados[4]  # usa o bulge corrigido diretamente da sua lógica já pronta
+        else:
+            bulge = 0
+        
+        boundary_points_com_bulge.append((start_pt[0], start_pt[1], bulge))
+
+    # Adicione explicitamente a LWPOLYLINE com os bulges corretos
+    msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
         doc.saveas(dxf_output_path)
