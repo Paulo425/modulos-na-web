@@ -798,22 +798,18 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     boundary_points_com_bulge = []
 
     for idx, (tipo, dados) in enumerate(sequencia_completa):
-        start_pt = dados[0]
+        start_pt, end_pt = dados[0], dados[1]
 
-        # Garante que cada arco tenha seu bulge corretamente aplicado ao ponto inicial
         if tipo == 'arc':
-            bulge = dados[4]  # bulge calculado corretamente no início
+            bulge = dados[4]  # bulge já corretamente invertido quando necessário
         else:
             bulge = 0
 
         boundary_points_com_bulge.append((start_pt[0], start_pt[1], bulge))
 
-    # Adiciona o último ponto final, garantindo bulge=0 para fechar corretamente a polilinha
-    ultimo_ponto = sequencia_completa[-1][1][1]
-    boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
-
-    # Cria a LWPOLYLINE com os bulges corretamente posicionados
+    # NÃO ADICIONE O ÚLTIMO PONTO NOVAMENTE!
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+
 
 
 
