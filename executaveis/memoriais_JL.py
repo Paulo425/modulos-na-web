@@ -655,14 +655,17 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 bulge_original = abs(bulge_original)
             elementos.append(('arc', (start_pt, end_pt, arc['radius'], arc['length'], bulge_original)))
 
-    # 🔁 Reordena elementos para começar pelo ponto original do desenho (V1 real)
+    # Ajuste definitivo para ordenar corretamente elementos pelo ponto inicial real:
     if ponto_inicial_real:
+        index_inicio = None
         for i, elemento in enumerate(elementos):
-            tipo, dados = elemento
-            pt_inicial = dados[0]
-            if math.hypot(pt_inicial[0] - ponto_inicial_real[0], pt_inicial[1] - ponto_inicial_real[1]) < 1e-6:
-                elementos = [elemento] + elementos[:i] + elementos[i+1:]
+            pt = elemento[1][0]
+            if math.hypot(pt[0] - ponto_inicial_real[0], pt[1] - ponto_inicial_real[1]) < 1e-6:
+                index_inicio = i
                 break
+
+        if index_inicio is not None:
+            elementos = elementos[index_inicio:] + elementos[:index_inicio]
 
     # Sequenciar corretamente os segmentos mantendo coerência geométrica
     sequencia_completa = []
@@ -789,19 +792,22 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     # Garante que os boundary_points incluam explicitamente o valor correto de bulge
     boundary_points_com_bulge = []
 
-    for idx, (tipo, dados) in enumerate(sequencia_completa):
+    for tipo, dados in sequencia_completa:
         start_pt = dados[0]
-        
-        # Se for um arco, inclui o bulge; se for linha, bulge = 0
+
         if tipo == 'arc':
-            bulge = dados[4]  # usa o bulge corrigido diretamente da sua lógica já pronta
+            bulge = dados[4]  # garante uso correto do bulge já calculado
         else:
             bulge = 0
-        
+
         boundary_points_com_bulge.append((start_pt[0], start_pt[1], bulge))
 
-    # Adicione explicitamente a LWPOLYLINE com os bulges corretos
+    # Adiciona o ponto final para fechar corretamente a polilinha com bulge 0.
+    ultimo_ponto = sequencia_completa[-1][1][1]
+    boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
+
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+
 
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
