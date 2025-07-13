@@ -648,7 +648,12 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             if math.hypot(pt_inicial[0] - ponto_inicial_real[0], pt_inicial[1] - ponto_inicial_real[1]) < 1e-6:
                 elementos = [elemento] + elementos[:i] + elementos[i+1:]
                 break
-
+    # Função adicional para verificar sentido horário do arco:
+    def is_arc_clockwise(start_pt, end_pt, center):
+        start_angle = math.atan2(start_pt[1] - center[1], start_pt[0] - center[0])
+        end_angle = math.atan2(end_pt[1] - center[1], end_pt[0] - center[0])
+        angle_diff = (end_angle - start_angle) % (2 * math.pi)
+        return angle_diff > math.pi
       
     # Sequenciar corretamente os segmentos mantendo coerência geométrica
     # Ao criar elementos, armazene também o bulge original:
@@ -666,12 +671,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 bulge_original = abs(bulge_original)
             elementos.append(('arc', (start_pt, end_pt, arc['radius'], arc['length'], bulge_original)))
 
-    # Função adicional para verificar sentido horário do arco:
-    def is_arc_clockwise(start_pt, end_pt, center):
-        start_angle = math.atan2(start_pt[1] - center[1], start_pt[0] - center[0])
-        end_angle = math.atan2(end_pt[1] - center[1], end_pt[0] - center[0])
-        angle_diff = (end_angle - start_angle) % (2 * math.pi)
-        return angle_diff > math.pi
+    
 
     # Sequenciar corretamente os segmentos mantendo coerência geométrica
     sequencia_completa = []
