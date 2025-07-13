@@ -629,16 +629,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             log.write("Nenhuma linha disponível para criar o memorial descritivo.\n")
         return None
 
-    # Dentro da função create_memorial_descritivo logo após criação de combined_segments
-
-   # Criar uma única lista sequencial de pontos ordenados (linhas e arcos)
-    elementos = []
-    for line in lines:
-        elementos.append(('line', (line[0], line[1])))
-
-    if arcs:
-        for arc in arcs:
-            elementos.append(('arc', (arc['start_point'], arc['end_point'], arc['radius'], arc['length'])))
+    
 
     # 🔁 Reordena elementos para começar pelo ponto original do desenho (V1 real)
     if ponto_inicial_real:
@@ -712,15 +703,16 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     area = calculate_signed_area(simple_ordered_points)
 
     # Agora inverter o sentido corretamente
-    if area > 0:  # Troque < por > aqui para mudar o sentido desejado
+    if area > 0:  
         sequencia_completa.reverse()
-        # Inverter pontos inicial e final de cada segmento após inversão
         for idx, (tipo, dados) in enumerate(sequencia_completa):
             start, end = dados[0], dados[1]
             if tipo == 'line':
                 sequencia_completa[idx] = ('line', (end, start))
             else:
-                sequencia_completa[idx] = ('arc', (end, start, dados[2], dados[3]))
+                radius, length, bulge_original = dados[2], dados[3], dados[4]
+                bulge_corrigido = -bulge_original  # inverte o bulge
+                sequencia_completa[idx] = ('arc', (end, start, radius, length, bulge_corrigido))
         area = abs(area)
 
     print(f"Área da poligonal ajustada: {area:.4f} m²")
