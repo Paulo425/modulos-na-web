@@ -64,15 +64,20 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
         doc_novo = ezdxf.new(dxfversion='R2010')
         msp_novo = doc_novo.modelspace()
 
+        # Garantir que o novo DXF esteja limpo antes de criar a nova polilinha
+        for entity in msp_novo.query('LWPOLYLINE[layer=="LAYOUT_MEMORIAL"]'):
+            msp_novo.delete_entity(entity)
+
         pontos_polilinha = None
         bulges_polilinha = None
         ponto_inicial_real = None
 
+        # Extrai pontos da polilinha fechada original
         for entity in msp_antigo.query('LWPOLYLINE'):
             polyline_points = entity.get_points('xyseb')
 
             if entity.closed:
-                pontos_polilinha_raw = polyline_points
+                pontos_polilinha_raw = entity.get_points('xyseb')
                 ponto_inicial_real = (float(pontos_polilinha_raw[0][0]), float(pontos_polilinha_raw[0][1]))
 
                 pontos_polilinha = []
@@ -91,14 +96,14 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
                             pontos_polilinha.append((x, y))
                             bulges_polilinha.append(bulge)
                         else:
-                            print(f"⚠️ Ponto duplicado consecutivo removido: {(x, y)}")
+                            log.write(f"⚠️ Ponto duplicado consecutivo removido: {(x, y)}\n")
 
                 # Remover ponto final duplicado se necessário
                 if len(pontos_polilinha) > 2 and math.hypot(
                     pontos_polilinha[0][0] - pontos_polilinha[-1][0],
                     pontos_polilinha[0][1] - pontos_polilinha[-1][1]
                 ) < tolerancia:
-                    print("⚠️ Último ponto é igual ao primeiro — removendo ponto final duplicado.")
+                    log.write("⚠️ Último ponto é igual ao primeiro — removendo ponto final duplicado.\n")
                     pontos_polilinha.pop()
                     bulges_polilinha.pop()
 
@@ -107,28 +112,37 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
         if pontos_polilinha is None:
             raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
 
+        # Verifica a orientação e corrige se necessário
         if calculate_signed_area(pontos_polilinha) < 0:
             pontos_polilinha.reverse()
             bulges_polilinha.reverse()
             bulges_polilinha = [-b for b in bulges_polilinha]
 
-        # ❌ Removido trecho de criação da polilinha ❌
+        # Prepara pontos finais com bulge para inserir no novo DXF
+        pontos_com_bulge = [
+            (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
+            for i in range(len(pontos_polilinha))
+        ]
+
+        # Insere nova polilinha corrigida
+        msp_novo.add_lwpolyline(
+            pontos_com_bulge,
+            format='xyb',
+            close=True,
+            dxfattribs={'layer': 'LAYOUT_MEMORIAL'}
+        )
 
         ponto_az = pontos_polilinha[0]
 
-        # Salva o DXF limpo, mas sem a polilinha nova
         doc_novo.saveas(saida_path)
-        print(f"✅ DXF limpo salvo em: {saida_path}")
-        if log:
-            log.write(f"✅ DXF limpo salvo em: {saida_path}\n")
+        log.write(f"✅ DXF limpo salvo em: {saida_path}\n")
 
         return saida_path, ponto_az, ponto_inicial_real
 
     except Exception as e:
-        print(f"❌ Erro ao limpar DXF: {e}")
-        if log:
-            log.write(f"❌ Erro ao limpar DXF: {e}\n")
+        log.write(f"❌ Erro ao limpar DXF: {e}\n")
         return original_path, None, None
+
 
 
 
@@ -781,43 +795,6 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
     if log:
         log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
-
-    # boundary_points é o conjunto original de pontos com bulge preservado
-    # Garante que os boundary_points incluam explicitamente o valor correto de bulge
-    # Monta boundary_points_com_bulge garantindo a atribuição correta do bulge
-    # --- SOLUÇÃO FINAL DEFINITIVA ---
-    # Remova todas as polilinhas anteriores da camada LAYOUT_MEMORIAL:
-    for entity in msp.query('LWPOLYLINE[layer=="LAYOUT_MEMORIAL"]'):
-        msp.delete_entity(entity)
-
-    # Cria lista corrigida dos boundary_points com bulge:
-    # --- GARANTIR BULGE CORRETO E SEM ERROS ---
-    boundary_points_com_bulge = []
-
-    for tipo, dados in sequencia_completa:
-        start_pt, end_pt = dados[0], dados[1]
-
-        if tipo == 'arc':
-            # Usa o bulge já corrigido diretamente, sem novas alterações
-            bulge_corrigido = dados[4]
-        else:
-            bulge_corrigido = 0
-
-        boundary_points_com_bulge.append((start_pt[0], start_pt[1], bulge_corrigido))
-
-    # Finaliza polígono com último ponto e bulge 0
-    ultimo_ponto = sequencia_completa[-1][1][1]
-    boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
-
-    # GARANTIA: Cria APENAS UMA polilinha no DXF final
-    msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
-
-
-
-
-
-
-
 
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
