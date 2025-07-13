@@ -649,80 +649,58 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 elementos = [elemento] + elementos[:i] + elementos[i+1:]
                 break
 
-    # Sequenciar os segmentos corretamente
+      
+    # Sequenciar corretamente os segmentos mantendo coerência geométrica
     # Ao criar elementos, armazene também o bulge original:
-elementos = []
-for line in lines:
-    elementos.append(('line', (line[0], line[1])))
-if arcs:
-    for arc in arcs:
-        start_pt, end_pt = arc['start_point'], arc['end_point']
-        # Calcular bulge original corretamente
-        bulge_original = math.tan((arc['length'] / arc['radius']) / 4)
-        if is_arc_clockwise(start_pt, end_pt, arc['center']):
-            bulge_original = -abs(bulge_original)
-        else:
-            bulge_original = abs(bulge_original)
-        elementos.append(('arc', (start_pt, end_pt, arc['radius'], arc['length'], bulge_original)))
-
-# Função adicional para verificar sentido horário do arco:
-def is_arc_clockwise(start_pt, end_pt, center):
-    start_angle = math.atan2(start_pt[1] - center[1], start_pt[0] - center[0])
-    end_angle = math.atan2(end_pt[1] - center[1], end_pt[0] - center[0])
-    angle_diff = (end_angle - start_angle) % (2 * math.pi)
-    return angle_diff > math.pi
-
-# Sequenciar corretamente os segmentos mantendo coerência geométrica
-# Ao criar elementos, armazene também o bulge original:
-elementos = []
-for line in lines:
-    elementos.append(('line', (line[0], line[1])))
-if arcs:
-    for arc in arcs:
-        start_pt, end_pt = arc['start_point'], arc['end_point']
-        # Calcular bulge original corretamente
-        bulge_original = math.tan((arc['length'] / arc['radius']) / 4)
-        if is_arc_clockwise(start_pt, end_pt, arc['center']):
-            bulge_original = -abs(bulge_original)
-        else:
-            bulge_original = abs(bulge_original)
-        elementos.append(('arc', (start_pt, end_pt, arc['radius'], arc['length'], bulge_original)))
-
-# Função adicional para verificar sentido horário do arco:
-def is_arc_clockwise(start_pt, end_pt, center):
-    start_angle = math.atan2(start_pt[1] - center[1], start_pt[0] - center[0])
-    end_angle = math.atan2(end_pt[1] - center[1], end_pt[0] - center[0])
-    angle_diff = (end_angle - start_angle) % (2 * math.pi)
-    return angle_diff > math.pi
-
-# Sequenciar corretamente os segmentos mantendo coerência geométrica
-sequencia_completa = []
-ponto_atual = elementos[0][1][0]
-
-while elementos:
-    for i, elemento in enumerate(elementos):
-        tipo, dados = elemento
-        start_point, end_point = dados[0], dados[1]
-        if ponto_atual == start_point:
-            sequencia_completa.append(elemento)
-            ponto_atual = end_point
-            elementos.pop(i)
-            break
-        elif ponto_atual == end_point:
-            # Inverter direção e ajustar bulge corretamente
-            if tipo == 'line':
-                elementos[i] = ('line', (end_point, start_point))
+    elementos = []
+    for line in lines:
+        elementos.append(('line', (line[0], line[1])))
+    if arcs:
+        for arc in arcs:
+            start_pt, end_pt = arc['start_point'], arc['end_point']
+            # Calcular bulge original corretamente
+            bulge_original = math.tan((arc['length'] / arc['radius']) / 4)
+            if is_arc_clockwise(start_pt, end_pt, arc['center']):
+                bulge_original = -abs(bulge_original)
             else:
-                radius, length, bulge_original = dados[2], dados[3], dados[4]
-                bulge_corrigido = -bulge_original  # Inverte o sinal corretamente
-                elementos[i] = ('arc', (end_point, start_point, radius, length, bulge_corrigido))
-            sequencia_completa.append(elementos[i])
-            ponto_atual = start_point
-            elementos.pop(i)
-            break
-    else:
-        if elementos:
-            ponto_atual = elementos[0][1][0]
+                bulge_original = abs(bulge_original)
+            elementos.append(('arc', (start_pt, end_pt, arc['radius'], arc['length'], bulge_original)))
+
+    # Função adicional para verificar sentido horário do arco:
+    def is_arc_clockwise(start_pt, end_pt, center):
+        start_angle = math.atan2(start_pt[1] - center[1], start_pt[0] - center[0])
+        end_angle = math.atan2(end_pt[1] - center[1], end_pt[0] - center[0])
+        angle_diff = (end_angle - start_angle) % (2 * math.pi)
+        return angle_diff > math.pi
+
+    # Sequenciar corretamente os segmentos mantendo coerência geométrica
+    sequencia_completa = []
+    ponto_atual = elementos[0][1][0]
+
+    while elementos:
+        for i, elemento in enumerate(elementos):
+            tipo, dados = elemento
+            start_point, end_point = dados[0], dados[1]
+            if ponto_atual == start_point:
+                sequencia_completa.append(elemento)
+                ponto_atual = end_point
+                elementos.pop(i)
+                break
+            elif ponto_atual == end_point:
+                # Inverter direção e ajustar bulge corretamente
+                if tipo == 'line':
+                    elementos[i] = ('line', (end_point, start_point))
+                else:
+                    radius, length, bulge_original = dados[2], dados[3], dados[4]
+                    bulge_corrigido = -bulge_original  # Inverte o sinal corretamente
+                    elementos[i] = ('arc', (end_point, start_point, radius, length, bulge_corrigido))
+                sequencia_completa.append(elementos[i])
+                ponto_atual = start_point
+                elementos.pop(i)
+                break
+        else:
+            if elementos:
+                ponto_atual = elementos[0][1][0]
 
 
 
