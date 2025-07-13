@@ -744,8 +744,10 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
         start_point = dados['start_point']
         end_point = dados['end_point']
-        bulge = dados['bulge']
-
+        if tipo == 'arc':
+            bulge = dados['bulge']  # ✅ bulge existe apenas para arco
+        else:
+            bulge = 0  # ✅ para linhas, bulge = 0 sempre
         if tipo == "line":
             azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
             azimute_excel = convert_to_dms(azimuth)
@@ -780,7 +782,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         boundary_points_com_bulge.append((start_point[0], start_point[1], bulge))
 
     # Fecha corretamente adicionando o último ponto sem bulge
-    ultimo_ponto = sequencia_completa[-1][1][1]
+    ultimo_ponto = sequencia_completa[-1][1]['end_point']
     boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
 
     # Insere a polilinha correta no DXF (remove anteriores)
