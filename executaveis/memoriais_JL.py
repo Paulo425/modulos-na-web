@@ -623,13 +623,21 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     if arcs:
         for arc in arcs:
             start_pt, end_pt = arc['start_point'], arc['end_point']
-            # Calcular bulge original corretamente
-            bulge_original = math.tan((arc['length'] / arc['radius']) / 4)
+
+            # Recalcular corretamente o comprimento da corda e bulge diretamente
+            chord_length = math.hypot(end_pt[0] - start_pt[0], end_pt[1] - start_pt[1])
+            sagitta = arc['radius'] - math.sqrt(arc['radius']**2 - (chord_length / 2)**2)
+
+            bulge_original = (2 * sagitta) / chord_length
+
+            # Ajusta o sinal do bulge de acordo com a direção do arco (horário ou anti-horário)
             if is_arc_clockwise(start_pt, end_pt, arc['center']):
                 bulge_original = -abs(bulge_original)
             else:
                 bulge_original = abs(bulge_original)
+
             elementos.append(('arc', (start_pt, end_pt, arc['radius'], arc['length'], bulge_original)))
+
 
     # Ajuste definitivo para ordenar corretamente elementos pelo ponto inicial real:
     if ponto_inicial_real:
