@@ -210,6 +210,8 @@ from shapely.geometry import Polygon
 
 def get_document_info_from_dxf(dxf_file_path, log=None):
     import ezdxf
+    import math
+    from shapely.geometry import Polygon
 
     if log is None:
         class DummyLog:
@@ -225,60 +227,62 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         perimeter_dxf = 0
         boundary_points = []
 
-        # Processa as LWPOLYLINE
+        # Processa as LWPOLYLINE corretamente capturando bulge
         for entity in msp.query('LWPOLYLINE'):
-            points = entity.get_points('xyb')
-            for i in range(len(points)):
-                start_point = points[i]
-                end_point = points[(i + 1) % len(points)]
-                # Logger importante para confirmar leitura dos pontos e bulges
+            points = entity.get_points('xyb')  # Captura XY e BULGE corretamente
+            for i, (x_start, y_start, bulge) in enumerate(points):
+                x_end, y_end, _ = points[(i + 1) % len(points)]
+
+                start_point = (x_start, y_start)
+                end_point = (x_end, y_end)
+
                 log.write(f"Pontos DXF capturados: start={start_point}, end={end_point}, bulge={bulge}\n")
-                lines.append((start_point, end_point))
 
-                segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])
-                perimeter_dxf += segment_length
+                if abs(bulge) > 1e-8:
+                    chord_length = math.hypot(x_end - x_start, y_end - y_start)
+                    angle_span_rad = 4 * math.atan(abs(bulge))
+                    radius = chord_length / (2 * math.sin(angle_span_rad / 2))
+                    sagitta = abs(bulge) * chord_length / 2
 
-                boundary_points.append((start_point[0], start_point[1], 0))
+                    mid_x = (x_start + x_end) / 2
+                    mid_y = (y_start + y_end) / 2
 
-        # Processa os arcos diretamente do DXF
-        for entity in msp.query('ARC'):
-            center = entity.dxf.center
-            radius = entity.dxf.radius
-            start_angle = math.radians(entity.dxf.start_angle)
-            end_angle = math.radians(entity.dxf.end_angle)
+                    dx = x_end - x_start
+                    dy = y_end - y_start
+                    perp_vector = (-dy / chord_length, dx / chord_length)
 
-            arc_length = abs(end_angle - start_angle) * radius
-            arcs.append({
-                'center': center,
-                'radius': radius,
-                'start_angle': start_angle,
-                'end_angle': end_angle,
-                'length': arc_length,
-                'start_point': (
-                    center[0] + radius * math.cos(start_angle),
-                    center[1] + radius * math.sin(start_angle)),
-                'end_point': (
-                    center[0] + radius * math.cos(end_angle),
-                    center[1] + radius * math.sin(end_angle)),
-            })
-            log.write(f"Elemento (arco) adicionado à lista: {arcs[-1]}\n")
+                    if bulge > 0:  # anti-horário
+                        center_x = mid_x + perp_vector[0] * (radius - sagitta)
+                        center_y = mid_y + perp_vector[1] * (radius - sagitta)
+                    else:  # horário
+                        center_x = mid_x - perp_vector[0] * (radius - sagitta)
+                        center_y = mid_y - perp_vector[1] * (radius - sagitta)
 
+                    center = (center_x, center_y)
+                    arc_length = abs(radius * angle_span_rad)
 
-            perimeter_dxf += arc_length
+                    arcs.append({
+                        'start_point': start_point,
+                        'end_point': end_point,
+                        'center': center,
+                        'radius': radius,
+                        'length': arc_length,
+                        'bulge': bulge
+                    })
 
-            boundary_points.append((arcs[-1]['start_point'][0], arcs[-1]['start_point'][1], 0))
+                    perimeter_dxf += arc_length
+                    log.write(f"🔴 Arco identificado: {arcs[-1]}\n")
 
-            log.write(
-                f"Arco original encontrado: "
-                f"start_point={arcs[-1]['start_point']}, "
-                f"end_point={arcs[-1]['end_point']}, "
-                f"center={arcs[-1]['center']}, "
-                f"radius={arcs[-1]['radius']:.3f}, "
-                f"length={arcs[-1]['length']:.3f}, "
-                f"bulge={bulge:.5f}\n"
-            )
+                else:
+                    # Linha reta
+                    lines.append((start_point, end_point))
+                    segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])
+                    perimeter_dxf += segment_length
+                    log.write(f"🔵 Linha identificada: start={start_point}, end={end_point}, length={segment_length:.3f}\n")
 
+                boundary_points.append((x_start, y_start, bulge))
 
+        # Calcula a área final
         polygon_coords = [(x, y) for x, y, _ in boundary_points]
         polygon = Polygon(polygon_coords)
         area_dxf = polygon.area
@@ -288,6 +292,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
     except Exception as e:
         log.write(f"Erro ao obter informações do documento: {e}\n")
         return None, [], [], 0, 0, []
+
 
 
 
