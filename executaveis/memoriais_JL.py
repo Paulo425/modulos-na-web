@@ -646,7 +646,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     if ponto_inicial_real:
         index_inicio = None
         for i, elemento in enumerate(elementos):
-            pt = elemento[1][0]
+            pt = elemento[1]['start_point']  # ✅ acesso correto!
             if math.hypot(pt[0] - ponto_inicial_real[0], pt[1] - ponto_inicial_real[1]) < 1e-6:
                 index_inicio = i
                 break
@@ -654,14 +654,16 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         if index_inicio is not None:
             elementos = elementos[index_inicio:] + elementos[:index_inicio]
 
+
     # Sequenciar corretamente os segmentos mantendo coerência geométrica
     sequencia_completa = []
-    ponto_atual = elementos[0][1][0]
+    ponto_atual = elementos[0][1]['start_point']  # ✅ Corrigido aqui!
 
     while elementos:
         for i, elemento in enumerate(elementos):
             tipo, dados = elemento
-            start_point, end_point = dados[0], dados[1]
+            start_point, end_point = dados['start_point'], dados['end_point']  # ✅ Corrigido aqui!
+
             if ponto_atual == start_point:
                 sequencia_completa.append(elemento)
                 ponto_atual = end_point
@@ -670,18 +672,27 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             elif ponto_atual == end_point:
                 # Inverter direção e ajustar bulge corretamente
                 if tipo == 'line':
-                    elementos[i] = ('line', (end_point, start_point))
-                else:
-                    radius, length, bulge_original = dados[2], dados[3], dados[4]
-                    bulge_corrigido = -bulge_original  # Inverte o sinal corretamente
-                    elementos[i] = ('arc', (end_point, start_point, radius, length, bulge_corrigido))
+                    elementos[i] = ('line', {
+                        'start_point': end_point,
+                        'end_point': start_point
+                    })
+                else:  # tipo == 'arc'
+                    elementos[i] = ('arc', {
+                        'start_point': end_point,
+                        'end_point': start_point,
+                        'center': dados['center'],
+                        'radius': dados['radius'],
+                        'length': dados['length'],
+                        'bulge': -dados['bulge']  # Inverte o sinal do bulge corretamente
+                    })
                 sequencia_completa.append(elementos[i])
                 ponto_atual = start_point
                 elementos.pop(i)
                 break
+
         else:
             if elementos:
-                ponto_atual = elementos[0][1][0]
+                ponto_atual = elementos[0][1]['start_point']
 
 
 
@@ -696,16 +707,28 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     if area > 0:
         sequencia_completa.reverse()
         sequencia_corrigida = []
+
         for tipo, dados in sequencia_completa:
-            start, end = dados[0], dados[1]
+            start, end = dados['start_point'], dados['end_point']  # ✅ Correção aqui!
+
             if tipo == 'arc':
-                radius, length, bulge_original = dados[2], dados[3], dados[4]
-                bulge_corrigido = -bulge_original
-                sequencia_corrigida.append(('arc', (end, start, radius, length, bulge_corrigido)))
-            else:
-                sequencia_corrigida.append(('line', (end, start)))
+                sequencia_corrigida.append(('arc', {
+                    'start_point': end,
+                    'end_point': start,
+                    'center': dados['center'],
+                    'radius': dados['radius'],
+                    'length': dados['length'],
+                    'bulge': -dados['bulge']  # ✅ Correção no sinal do bulge
+                }))
+            else:  # tipo == 'line'
+                sequencia_corrigida.append(('line', {
+                    'start_point': end,
+                    'end_point': start
+                }))
+
         sequencia_completa = sequencia_corrigida
         area = abs(area)
+
 
     print(f"Área da poligonal ajustada: {area:.4f} m²")
     if log:
