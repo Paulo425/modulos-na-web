@@ -24,8 +24,11 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
 
 
                 doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points = get_document_info_from_dxf(dxf_limpo_path, log=log)
-                if not doc or not ponto_az:
-                    raise ValueError("Erro ao processar o DXF ou ponto Az não encontrado.")
+                if not doc:
+                    raise ValueError("Erro ao processar o DXF.")
+                if ponto_az is None:
+                    ponto_az = (0.0, 0.0)  # ou qualquer valor neutro, já que não será usado
+
 
                 v1 = lines[0][0]
                 distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])

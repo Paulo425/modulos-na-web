@@ -236,23 +236,57 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
                     segment_length = math.hypot(x_end - x_start, y_end - y_start)
 
+                    # Exemplo correto do trecho a ser usado na sua função get_document_info_from_dxf:
                     if abs(bulge) > 1e-8:
-                        # Se for arco, armazena no arcs com o bulge original.
+                        dx = end_point[0] - start_point[0]
+                        dy = end_point[1] - start_point[1]
+                        chord_length = math.hypot(dx, dy)
+
+                        angle_span_rad = 4 * math.atan(abs(bulge))
+                        radius = chord_length / (2 * math.sin(angle_span_rad / 2))
+
+                        mid_x = (start_point[0] + end_point[0]) / 2
+                        mid_y = (start_point[1] + end_point[1]) / 2
+                        chord_midpoint = (mid_x, mid_y)
+
+                        offset_dist = math.sqrt(abs(radius**2 - (chord_length / 2)**2))
+                        perp_vector = (-dy / chord_length, dx / chord_length)
+
+                        if bulge > 0:
+                            center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
+                            center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
+                        else:
+                            center_x = chord_midpoint[0] - perp_vector[0] * offset_dist
+                            center_y = chord_midpoint[1] - perp_vector[1] * offset_dist
+
+                        center = (center_x, center_y)
+
+                        start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
+                        end_angle = math.atan2(end_point[1] - center[1], end_point[0] - center[0])
+
+                        if bulge > 0 and end_angle < start_angle:
+                            end_angle += 2 * math.pi
+                        elif bulge < 0 and end_angle > start_angle:
+                            end_angle -= 2 * math.pi
+
+                        arc_length = abs(radius * (end_angle - start_angle))
+
+                        # ✅ Aqui está a CORREÇÃO DEFINITIVA, garantindo todos os dados necessários:
                         arcs.append({
                             'start_point': start_point,
                             'end_point': end_point,
-                            'center': center, # <--- faltava exatamente isso!
+                            'center': center,        # Agora sim definido corretamente
                             'radius': radius,
                             'length': arc_length,
                             'bulge': bulge
                         })
-                        angle_span_rad = 4 * math.atan(abs(bulge))
-                        radius = segment_length / (2 * math.sin(angle_span_rad / 2))
-                        arc_length = abs(radius * angle_span_rad)
+
                         perimeter_dxf += arc_length
+
                     else:
                         # Linha reta
                         lines.append((start_point, end_point))
+                        segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])  # ✅ DEFINIR AQUI!
                         perimeter_dxf += segment_length
 
                 polygon_coords = [(x, y) for x, y, _ in boundary_points]
