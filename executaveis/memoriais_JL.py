@@ -50,15 +50,14 @@ def obter_data_em_portugues():
 
 
 def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
-    import math
-    import ezdxf
-
+    
     if log is None:
         class DummyLog:
             def write(self, msg): pass
         log = DummyLog()
 
     try:
+        # Carrega o arquivo DXF original
         doc_antigo = ezdxf.readfile(original_path)
         msp_antigo = doc_antigo.modelspace()
 
@@ -66,56 +65,42 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
         doc_novo = ezdxf.new(dxfversion='R2010')
         msp_novo = doc_novo.modelspace()
 
+        pontos_com_bulge = None
+
+        # Obtém diretamente os pontos da polilinha fechada (com os bulges originais preservados)
         for entity in msp_antigo.query('LWPOLYLINE'):
             if entity.closed:
-                pontos_polilinha_raw = entity.get_points('xyb')  # xy + bulge original preservado
+                pontos_com_bulge = [(point[0], point[1], point[4]) for point in entity.get_points('xyseb')]
 
-                pontos_polilinha = []
-                bulges_polilinha = []
+                # Remove pontos consecutivos duplicados
                 tolerancia = 1e-6
+                pontos_unicos = [pontos_com_bulge[0]]
+                for pt in pontos_com_bulge[1:]:
+                    x_ant, y_ant, _ = pontos_unicos[-1]
+                    if math.hypot(pt[0] - x_ant, pt[1] - y_ant) > tolerancia:
+                        pontos_unicos.append(pt)
 
-                for pt in pontos_polilinha_raw:
-                    x, y, bulge = pt
-                    x, y, bulge = float(x), float(y), float(bulge)
-                    if not pontos_polilinha:
-                        pontos_polilinha.append((x, y))
-                        bulges_polilinha.append(bulge)
-                    else:
-                        x_ant, y_ant = pontos_polilinha[-1]
-                        if math.hypot(x - x_ant, y - y_ant) > tolerancia:
-                            pontos_polilinha.append((x, y))
-                            bulges_polilinha.append(bulge)
+                # Verificar e corrigir orientação (manter anti-horário)
+                coords = [(p[0], p[1]) for p in pontos_unicos]
+                if calculate_signed_area(coords) < 0:
+                    pontos_unicos.reverse()
+                    pontos_unicos = [(p[0], p[1], -p[2]) for p in pontos_unicos]
 
-                # Remover ponto final duplicado, se existir
-                if len(pontos_polilinha) > 2 and math.hypot(
-                    pontos_polilinha[0][0] - pontos_polilinha[-1][0],
-                    pontos_polilinha[0][1] - pontos_polilinha[-1][1]
-                ) < tolerancia:
-                    pontos_polilinha.pop()
-                    bulges_polilinha.pop()
-
-                # Verificar orientação e inverter se necessário (manter anti-horário)
-                if calculate_signed_area(pontos_polilinha) < 0:
-                    pontos_polilinha.reverse()
-                    bulges_polilinha.reverse()
-                    bulges_polilinha = [-b for b in bulges_polilinha]
-
-                pontos_com_bulge = [
-                    (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
-                    for i in range(len(pontos_polilinha))
-                ]
-
-                # Insere corretamente no novo DXF com bulge preservado
-                msp_novo.add_lwpolyline(
-                    pontos_com_bulge,
-                    format='xyb',
-                    close=True,
-                    dxfattribs={'layer': 'LAYOUT_MEMORIAL'}
-                )
-
+                pontos_com_bulge = pontos_unicos
                 break
 
-        ponto_az = pontos_polilinha[0] if pontos_polilinha else None
+        if pontos_com_bulge is None:
+            raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
+
+        # Insere diretamente no novo DXF garantindo preservação total dos bulges
+        msp_novo.add_lwpolyline(
+            pontos_com_bulge,
+            format='xyb',
+            close=True,
+            dxfattribs={'layer': 'LAYOUT_MEMORIAL'}
+        )
+
+        ponto_az = (pontos_com_bulge[0][0], pontos_com_bulge[0][1])
 
         doc_novo.saveas(saida_path)
         print(f"✅ DXF limpo salvo em: {saida_path}")
@@ -127,6 +112,7 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
         print(f"❌ Erro ao limpar DXF: {e}")
         log.write(f"❌ Erro ao limpar DXF: {e}\n")
         return original_path, None, None
+
 
 
 
