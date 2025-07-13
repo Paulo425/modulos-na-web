@@ -69,10 +69,10 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
         ponto_inicial_real = None
 
         for entity in msp_antigo.query('LWPOLYLINE'):
-            polyline_points = entity.get_points('xyseb')  # Garanta que esteja definido assim no início deste loop
+            polyline_points = entity.get_points('xyseb')
 
             if entity.closed:
-                pontos_polilinha_raw = entity.get_points('xyseb')
+                pontos_polilinha_raw = polyline_points
                 ponto_inicial_real = (float(pontos_polilinha_raw[0][0]), float(pontos_polilinha_raw[0][1]))
 
                 pontos_polilinha = []
@@ -112,20 +112,11 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
             bulges_polilinha.reverse()
             bulges_polilinha = [-b for b in bulges_polilinha]
 
-        pontos_com_bulge = [
-            (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
-            for i in range(len(pontos_polilinha))
-        ]
-
-        msp_novo.add_lwpolyline(
-            pontos_com_bulge,
-            format='xyb',
-            close=True,
-            dxfattribs={'layer': 'DIVISA_PROJETADA'}
-        )
+        # ❌ Removido trecho de criação da polilinha ❌
 
         ponto_az = pontos_polilinha[0]
 
+        # Salva o DXF limpo, mas sem a polilinha nova
         doc_novo.saveas(saida_path)
         print(f"✅ DXF limpo salvo em: {saida_path}")
         if log:
@@ -138,6 +129,7 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
         if log:
             log.write(f"❌ Erro ao limpar DXF: {e}\n")
         return original_path, None, None
+
 
 
 
@@ -799,19 +791,27 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         msp.delete_entity(entity)
 
     # Cria lista corrigida dos boundary_points com bulge:
+    # --- GARANTIR BULGE CORRETO E SEM ERROS ---
     boundary_points_com_bulge = []
-    for tipo, dados in sequencia_completa:
-        start_pt = dados[0]
 
-        bulge_corrigido = dados[4] if tipo == 'arc' else 0
+    for tipo, dados in sequencia_completa:
+        start_pt, end_pt = dados[0], dados[1]
+
+        if tipo == 'arc':
+            # Usa o bulge já corrigido diretamente, sem novas alterações
+            bulge_corrigido = dados[4]
+        else:
+            bulge_corrigido = 0
+
         boundary_points_com_bulge.append((start_pt[0], start_pt[1], bulge_corrigido))
 
-    # Fecha corretamente adicionando o último ponto com bulge zero (corrigido aqui!):
-    ultimo_ponto = sequencia_completa[-1][1][1]  # Correção feita aqui!
+    # Finaliza polígono com último ponto e bulge 0
+    ultimo_ponto = sequencia_completa[-1][1][1]
     boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
 
-    # Adiciona a única polilinha corrigida no DXF final:
+    # GARANTIA: Cria APENAS UMA polilinha no DXF final
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+
 
 
 
