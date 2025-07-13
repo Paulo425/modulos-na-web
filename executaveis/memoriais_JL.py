@@ -807,7 +807,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         boundary_points_com_bulge.append((start_pt[0], start_pt[1], bulge_corrigido))
 
     # Fecha corretamente adicionando o último ponto com bulge zero (corrigido aqui!):
-    ultimo_ponto = sequencia_completa[-1][1]  # Correção crucial aqui ✅
+    ultimo_ponto = sequencia_completa[-1][1][1]  # Correção feita aqui!
     boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
 
     # Adiciona a única polilinha corrigida no DXF final:
