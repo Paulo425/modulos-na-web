@@ -706,17 +706,21 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     area = calculate_signed_area(simple_ordered_points)
 
     # Agora inverter o sentido corretamente
-    if area > 0:  
+    if area > 0:
         sequencia_completa.reverse()
+        
         for idx, (tipo, dados) in enumerate(sequencia_completa):
             start, end = dados[0], dados[1]
             if tipo == 'line':
                 sequencia_completa[idx] = ('line', (end, start))
             else:
+                # Para arcos, inverter raio, comprimento e bulge também:
                 radius, length, bulge_original = dados[2], dados[3], dados[4]
-                bulge_corrigido = -bulge_original  # inverte o bulge
-                sequencia_completa[idx] = ('arc', (end, start, radius, length, bulge_corrigido))
+                bulge_invertido = -bulge_original  # 🔄 Aqui inverte-se o bulge claramente!
+                sequencia_completa[idx] = ('arc', (end, start, radius, length, bulge_invertido))
+
         area = abs(area)
+
 
     print(f"Área da poligonal ajustada: {area:.4f} m²")
     if log:
@@ -790,23 +794,27 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     # boundary_points é o conjunto original de pontos com bulge preservado
     # Garante que os boundary_points incluam explicitamente o valor correto de bulge
+    # Monta boundary_points_com_bulge garantindo a atribuição correta do bulge
     boundary_points_com_bulge = []
 
-    for tipo, dados in sequencia_completa:
+    for idx, (tipo, dados) in enumerate(sequencia_completa):
         start_pt = dados[0]
 
+        # Garante que cada arco tenha seu bulge corretamente aplicado ao ponto inicial
         if tipo == 'arc':
-            bulge = dados[4]  # garante uso correto do bulge já calculado
+            bulge = dados[4]  # bulge calculado corretamente no início
         else:
             bulge = 0
 
         boundary_points_com_bulge.append((start_pt[0], start_pt[1], bulge))
 
-    # Adiciona o ponto final para fechar corretamente a polilinha com bulge 0.
+    # Adiciona o último ponto final, garantindo bulge=0 para fechar corretamente a polilinha
     ultimo_ponto = sequencia_completa[-1][1][1]
     boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
 
+    # Cria a LWPOLYLINE com os bulges corretamente posicionados
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+
 
 
     try:
