@@ -711,7 +711,10 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     boundary_points_com_bulge = []
 
     for idx, (tipo, dados) in enumerate(sequencia_completa):
-        start_point, end_point = dados[0], dados[1]
+        if tipo == "line":
+            start_point, end_point = dados[0], dados[1]
+        else:  # tipo == 'arc'
+            start_point, end_point = dados['start_point'], dados['end_point']
 
         if tipo == "line":
             azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
