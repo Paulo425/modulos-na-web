@@ -621,8 +621,14 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     # Sequenciar corretamente os segmentos mantendo coerência geométrica
     # Ao criar elementos, armazene também o bulge original:
     elementos = []
+
     for line in lines:
-        elementos.append(('line', (line[0], line[1])))
+        elementos.append(('line', {
+            'start_point': line[0],
+            'end_point': line[1],
+            'bulge': 0
+        }))
+
     if arcs:
         for arc in arcs:
             elementos.append(('arc', {
@@ -633,6 +639,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 'length': arc['length'],
                 'bulge': arc['bulge']
             }))
+
 
 
     # Ajuste definitivo para ordenar corretamente elementos pelo ponto inicial real:
@@ -711,18 +718,17 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     boundary_points_com_bulge = []
 
     for idx, (tipo, dados) in enumerate(sequencia_completa):
-        if tipo == "line":
-            start_point, end_point = dados[0], dados[1]
-        else:  # tipo == 'arc'
-            start_point, end_point = dados['start_point'], dados['end_point']
+
+        start_point = dados['start_point']
+        end_point = dados['end_point']
+        bulge = dados['bulge']
 
         if tipo == "line":
             azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
             azimute_excel = convert_to_dms(azimuth)
             distancia_excel = f"{distance:.2f}".replace(".", ",")
-            bulge = 0
         else:  # tipo == 'arc'
-            radius, distance, bulge = dados[2], dados[3], dados[4]
+            radius, distance = dados['radius'], dados['length']
             azimute_excel = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
@@ -744,6 +750,8 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
+
+
 
         # Boundary com bulge para DXF
         boundary_points_com_bulge.append((start_point[0], start_point[1], bulge))
