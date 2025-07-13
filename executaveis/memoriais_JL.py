@@ -205,7 +205,12 @@ def bulge_to_arc_length(start_point, end_point, bulge):
     arc_length = radius * angle
     return arc_length, radius, angle
 
+import math
+from shapely.geometry import Polygon
+
 def get_document_info_from_dxf(dxf_file_path, log=None):
+    import ezdxf
+
     if log is None:
         class DummyLog:
             def write(self, msg): pass
@@ -220,88 +225,48 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         perimeter_dxf = 0
         boundary_points = []
 
+        # Processa as LWPOLYLINE
         for entity in msp.query('LWPOLYLINE'):
-            if entity.is_closed:
-                polyline_points = entity.get_points('xyb')  # ✅ Aqui já contém o bulge original
-                num_points = len(polyline_points)
+            points = entity.get_points('xy')
+            for i in range(len(points)):
+                start_point = points[i]
+                end_point = points[(i + 1) % len(points)]
+                lines.append((start_point, end_point))
 
-                for i in range(num_points):
-                    x_start, y_start, bulge = polyline_points[i]
-                    x_end, y_end, _ = polyline_points[(i + 1) % num_points]
+                segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])
+                perimeter_dxf += segment_length
 
-                    start_point = (float(x_start), float(y_start))
-                    end_point = (float(x_end), float(y_end))
+                boundary_points.append((start_point[0], start_point[1], 0))
 
-                    boundary_points.append((start_point[0], start_point[1], bulge))  # 🔑 armazena o bulge original
+        # Processa os arcos diretamente do DXF
+        for entity in msp.query('ARC'):
+            center = entity.dxf.center
+            radius = entity.dxf.radius
+            start_angle = math.radians(entity.dxf.start_angle)
+            end_angle = math.radians(entity.dxf.end_angle)
 
-                    segment_length = math.hypot(x_end - x_start, y_end - y_start)
+            arc_length = abs(end_angle - start_angle) * radius
+            arcs.append({
+                'center': center,
+                'radius': radius,
+                'start_angle': start_angle,
+                'end_angle': end_angle,
+                'length': arc_length,
+                'start_point': (
+                    center[0] + radius * math.cos(start_angle),
+                    center[1] + radius * math.sin(start_angle)),
+                'end_point': (
+                    center[0] + radius * math.cos(end_angle),
+                    center[1] + radius * math.sin(end_angle)),
+            })
 
-                    # Exemplo correto do trecho a ser usado na sua função get_document_info_from_dxf:
-                    if abs(bulge) > 1e-8:
-                        dx = end_point[0] - start_point[0]
-                        dy = end_point[1] - start_point[1]
-                        chord_length = math.hypot(dx, dy)
+            perimeter_dxf += arc_length
 
-                        angle_span_rad = 4 * math.atan(abs(bulge))
-                        radius = chord_length / (2 * math.sin(angle_span_rad / 2))
+            boundary_points.append((arcs[-1]['start_point'][0], arcs[-1]['start_point'][1], 0))
 
-                        mid_x = (start_point[0] + end_point[0]) / 2
-                        mid_y = (start_point[1] + end_point[1]) / 2
-                        chord_midpoint = (mid_x, mid_y)
-
-                        offset_dist = math.sqrt(abs(radius**2 - (chord_length / 2)**2))
-                        perp_vector = (-dy / chord_length, dx / chord_length)
-
-                        if bulge > 0:
-                            center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
-                            center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
-                        else:
-                            center_x = chord_midpoint[0] - perp_vector[0] * offset_dist
-                            center_y = chord_midpoint[1] - perp_vector[1] * offset_dist
-
-                        center = (center_x, center_y)
-
-                        start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
-                        end_angle = math.atan2(end_point[1] - center[1], end_point[0] - center[0])
-
-                        if bulge > 0 and end_angle < start_angle:
-                            end_angle += 2 * math.pi
-                        elif bulge < 0 and end_angle > start_angle:
-                            end_angle -= 2 * math.pi
-
-                        arc_length = abs(radius * (end_angle - start_angle))
-
-                        # ✅ Aqui está a CORREÇÃO DEFINITIVA, garantindo todos os dados necessários:
-                        arcs.append({
-                            'start_point': start_point,
-                            'end_point': end_point,
-                            'center': center,        # Agora sim definido corretamente
-                            'radius': radius,
-                            'length': arc_length,
-                            'bulge': bulge
-                        })
-
-                        perimeter_dxf += arc_length
-
-                    else:
-                        # Linha reta
-                        lines.append((start_point, end_point))
-                        segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])  # ✅ DEFINIR AQUI!
-                        perimeter_dxf += segment_length
-
-                polygon_coords = [(x, y) for x, y, _ in boundary_points]
-                polygon = Polygon(polygon_coords)
-                area_dxf = polygon.area
-                break
-
-        if not lines and not arcs:
-            log.write("Nenhuma polilinha fechada encontrada no arquivo DXF.\n")
-            return None, [], [], 0, 0, []
-
-        log.write(f"Linhas processadas: {len(lines)}\n")
-        log.write(f"Arcos processados: {len(arcs)}\n")
-        log.write(f"Perímetro do DXF: {perimeter_dxf:.2f} metros\n")
-        log.write(f"Área do DXF: {area_dxf:.2f} metros quadrados\n")
+        polygon_coords = [(x, y) for x, y, _ in boundary_points]
+        polygon = Polygon(polygon_coords)
+        area_dxf = polygon.area
 
         return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
 
