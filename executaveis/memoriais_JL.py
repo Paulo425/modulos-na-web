@@ -227,10 +227,12 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
         # Processa as LWPOLYLINE
         for entity in msp.query('LWPOLYLINE'):
-            points = entity.get_points('xy')
+            points = entity.get_points('xyb')
             for i in range(len(points)):
                 start_point = points[i]
                 end_point = points[(i + 1) % len(points)]
+                # Logger importante para confirmar leitura dos pontos e bulges
+                log.write(f"Pontos DXF capturados: start={start_point}, end={end_point}, bulge={bulge}\n")
                 lines.append((start_point, end_point))
 
                 segment_length = math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])
@@ -803,15 +805,23 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
     try:
+
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
+         # Logger claro e útil sobre boundary_points_com_bulge
+        if log:
+            log.write("Boundary points com bulge (final para DXF):\n")
+            for idx, pt in enumerate(boundary_points_com_bulge, 1):
+                log.write(f"{idx}: Coordenadas={pt[:2]}, Bulge={pt[2]}\n")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
         if log:
             log.write(f"Arquivo DXF salvo em: {dxf_output_path}\n")
     except Exception as e:
-        print(f"Erro ao salvar DXF: {e}")
+        erro_msg = f"Erro ao salvar DXF: {e}"
+        print(erro_msg)
+
         if log:
-            log.write(f"Erro ao salvar DXF: {e}\n")
+            log.write(erro_msg + "\n")
 
     return excel_output_path
 
