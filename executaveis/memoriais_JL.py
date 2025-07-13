@@ -678,7 +678,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     data = []
     num_vertices = len(sequencia_completa)
 
-    boundary_points_com_bulge = boundary_points
+    boundary_points_com_bulge = []
 
     for idx, (tipo, dados) in enumerate(sequencia_completa):
         start_point, end_point = dados[0], dados[1]
@@ -725,9 +725,10 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
 
-
+    # Agora salva Excel normalmente
     df = pd.DataFrame(data, dtype=str)
     excel_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.xlsx")
+
     df.to_excel(excel_output_path, index=False)
 
     wb = openpyxl.load_workbook(excel_output_path)
