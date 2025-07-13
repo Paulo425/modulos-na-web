@@ -702,61 +702,59 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
 
 
-    # Lista de pontos sequenciais simples para área (garante polígono fechado)
+    # Calcula a área da poligonal para verificar se precisa inverter
     pontos_para_area = [seg[1][0] for seg in sequencia_completa]
-    pontos_para_area.append(sequencia_completa[-1][1][1])  # Fecha o polígono
+    pontos_para_area.append(sequencia_completa[-1][1][1])
 
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
     area = calculate_signed_area(simple_ordered_points)
 
-    # Agora inverter o sentido corretamente
+    # Agora inverter o sentido APENAS se necessário
     if area > 0:
         sequencia_completa.reverse()
-        
-        for idx, (tipo, dados) in enumerate(sequencia_completa):
+        sequencia_corrigida = []
+        for tipo, dados in sequencia_completa:
             start, end = dados[0], dados[1]
-            if tipo == 'line':
-                sequencia_completa[idx] = ('line', (end, start))
-            else:
-                # Para arcos, inverter raio, comprimento e bulge também:
+            if tipo == 'arc':
                 radius, length, bulge_original = dados[2], dados[3], dados[4]
-                bulge_invertido = -bulge_original  # 🔄 Aqui inverte-se o bulge claramente!
-                sequencia_completa[idx] = ('arc', (end, start, radius, length, bulge_invertido))
-
+                bulge_corrigido = -bulge_original
+                sequencia_corrigida.append(('arc', (end, start, radius, length, bulge_corrigido)))
+            else:
+                sequencia_corrigida.append(('line', (end, start)))
+        sequencia_completa = sequencia_corrigida
         area = abs(area)
-
 
     print(f"Área da poligonal ajustada: {area:.4f} m²")
     if log:
         log.write(f"Área da poligonal ajustada: {area:.4f} m²\n")
 
-
-
-    # Continuação após inverter corretamente
+    # Agora, cria os dados Excel e DXF com pontos e bulges corretos
     data = []
-    num_vertices = len(sequencia_completa)  # captura a quantidade correta antes do loop
+    num_vertices = len(sequencia_completa)
+
+    boundary_points_com_bulge = []
 
     for idx, (tipo, dados) in enumerate(sequencia_completa):
-        start_point = dados[0]
-        end_point = dados[1]
+        start_point, end_point = dados[0], dados[1]
 
         if tipo == "line":
             azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
             azimute_excel = convert_to_dms(azimuth)
             distancia_excel = f"{distance:.2f}".replace(".", ",")
-        elif tipo == "arc":
-            radius = dados[2]
-            distance = dados[3]
+            bulge = 0
+        else:  # tipo == 'arc'
+            radius, distance, bulge = dados[2], dados[3], dados[4]
             azimute_excel = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
+        # Acrescenta label e distância no DXF
         label = f"P{idx + 1}"
         add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=None)
 
         confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
-
         divisa = f"P{idx + 1}_P{idx + 2}" if idx + 1 < num_vertices else f"P{idx + 1}_P1"
 
+        # Preenche dados para Excel
         data.append({
             "V": label,
             "E": f"{start_point[0]:.3f}".replace('.', ','),
@@ -767,6 +765,19 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
+
+        # Boundary com bulge para DXF
+        boundary_points_com_bulge.append((start_point[0], start_point[1], bulge))
+
+    # Fecha corretamente adicionando o último ponto sem bulge
+    ultimo_ponto = sequencia_completa[-1][1][1]
+    boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
+
+    # Insere a polilinha correta no DXF (remove anteriores)
+    for entity in msp.query('LWPOLYLINE[layer=="LAYOUT_MEMORIAL"]'):
+        msp.delete_entity(entity)
+
+    msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
 
 
     df = pd.DataFrame(data, dtype=str)
