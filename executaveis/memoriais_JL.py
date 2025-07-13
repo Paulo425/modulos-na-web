@@ -794,24 +794,25 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     # Garante que os boundary_points incluam explicitamente o valor correto de bulge
     # Monta boundary_points_com_bulge garantindo a atribuição correta do bulge
     # --- SOLUÇÃO FINAL DEFINITIVA ---
-    boundary_points_com_bulge = []
+    # Remova todas as polilinhas anteriores da camada LAYOUT_MEMORIAL:
+    for entity in msp.query('LWPOLYLINE[layer=="LAYOUT_MEMORIAL"]'):
+        msp.delete_entity(entity)
 
+    # Cria lista corrigida dos boundary_points com bulge:
+    boundary_points_com_bulge = []
     for tipo, dados in sequencia_completa:
         start_pt = dados[0]
 
-        if tipo == 'arc':
-            bulge_corrigido = dados[4]  # já corrigido anteriormente
-        else:
-            bulge_corrigido = 0
-
+        bulge_corrigido = dados[4] if tipo == 'arc' else 0
         boundary_points_com_bulge.append((start_pt[0], start_pt[1], bulge_corrigido))
 
-    # Fecha corretamente adicionando o último ponto com bulge zero:
-    ultimo_ponto = sequencia_completa[-1][1][1]
+    # Fecha corretamente adicionando o último ponto com bulge zero (corrigido aqui!):
+    ultimo_ponto = sequencia_completa[-1][1]  # Correção crucial aqui ✅
     boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
 
-    # Adiciona polilinha única no DXF:
+    # Adiciona a única polilinha corrigida no DXF final:
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+
 
 
 
