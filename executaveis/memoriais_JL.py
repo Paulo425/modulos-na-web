@@ -697,8 +697,8 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
 
     # Calcula a área da poligonal para verificar se precisa inverter
-    pontos_para_area = [seg[1][0] for seg in sequencia_completa]
-    pontos_para_area.append(sequencia_completa[-1][1][1])
+    pontos_para_area = [seg[1]['start_point'] for seg in sequencia_completa]
+    pontos_para_area.append(sequencia_completa[-1][1]['end_point'])  # Fecha o polígono corretamente
 
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
     area = calculate_signed_area(simple_ordered_points)
