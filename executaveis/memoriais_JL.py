@@ -259,10 +259,23 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                     center[0] + radius * math.cos(end_angle),
                     center[1] + radius * math.sin(end_angle)),
             })
+            log.write(f"Elemento (arco) adicionado à lista: {arcs[-1]}\n")
+
 
             perimeter_dxf += arc_length
 
             boundary_points.append((arcs[-1]['start_point'][0], arcs[-1]['start_point'][1], 0))
+
+            log.write(
+                f"Arco original encontrado: "
+                f"start_point={arcs[-1]['start_point']}, "
+                f"end_point={arcs[-1]['end_point']}, "
+                f"center={arcs[-1]['center']}, "
+                f"radius={arcs[-1]['radius']:.3f}, "
+                f"length={arcs[-1]['length']:.3f}, "
+                f"bulge={bulge:.5f}\n"
+            )
+
 
         polygon_coords = [(x, y) for x, y, _ in boundary_points]
         polygon = Polygon(polygon_coords)
@@ -741,10 +754,14 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Confrontante": confrontante,
         })
 
-
-
         # Boundary com bulge para DXF
         boundary_points_com_bulge.append((start_point[0], start_point[1], bulge))
+
+        log.write(
+            f"Adicionado: Label={label}, Tipo={tipo.upper()}, Start={start_point}, End={end_point}, "
+            f"Radius={dados.get('radius', 'N/A')}, Bulge={bulge}, Azimute={azimute_excel}, Distância={distancia_excel}\n"
+        )
+
 
     # Fecha corretamente adicionando o último ponto sem bulge
     ultimo_ponto = sequencia_completa[-1][1]['end_point']
