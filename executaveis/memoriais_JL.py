@@ -241,6 +241,9 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                         arcs.append({
                             'start_point': start_point,
                             'end_point': end_point,
+                            'center': center, # <--- faltava exatamente isso!
+                            'radius': radius,
+                            'length': arc_length,
                             'bulge': bulge
                         })
                         angle_span_rad = 4 * math.atan(abs(bulge))
