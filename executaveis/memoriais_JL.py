@@ -599,25 +599,25 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         }))
 
     if arcs:
-    for arc in arcs:
-        start_point = arc['start_point']
-        end_point = arc['end_point']
-        bulge = arc['bulge']
+        for arc in arcs:
+            start_point = arc['start_point']
+            end_point = arc['end_point']
+            bulge = arc['bulge']
 
-        dx, dy = end_point[0] - start_point[0], end_point[1] - start_point[1]
-        chord_length = math.hypot(dx, dy)
-        sagitta = (bulge * chord_length) / 2
-        radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-        angle_span_rad = 4 * math.atan(abs(bulge))
-        arc_length = radius * angle_span_rad
+            dx, dy = end_point[0] - start_point[0], end_point[1] - start_point[1]
+            chord_length = math.hypot(dx, dy)
+            sagitta = (bulge * chord_length) / 2
+            radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
+            angle_span_rad = 4 * math.atan(abs(bulge))
+            arc_length = radius * angle_span_rad
 
-        elementos.append(('arc', {
-            'start_point': start_point,
-            'end_point': end_point,
-            'bulge': bulge,          # ✅ Usado APENAS para o DXF
-            'radius': radius,        # ✅ Usado APENAS para o Excel
-            'length': arc_length     # ✅ Usado APENAS para o Excel
-        }))
+            elementos.append(('arc', {
+                'start_point': start_point,
+                'end_point': end_point,
+                'bulge': bulge,          # ✅ Usado APENAS para o DXF
+                'radius': radius,        # ✅ Usado APENAS para o Excel
+                'length': arc_length     # ✅ Usado APENAS para o Excel
+            }))
 
 
 
