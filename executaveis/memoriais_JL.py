@@ -603,7 +603,6 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             elementos.append(('arc', {
                 'start_point': arc['start_point'],
                 'end_point': arc['end_point'],
-                'center': arc['center'],
                 'radius': arc['radius'],
                 'length': arc['length'],
                 'bulge': arc['bulge']
