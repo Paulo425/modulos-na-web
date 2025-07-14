@@ -52,7 +52,7 @@ def obter_data_em_portugues():
 import ezdxf
 import math
 
-ddef limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
+def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
     doc = ezdxf.readfile(dxf_original)
     msp = doc.modelspace()
 
