@@ -728,105 +728,77 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     # boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
 
 
-    # Agora, cria os dados Excel e DXF com pontos e bulges corretos
-    dados = []
+    # ✅ BLOCO DIRETO E CORRIGIDO PARA SUBSTITUIÇÃO
 
-    for entity in msp.query('LWPOLYLINE'):
-        if entity.closed:
-            pontos = entity.get_points('xyseb')
-            num_pontos = len(pontos)
-
-            for i in range(num_pontos):
-                x_start, y_start, _, _, bulge = pontos[i]
-                x_end, y_end, _, _, _ = pontos[(i + 1) % num_pontos]
-
-                dx, dy = x_end - x_start, y_end - y_start
-                chord_length = math.hypot(dx, dy)
-
-                if abs(bulge) > 1e-8:
-                    sagitta = (bulge * chord_length) / 2
-                    radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-                    angle_span_rad = 4 * math.atan(abs(bulge))
-                    arc_length = radius * angle_span_rad
-
-                    azimute_excel = f"R={radius:.3f}".replace(".", ",")
-                    distancia_excel = f"C={arc_length:.3f}".replace(".", ",")
-
-                else:
-                    azimuth, distance = calculate_azimuth_and_distance(
-                        (x_start, y_start), (x_end, y_end)
-                    )
-                    azimute_excel = convert_to_dms(azimuth)
-                    distancia_excel = f"{distance:.2f}".replace(".", ",")
-
-                label = f"P{i + 1}"
-                divisa = f"P{i + 1}_P{i + 2}" if i + 1 < num_pontos else f"P{i + 1}_P1"
-                confrontante = confrontantes_dict.get(f"V{i + 1}", "Desconhecido")
-
-                dados.append({
-                    "V": label,
-                    "E": f"{x_start:.3f}".replace('.', ','),
-                    "N": f"{y_start:.3f}".replace('.', ','),
-                    "Z": "0.000",
-                    "Divisa": divisa,
-                    "Azimute": azimute_excel,
-                    "Distancia(m)": distancia_excel,
-                    "Confrontante": confrontante,
-                })
-
-            break  # Sai após a primeira polilinha fechada encontrada
-
-    # Insere a polilinha correta no DXF (remove anteriores)
-    # Insere a polilinha correta no DXF (remove anteriores)
+    # Exclui polilinhas antigas no DXF antes de inserir a nova
     for entity in msp.query('LWPOLYLINE[layer=="LAYOUT_MEMORIAL"]'):
         msp.delete_entity(entity)
 
-    # ✅ Definitivo: Garantir bulge invertido corretamente
+    # Cria dados para Excel usando sequencia_completa (correto e definitivo)
+    dados = []
+    num_vertices = len(sequencia_completa)
+
     boundary_points_com_bulge = []
 
-    for tipo, dados in sequencia_completa:
-        bulge = dados['bulge'] if tipo == 'arc' else 0
-        boundary_points_com_bulge.append((
-            float(dados['start_point'][0]),
-            float(dados['start_point'][1]),
-            float(bulge)
-        ))
+    for idx, (tipo, dados_seg) in enumerate(sequencia_completa):
+        start_point = dados_seg['start_point']
+        end_point = dados_seg['end_point']
 
+        if tipo == "line":
+            azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
+            azimute_excel = convert_to_dms(azimuth)
+            distancia_excel = f"{distance:.2f}".replace(".", ",")
+            bulge = 0
+
+        elif tipo == "arc":
+            radius = dados_seg['radius']
+            distance = dados_seg['length']
+            azimute_excel = f"R={radius:.3f}".replace(".", ",")
+            distancia_excel = f"C={distance:.3f}".replace(".", ",")
+            bulge = dados_seg['bulge']
+
+        label = f"P{idx + 1}"
+        divisa = f"P{idx + 1}_P{idx + 2}" if idx + 1 < num_vertices else f"P{idx + 1}_P1"
+        confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
+
+        dados.append({
+            "V": label,
+            "E": f"{start_point[0]:.3f}".replace('.', ','),
+            "N": f"{start_point[1]:.3f}".replace('.', ','),
+            "Z": "0,000",
+            "Divisa": divisa,
+            "Azimute": azimute_excel,
+            "Distancia(m)": distancia_excel,
+            "Confrontante": confrontante,
+        })
+
+        boundary_points_com_bulge.append((float(start_point[0]), float(start_point[1]), float(bulge)))
+
+    # Adiciona o último ponto para fechar corretamente a poligonal
     ultimo_ponto = sequencia_completa[-1][1]['end_point']
     boundary_points_com_bulge.append((float(ultimo_ponto[0]), float(ultimo_ponto[1]), 0))
 
-    # Inserção definitiva no DXF (garante formato 'xyb' com bulge)
+    # Inserção definitiva da polilinha com arcos no DXF
     msp.add_lwpolyline(
-        boundary_points_com_bulge, 
-        format='xyb', 
+        boundary_points_com_bulge,
+        format='xyb',
         close=True,
         dxfattribs={"layer": "LAYOUT_MEMORIAL"}
     )
 
+    # Inserção dos rótulos corretamente no DXF
+    for idx, (tipo, dados_seg) in enumerate(sequencia_completa):
+        start_point = dados_seg['start_point']
+        end_point = dados_seg['end_point']
+        distance = dados_seg['length'] if tipo == 'arc' else calculate_azimuth_and_distance(start_point, end_point)[1]
+        label = f"P{idx + 1}"
 
-    # Agora salva Excel normalmente (use "dados" em vez de "data")
+        add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=log)
+
+    # Agora salva Excel normalmente
     df = pd.DataFrame(dados, dtype=str)
     excel_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.xlsx")
     df.to_excel(excel_output_path, index=False)
-
-    # ✅ INSERÇÃO DOS RÓTULOS NO DXF (exatamente igual ao ambiente local)
-    num_vertices = len(sequencia_completa)
-
-    for idx, (tipo, dados) in enumerate(sequencia_completa):
-        start_point = dados['start_point']
-        end_point = dados['end_point']
-
-        if tipo == "line":
-            azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
-        elif tipo == "arc":
-            radius = dados['radius']
-            distance = dados['length']
-
-        label = f"P{idx + 1}"
-
-        # Chamada que insere os rótulos corretamente no DXF
-        add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=log)
-
 
     wb = openpyxl.load_workbook(excel_output_path)
     ws = wb.active
@@ -851,6 +823,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
     if log:
         log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
+
 
     # Agora salva o arquivo DXF final com os dados atualizados
     try:
