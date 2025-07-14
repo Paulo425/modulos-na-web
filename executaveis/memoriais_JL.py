@@ -197,7 +197,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         lines, arcs, boundary_points = [], [], []
         perimeter_dxf = 0
 
-        # Processa LWPOLYLINE
+        # Processa polilinhas mantendo dados ORIGINAIS sem recalcular nada
         for entity in msp.query('LWPOLYLINE'):
             if entity.is_closed:
                 points = entity.get_points('xyseb')
@@ -211,57 +211,30 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                     end_point = (x_end, y_end)
 
                     if abs(bulge) > 1e-8:
-                        # Necessariamente recalcula arco (bulge)
-                        dx, dy = x_end - x_start, y_end - y_start
-                        chord_length = math.hypot(dx, dy)
-                        sagitta = (bulge * chord_length) / 2
-                        radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-                        angle_span_rad = 4 * math.atan(abs(bulge))
-                        arc_length = radius * angle_span_rad
-
-                        mid_x, mid_y = (x_start + x_end) / 2, (y_start + y_end) / 2
-                        offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
-                        perp_vector = (-dy / chord_length, dx / chord_length)
-
-                        if bulge < 0:
-                            perp_vector = (-perp_vector[0], -perp_vector[1])
-
-                        center_x = mid_x + perp_vector[0] * offset_dist
-                        center_y = mid_y + perp_vector[1] * offset_dist
-
-                        start_angle = math.atan2(y_start - center_y, x_start - center_x)
-                        end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
-
+                        # Armazena APENAS os dados ORIGINAIS do arco (sem recalcular)
                         arcs.append({
-                            'tipo': 'bulge calculado',
+                            'tipo': 'bulge original preservado',
                             'start_point': start_point,
                             'end_point': end_point,
-                            'center': (center_x, center_y),
-                            'radius': radius,
-                            'start_angle': math.degrees(start_angle),
-                            'end_angle': math.degrees(end_angle),
-                            'length': arc_length,
                             'bulge': bulge
                         })
 
-                        log.write(f"🔴 Arco (bulge): {arcs[-1]}\n")
+                        log.write(f"🔴 Arco original preservado (bulge={bulge}): "
+                                  f"start={start_point}, end={end_point}\n")
 
-                        # Pontos intermediários para a área
-                        for t in range(100):
-                            angle = start_angle + (end_angle - start_angle) * t / 100
-                            boundary_points.append((
-                                center_x + radius * math.cos(angle),
-                                center_y + radius * math.sin(angle)))
-                        perimeter_dxf += arc_length
+                        boundary_points.append(start_point)
+                        segment_length = math.hypot(x_end - x_start, y_end - y_start)
+                        perimeter_dxf += segment_length
                     else:
-                        # Linha reta
+                        # Armazena apenas segmentos retos originais
                         lines.append((start_point, end_point))
                         boundary_points.append(start_point)
-                        segment_length = math.hypot(dx, dy)
+                        segment_length = math.hypot(x_end - x_start, y_end - y_start)
                         perimeter_dxf += segment_length
-                        log.write(f"🔵 Linha reta capturada: start={start_point}, end={end_point}, length={segment_length:.3f}\n")
+                        log.write(f"🔵 Linha reta preservada: start={start_point}, end={end_point}, "
+                                  f"length={segment_length:.3f}\n")
 
-        # Processa ARC nativos (raio exato disponível!)
+        # Preserva arcos nativos (ARC) diretamente do DXF original (caso exista)
         for entity in msp.query('ARC'):
             center = entity.dxf.center
             radius = entity.dxf.radius
@@ -284,18 +257,21 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
             })
 
             perimeter_dxf += arc_length
-            log.write(f"🟣 Arco (nativo DXF): {arcs[-1]}\n")
+            log.write(f"🟣 Arco nativo DXF preservado: {arcs[-1]}\n")
 
+        # Área aproximada com base nos pontos originais
         polygon = Polygon(boundary_points)
         area_dxf = polygon.area
 
-        log.write(f"✅ Linhas: {len(lines)}, Arcos: {len(arcs)}, Perímetro: {perimeter_dxf:.2f}, Área: {area_dxf:.2f}\n")
+        log.write(f"✅ Linhas: {len(lines)}, Arcos: {len(arcs)}, "
+                  f"Perímetro aproximado: {perimeter_dxf:.2f}, Área aproximada: {area_dxf:.2f}\n")
 
         return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
 
     except Exception as e:
         log.write(f"❌ Erro crítico: {e}\n")
         return None, [], [], 0, 0, []
+
 
 
 
@@ -775,8 +751,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
             break  # Sai após a primeira polilinha fechada encontrada
 
-
-
+    
     # Fecha corretamente adicionando o último ponto sem bulge
     ultimo_ponto = sequencia_completa[-1][1]['end_point']
     boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
@@ -787,10 +762,9 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
 
-    # Agora salva Excel normalmente
+    # Agora salva Excel normalmente (use "dados" em vez de "data")
     df = pd.DataFrame(dados, dtype=str)
     excel_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.xlsx")
-
     df.to_excel(excel_output_path, index=False)
 
     wb = openpyxl.load_workbook(excel_output_path)
@@ -812,14 +786,14 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
     wb.save(excel_output_path)
+
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
     if log:
         log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
+    # Agora salva o arquivo DXF final com os dados atualizados
     try:
-
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
-         # Logger claro e útil sobre boundary_points_com_bulge
         if log:
             log.write("Boundary points com bulge (final para DXF):\n")
             for idx, pt in enumerate(boundary_points_com_bulge, 1):
@@ -831,11 +805,11 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     except Exception as e:
         erro_msg = f"Erro ao salvar DXF: {e}"
         print(erro_msg)
-
         if log:
             log.write(erro_msg + "\n")
 
     return excel_output_path
+
 
 
 
