@@ -599,25 +599,26 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         }))
 
     if arcs:
-        for arc in arcs:
-            start_point = arc['start_point']
-            end_point = arc['end_point']
-            bulge = arc['bulge']
+    for arc in arcs:
+        start_point = arc['start_point']
+        end_point = arc['end_point']
+        bulge = arc['bulge']
 
-            dx, dy = end_point[0] - start_point[0], end_point[1] - start_point[1]
-            chord_length = math.hypot(dx, dy)
-            sagitta = (bulge * chord_length) / 2
-            radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-            angle_span_rad = 4 * math.atan(abs(bulge))
-            arc_length = radius * angle_span_rad
+        dx, dy = end_point[0] - start_point[0], end_point[1] - start_point[1]
+        chord_length = math.hypot(dx, dy)
+        sagitta = (bulge * chord_length) / 2
+        radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
+        angle_span_rad = 4 * math.atan(abs(bulge))
+        arc_length = radius * angle_span_rad
 
-            elementos.append(('arc', {
-                'start_point': start_point,
-                'end_point': end_point,
-                'radius': radius,      # ✅ calculado aqui apenas para o Excel
-                'length': arc_length,  # ✅ calculado aqui apenas para o Excel
-                'bulge': bulge
-            }))
+        elementos.append(('arc', {
+            'start_point': start_point,
+            'end_point': end_point,
+            'bulge': bulge,          # ✅ Usado APENAS para o DXF
+            'radius': radius,        # ✅ Usado APENAS para o Excel
+            'length': arc_length     # ✅ Usado APENAS para o Excel
+        }))
+
 
 
 
@@ -776,16 +777,32 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             break  # Sai após a primeira polilinha fechada encontrada
 
     # Insere a polilinha correta no DXF (remove anteriores)
+    # Insere a polilinha correta no DXF (remove anteriores)
     for entity in msp.query('LWPOLYLINE[layer=="LAYOUT_MEMORIAL"]'):
         msp.delete_entity(entity)
-    
-    # Garante bulge em float explícito
-    points_final_dxf = [
-        (float(x), float(y), float(bulge))
-        for x, y, bulge in boundary_points_com_bulge
-    ]
 
-    msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
+    # ✅ Definitivo: Garantir bulge invertido corretamente
+    boundary_points_com_bulge = []
+
+    for tipo, dados in sequencia_completa:
+        bulge = dados['bulge'] if tipo == 'arc' else 0
+        boundary_points_com_bulge.append((
+            float(dados['start_point'][0]),
+            float(dados['start_point'][1]),
+            float(bulge)
+        ))
+
+    ultimo_ponto = sequencia_completa[-1][1]['end_point']
+    boundary_points_com_bulge.append((float(ultimo_ponto[0]), float(ultimo_ponto[1]), 0))
+
+    # Inserção definitiva no DXF (garante formato 'xyb' com bulge)
+    msp.add_lwpolyline(
+        boundary_points_com_bulge, 
+        format='xyb', 
+        close=True,
+        dxfattribs={"layer": "LAYOUT_MEMORIAL"}
+    )
+
 
     # Agora salva Excel normalmente (use "dados" em vez de "data")
     df = pd.DataFrame(dados, dtype=str)
