@@ -778,6 +778,12 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     # Insere a polilinha correta no DXF (remove anteriores)
     for entity in msp.query('LWPOLYLINE[layer=="LAYOUT_MEMORIAL"]'):
         msp.delete_entity(entity)
+    
+    # Garante bulge em float explícito
+    points_final_dxf = [
+        (float(x), float(y), float(bulge))
+        for x, y, bulge in boundary_points_com_bulge
+    ]
 
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
 
@@ -785,6 +791,25 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     df = pd.DataFrame(dados, dtype=str)
     excel_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.xlsx")
     df.to_excel(excel_output_path, index=False)
+
+    # ✅ INSERÇÃO DOS RÓTULOS NO DXF (exatamente igual ao ambiente local)
+    num_vertices = len(sequencia_completa)
+
+    for idx, (tipo, dados) in enumerate(sequencia_completa):
+        start_point = dados['start_point']
+        end_point = dados['end_point']
+
+        if tipo == "line":
+            azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
+        elif tipo == "arc":
+            radius = dados['radius']
+            distance = dados['length']
+
+        label = f"P{idx + 1}"
+
+        # Chamada que insere os rótulos corretamente no DXF
+        add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=log)
+
 
     wb = openpyxl.load_workbook(excel_output_path)
     ws = wb.active
