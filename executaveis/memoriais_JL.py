@@ -53,30 +53,43 @@ import ezdxf
 import math
 
 def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
+    import ezdxf
+
     doc = ezdxf.readfile(dxf_original)
     msp = doc.modelspace()
 
     novo_doc = ezdxf.new(dxfversion='R2010')
     novo_msp = novo_doc.modelspace()
 
-    pontos_bulge = []
+    ponto_inicial_real = None
+
     for entity in msp.query('LWPOLYLINE'):
         if entity.closed:
             pontos_bulge = [(p[0], p[1], p[4]) for p in entity.get_points('xyseb')]
-            novo_msp.add_lwpolyline(pontos_bulge, format='xyb', close=True, dxfattribs={'layer': 'LAYOUT_MEMORIAL'})
+
+            # Captura o ponto inicial real da polilinha
+            ponto_inicial_real = (pontos_bulge[0][0], pontos_bulge[0][1])
+
+            novo_msp.add_lwpolyline(
+                pontos_bulge, 
+                format='xyb', 
+                close=True, 
+                dxfattribs={'layer': 'LAYOUT_MEMORIAL'}
+            )
+
             if log:
                 log.write("✅ Polilinha original preservada com bulges.\n")
+                log.write(f"✅ Ponto inicial capturado: {ponto_inicial_real}\n")
             break
 
     novo_doc.saveas(dxf_saida)
+
     if log:
         log.write(f"✅ DXF salvo: {dxf_saida}\n")
 
-    # Agora retorna corretamente 3 valores
-    ponto_az = pontos_bulge[0][:2] if pontos_bulge else (None, None)
-    ponto_inicial_real = pontos_bulge[0][:2] if pontos_bulge else (None, None)
+    # Aqui está o retorno correto com 3 valores:
+    return dxf_saida, ponto_inicial_real, ponto_inicial_real
 
-    return dxf_saida, ponto_az, ponto_inicial_real
 
 
 
@@ -715,54 +728,53 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         log.write(f"Área da poligonal ajustada: {area:.4f} m²\n")
 
     # Agora, cria os dados Excel e DXF com pontos e bulges corretos
-    data = []
-    num_vertices = len(sequencia_completa)
+    dados = []
 
-    boundary_points_com_bulge = []
+    for entity in msp.query('LWPOLYLINE'):
+        if entity.closed:
+            pontos = entity.get_points('xyseb')
+            num_pontos = len(pontos)
 
-    for idx, (tipo, dados) in enumerate(sequencia_completa):
+            for i in range(num_pontos):
+                x_start, y_start, _, _, bulge = pontos[i]
+                x_end, y_end, _, _, _ = pontos[(i + 1) % num_pontos]
 
-        start_point = dados['start_point']
-        end_point = dados['end_point']
-        if tipo == 'arc':
-            bulge = dados['bulge']  # ✅ bulge existe apenas para arco
-        else:
-            bulge = 0  # ✅ para linhas, bulge = 0 sempre
-        if tipo == "line":
-            azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
-            azimute_excel = convert_to_dms(azimuth)
-            distancia_excel = f"{distance:.2f}".replace(".", ",")
-        else:  # tipo == 'arc'
-            radius, distance = dados['radius'], dados['length']
-            azimute_excel = f"R={radius:.2f}".replace(".", ",")
-            distancia_excel = f"C={distance:.2f}".replace(".", ",")
+                dx, dy = x_end - x_start, y_end - y_start
+                chord_length = math.hypot(dx, dy)
 
-        # Acrescenta label e distância no DXF
-        label = f"P{idx + 1}"
-        add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=None)
+                if abs(bulge) > 1e-8:
+                    sagitta = (bulge * chord_length) / 2
+                    radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
+                    angle_span_rad = 4 * math.atan(abs(bulge))
+                    arc_length = radius * angle_span_rad
 
-        confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
-        divisa = f"P{idx + 1}_P{idx + 2}" if idx + 1 < num_vertices else f"P{idx + 1}_P1"
+                    azimute_excel = f"R={radius:.2f}".replace(".", ",")
+                    distancia_excel = f"C={arc_length:.2f}".replace(".", ",")
 
-        # Preenche dados para Excel
-        data.append({
-            "V": label,
-            "E": f"{start_point[0]:.3f}".replace('.', ','),
-            "N": f"{start_point[1]:.3f}".replace('.', ','),
-            "Z": "0.000",
-            "Divisa": divisa,
-            "Azimute": azimute_excel,
-            "Distancia(m)": distancia_excel,
-            "Confrontante": confrontante,
-        })
+                else:
+                    azimuth, distance = calculate_azimuth_and_distance(
+                        (x_start, y_start), (x_end, y_end)
+                    )
+                    azimute_excel = convert_to_dms(azimuth)
+                    distancia_excel = f"{distance:.2f}".replace(".", ",")
 
-        # Boundary com bulge para DXF
-        boundary_points_com_bulge.append((start_point[0], start_point[1], bulge))
+                label = f"P{i + 1}"
+                divisa = f"P{i + 1}_P{i + 2}" if i + 1 < num_pontos else f"P{i + 1}_P1"
+                confrontante = confrontantes_dict.get(f"V{i + 1}", "Desconhecido")
 
-        log.write(
-            f"Adicionado: Label={label}, Tipo={tipo.upper()}, Start={start_point}, End={end_point}, "
-            f"Radius={dados.get('radius', 'N/A')}, Bulge={bulge}, Azimute={azimute_excel}, Distância={distancia_excel}\n"
-        )
+                dados.append({
+                    "V": label,
+                    "E": f"{x_start:.3f}".replace('.', ','),
+                    "N": f"{y_start:.3f}".replace('.', ','),
+                    "Z": "0.000",
+                    "Divisa": divisa,
+                    "Azimute": azimute_excel,
+                    "Distancia(m)": distancia_excel,
+                    "Confrontante": confrontante,
+                })
+
+            break  # Sai após a primeira polilinha fechada encontrada
+
 
 
     # Fecha corretamente adicionando o último ponto sem bulge
@@ -776,7 +788,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     msp.add_lwpolyline(boundary_points_com_bulge, close=True, dxfattribs={"layer": "LAYOUT_MEMORIAL"})
 
     # Agora salva Excel normalmente
-    df = pd.DataFrame(data, dtype=str)
+    df = pd.DataFrame(dados, dtype=str)
     excel_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.xlsx")
 
     df.to_excel(excel_output_path, index=False)
