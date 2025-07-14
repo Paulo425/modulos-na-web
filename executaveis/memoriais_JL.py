@@ -59,6 +59,7 @@ def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
     novo_doc = ezdxf.new(dxfversion='R2010')
     novo_msp = novo_doc.modelspace()
 
+    pontos_bulge = []
     for entity in msp.query('LWPOLYLINE'):
         if entity.closed:
             pontos_bulge = [(p[0], p[1], p[4]) for p in entity.get_points('xyseb')]
@@ -71,7 +72,12 @@ def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
     if log:
         log.write(f"✅ DXF salvo: {dxf_saida}\n")
 
-    return dxf_saida
+    # Agora retorna corretamente 3 valores
+    ponto_az = pontos_bulge[0][:2] if pontos_bulge else (None, None)
+    ponto_inicial_real = pontos_bulge[0][:2] if pontos_bulge else (None, None)
+
+    return dxf_saida, ponto_az, ponto_inicial_real
+
 
 
 def calculate_signed_area(points):
