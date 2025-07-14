@@ -49,76 +49,29 @@ def obter_data_em_portugues():
     return f"{data.day:02d} de {mes_pt} de {data.year}"
 
 
-def limpar_dxf_e_inserir_ponto_az(original_path, saida_path, log=None):
-    
-    if log is None:
-        class DummyLog:
-            def write(self, msg): pass
-        log = DummyLog()
+import ezdxf
+import math
 
-    try:
-        # Carrega o arquivo DXF original
-        doc_antigo = ezdxf.readfile(original_path)
-        msp_antigo = doc_antigo.modelspace()
+ddef limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
+    doc = ezdxf.readfile(dxf_original)
+    msp = doc.modelspace()
 
-        # Novo DXF limpo
-        doc_novo = ezdxf.new(dxfversion='R2010')
-        msp_novo = doc_novo.modelspace()
+    novo_doc = ezdxf.new(dxfversion='R2010')
+    novo_msp = novo_doc.modelspace()
 
-        pontos_com_bulge = None
+    for entity in msp.query('LWPOLYLINE'):
+        if entity.closed:
+            pontos_bulge = [(p[0], p[1], p[4]) for p in entity.get_points('xyseb')]
+            novo_msp.add_lwpolyline(pontos_bulge, format='xyb', close=True, dxfattribs={'layer': 'LAYOUT_MEMORIAL'})
+            if log:
+                log.write("✅ Polilinha original preservada com bulges.\n")
+            break
 
-        # Obtém diretamente os pontos da polilinha fechada (com os bulges originais preservados)
-        for entity in msp_antigo.query('LWPOLYLINE'):
-            if entity.closed:
-                pontos_com_bulge = [(point[0], point[1], point[4]) for point in entity.get_points('xyseb')]
+    novo_doc.saveas(dxf_saida)
+    if log:
+        log.write(f"✅ DXF salvo: {dxf_saida}\n")
 
-                # Remove pontos consecutivos duplicados
-                tolerancia = 1e-6
-                pontos_unicos = [pontos_com_bulge[0]]
-                for pt in pontos_com_bulge[1:]:
-                    x_ant, y_ant, _ = pontos_unicos[-1]
-                    if math.hypot(pt[0] - x_ant, pt[1] - y_ant) > tolerancia:
-                        pontos_unicos.append(pt)
-
-                # Verificar e corrigir orientação (manter anti-horário)
-                coords = [(p[0], p[1]) for p in pontos_unicos]
-                if calculate_signed_area(coords) < 0:
-                    pontos_unicos.reverse()
-                    pontos_unicos = [(p[0], p[1], -p[2]) for p in pontos_unicos]
-
-                pontos_com_bulge = pontos_unicos
-                break
-
-        if pontos_com_bulge is None:
-            raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
-
-        # Insere diretamente no novo DXF garantindo preservação total dos bulges
-        msp_novo.add_lwpolyline(
-            pontos_com_bulge,
-            format='xyb',
-            close=True,
-            dxfattribs={'layer': 'LAYOUT_MEMORIAL'}
-        )
-
-        ponto_az = (pontos_com_bulge[0][0], pontos_com_bulge[0][1])
-
-        doc_novo.saveas(saida_path)
-        print(f"✅ DXF limpo salvo em: {saida_path}")
-        log.write(f"✅ DXF limpo salvo em: {saida_path}\n")
-
-        return saida_path, ponto_az, ponto_az
-
-    except Exception as e:
-        print(f"❌ Erro ao limpar DXF: {e}")
-        log.write(f"❌ Erro ao limpar DXF: {e}\n")
-        return original_path, None, None
-
-
-
-
-
-
-
+    return dxf_saida
 
 
 def calculate_signed_area(points):
@@ -225,9 +178,10 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         lines, arcs, boundary_points = [], [], []
         perimeter_dxf = 0
 
+        # Processa LWPOLYLINE
         for entity in msp.query('LWPOLYLINE'):
             if entity.is_closed:
-                points = entity.get_points('xyseb')  # Esse é o seu método local exato
+                points = entity.get_points('xyseb')
                 num_points = len(points)
 
                 for i in range(num_points):
@@ -237,18 +191,16 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                     start_point = (x_start, y_start)
                     end_point = (x_end, y_end)
 
-                    if bulge != 0:
-                        # Calcula o arco com precisão (seu método local)
-                        dx = x_end - x_start
-                        dy = y_end - y_start
+                    if abs(bulge) > 1e-8:
+                        # Necessariamente recalcula arco (bulge)
+                        dx, dy = x_end - x_start, y_end - y_start
                         chord_length = math.hypot(dx, dy)
                         sagitta = (bulge * chord_length) / 2
                         radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
                         angle_span_rad = 4 * math.atan(abs(bulge))
                         arc_length = radius * angle_span_rad
 
-                        mid_x = (x_start + x_end) / 2
-                        mid_y = (y_start + y_end) / 2
+                        mid_x, mid_y = (x_start + x_end) / 2, (y_start + y_end) / 2
                         offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
                         perp_vector = (-dy / chord_length, dx / chord_length)
 
@@ -257,15 +209,15 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
                         center_x = mid_x + perp_vector[0] * offset_dist
                         center_y = mid_y + perp_vector[1] * offset_dist
-                        center = (center_x, center_y)
 
                         start_angle = math.atan2(y_start - center_y, x_start - center_x)
                         end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
 
                         arcs.append({
+                            'tipo': 'bulge calculado',
                             'start_point': start_point,
                             'end_point': end_point,
-                            'center': center,
+                            'center': (center_x, center_y),
                             'radius': radius,
                             'start_angle': math.degrees(start_angle),
                             'end_angle': math.degrees(end_angle),
@@ -273,31 +225,50 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                             'bulge': bulge
                         })
 
-                        log.write(f"🔴 Arco capturado com exatidão: {arcs[-1]}\n")
+                        log.write(f"🔴 Arco (bulge): {arcs[-1]}\n")
 
-                        num_arc_points = 100
-                        for t in range(num_arc_points):
-                            angle = start_angle + (end_angle - start_angle) * t / num_arc_points
-                            arc_x = center_x + radius * math.cos(angle)
-                            arc_y = center_y + radius * math.sin(angle)
-                            boundary_points.append((arc_x, arc_y))
-
+                        # Pontos intermediários para a área
+                        for t in range(100):
+                            angle = start_angle + (end_angle - start_angle) * t / 100
+                            boundary_points.append((
+                                center_x + radius * math.cos(angle),
+                                center_y + radius * math.sin(angle)))
                         perimeter_dxf += arc_length
                     else:
                         # Linha reta
                         lines.append((start_point, end_point))
-                        segment_length = math.hypot(x_end - x_start, y_end - y_start)
+                        boundary_points.append(start_point)
+                        segment_length = math.hypot(dx, dy)
                         perimeter_dxf += segment_length
-                        boundary_points.append((x_start, y_start))
                         log.write(f"🔵 Linha reta capturada: start={start_point}, end={end_point}, length={segment_length:.3f}\n")
 
-                polygon = Polygon(boundary_points)
-                area_dxf = polygon.area
-                break
+        # Processa ARC nativos (raio exato disponível!)
+        for entity in msp.query('ARC'):
+            center = entity.dxf.center
+            radius = entity.dxf.radius
+            start_angle_rad = math.radians(entity.dxf.start_angle)
+            end_angle_rad = math.radians(entity.dxf.end_angle)
+            arc_length = abs(end_angle_rad - start_angle_rad) * radius
 
-        if not lines and not arcs:
-            log.write("Nenhuma polilinha fechada encontrada no arquivo DXF.\n")
-            return None, [], [], 0, 0, []
+            arcs.append({
+                'tipo': 'nativo DXF',
+                'center': (center[0], center[1]),
+                'radius': radius,
+                'start_angle': entity.dxf.start_angle,
+                'end_angle': entity.dxf.end_angle,
+                'length': arc_length,
+                'start_point': (center[0] + radius * math.cos(start_angle_rad),
+                                center[1] + radius * math.sin(start_angle_rad)),
+                'end_point': (center[0] + radius * math.cos(end_angle_rad),
+                              center[1] + radius * math.sin(end_angle_rad)),
+                'bulge': None
+            })
+
+            perimeter_dxf += arc_length
+            log.write(f"🟣 Arco (nativo DXF): {arcs[-1]}\n")
+
+        polygon = Polygon(boundary_points)
+        area_dxf = polygon.area
 
         log.write(f"✅ Linhas: {len(lines)}, Arcos: {len(arcs)}, Perímetro: {perimeter_dxf:.2f}, Área: {area_dxf:.2f}\n")
 
@@ -306,6 +277,8 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
     except Exception as e:
         log.write(f"❌ Erro crítico: {e}\n")
         return None, [], [], 0, 0, []
+
+
 
 
 
