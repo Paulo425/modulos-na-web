@@ -703,55 +703,115 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     if log:
         log.write(f"Área da poligonal ajustada: {area:.4f} m²\n")
 
+    # # Agora, cria os dados Excel e DXF com pontos e bulges corretos
+    # dados = []
+
+    # for entity in msp.query('LWPOLYLINE'):
+    #     if entity.closed:
+    #         pontos = entity.get_points('xyseb')
+    #         num_pontos = len(pontos)
+
+    #         for i in range(num_pontos):
+    #             x_start, y_start, _, _, bulge = pontos[i]
+    #             x_end, y_end, _, _, _ = pontos[(i + 1) % num_pontos]
+
+    #             dx, dy = x_end - x_start, y_end - y_start
+    #             chord_length = math.hypot(dx, dy)
+
+    #             if abs(bulge) > 1e-8:
+    #                 sagitta = (bulge * chord_length) / 2
+    #                 radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
+    #                 angle_span_rad = 4 * math.atan(abs(bulge))
+    #                 arc_length = radius * angle_span_rad
+
+    #                 azimute_excel = f"R={radius:.2f}".replace(".", ",")
+    #                 distancia_excel = f"C={arc_length:.2f}".replace(".", ",")
+
+    #             else:
+    #                 azimuth, distance = calculate_azimuth_and_distance(
+    #                     (x_start, y_start), (x_end, y_end)
+    #                 )
+    #                 azimute_excel = convert_to_dms(azimuth)
+    #                 distancia_excel = f"{distance:.2f}".replace(".", ",")
+
+    #             label = f"P{i + 1}"
+    #             divisa = f"P{i + 1}_P{i + 2}" if i + 1 < num_pontos else f"P{i + 1}_P1"
+    #             confrontante = confrontantes_dict.get(f"V{i + 1}", "Desconhecido")
+
+    #             dados.append({
+    #                 "V": label,
+    #                 "E": f"{x_start:.3f}".replace('.', ','),
+    #                 "N": f"{y_start:.3f}".replace('.', ','),
+    #                 "Z": "0.000",
+    #                 "Divisa": divisa,
+    #                 "Azimute": azimute_excel,
+    #                 "Distancia(m)": distancia_excel,
+    #                 "Confrontante": confrontante,
+    #             })
+
+    #         break  # Sai após a primeira polilinha fechada encontrada
+
+    
+    # # Fecha corretamente adicionando o último ponto sem bulge
+    # ultimo_ponto = sequencia_completa[-1][1]['end_point']
+    # boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
+
+
     # Agora, cria os dados Excel e DXF com pontos e bulges corretos
     dados = []
 
-    for entity in msp.query('LWPOLYLINE'):
-        if entity.closed:
-            pontos = entity.get_points('xyseb')
-            num_pontos = len(pontos)
+    for idx, (tipo, dados_elem) in enumerate(sequencia_completa):
 
-            for i in range(num_pontos):
-                x_start, y_start, _, _, bulge = pontos[i]
-                x_end, y_end, _, _, _ = pontos[(i + 1) % num_pontos]
+        start_point = dados_elem['start_point']
+        end_point = dados_elem['end_point']
 
-                dx, dy = x_end - x_start, y_end - y_start
-                chord_length = math.hypot(dx, dy)
+        if tipo == "arc":
+            bulge = dados_elem['bulge']
 
-                if abs(bulge) > 1e-8:
-                    sagitta = (bulge * chord_length) / 2
-                    radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-                    angle_span_rad = 4 * math.atan(abs(bulge))
-                    arc_length = radius * angle_span_rad
+            # Calcular apenas para o Excel (sem alterar DXF)
+            dx, dy = end_point[0] - start_point[0], end_point[1] - start_point[1]
+            chord_length = math.hypot(dx, dy)
+            sagitta = (bulge * chord_length) / 2
+            radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
+            angle_span_rad = 4 * math.atan(abs(bulge))
+            arc_length = radius * angle_span_rad
 
-                    azimute_excel = f"R={radius:.2f}".replace(".", ",")
-                    distancia_excel = f"C={arc_length:.2f}".replace(".", ",")
+            azimute_excel = f"R={radius:.2f}".replace(".", ",")
+            distancia_excel = f"C={arc_length:.2f}".replace(".", ",")
 
-                else:
-                    azimuth, distance = calculate_azimuth_and_distance(
-                        (x_start, y_start), (x_end, y_end)
-                    )
-                    azimute_excel = convert_to_dms(azimuth)
-                    distancia_excel = f"{distance:.2f}".replace(".", ",")
+        else:  # tipo == 'line'
+            azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
+            azimute_excel = convert_to_dms(azimuth)
+            distancia_excel = f"{distance:.2f}".replace(".", ",")
 
-                label = f"P{i + 1}"
-                divisa = f"P{i + 1}_P{i + 2}" if i + 1 < num_pontos else f"P{i + 1}_P1"
-                confrontante = confrontantes_dict.get(f"V{i + 1}", "Desconhecido")
+        # Acrescenta label e distância no DXF
+        label = f"P{idx + 1}"
+        add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=None)
 
-                dados.append({
-                    "V": label,
-                    "E": f"{x_start:.3f}".replace('.', ','),
-                    "N": f"{y_start:.3f}".replace('.', ','),
-                    "Z": "0.000",
-                    "Divisa": divisa,
-                    "Azimute": azimute_excel,
-                    "Distancia(m)": distancia_excel,
-                    "Confrontante": confrontante,
-                })
+        confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
+        divisa = f"P{idx + 1}_P{idx + 2}" if idx + 1 < num_vertices else f"P{idx + 1}_P1"
 
-            break  # Sai após a primeira polilinha fechada encontrada
+        # Preenche dados para Excel
+        dados.append({
+            "V": label,
+            "E": f"{start_point[0]:.3f}".replace('.', ','),
+            "N": f"{start_point[1]:.3f}".replace('.', ','),
+            "Z": "0.000",
+            "Divisa": divisa,
+            "Azimute": azimute_excel,
+            "Distancia(m)": distancia_excel,
+            "Confrontante": confrontante,
+        })
 
-    
+        # Boundary com bulge para DXF
+        boundary_points_com_bulge.append((start_point[0], start_point[1], bulge if tipo == 'arc' else 0))
+
+        log.write(
+            f"Adicionado: Label={label}, Tipo={tipo.upper()}, Start={start_point}, End={end_point}, "
+            f"Radius={radius if tipo=='arc' else 'N/A'}, Bulge={bulge if tipo=='arc' else '0'}, "
+            f"Azimute={azimute_excel}, Distância={distancia_excel}\n"
+        )
+
     # Fecha corretamente adicionando o último ponto sem bulge
     ultimo_ponto = sequencia_completa[-1][1]['end_point']
     boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
