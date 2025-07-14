@@ -600,13 +600,25 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     if arcs:
         for arc in arcs:
+            start_point = arc['start_point']
+            end_point = arc['end_point']
+            bulge = arc['bulge']
+
+            dx, dy = end_point[0] - start_point[0], end_point[1] - start_point[1]
+            chord_length = math.hypot(dx, dy)
+            sagitta = (bulge * chord_length) / 2
+            radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
+            angle_span_rad = 4 * math.atan(abs(bulge))
+            arc_length = radius * angle_span_rad
+
             elementos.append(('arc', {
-                'start_point': arc['start_point'],
-                'end_point': arc['end_point'],
-                'radius': arc['radius'],
-                'length': arc['length'],
-                'bulge': arc['bulge']
+                'start_point': start_point,
+                'end_point': end_point,
+                'radius': radius,      # ✅ calculado aqui apenas para o Excel
+                'length': arc_length,  # ✅ calculado aqui apenas para o Excel
+                'bulge': bulge
             }))
+
 
 
 
@@ -622,7 +634,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         if index_inicio is not None:
             elementos = elementos[index_inicio:] + elementos[:index_inicio]
 
-
+    boundary_points_com_bulge = []  # <-- ✅ ADICIONAR ESTA LINHA AQUI
     # Sequenciar corretamente os segmentos mantendo coerência geométrica
     sequencia_completa = []
     ponto_atual = elementos[0][1]['start_point']  # ✅ Corrigido aqui!
@@ -662,7 +674,14 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             if elementos:
                 ponto_atual = elementos[0][1]['start_point']
 
+    # ✅ ADICIONAR ESTE BLOCO COMPLETO LOGO APÓS O LOOP ACIMA TERMINAR
+    for idx, (tipo, dados) in enumerate(sequencia_completa):
+        bulge = dados['bulge'] if tipo == 'arc' else 0
+        boundary_points_com_bulge.append((dados['start_point'][0], dados['start_point'][1], bulge))
 
+    ultimo_ponto = sequencia_completa[-1][1]['end_point']
+    boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
+    
 
     # Calcula a área da poligonal para verificar se precisa inverter
     pontos_para_area = [seg[1]['start_point'] for seg in sequencia_completa]
@@ -702,55 +721,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     if log:
         log.write(f"Área da poligonal ajustada: {area:.4f} m²\n")
 
-    # # Agora, cria os dados Excel e DXF com pontos e bulges corretos
-    # dados = []
-
-    # for entity in msp.query('LWPOLYLINE'):
-    #     if entity.closed:
-    #         pontos = entity.get_points('xyseb')
-    #         num_pontos = len(pontos)
-
-    #         for i in range(num_pontos):
-    #             x_start, y_start, _, _, bulge = pontos[i]
-    #             x_end, y_end, _, _, _ = pontos[(i + 1) % num_pontos]
-
-    #             dx, dy = x_end - x_start, y_end - y_start
-    #             chord_length = math.hypot(dx, dy)
-
-    #             if abs(bulge) > 1e-8:
-    #                 sagitta = (bulge * chord_length) / 2
-    #                 radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-    #                 angle_span_rad = 4 * math.atan(abs(bulge))
-    #                 arc_length = radius * angle_span_rad
-
-    #                 azimute_excel = f"R={radius:.2f}".replace(".", ",")
-    #                 distancia_excel = f"C={arc_length:.2f}".replace(".", ",")
-
-    #             else:
-    #                 azimuth, distance = calculate_azimuth_and_distance(
-    #                     (x_start, y_start), (x_end, y_end)
-    #                 )
-    #                 azimute_excel = convert_to_dms(azimuth)
-    #                 distancia_excel = f"{distance:.2f}".replace(".", ",")
-
-    #             label = f"P{i + 1}"
-    #             divisa = f"P{i + 1}_P{i + 2}" if i + 1 < num_pontos else f"P{i + 1}_P1"
-    #             confrontante = confrontantes_dict.get(f"V{i + 1}", "Desconhecido")
-
-    #             dados.append({
-    #                 "V": label,
-    #                 "E": f"{x_start:.3f}".replace('.', ','),
-    #                 "N": f"{y_start:.3f}".replace('.', ','),
-    #                 "Z": "0.000",
-    #                 "Divisa": divisa,
-    #                 "Azimute": azimute_excel,
-    #                 "Distancia(m)": distancia_excel,
-    #                 "Confrontante": confrontante,
-    #             })
-
-    #         break  # Sai após a primeira polilinha fechada encontrada
-
-    
+       
     # # Fecha corretamente adicionando o último ponto sem bulge
     # ultimo_ponto = sequencia_completa[-1][1]['end_point']
     # boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
