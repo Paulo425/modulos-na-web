@@ -6,7 +6,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
     import traceback
     from datetime import datetime
     from executaveis.memoriais_JL import (
-        limpar_dxf_e_inserir_ponto_az,
+        limpar_dxf_preservando_original,
         get_document_info_from_dxf,
         create_memorial_descritivo,
         create_memorial_document
