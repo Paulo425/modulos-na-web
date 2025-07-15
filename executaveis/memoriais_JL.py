@@ -180,90 +180,126 @@ def bulge_to_arc_length(start_point, end_point, bulge):
 import math
 from shapely.geometry import Polygon
 
-def get_document_info_from_dxf(dxf_file_path, log=None):
-    import ezdxf
-    import math
-
-    if log is None:
-        class DummyLog:
-            def write(self, msg): pass
-        log = DummyLog()
-
+def get_document_info_from_dxf(dxf_file_path):
     try:
         doc = ezdxf.readfile(dxf_file_path)
         msp = doc.modelspace()
 
-        lines, arcs, boundary_points = [], [], []
-
+        lines = []
+        arcs = []
         perimeter_dxf = 0
-        area_dxf = 0
+        ponto_az = None
 
-        # Processa polilinhas mantendo dados ORIGINAIS
         for entity in msp.query('LWPOLYLINE'):
             if entity.is_closed:
-                # Dentro do loop onde processa a polilinha fechada:
-                polygon = EzdxfPolygon(entity.points())
-                perimeter_dxf = polygon.length
-                area_dxf = abs(polygon.area)
-                num_points = len(points)
+                polyline_points = entity.get_points('xyseb')
+                num_points = len(polyline_points)
+
+                boundary_points = []
+
                 for i in range(num_points):
-                    x_start, y_start, _, _, bulge = points[i]
-                    x_end, y_end, _, _, _ = points[(i + 1) % num_points]
+                    x_start, y_start, _, _, bulge = polyline_points[i]
+                    x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
 
-                    start_point = (x_start, y_start)
-                    end_point = (x_end, y_end)
+                    #start_point = Vec2(float(x_start), float(y_start))
+                    start_point = (float(x_start), float(y_start))
 
-                    if abs(bulge) > 1e-8:
+                    #end_point = Vec2(float(x_end), float(y_end))
+                    end_point = (float(x_end), float(y_end))
+
+                    if bulge != 0:
+                        # Trata-se de arco
+                       # chord_length = (end_point - start_point).magnitude
+                        dx = end_point[0] - start_point[0]
+                        dy = end_point[1] - start_point[1]
+                        chord_length = math.hypot(dx, dy)
+                        sagitta = (bulge * chord_length) / 2
+                        radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
+                        angle_span_rad = 4 * math.atan(abs(bulge))
+                        arc_length = radius * angle_span_rad
+
+                        #chord_midpoint = (start_point + end_point) / 2
+                        mid_x = (start_point[0] + end_point[0]) / 2
+                        mid_y = (start_point[1] + end_point[1]) / 2
+                        chord_midpoint = (mid_x, mid_y)
+
+                        offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
+#                         dx = end_point[0] - start_point[0]
+#                         dy = end_point[1] - start_point[1]
+                        dx = float(end_point[0]) - float(start_point[0])
+                        dy = float(end_point[1]) - float(start_point[1])
+
+                        #perp_vector = Vec2(-dy, dx).normalize()
+                        length = math.hypot(dx, dy)
+                        perp_vector = (-dy / length, dx / length)
+
+                        if bulge < 0:
+                            #perp_vector = -perp_vector
+                            perp_vector = (-perp_vector[0], -perp_vector[1])
+
+
+                        #center = chord_midpoint + perp_vector * offset_dist
+                        center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
+                        center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
+                        center = (center_x, center_y)
+
+
+                        #start_angle = math.atan2(start_point.y - center.y, start_point[0] - center[0])
+                        start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
+
+                        end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
+
                         arcs.append({
-                            'tipo': 'bulge original preservado',
-                            'start_point': start_point,
-                            'end_point': end_point,
-                            'bulge': bulge
+                            'start_point': (start_point[0], start_point[1]),
+                            'end_point': (end_point[0], end_point[1]),
+                            'start_angle': math.degrees(start_angle),
+                            'end_angle': math.degrees(end_angle),
+                            'length': arc_length
                         })
 
-                        log.write(f"🔴 Arco original preservado (bulge={bulge}): "
-                                  f"start={start_point}, end={end_point}\n")
+                        # Pontos intermediários no arco (para precisão da área)
+                        num_arc_points = 100  # mais pontos para maior precisão
+                        for t in range(num_arc_points):
+                            angle = start_angle + (end_angle - start_angle) * t / num_arc_points
+                            arc_x = center[0] + radius * math.cos(angle)
+                            arc_y = center[1] + radius * math.sin(angle)
+                            boundary_points.append((arc_x, arc_y))
+
+                        segment_length = arc_length
+                        perimeter_dxf += segment_length
                     else:
+                        # Linha reta
                         lines.append((start_point, end_point))
-                        log.write(f"🔵 Linha reta preservada: start={start_point}, end={end_point}\n")
+                        boundary_points.append((start_point[0], start_point[1]))
+                       # segment_length = (end_point - start_point).magnitude
+                        dx = end_point[0] - start_point[0]
+                        dy = end_point[1] - start_point[1]
+                        segment_length = math.hypot(dx, dy)
 
-                    boundary_points.append(start_point)
+                        perimeter_dxf += segment_length
 
-                # Considera apenas a primeira poligonal fechada
+                # Após loop, calcular a área com Shapely
+                polygon = Polygon(boundary_points)
+                area_dxf = polygon.area  # área exata do desenho
+
                 break
 
-        # Preserva arcos nativos (ARC) diretamente do DXF original (se houver)
-        for entity in msp.query('ARC'):
-            center = entity.dxf.center
-            radius = entity.dxf.radius
-            start_angle_rad = math.radians(entity.dxf.start_angle)
-            end_angle_rad = math.radians(entity.dxf.end_angle)
-            arc_length = abs(end_angle_rad - start_angle_rad) * radius
+        if not lines and not arcs:
+            print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
+            return None, [], [], 0, 0, None
 
-            arcs.append({
-                'tipo': 'nativo DXF',
-                'center': (center[0], center[1]),
-                'radius': radius,
-                'start_angle': entity.dxf.start_angle,
-                'end_angle': entity.dxf.end_angle,
-                'length': arc_length,
-                'start_point': (center[0] + radius * math.cos(start_angle_rad),
-                                center[1] + radius * math.sin(start_angle_rad)),
-                'end_point': (center[0] + radius * math.cos(end_angle_rad),
-                              center[1] + radius * math.sin(end_angle_rad)),
-                'bulge': None
-            })
+        print(f"Linhas processadas: {len(lines)}")
+        print(f"Arcos processados: {len(arcs)}")
+        print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
+        print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
+#         print(f"Ponto Az: {ponto_az}")
 
-            log.write(f"🟣 Arco nativo DXF preservado: {arcs[-1]}\n")
-
-        log.write(f"✅ Linhas: {len(lines)}, Arcos: {len(arcs)}, "
-                  f"Perímetro exato DXF: {perimeter_dxf:.2f}, Área exata DXF: {area_dxf:.2f}\n")
-
-        return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
+        return doc, lines, arcs, perimeter_dxf, area_dxf
 
     except Exception as e:
-        log.write(f"❌ Erro crítico: {e}\n")
-        return None, [], [], 0, 0, []
+        print(f"Erro ao obter informações do documento: {e}")
+        traceback.print_exc()
+        return None, [], [], 0, 0, None
 
 
 
