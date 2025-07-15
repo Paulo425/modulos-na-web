@@ -472,7 +472,7 @@ def calculate_polygon_area(points):
     return area / 2.0
 
 
-def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log=None):
+ def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log=None):
     if log is None:
         class DummyLog:
             def write(self, msg): pass
@@ -496,17 +496,14 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log
         msp.add_circle(center=start_point, radius=0.5, dxfattribs={'layer': 'LAYOUT_VERTICES'})
 
         # Adicionar rótulo do vértice (ex: V1, V2...)
-        # Novo trecho ajustável (recomendado!)
-        offset_rotulo_x = 0.3  # menor para aproximar o rótulo do círculo
-        offset_rotulo_y = 0.3
-
+        ofset_x = 0.3
+        ofset_y = 0.3
         msp.add_text(
             label,
             dxfattribs={
                 'height': 0.5,
                 'layer': 'LAYOUT_VERTICES',
-                'insert': (start_point[0] + offset_rotulo_x, start_point[1] + offset_rotulo_y),
-                'align': 'CENTER'
+                'insert': (start_point[0] + ofset_x, start_point[1] + ofset_y)
             }
         )
 
@@ -528,7 +525,7 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log
             angle += 180
 
         # Deslocar o rótulo perpendicularmente ao segmento
-        offset = 0.5  # pode ajustar para mais ou menos afastamento
+        offset = 0.2  # pode ajustar para mais ou menos afastamento
         perp_x = -dy / length * offset
         perp_y = dx / length * offset
         mid_point_displaced = (mid_x + perp_x, mid_y + perp_y)
