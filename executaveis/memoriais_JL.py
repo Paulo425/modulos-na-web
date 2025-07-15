@@ -472,7 +472,7 @@ def calculate_polygon_area(points):
     return area / 2.0
 
 
- def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log=None):
+def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log=None):
     if log is None:
         class DummyLog:
             def write(self, msg): pass
