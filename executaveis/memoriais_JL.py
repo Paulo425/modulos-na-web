@@ -258,7 +258,8 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                             'end_point': (end_point[0], end_point[1]),
                             'start_angle': math.degrees(start_angle),
                             'end_angle': math.degrees(end_angle),
-                            'length': arc_length
+                            'length': arc_length,
+                            'bulge': bulge
                         })
 
                         # Pontos intermediários no arco (para precisão da área)
@@ -304,18 +305,6 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         print(f"Erro ao obter informações do documento: {e}")
         traceback.print_exc()
         return None, [], [], 0, 0, None
-
-
-
-
-
-
-
-
-
-
-
-
 
 # 🔹 Função para definir a fonte padrão
 def set_default_font(doc):
