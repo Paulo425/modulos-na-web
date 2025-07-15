@@ -298,7 +298,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
 #         print(f"Ponto Az: {ponto_az}")
 
-        return doc, lines, arcs, perimeter_dxf, area_dxf
+        return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
 
     except Exception as e:
         print(f"Erro ao obter informações do documento: {e}")
