@@ -12,7 +12,6 @@ from docx.shared import Pt, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx import Document
 import ezdxf
-from ezdxf.math import Polygon as EzdxfPolygon  # Adicionar no topo da função
 from shapely.geometry import Polygon
 try:
     from ezdxf.math import Vec3 as Vector
