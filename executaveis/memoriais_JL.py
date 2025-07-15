@@ -12,8 +12,8 @@ from docx.shared import Pt, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx import Document
 import ezdxf
+from ezdxf.math import Polygon as EzdxfPolygon  # Adicionar no topo da função
 from shapely.geometry import Polygon
-
 try:
     from ezdxf.math import Vec3 as Vector
 except ImportError:
@@ -201,12 +201,10 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         # Processa polilinhas mantendo dados ORIGINAIS
         for entity in msp.query('LWPOLYLINE'):
             if entity.is_closed:
-                points = entity.get_points('xyseb')
-
-                # Extrai propriedades diretas da entidade DXF (sem recalcular)
-                perimeter_dxf = entity.length
-                area_dxf = abs(entity.area)
-
+                # Dentro do loop onde processa a polilinha fechada:
+                polygon = EzdxfPolygon(entity.points())
+                perimeter_dxf = polygon.length
+                area_dxf = abs(polygon.area)
                 num_points = len(points)
                 for i in range(num_points):
                     x_start, y_start, _, _, bulge = points[i]
@@ -466,13 +464,13 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log
                 doc.layers.new(name=layer_name, dxfattribs={"color": color})
 
         # Adicionar círculo no ponto inicial
-        msp.add_circle(center=start_point, radius=1.0, dxfattribs={'layer': 'LAYOUT_VERTICES'})
+        msp.add_circle(center=start_point, radius=0.5, dxfattribs={'layer': 'LAYOUT_VERTICES'})
 
         # Adicionar rótulo do vértice (ex: V1, V2...)
         msp.add_text(
             label,
             dxfattribs={
-                'height': 2.5,
+                'height': 0.5,
                 'layer': 'LAYOUT_VERTICES',
                 'insert': (start_point[0] + 1.5, start_point[1] + 1.5)
             }
