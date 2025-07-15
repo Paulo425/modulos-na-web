@@ -525,7 +525,17 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log
             angle += 180
 
         # Deslocar o rótulo perpendicularmente ao segmento
-        offset = 0.2  # pode ajustar para mais ou menos afastamento
+        offset = 0.5  # pode ajustar para mais ou menos afastamento
+
+        angle_rad = math.atan2(dy, dx)
+        angle_deg = math.degrees(angle_rad)
+
+        # Define o lado correto baseado no ângulo do segmento
+        if -90 <= angle_deg <= 90:
+            side_factor = 1  # acima da linha
+        else:
+            side_factor = -1  # abaixo da linha
+
         perp_x = -dy / length * offset
         perp_y = dx / length * offset
         mid_point_displaced = (mid_x + perp_x, mid_y + perp_y)
