@@ -183,7 +183,6 @@ from shapely.geometry import Polygon
 def get_document_info_from_dxf(dxf_file_path, log=None):
     import ezdxf
     import math
-    from shapely.geometry import Polygon
 
     if log is None:
         class DummyLog:
@@ -195,14 +194,20 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         msp = doc.modelspace()
 
         lines, arcs, boundary_points = [], [], []
-        perimeter_dxf = 0
 
-        # Processa polilinhas mantendo dados ORIGINAIS sem recalcular nada
+        perimeter_dxf = 0
+        area_dxf = 0
+
+        # Processa polilinhas mantendo dados ORIGINAIS
         for entity in msp.query('LWPOLYLINE'):
             if entity.is_closed:
                 points = entity.get_points('xyseb')
-                num_points = len(points)
 
+                # Extrai propriedades diretas da entidade DXF (sem recalcular)
+                perimeter_dxf = entity.length
+                area_dxf = abs(entity.area)
+
+                num_points = len(points)
                 for i in range(num_points):
                     x_start, y_start, _, _, bulge = points[i]
                     x_end, y_end, _, _, _ = points[(i + 1) % num_points]
@@ -211,7 +216,6 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                     end_point = (x_end, y_end)
 
                     if abs(bulge) > 1e-8:
-                        # Armazena APENAS os dados ORIGINAIS do arco (sem recalcular)
                         arcs.append({
                             'tipo': 'bulge original preservado',
                             'start_point': start_point,
@@ -221,20 +225,16 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
 
                         log.write(f"🔴 Arco original preservado (bulge={bulge}): "
                                   f"start={start_point}, end={end_point}\n")
-
-                        boundary_points.append(start_point)
-                        segment_length = math.hypot(x_end - x_start, y_end - y_start)
-                        perimeter_dxf += segment_length
                     else:
-                        # Armazena apenas segmentos retos originais
                         lines.append((start_point, end_point))
-                        boundary_points.append(start_point)
-                        segment_length = math.hypot(x_end - x_start, y_end - y_start)
-                        perimeter_dxf += segment_length
-                        log.write(f"🔵 Linha reta preservada: start={start_point}, end={end_point}, "
-                                  f"length={segment_length:.3f}\n")
+                        log.write(f"🔵 Linha reta preservada: start={start_point}, end={end_point}\n")
 
-        # Preserva arcos nativos (ARC) diretamente do DXF original (caso exista)
+                    boundary_points.append(start_point)
+
+                # Considera apenas a primeira poligonal fechada
+                break
+
+        # Preserva arcos nativos (ARC) diretamente do DXF original (se houver)
         for entity in msp.query('ARC'):
             center = entity.dxf.center
             radius = entity.dxf.radius
@@ -256,21 +256,17 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                 'bulge': None
             })
 
-            perimeter_dxf += arc_length
             log.write(f"🟣 Arco nativo DXF preservado: {arcs[-1]}\n")
 
-        # Área aproximada com base nos pontos originais
-        polygon = Polygon(boundary_points)
-        area_dxf = polygon.area
-
         log.write(f"✅ Linhas: {len(lines)}, Arcos: {len(arcs)}, "
-                  f"Perímetro aproximado: {perimeter_dxf:.2f}, Área aproximada: {area_dxf:.2f}\n")
+                  f"Perímetro exato DXF: {perimeter_dxf:.2f}, Área exata DXF: {area_dxf:.2f}\n")
 
         return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
 
     except Exception as e:
         log.write(f"❌ Erro crítico: {e}\n")
         return None, [], [], 0, 0, []
+
 
 
 
