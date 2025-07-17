@@ -37,6 +37,8 @@ from lxml import etree
 
 from docx.oxml.ns import nsdecls, qn
 
+from typing import Union
+
 # Para seleção de múltiplas fotos e da planilha (file dialog).
 
 
@@ -3052,7 +3054,7 @@ from math import radians, sin, cos, sqrt, atan2   # usado pelo haversine_km
 # --------------------------------------------------------------------------
 # Helpers internos (os dois já estavam no nosso “arsenal”)
 # --------------------------------------------------------------------------
-def _parse_coord(val: str|float|int):
+def _parse_coord(val: Union[str, float, int]):
     """
     Converte qualquer string de coordenada (-29.08°, 53,842 etc.) em float.
     Retorna None se não conseguir.
