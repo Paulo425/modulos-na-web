@@ -1152,6 +1152,14 @@ def gerar_laudo_final(uuid):
     import pandas as pd
     df_ativas = pd.DataFrame(amostras_ativas)
 
+    # Padroniza nomes de colunas esperadas
+    df_ativas.rename(columns={
+        "valor_total": "VALOR TOTAL",
+        "area": "AREA TOTAL",
+        "distancia_centro": "DISTANCIA CENTRO"
+    }, inplace=True)
+
+
     # Aplicar Chauvenet e homogeneização
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
     homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
