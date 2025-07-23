@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block conteudo %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div style="max-width: 800px; margin: 20px auto;">
+      {% for category, message in messages %}
+        <div style="
+            background-color: {% if category == 'success' %}#ccffcc
+                             {% elif category == 'warning' %}#fff3cd
+                             {% elif category == 'danger' %}#f8d7da
+                             {% else %}#e2e3e5{% endif %};
+            color: #000;
+            border: 1px solid #ccc;
+            border-left: 5px solid {% if category == 'warning' %}#856404
+                                      {% elif category == 'danger' %}#721c24
+                                      {% elif category == 'success' %}#155724
+                                      {% else %}#6c757d{% endif %};
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 16px;">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+<h2 style="margin-top: 30px; text-align: center;">Avaliação Interativa das Amostras</h2>
+
+<div style="max-width: 900px; margin: auto;">
+    <form method="post">
+        <table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th>Incluir?</th>
+                    <th>Identificador</th>
+                    <th>Valor Total</th>
+                    <th>Área</th>
+                    <th>Valor Unitário (R$/m²)</th>
+                    <th>Resíduo Rel. (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in amostras %}
+                <tr>
+                    <td style="text-align: center;">
+                        <input type="checkbox" name="ativo_{{a.idx}}" {% if a.ativo %}checked{% endif %}>
+                    </td>
+                    <td>{{a.idx}}</td>
+                    <td>R$ {{ '%.2f'|format(a.valor_total) }}</td>
+                    <td>{{ '%.2f'|format(a.area) }} m²</td>
+                    <td>
+                        {% if a.area > 0 and media > 0 %}
+                        <span style="color: {% if ((a.valor_total / a.area - media) / media)*100 > 20 %}red{% else %}black{% endif %}">
+                            {{ '%.1f'|format(((a.valor_total / a.area - media) / media) * 100) }}%
+                        </span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if a.area > 0 and media > 0 %}
+                        {{ '%.1f'|format(((a.valor_total / a.area - media) / media) * 100) }}%
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <p style="margin-top: 20px; font-weight: bold;">
+            Valor Unitário Médio (amostras ativas): <span style="color: darkblue;">R$ {{media}}</span>
+        </p>
+        <p style="font-weight: bold; color: #444;">
+            Amplitude do Intervalo de Confiança 80%: <span style="color: darkred;">{{ amplitude_ic80 }}%</span>
+        </p>
+
+        <hr style="margin: 40px 0;">
+
+        <h4 style="text-align: center; color: #333;">Gráfico de Dispersão das Amostras Selecionadas</h4>
+
+        <div style="text-align: center;">
+        <img src="{{ url_for('static', filename='arquivos/avaliacao_' + uuid + '/grafico_dispersao.png') }}"
+            alt="Gráfico de Dispersão"
+            style="max-width: 700px; width: 100%; border: 1px solid #ccc; padding: 10px;">
+        </div>
+
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="{{ url_for('gerar_avaliacao') }}" class="btn btn-secondary">← Voltar</a>
+            <button type="submit" formaction="{{ url_for('gerar_laudo_final', uuid=uuid) }}" class="btn btn-success">
+                Gerar Laudo Final
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

@@ -15,6 +15,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import traceback
 import sys 
 import fitz  # PyMuPDF
+from flask import flash
+import zipfile
 
 
 
@@ -816,6 +818,7 @@ def gerar_avaliacao():
     resultado = erro_execucao = zip_download = log_relativo = None
     
     if request.method == "POST":
+        acao = request.form.get("acao", "").lower()
         try:
             from werkzeug.utils import secure_filename
             import uuid, zipfile
@@ -981,6 +984,16 @@ def gerar_avaliacao():
                 finalidade_tipo = "servidao"
             else:
                 finalidade_tipo = "mercado"
+            if acao == "avaliar":
+                from executaveis_avaliacao.utils_json import salvar_entrada_corrente_json
+                salvar_entrada_corrente_json(
+                    dados_imovel,
+                    fatores_usuario,
+                    df_amostras.to_dict(orient="records"),
+                    id_execucao
+                )
+                return redirect(url_for('visualizar_resultados', uuid=id_execucao))
+
 
 
             gerar_relatorio_avaliacao_com_template(
@@ -1047,6 +1060,163 @@ def gerar_avaliacao():
 # @app.route('/memoriais-angulos-internos-p1-p2')
 # def memoriais_angulos_internos_p1_p2():
 #     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
+
+@app.route("/visualizar_resultados/<uuid>")
+def visualizar_resultados(uuid):
+    import json
+    caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+    if not os.path.exists(caminho_json):
+        flash("Arquivo JSON de entrada não encontrado.", "danger")
+        return redirect(url_for("gerar_avaliacao"))
+
+    with open(caminho_json, "r", encoding="utf-8") as f:
+        dados = json.load(f)
+
+    amostras = dados.get("amostras", [])
+    fatores = dados.get("fatores_do_usuario", {})
+    dados_avaliando = dados.get("dados_avaliando", {})
+
+    # Calcular valor unitário por amostra ativa
+    valores_ativos = [
+        a["valor_total"] / a["area"]
+        for a in amostras if a.get("ativo") and a.get("area", 0) > 0
+    ]
+
+    media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
+
+    from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
+    amplitude_ic80 = 0.0
+    if len(valores_ativos) > 1:
+        li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
+        if li > 0:
+            amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
+
+
+    return render_template(
+        "visualizar_resultados.html",
+        uuid=uuid,
+        amostras=amostras,
+        media=media,
+        amplitude_ic80=amplitude_ic80,
+        dados_avaliando=dados_avaliando,
+        fatores=fatores
+    )
+@app.route("/gerar_laudo_final/<uuid>", methods=["POST"])
+def gerar_laudo_final(uuid):
+    import json
+    caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+    if not os.path.exists(caminho_json):
+        flash("Arquivo de entrada não encontrado.", "danger")
+        return redirect(url_for("gerar_avaliacao"))
+
+    # 1. Carrega JSON
+    with open(caminho_json, "r", encoding="utf-8") as f:
+        dados = json.load(f)
+
+    # 2. Atualiza estado das amostras com base nos checkboxes
+    for amostra in dados["amostras"]:
+        campo = f"ativo_{amostra['idx']}"
+        amostra["ativo"] = campo in request.form
+
+    # 3. Salva JSON atualizado
+    with open(caminho_json, "w", encoding="utf-8") as f:
+        json.dump(dados, f, indent=2, ensure_ascii=False)
+
+    # 4. Filtra amostras ativas
+    amostras_ativas = [
+        a for a in dados["amostras"]
+        if a.get("ativo") and a.get("area", 0) > 0
+    ]
+
+    if not amostras_ativas:
+        flash("Nenhuma amostra ativa para gerar o laudo.", "warning")
+        return redirect(url_for("visualizar_resultados", uuid=uuid))
+
+    # 5. Executa cálculo simplificado apenas para demonstração
+    valores_unitarios = [a["valor_total"] / a["area"] for a in amostras_ativas]
+    media = round(sum(valores_unitarios) / len(valores_unitarios), 2)
+    media_formatado = f"R$ {media:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    # 6. Gera um arquivo Word simples (você pode adaptar para seu modelo completo)
+    from executaveis_avaliacao.main import (
+        aplicar_chauvenet_e_filtrar,
+        homogeneizar_amostras,
+        gerar_grafico_aderencia_totais,
+        gerar_grafico_dispersao_mediana,
+        gerar_relatorio_avaliacao_com_template
+    )
+
+    import pandas as pd
+    df_ativas = pd.DataFrame(amostras_ativas)
+
+    # Aplicar Chauvenet e homogeneização
+    df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+    homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
+
+    pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
+    os.makedirs(pasta_saida, exist_ok=True)
+
+    img1 = os.path.join(pasta_saida, "grafico_aderencia.png")
+    img2 = os.path.join(pasta_saida, "grafico_dispersao.png")
+    gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+    gerar_grafico_dispersao_mediana(homog, img2)
+
+    # Chamada final
+    nome_docx = f"laudo_avaliacao_{uuid}.docx"
+    caminho_docx = os.path.join(pasta_saida, nome_docx)
+
+    gerar_relatorio_avaliacao_com_template(
+        dados_avaliando=dados["dados_avaliando"],
+        dataframe_amostras_inicial=df_ativas,
+        dataframe_amostras_filtrado=df_filtrado,
+        indices_excluidos=idx_exc,
+        amostras_excluidas=amostras_exc,
+        media=media,
+        desvio_padrao=dp,
+        menor_valor=menor,
+        maior_valor=maior,
+        mediana_valor=mediana,
+        valores_originais_iniciais=df_filtrado["VALOR TOTAL"].tolist(),
+        valores_homogeneizados_validos=homog,
+        caminho_imagem_aderencia=img1,
+        caminho_imagem_dispersao=img2,
+        uuid_atual=uuid,
+        finalidade_do_laudo="mercado",  # ou adaptar
+        area_parcial_afetada=dados["dados_avaliando"].get("AREA TOTAL", 0),
+        fatores_do_usuario=dados["fatores_do_usuario"],
+        caminhos_fotos_avaliando=[],
+        caminhos_fotos_adicionais=[],
+        caminhos_fotos_proprietario=[],
+        caminhos_fotos_planta=[],
+        caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
+        nome_arquivo_word=caminho_docx
+    )
+
+
+    # 1. Criar caminho do ZIP
+    nome_zip = f"pacote_avaliacao_{uuid}.zip"
+    caminho_zip = os.path.join(BASE_DIR, "static", "arquivos", nome_zip)
+
+
+    # Copiar o JSON de entrada para a pasta de saída
+    origem_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+    destino_json = os.path.join(pasta_saida, f"{uuid}_entrada_corrente.json")
+    if os.path.exists(origem_json):
+        import shutil
+        shutil.copyfile(origem_json, destino_json)
+
+    # 2. Compactar todos os arquivos da pasta
+    with zipfile.ZipFile(caminho_zip, 'w') as zipf:
+        for root, dirs, files in os.walk(pasta_saida):
+            for file in files:
+                full_path = os.path.join(root, file)
+                zipf.write(full_path, arcname=file)
+
+    # 3. Retornar ZIP ao invés do DOCX
+    return send_file(caminho_zip, as_attachment=True)
+
    
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
