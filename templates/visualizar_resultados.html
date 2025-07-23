@@ -27,79 +27,72 @@
   {% endif %}
 {% endwith %}
 
-
 <h2 style="margin-top: 30px; text-align: center;">Avaliação Interativa das Amostras</h2>
 
 <div style="max-width: 900px; margin: auto;">
-    <form method="post">
-        <table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse: collapse;">
-            <thead>
-                <tr style="background-color: #f2f2f2;">
-                    <th>Incluir?</th>
-                    <th>Identificador</th>
-                    <th>Valor Total</th>
-                    <th>Área</th>
-                    <th>Valor Unitário (R$/m²)</th>
-                    <th>Resíduo Rel. (%)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for a in amostras %}
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" name="ativo_{{a.idx}}" {% if a.ativo %}checked{% endif %}>
-                    </td>
-                    <td>{{a.idx}}</td>
-                    <td>R$ {{ '%.2f'|format(a.valor_total) }}</td>
-                    <td>{{ '%.2f'|format(a.area) }} m²</td>
-                    <td>
-                        {% if a.area > 0 and media > 0 %}
-                        <span style="color: {% if ((a.valor_total / a.area - media) / media)*100 > 20 %}red{% else %}black{% endif %}">
-                            {{ '%.1f'|format(((a.valor_total / a.area - media) / media) * 100) }}%
-                        </span>
-                        {% else %}
-                        -
-                        {% endif %}
-                    </td>
+  <form method="post">
+    <table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse: collapse;">
+      <thead>
+        <tr style="background-color: #f2f2f2;">
+          <th>Incluir?</th>
+          <th>Identificador</th>
+          <th>Valor Total</th>
+          <th>Área</th>
+          <th>Valor Unitário (R$/m²)</th>
+          <th>Resíduo Rel. (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in amostras %}
+        <tr>
+          <td><input type="checkbox" name="ativo_{{ a.idx }}" checked></td>
+          <td>{{ a.idx }}</td>
+          <td>R$ {{ a.valor_total }}</td>
+          <td>{{ a.area }} m²</td>
+          <td>
+            {% if a.area > 0 %}
+              R$ {{ '%.2f'|format(a.valor_total / a.area) }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if a.area > 0 and media > 0 %}
+              <span style="color: {% if ((a.valor_total / a.area - media) / media)*100 > 20 %}red{% else %}black{% endif %}">
+                {{ '%.1f'|format(((a.valor_total / a.area - media) / media) * 100) }}%
+              </span>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-                    <td>
-                        {% if a.area > 0 and media > 0 %}
-                        {{ '%.1f'|format(((a.valor_total / a.area - media) / media) * 100) }}%
-                        {% else %}
-                        -
-                        {% endif %}
-                    </td>
+    <p style="margin-top: 20px; font-weight: bold;">
+      Valor Unitário Médio (amostras ativas): <span style="color: darkblue;">R$ {{ media }}</span>
+    </p>
+    <p style="font-weight: bold; color: #444;">
+      Amplitude do Intervalo de Confiança 80%: <span style="color: darkred;">{{ amplitude_ic80 }}%</span>
+    </p>
 
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <hr style="margin: 40px 0;">
+    <h4 style="text-align: center; color: #333;">Gráfico de Dispersão das Amostras Selecionadas</h4>
 
-        <p style="margin-top: 20px; font-weight: bold;">
-            Valor Unitário Médio (amostras ativas): <span style="color: darkblue;">R$ {{media}}</span>
-        </p>
-        <p style="font-weight: bold; color: #444;">
-            Amplitude do Intervalo de Confiança 80%: <span style="color: darkred;">{{ amplitude_ic80 }}%</span>
-        </p>
+    <div style="text-align: center;">
+      <img src="{{ url_for('static', filename='arquivos/avaliacao_' + uuid + '/grafico_dispersao.png') }}"
+           alt="Gráfico de Dispersão"
+           style="max-width: 700px; width: 100%; border: 1px solid #ccc; padding: 10px;">
+    </div>
 
-        <hr style="margin: 40px 0;">
-
-        <h4 style="text-align: center; color: #333;">Gráfico de Dispersão das Amostras Selecionadas</h4>
-
-        <div style="text-align: center;">
-        <img src="{{ url_for('static', filename='arquivos/avaliacao_' + uuid + '/grafico_dispersao.png') }}"
-            alt="Gráfico de Dispersão"
-            style="max-width: 700px; width: 100%; border: 1px solid #ccc; padding: 10px;">
-        </div>
-
-
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="{{ url_for('gerar_avaliacao') }}" class="btn btn-secondary">← Voltar</a>
-            <button type="submit" formaction="{{ url_for('gerar_laudo_final', uuid=uuid) }}" class="btn btn-success">
-                Gerar Laudo Final
-            </button>
-        </div>
-    </form>
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="{{ url_for('gerar_avaliacao') }}" class="btn btn-secondary">← Voltar</a>
+      <button type="submit" formaction="{{ url_for('gerar_laudo_final', uuid=uuid) }}" class="btn btn-success">
+        Gerar Laudo Final
+      </button>
+    </div>
+  </form>
 </div>
 
 {% endblock %}

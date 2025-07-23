@@ -17,6 +17,7 @@ import sys
 import fitz  # PyMuPDF
 from flask import flash
 import zipfile
+from flask import send_file
 
 
 
@@ -1007,7 +1008,7 @@ def gerar_avaliacao():
                 menor_valor=menor,
                 maior_valor=maior,
                 mediana_valor=mediana,
-                valores_originais_iniciais=df_filtrado["VALOR TOTAL"].tolist(),
+                valores_originais_iniciais = df_filtrado.get("VALOR TOTAL", pd.Series()).tolist(),
                 valores_homogeneizados_validos=homog,
                 caminho_imagem_aderencia=img1,
                 caminho_imagem_dispersao=img2,
