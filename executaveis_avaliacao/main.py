@@ -3219,7 +3219,20 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     lista_valores_unitarios = []
 
     for _, linha in dataframe_amostras_validas.iterrows():
-        valor_total_amostra = linha["VALOR TOTAL"]
+        try:
+            valor_total_amostra = (
+                linha["VALOR TOTAL"]
+                if "VALOR TOTAL" in linha
+                else linha["valor_total"]
+                if "valor_total" in linha
+                else linha["VALOR_TOTAL"]
+                if "VALOR_TOTAL" in linha
+                else None
+            )
+        except Exception as e:
+            print(f"Erro ao acessar 'VALOR TOTAL' em: {linha}")
+            raise e
+
         area_da_amostra = float(linha.get("AREA TOTAL", 0))
 
         # Cálculo dos fatores conforme a lógica original:
