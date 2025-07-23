@@ -1202,6 +1202,10 @@ def gerar_laudo_final(uuid):
         caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
         nome_arquivo_word=caminho_docx
     )
+    if os.path.exists(caminho_docx):
+        logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
+    else:
+        logger.error(f"❌ Erro: o DOCX não foi gerado em {caminho_docx}")
 
 
     # 1. Criar caminho do ZIP
