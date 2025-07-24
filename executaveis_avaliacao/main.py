@@ -5836,6 +5836,14 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
     dados_avaliando = df.iloc[-1].to_dict()
     dataframe_amostras = df.iloc[:-1].copy()
 
+    # Garantindo que CIDADE, FONTE, LATITUDE e LONGITUDE estejam no dataframe_amostras
+    for coluna in ["CIDADE", "FONTE", "LATITUDE", "LONGITUDE"]:
+        if coluna in df.columns:
+            dataframe_amostras[coluna] = df[coluna].iloc[:-1].values
+        else:
+            dataframe_amostras[coluna] = None
+
+
     if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
         dataframe_amostras["VALOR UNITARIO"] = (
             dataframe_amostras["VALOR TOTAL"] / dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
