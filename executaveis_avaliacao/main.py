@@ -5899,7 +5899,7 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         import traceback
         erro_completo = traceback.format_exc()
         logger.error(f"ERRO DETALHADO:\n{erro_completo}")
-        raise Exception(f"Ocorreu um erro ao processar o Excel: {e}")
+        raise 
 ###############################################################################
 # HOMOGENEIZAR AMOSTRAS (DATAFRAME FILTRADO)
 ###############################################################################
