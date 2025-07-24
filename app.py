@@ -972,8 +972,13 @@ def gerar_avaliacao():
                     dados_imovel,
                     fatores_usuario,
                     df_amostras.to_dict(orient="records"),
-                    id_execucao
+                    id_execucao,
+                    fotos_imovel=fotos_imovel,
+                    fotos_adicionais=fotos_adicionais,
+                    fotos_proprietario=fotos_proprietario,
+                    fotos_planta=fotos_planta
                 )
+
                 return redirect(url_for('visualizar_resultados', uuid=id_execucao))
 
 
@@ -1100,6 +1105,11 @@ def gerar_laudo_final(uuid):
     # 1. Carrega JSON
     with open(caminho_json, "r", encoding="utf-8") as f:
         dados = json.load(f)
+        fotos_imovel = dados.get("fotos_imovel", [])
+        fotos_adicionais = dados.get("fotos_adicionais", [])
+        fotos_proprietario = dados.get("fotos_proprietario", [])
+        fotos_planta = dados.get("fotos_planta", [])
+
 
     # 2. Atualiza estado das amostras com base nos checkboxes
     for amostra in dados["amostras"]:
@@ -1177,16 +1187,17 @@ def gerar_laudo_final(uuid):
         caminho_imagem_aderencia=img1,
         caminho_imagem_dispersao=img2,
         uuid_atual=uuid,
-        finalidade_do_laudo="mercado",  # ou adaptar
+        finalidade_do_laudo="mercado",  # ou adaptar conforme seu fluxo
         area_parcial_afetada=dados["dados_avaliando"].get("AREA TOTAL", 0),
         fatores_do_usuario=dados["fatores_do_usuario"],
-        caminhos_fotos_avaliando=[],
-        caminhos_fotos_adicionais=[],
-        caminhos_fotos_proprietario=[],
-        caminhos_fotos_planta=[],
+        caminhos_fotos_avaliando=fotos_imovel,
+        caminhos_fotos_adicionais=fotos_adicionais,
+        caminhos_fotos_proprietario=fotos_proprietario,
+        caminhos_fotos_planta=fotos_planta,
         caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
         nome_arquivo_word=caminho_docx
     )
+
     if os.path.exists(caminho_docx):
         logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
     else:

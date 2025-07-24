@@ -3,17 +3,31 @@
 import json
 import os
 
-def salvar_entrada_corrente_json(dados_imovel, fatores_usuario, amostras, uuid_execucao):
+def salvar_entrada_corrente_json(
+    dados_imovel,
+    fatores_usuario,
+    amostras,
+    uuid_execucao,
+    fotos_imovel=None,
+    fotos_adicionais=None,
+    fotos_proprietario=None,
+    fotos_planta=None
+):
     """
     Gera e salva o arquivo entrada_corrente.json contendo:
     - Dados do imóvel
     - Fatores selecionados
     - Lista de amostras com campo "ativo": True
+    - Caminhos das fotos (opcionais)
     """
     estrutura = {
         "dados_avaliando": dados_imovel,
         "fatores_do_usuario": fatores_usuario,
-        "amostras": []
+        "amostras": [],
+        "fotos_imovel": fotos_imovel or [],
+        "fotos_adicionais": fotos_adicionais or [],
+        "fotos_proprietario": fotos_proprietario or [],
+        "fotos_planta": fotos_planta or []
     }
 
     for a in amostras:

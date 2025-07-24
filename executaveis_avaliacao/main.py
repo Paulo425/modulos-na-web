@@ -5343,7 +5343,7 @@ def gerar_relatorio_avaliacao_com_template(
     )
 
 
-    area_total_lida = float(dados_avaliando.get("AREA TOTAL", 0))
+    area_total_lida = area_parcial_afetada
     area_total_str = f"{formatar_numero_brasileiro(area_total_lida)} m²"
 
     substituir_placeholder_por_titulo_e_valor(
