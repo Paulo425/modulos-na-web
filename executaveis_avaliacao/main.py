@@ -5846,6 +5846,12 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         else:
             dataframe_amostras[coluna] = None
 
+    # Converter LATITUDE e LONGITUDE para valores numéricos corretos
+    dataframe_amostras["LATITUDE"] = dataframe_amostras["LATITUDE"].str.replace("°", "").astype(float)
+    dataframe_amostras["LONGITUDE"] = dataframe_amostras["LONGITUDE"].str.replace("°", "").astype(float)
+
+    # Garantir o cálculo correto de VALOR_UNITARIO
+    dataframe_amostras["VALOR UNITARIO"] = dataframe_amostras["VALOR TOTAL"] / dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
 
 
     if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
