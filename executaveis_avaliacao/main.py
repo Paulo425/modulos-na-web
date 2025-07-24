@@ -80,6 +80,15 @@ from itertools import chain
 from docx.enum.text import WD_BREAK
 from docx.oxml.ns import qn
 
+
+logging.basicConfig(
+    filename="erro_detalhado.txt",
+    filemode="w",
+    level=logging.ERROR,
+    format="%(asctime)s %(levelname)s: %(message)s"
+)
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -5898,8 +5907,10 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
     except Exception as e:
         import traceback
         erro_completo = traceback.format_exc()
-        logger.error(f"ERRO DETALHADO:\n{erro_completo}")
-        raise 
+        with open("erro_detalhado.txt", "w", encoding="utf-8") as f:
+            f.write(erro_completo)
+        raise e
+
 ###############################################################################
 # HOMOGENEIZAR AMOSTRAS (DATAFRAME FILTRADO)
 ###############################################################################
