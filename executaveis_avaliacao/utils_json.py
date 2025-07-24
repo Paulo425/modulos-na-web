@@ -32,12 +32,12 @@ def salvar_entrada_corrente_json(
 
     for a in amostras:
         estrutura["amostras"].append({
-            "idx": a.get("AM") or a.get("idx"),
-            "valor_total": float(a.get("VALOR TOTAL", 0)),
-            "area": float(a.get("AREA TOTAL", 0)),
-            "valor_unitario": float(a.get("VALOR UNITARIO", 0)),
-            "cidade": a.get("CIDADE", ""),
-            "fonte": a.get("FONTE", ""),
+            "idx": a.get("idx"),
+            "valor_total": float(a.get("valor_total", 0)),
+            "area": float(a.get("area", 0)),
+            "valor_unitario": float(a.get("valor_unitario", 0)),
+            "cidade": a.get("cidade", ""),
+            "fonte": a.get("fonte", ""),
             "coordenada_x": a.get("X", None),
             "coordenada_y": a.get("Y", None),
             "ativo": True
