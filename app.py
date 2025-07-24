@@ -819,6 +819,8 @@ def gerar_avaliacao():
     resultado = erro_execucao = zip_download = log_relativo = None
     
     if request.method == "POST":
+        logger.info("🔧 Início da execução do bloco POST em /avaliacoes")
+
         acao = request.form.get("acao", "").lower()
         try:
             from werkzeug.utils import secure_filename
