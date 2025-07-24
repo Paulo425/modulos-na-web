@@ -1025,8 +1025,12 @@ def gerar_avaliacao():
                 caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
                 nome_arquivo_word=caminho_docx
             )
-
-            
+            # 3. Verificar se foi realmente criado
+            if os.path.exists(caminho_docx):
+                logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
+            else:
+                logger.error(f"❌ Erro: o DOCX não foi gerado em {caminho_docx}")
+                        
             # 5. Gerar ZIP
             nome_zip = f"relatorio_avaliacao_{id_execucao}.zip"
             caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos', nome_zip)
@@ -1166,7 +1170,7 @@ def gerar_laudo_final(uuid):
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
     homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
 
-    pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
+    pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
     os.makedirs(pasta_saida, exist_ok=True)
 
     img1 = os.path.join(pasta_saida, "grafico_aderencia.png")
