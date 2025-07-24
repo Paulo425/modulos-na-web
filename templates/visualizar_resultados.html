@@ -47,11 +47,11 @@
         <tr>
           <td><input type="checkbox" name="ativo_{{ a.idx }}" checked></td>
           <td>{{ a.idx }}</td>
-          <td>R$ {{ a.valor_total }}</td>
-          <td>{{ a.area }} m²</td>
+          <td>R$ {{ '%.2f'|format(a.valor_total | float) }}</td>
+          <td>{{ '%.2f'|format(a.area | float) }} m²</td>
           <td>
             {% if a.area > 0 %}
-              R$ {{ '%.2f'|format(a.valor_total / a.area) }}
+              R$ {{ '%.2f'|format((a.valor_total | float) / (a.area | float)) }}
             {% else %}
               -
             {% endif %}
@@ -59,7 +59,7 @@
           <td>
             {% if a.area > 0 and media > 0 %}
               <span style="color: {% if ((a.valor_total / a.area - media) / media)*100 > 20 %}red{% else %}black{% endif %}">
-                {{ '%.1f'|format(((a.valor_total / a.area - media) / media) * 100) }}%
+                {{ '%.1f'|format((((a.valor_total | float) / (a.area | float) - media) / media) * 100) }}%
               </span>
             {% else %}
               -
