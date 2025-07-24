@@ -5199,7 +5199,12 @@ def gerar_relatorio_avaliacao_com_template(
     logger.info(f"Área parcial afetada recebida: {area_parcial_afetada}")
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
-    area_disponivel = area_parcial_afetada
+    try:
+        area_disponivel = float(str(area_parcial_afetada).replace(",", "."))
+    except:
+        area_disponivel = 0.0
+        logger.warning(f"⚠️ Área parcial afetada inválida: {area_parcial_afetada}")
+
     # ──────────────────────────────────────────────────────
     """
     Gera o relatório Word completo, exibindo todos os itens e incluindo

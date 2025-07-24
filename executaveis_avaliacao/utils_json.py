@@ -35,8 +35,14 @@ def salvar_entrada_corrente_json(
             "idx": a.get("AM") or a.get("idx"),
             "valor_total": float(a.get("VALOR TOTAL", 0)),
             "area": float(a.get("AREA TOTAL", 0)),
+            "valor_unitario": float(a.get("VALOR UNITARIO", 0)),
+            "cidade": a.get("CIDADE", ""),
+            "fonte": a.get("FONTE", ""),
+            "coordenada_x": a.get("X", None),
+            "coordenada_y": a.get("Y", None),
             "ativo": True
         })
+
 
     pasta_saida = f"static/tmp"
     os.makedirs(pasta_saida, exist_ok=True)
