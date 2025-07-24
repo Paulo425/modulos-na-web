@@ -5823,78 +5823,83 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         return R * c
 
     df = pd.read_excel(caminho_arquivo_excel)
-    print(df.head()) 
-    df.dropna(how="all", inplace=True)
-    df.reset_index(drop=True, inplace=True)
+    try:
+        print(df.head()) 
+        df.dropna(how="all", inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
-    for col in ("VALOR TOTAL", "AREA TOTAL", "VALOR UNITARIO"):
-        if col in df.columns:
-            df[col] = df[col].apply(_to_float)
+        for col in ("VALOR TOTAL", "AREA TOTAL", "VALOR UNITARIO"):
+            if col in df.columns:
+                df[col] = df[col].apply(_to_float)
 
-    dados_avaliando = df.iloc[-1].to_dict()
-    dataframe_amostras = df.iloc[:-1].copy()
+        dados_avaliando = df.iloc[-1].to_dict()
+        dataframe_amostras = df.iloc[:-1].copy()
 
-    # Garantindo colunas essenciais para o dataframe_amostras
-    for coluna in ["CIDADE", "FONTE", "LATITUDE", "LONGITUDE"]:
-        if coluna in df.columns:
-            dataframe_amostras[coluna] = df[coluna].iloc[:-1].values
+        # Garantindo colunas essenciais para o dataframe_amostras
+        for coluna in ["CIDADE", "FONTE", "LATITUDE", "LONGITUDE"]:
+            if coluna in df.columns:
+                dataframe_amostras[coluna] = df[coluna].iloc[:-1].values
+            else:
+                dataframe_amostras[coluna] = None
+
+        if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
+            dataframe_amostras["VALOR UNITARIO"] = (
+                dataframe_amostras["VALOR TOTAL"] / dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
+            )
+
+        lat_av = _parse_coord(dados_avaliando.get("LATITUDE"))
+        lon_av = _parse_coord(dados_avaliando.get("LONGITUDE"))
+
+        nome_cidade = str(dados_avaliando.get("CIDADE", "")).strip()
+        if nome_cidade:
+            try:
+                geoloc = Nominatim(user_agent="aval-geo")
+                loc = geoloc.geocode(f"{nome_cidade}, Brazil", timeout=10)
+                lat_ctr, lon_ctr = loc.latitude, loc.longitude if loc else (lat_av, lon_av)
+            except:
+                lat_ctr, lon_ctr = lat_av, lon_av
         else:
-            dataframe_amostras[coluna] = None
+            lat_ctr, lon_ctr = lat_av, lon_av
 
-    if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
-        dataframe_amostras["VALOR UNITARIO"] = (
-            dataframe_amostras["VALOR TOTAL"] / dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
+        dados_avaliando["DISTANCIA CENTRO"] = haversine_km(lat_av, lon_av, lat_ctr, lon_ctr)
+
+        dataframe_amostras["LAT_PARS"] = dataframe_amostras["LATITUDE"].apply(_parse_coord)
+        dataframe_amostras["LON_PARS"] = dataframe_amostras["LONGITUDE"].apply(_parse_coord)
+        dataframe_amostras["DISTANCIA CENTRO"] = dataframe_amostras.apply(
+            lambda r: haversine_km(r["LAT_PARS"], r["LON_PARS"], lat_ctr, lon_ctr), axis=1
         )
 
-    lat_av = _parse_coord(dados_avaliando.get("LATITUDE"))
-    lon_av = _parse_coord(dados_avaliando.get("LONGITUDE"))
+        logger.info(f"✅ Linhas antes do filtro crítico: {len(dataframe_amostras)}")
+        logger.info(f"Valores nulos em 'VALOR TOTAL': {dataframe_amostras['VALOR TOTAL'].isna().sum()}")
+        logger.info(f"Valores nulos em 'AREA TOTAL': {dataframe_amostras['AREA TOTAL'].isna().sum()}")
+        logger.info(f"Valores nulos em 'DISTANCIA CENTRO': {dataframe_amostras['DISTANCIA CENTRO'].isna().sum()}")
 
-    nome_cidade = str(dados_avaliando.get("CIDADE", "")).strip()
-    if nome_cidade:
-        try:
-            geoloc = Nominatim(user_agent="aval-geo")
-            loc = geoloc.geocode(f"{nome_cidade}, Brazil", timeout=10)
-            lat_ctr, lon_ctr = loc.latitude, loc.longitude if loc else (lat_av, lon_av)
-        except:
-            lat_ctr, lon_ctr = lat_av, lon_av
-    else:
-        lat_ctr, lon_ctr = lat_av, lon_av
+        logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras.head())
 
-    dados_avaliando["DISTANCIA CENTRO"] = haversine_km(lat_av, lon_av, lat_ctr, lon_ctr)
+        mask_excluir = (
+            (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
+            (dataframe_amostras["DISTANCIA CENTRO"].isna()) |
+            (dataframe_amostras["VALOR TOTAL"].isna()) |
+            (dataframe_amostras["AREA TOTAL"].isna()) |
+            (dataframe_amostras["AREA TOTAL"] == 0)
+        )
+        logger.info("Máscara de exclusão:\n", mask_excluir.head())
+        logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir].head())
+        dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
+        logger.info(f"✅ Linhas após o filtro crítico: {len(dataframe_amostras)}")
+        dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
 
-    dataframe_amostras["LAT_PARS"] = dataframe_amostras["LATITUDE"].apply(_parse_coord)
-    dataframe_amostras["LON_PARS"] = dataframe_amostras["LONGITUDE"].apply(_parse_coord)
-    dataframe_amostras["DISTANCIA CENTRO"] = dataframe_amostras.apply(
-        lambda r: haversine_km(r["LAT_PARS"], r["LON_PARS"], lat_ctr, lon_ctr), axis=1
-    )
+        logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras)
+        logger.info("Mascara de exclusão:\n", mask_excluir)
+        logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir])
 
-    logger.info(f"✅ Linhas antes do filtro crítico: {len(dataframe_amostras)}")
-    logger.info(f"Valores nulos em 'VALOR TOTAL': {dataframe_amostras['VALOR TOTAL'].isna().sum()}")
-    logger.info(f"Valores nulos em 'AREA TOTAL': {dataframe_amostras['AREA TOTAL'].isna().sum()}")
-    logger.info(f"Valores nulos em 'DISTANCIA CENTRO': {dataframe_amostras['DISTANCIA CENTRO'].isna().sum()}")
+        return dataframe_amostras, dados_avaliando
 
-    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras.head())
-
-    mask_excluir = (
-        (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
-        (dataframe_amostras["DISTANCIA CENTRO"].isna()) |
-        (dataframe_amostras["VALOR TOTAL"].isna()) |
-        (dataframe_amostras["AREA TOTAL"].isna()) |
-        (dataframe_amostras["AREA TOTAL"] == 0)
-    )
-    logger.info("Máscara de exclusão:\n", mask_excluir.head())
-    logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir].head())
-    dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
-    logger.info(f"✅ Linhas após o filtro crítico: {len(dataframe_amostras)}")
-    dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
-
-    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras)
-    logger.info("Mascara de exclusão:\n", mask_excluir)
-    logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir])
-
-    return dataframe_amostras, dados_avaliando
-
-
+    except Exception as e:
+        import traceback
+        erro_completo = traceback.format_exc()
+        logger.error(f"ERRO DETALHADO:\n{erro_completo}")
+        raise Exception(f"Ocorreu um erro ao processar o Excel: {e}")
 ###############################################################################
 # HOMOGENEIZAR AMOSTRAS (DATAFRAME FILTRADO)
 ###############################################################################
