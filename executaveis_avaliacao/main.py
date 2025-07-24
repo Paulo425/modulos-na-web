@@ -5787,8 +5787,6 @@ def gerar_relatorio_avaliacao_com_template(
         pass
 
 
-
-
 ###############################################################################
 # LEITURA DA PLANILHA EXCEL
 ###############################################################################
@@ -5829,50 +5827,27 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    for col in ("VALOR TOTAL", "AREA TOTAL"):
+    for col in ("VALOR TOTAL", "AREA TOTAL", "VALOR UNITARIO"):
         if col in df.columns:
             df[col] = df[col].apply(_to_float)
-
-    # # Corrigir cálculo do VALOR UNITARIO sem mudar nomes das colunas:
-    # df["VALOR UNITARIO"] = df["VALOR TOTAL"] / df["AREA TOTAL"].replace({0: pd.NA})
 
     dados_avaliando = df.iloc[-1].to_dict()
     dataframe_amostras = df.iloc[:-1].copy()
 
-    # Garantindo as colunas originais do Excel sem alterar nomes
+    # Garantindo colunas essenciais para o dataframe_amostras
     for coluna in ["CIDADE", "FONTE", "LATITUDE", "LONGITUDE"]:
         if coluna in df.columns:
             dataframe_amostras[coluna] = df[coluna].iloc[:-1].values
         else:
             dataframe_amostras[coluna] = None
 
-    # Converter LATITUDE e LONGITUDE para valores numéricos corretos
-    # Função segura para converter coordenadas, sem erros
-    def converter_coordenada(valor):
-        try:
-            return float(str(valor).replace("°", "").replace(",", ".").strip())
-        except:
-            return None
+    if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
+        dataframe_amostras["VALOR UNITARIO"] = (
+            dataframe_amostras["VALOR TOTAL"] / dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
+        )
 
-    dataframe_amostras["LATITUDE"] = dataframe_amostras["LATITUDE"].apply(converter_coordenada)
-    dataframe_amostras["LONGITUDE"] = dataframe_amostras["LONGITUDE"].apply(converter_coordenada)
-
-    # Código robusto e seguro recomendado para manter:
-    def calcular_valor_unitario(row):
-        try:
-            valor_total = float(row["VALOR TOTAL"])
-            area_total = float(row["AREA TOTAL"])
-            if area_total > 0:
-                return valor_total / area_total
-            else:
-                return None
-        except:
-            return None
-
-    dataframe_amostras["VALOR UNITARIO"] = dataframe_amostras.apply(calcular_valor_unitario, axis=1)
-
-    lat_av = converter_coordenada(dados_avaliando.get("LATITUDE"))
-    lon_av = converter_coordenada(dados_avaliando.get("LONGITUDE"))
+    lat_av = _parse_coord(dados_avaliando.get("LATITUDE"))
+    lon_av = _parse_coord(dados_avaliando.get("LONGITUDE"))
 
     nome_cidade = str(dados_avaliando.get("CIDADE", "")).strip()
     if nome_cidade:
@@ -5918,7 +5893,6 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
     logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir])
 
     return dataframe_amostras, dados_avaliando
-
 
 
 ###############################################################################
