@@ -73,10 +73,6 @@ from docx.oxml.ns import nsdecls, qn
 from docx.oxml.shared import OxmlElement
 from lxml import etree
 import logging
-logger = logging.getLogger()
-
-
-
 from uuid import uuid4
 import fitz  # PyMuPDF
 from pathlib import Path
@@ -84,11 +80,7 @@ from itertools import chain
 from docx.enum.text import WD_BREAK
 from docx.oxml.ns import qn
 
-
-
-
-
-
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

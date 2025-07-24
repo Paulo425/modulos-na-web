@@ -1,80 +1,59 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
+from flask import (
+    Flask, render_template, request, redirect, url_for, session,
+    send_from_directory, send_file, flash
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-from subprocess import Popen, DEVNULL, STDOUT
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, DEVNULL, STDOUT
 import os
 import json
-import subprocess
 import tempfile
 from pathlib import Path
-from subprocess import Popen, PIPE
 import shutil
-import os
-from werkzeug.security import generate_password_hash, check_password_hash
 import traceback
-import sys 
-import fitz  # PyMuPDF
-from flask import flash
-import zipfile
-from flask import send_file
-
-
-
-from usuarios_mysql import (
-    salvar_usuario_mysql,
-    buscar_usuario_mysql,
-    aprovar_usuario_mysql,
-    excluir_usuario_mysql,
-    listar_pendentes_mysql,
-    listar_usuarios_mysql,
-    atualizar_senha_mysql
-)
-
-import logging
 import sys
-import uuid
-import logging, traceback
-from datetime import datetime
+import fitz  # PyMuPDF
+import zipfile
 from pdf2image import convert_from_bytes
 import io
 from PIL import Image, UnidentifiedImageError
-           
+import uuid
+import logging
 
-
+# 🔧 Configuração do logger (definitiva e funcional)
 logging.basicConfig(
     level=logging.INFO,
     format='%(levelname)s: %(message)s',
     stream=sys.stdout
 )
+logger = logging.getLogger(__name__)
 
+# 📁 Diretórios base e públicos
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
-os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
-
-
-app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'),
-                       static_folder=os.path.join(BASE_DIR, 'static'))
-
-app.secret_key = 'chave_super_secreta'
-app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
-
-# Diretórios do projeto
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 log_dir = os.path.join(BASE_DIR, "static", "logs")
 arquivos_dir = os.path.join(BASE_DIR, "static", "arquivos")
+
+os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 os.makedirs(arquivos_dir, exist_ok=True)
 
-# @app.context_processor
-# def inject_pendentes_count():
-#     if session.get('usuario') == 'admin':
-#         try:
-#             return dict(pendentes_count=len(listar_pendentes_mysql()))
-#         except:
-#             return dict(pendentes_count=0)
-#     return dict(pendentes_count=0)
-import uuid
+# 🚀 Inicialização do app Flask
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'static')
+)
+app.secret_key = 'chave_super_secreta'
+app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+
+# 🔄 Imports do módulo de usuários
+from usuarios_mysql import (
+    salvar_usuario_mysql, buscar_usuario_mysql, aprovar_usuario_mysql,
+    excluir_usuario_mysql, listar_pendentes_mysql, listar_usuarios_mysql,
+    atualizar_senha_mysql
+)
+
 
 def salvar_com_nome_unico(arquivo, destino_base):
     """
@@ -1111,7 +1090,7 @@ def visualizar_resultados(uuid):
     )
 @app.route("/gerar_laudo_final/<uuid>", methods=["POST"])
 def gerar_laudo_final(uuid):
-    import json
+    global logger
     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
 
     if not os.path.exists(caminho_json):
