@@ -5194,6 +5194,9 @@ def gerar_relatorio_avaliacao_com_template(
     caminho_template="template.docx",
     nome_arquivo_word="relatorio.docx"
 ):
+    logger.info(f"🔍 Entrando na função gerar_relatorio_avaliacao_com_template...")
+    logger.info(f"📄 Template recebido: {caminho_template}")
+    logger.info(f"📝 Caminho destino: {nome_arquivo_word}")
 
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
@@ -5213,7 +5216,13 @@ def gerar_relatorio_avaliacao_com_template(
     data_atual = datetime.now().strftime("%d/%m/%Y")
 
     # Carregar template
-    documento = Document(caminho_template)
+    try:
+        doc = Document(caminho_template)
+        logger.info("✅ Template Word carregado com sucesso.")
+    except Exception as e:
+        logger.error(f"❌ Erro ao carregar template: {e}")
+        return
+
 
     cidade_nome = fatores_do_usuario.get("cidade", "CIDADE NÃO INFORMADA").strip().upper()
     data_formatada = datetime.now().strftime("%d-%m-%Y")
@@ -5738,7 +5747,11 @@ def gerar_relatorio_avaliacao_com_template(
     # inserir_tabela_resumo_geral_completo(documento, "[RESUMO GERAL]", {...})
 
     # Salvar
-    documento.save(nome_arquivo_word)
+    try:
+        doc.save(nome_arquivo_word)
+        logger.info(f"✅ Laudo salvo em: {nome_arquivo_word}")
+    except Exception as e:
+        logger.error(f"❌ Erro ao salvar o laudo: {e}")
     # Limpar arquivos PNG temporários gerados a partir de PDFs
     def limpar_arquivos_temp_png(lista_de_caminhos):
         for caminho in lista_de_caminhos:
