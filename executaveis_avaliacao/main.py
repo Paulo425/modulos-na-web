@@ -5833,20 +5833,18 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         if col in df.columns:
             df[col] = df[col].apply(_to_float)
 
-    # Garanta o cálculo correto do valor unitário aqui:
+    # Corrigir cálculo do VALOR UNITARIO sem mudar nomes das colunas:
     df["VALOR UNITARIO"] = df["VALOR TOTAL"] / df["AREA TOTAL"].replace({0: pd.NA})
-
 
     dados_avaliando = df.iloc[-1].to_dict()
     dataframe_amostras = df.iloc[:-1].copy()
 
-    # Garantindo que CIDADE, FONTE, LATITUDE e LONGITUDE estejam no dataframe_amostras
-    for coluna, nome_novo in zip(["CIDADE", "FONTE", "LATITUDE", "LONGITUDE"],
-                                 ["cidade", "fonte", "latitude", "longitude"]):
+    # Garantindo as colunas originais do Excel sem alterar nomes
+    for coluna in ["CIDADE", "FONTE", "LATITUDE", "LONGITUDE"]:
         if coluna in df.columns:
-            dataframe_amostras[nome_novo] = df[coluna].iloc[:-1].values
+            dataframe_amostras[coluna] = df[coluna].iloc[:-1].values
         else:
-            dataframe_amostras[nome_novo] = None
+            dataframe_amostras[coluna] = None
 
 
 
