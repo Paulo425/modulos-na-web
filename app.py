@@ -45,6 +45,7 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, 'static')
 )
 app.secret_key = 'chave_super_secreta'
+app.debug = True 
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
 # 🔄 Imports do módulo de usuários
