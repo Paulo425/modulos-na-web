@@ -5192,8 +5192,8 @@ def gerar_relatorio_avaliacao_com_template(
     caminhos_fotos_adicionais=None,
     caminhos_fotos_proprietario=None,
     caminhos_fotos_planta=None,
-    caminho_template="template.docx",
-    nome_arquivo_word="relatorio.docx"
+    caminho_template,
+    nome_arquivo_word
 ):
     logger.info(f"🔍 Entrando na função gerar_relatorio_avaliacao_com_template...")
     logger.info(f"📄 Template recebido: {caminho_template}")
