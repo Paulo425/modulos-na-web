@@ -5757,6 +5757,14 @@ def gerar_relatorio_avaliacao_com_template(
         logger.error(f"❌ Erro ao salvar o laudo: {e}")
         logger.error(traceback.format_exc())
         return
+    
+        # Verificação extra para garantir que o arquivo foi criado
+    if os.path.exists(nome_arquivo_word):
+        logger.info(f"✅ DOCX verificado: arquivo existe em {nome_arquivo_word}")
+    else:
+        logger.error(f"❌ ERRO CRÍTICO: o DOCX não foi criado em {nome_arquivo_word}")
+
+
     # Limpar arquivos PNG temporários gerados a partir de PDFs
     def limpar_arquivos_temp_png(lista_de_caminhos):
         for caminho in lista_de_caminhos:

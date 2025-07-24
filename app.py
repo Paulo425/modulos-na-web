@@ -369,9 +369,9 @@ def listar_arquivos():
     arquivos = os.listdir(arquivos_dir)
     return render_template("listar_arquivos.html", arquivos=arquivos)
 
-@app.route("/download/<nome_arquivo>")
-def download_arquivo(nome_arquivo):
-    return send_from_directory(arquivos_dir, nome_arquivo, as_attachment=True)
+# @app.route("/download/<nome_arquivo>")
+# def download_arquivo(nome_arquivo):
+#     return send_from_directory(arquivos_dir, nome_arquivo, as_attachment=True)
 
 @app.route('/memorial_azimute_az', methods=['GET', 'POST'])
 def gerar_memorial_azimute_az():
