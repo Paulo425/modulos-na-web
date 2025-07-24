@@ -5184,17 +5184,18 @@ def gerar_relatorio_avaliacao_com_template(
     valores_homogeneizados_validos,
     caminho_imagem_aderencia,
     caminho_imagem_dispersao,
-    uuid_atual,                          # obrigatório, sem valor padrão
-    finalidade_do_laudo,                # agora obrigatório também
-    area_parcial_afetada,              # idem — valor digitado deve ser usado sempre
+    uuid_atual,                          # ← obrigatório
+    finalidade_do_laudo,                # ← obrigatório
+    area_parcial_afetada,              # ← obrigatório
     fatores_do_usuario=None,
     caminhos_fotos_avaliando=None,
     caminhos_fotos_adicionais=None,
     caminhos_fotos_proprietario=None,
     caminhos_fotos_planta=None,
-    caminho_template,
-    nome_arquivo_word
+    caminho_template="Template.docx",
+    nome_arquivo_word="relatorio.docx"
 ):
+
     logger.info(f"🔍 Entrando na função gerar_relatorio_avaliacao_com_template...")
     logger.info(f"📄 Template recebido: {caminho_template}")
     logger.info(f"📝 Caminho destino: {nome_arquivo_word}")
