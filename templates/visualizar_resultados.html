@@ -88,7 +88,7 @@
 
     <div style="text-align: center; margin-top: 30px;">
       <a href="{{ url_for('gerar_avaliacao') }}" class="btn btn-secondary">← Voltar</a>
-      <button type="submit" formaction="{{ url_for('gerar_laudo_final', uuid=uuid) }}" class="btn btn-success">
+      <button type="submit" name="acao" value="gerar_laudo" formaction="{{ url_for('gerar_laudo_final', uuid=uuid) }}" class="btn btn-success">
         Gerar Laudo Final
       </button>
     </div>

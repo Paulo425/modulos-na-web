@@ -1697,7 +1697,8 @@ def inserir_fundamentacao_e_enquadramento(
     if lista_todos_os_fatores is None:
         lista_todos_os_fatores = []
 
-    tipo_lower = tipo_imovel.strip().lower()
+    tipo_lower = (tipo_imovel or "").strip().lower()
+
 
     #
     # 1) Checagens que podem ANULAR imediatamente o grau de fundamentação

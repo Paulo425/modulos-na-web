@@ -1095,6 +1095,10 @@ def visualizar_resultados(uuid):
     )
 @app.route("/gerar_laudo_final/<uuid>", methods=["POST"])
 def gerar_laudo_final(uuid):
+    if request.form.get("acao") != "gerar_laudo":
+        flash("Ação inválida ou acesso direto sem clique autorizado.", "warning")
+        return redirect(url_for("visualizar_resultados", uuid=uuid))
+
     global logger
     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
 
