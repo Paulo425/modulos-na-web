@@ -73,6 +73,7 @@ from docx.oxml.ns import nsdecls, qn
 from docx.oxml.shared import OxmlElement
 from lxml import etree
 import logging
+logger = logging.getLogger()
 
 
 
@@ -5217,7 +5218,7 @@ def gerar_relatorio_avaliacao_com_template(
 
     # Carregar template
     try:
-        doc = Document(caminho_template)
+        documento = Document(caminho_template)
         logger.info("✅ Template Word carregado com sucesso.")
     except Exception as e:
         logger.error(f"❌ Erro ao carregar template: {e}")
