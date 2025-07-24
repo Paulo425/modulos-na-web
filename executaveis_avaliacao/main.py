@@ -5749,10 +5749,13 @@ def gerar_relatorio_avaliacao_com_template(
 
     # Salvar
     try:
-        doc.save(nome_arquivo_word)
+        documento.save(nome_arquivo_word)
         logger.info(f"✅ Laudo salvo em: {nome_arquivo_word}")
     except Exception as e:
+        import traceback
         logger.error(f"❌ Erro ao salvar o laudo: {e}")
+        logger.error(traceback.format_exc())
+        return
     # Limpar arquivos PNG temporários gerados a partir de PDFs
     def limpar_arquivos_temp_png(lista_de_caminhos):
         for caminho in lista_de_caminhos:
