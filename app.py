@@ -970,15 +970,18 @@ def gerar_avaliacao():
                 from executaveis_avaliacao.utils_json import salvar_entrada_corrente_json
                 lista_amostras = []
                 for _, linha in df_amostras.iterrows():
-                    lista_amostras.append({
-                        "idx": linha.get("AM", ""),
-                        "valor_total": float(linha.get("VALOR TOTAL", 0)),
-                        "area": float(linha.get("AREA TOTAL", 0)),
-                        "X": float(linha.get("X", 0)),
-                        "Y": float(linha.get("Y", 0)),
-                        "cidade": linha.get("CIDADE", ""),
-                        "fonte": linha.get("FONTE", "")
-                    })
+                    lista_amostras = []
+                    for _, linha in df_amostras.iterrows():
+                        lista_amostras.append({
+                            "idx": linha["AM"] if "AM" in linha else "",
+                            "valor_total": float(linha["VALOR TOTAL"]) if "VALOR TOTAL" in linha else 0,
+                            "area": float(linha["AREA TOTAL"]) if "AREA TOTAL" in linha else 0,
+                            "X": float(linha["X"]) if "X" in linha else 0,
+                            "Y": float(linha["Y"]) if "Y" in linha else 0,
+                            "cidade": linha["CIDADE"] if "CIDADE" in linha else "",
+                            "fonte": linha["FONTE"] if "FONTE" in linha else ""
+                        })
+
                 salvar_entrada_corrente_json(
                     dados_imovel,
                     fatores_usuario,
