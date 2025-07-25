@@ -983,23 +983,37 @@ def gerar_avaliacao():
                     for _, linha in df_amostras.iterrows():
                         area = float(linha.get("AREA TOTAL", 0))
                         valor_total = float(linha.get("VALOR TOTAL", 0))
-                        latitude = linha.get("LATITUDE", None)
-                        longitude = linha.get("LONGITUDE", None)
 
                         def limpar_grau(valor):
                             if valor and isinstance(valor, str):
                                 return valor.replace("°", "").strip()
                             return valor
 
-                        latitude = limpar_grau(latitude)
-                        longitude = limpar_grau(longitude)
+                        # Aqui já fazemos limpeza e conversão com segurança
+                        latitude_raw = linha.get("LATITUDE", None)
+                        longitude_raw = linha.get("LONGITUDE", None)
+
+                        latitude = limpar_grau(latitude_raw)
+                        longitude = limpar_grau(longitude_raw)
+
+                        try:
+                            latitude_float = float(latitude) if latitude not in [None, ""] else None
+                        except ValueError:
+                            latitude_float = None
+                            logger.warning(f"Erro ao converter latitude '{latitude_raw}' para float.")
+
+                        try:
+                            longitude_float = float(longitude) if longitude not in [None, ""] else None
+                        except ValueError:
+                            longitude_float = None
+                            logger.warning(f"Erro ao converter longitude '{longitude_raw}' para float.")
 
                         lista_amostras.append({
                             "idx": linha.get("AM", ""),
                             "valor_total": valor_total,
                             "area": area,
-                            "LATITUDE": float(latitude) if latitude not in [None, ""] else None,
-                            "LONGITUDE": float(longitude) if longitude not in [None, ""] else None,
+                            "LATITUDE": latitude_float,
+                            "LONGITUDE": longitude_float,
                             "cidade": linha.get("CIDADE", ""),
                             "fonte": linha.get("FONTE", ""),
                             "ativo": True
