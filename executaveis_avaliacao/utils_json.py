@@ -38,10 +38,11 @@ def salvar_entrada_corrente_json(
             "valor_unitario": float(a.get("valor_unitario", 0)),
             "cidade": a.get("cidade", ""),
             "fonte": a.get("fonte", ""),
-            "coordenada_x": a.get("X", None),
-            "coordenada_y": a.get("Y", None),
+            "LATITUDE": a.get("LATITUDE", None),
+            "LONGITUDE": a.get("LONGITUDE", None),
             "ativo": True
         })
+
 
 
     pasta_saida = f"static/tmp"
