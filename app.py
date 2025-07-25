@@ -1060,7 +1060,7 @@ def gerar_avaliacao():
                            zip_download=zip_download,
                            log_path=log_path_relativo if os.path.exists(log_path) else None)
 
-
+#fazendo comentario
 
 # @app.route('/memoriais-azimute-p1-p2')
 # def memoriais_azimute_p1_p2():
