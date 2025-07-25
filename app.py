@@ -797,7 +797,20 @@ def gerar_avaliacao():
         if request.method == "POST":
             logger.info("🔧 Início da execução do bloco POST em /avaliacoes")
 
+            # Indispensável! Identifica o botão clicado pelo usuário
             acao = request.form.get("acao", "").lower()
+            logger.debug(f"Ação recebida: {acao}")
+
+            # Indispensável! Verifica o envio da planilha Excel
+            if "planilha_excel" not in request.files:
+                logger.error("❌ ERRO: O arquivo 'planilha_excel' não foi enviado!")
+                return "Erro: arquivo planilha_excel faltando!", 400
+
+            excel_file = request.files["planilha_excel"]
+            if excel_file.filename == '':
+                logger.error("❌ ERRO: Arquivo planilha_excel vazio ou nome inválido.")
+                return "Erro: arquivo planilha_excel vazio.", 400
+
             try:
                 from werkzeug.utils import secure_filename
                 import uuid, zipfile
@@ -808,15 +821,9 @@ def gerar_avaliacao():
                 pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
                 os.makedirs(pasta_temp, exist_ok=True)
 
-                # 2. Salvar arquivos recebidos
-                if "planilha_excel" not in request.files:
-                    logger.error("❌ ERRO: O arquivo 'planilha_excel' não foi enviado!")
-                    return "Erro: arquivo planilha_excel faltando!", 400
-
-
-                # 2. Salvar arquivos recebidos
+                # 2. Salvar arquivo Excel recebido
                 caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
-                request.files["planilha_excel"].save(caminho_planilha)
+                excel_file.save(caminho_planilha)
                 logger.info(f"✅ Planilha salva: {caminho_planilha}")
 
                 def salvar_multiplos(nome_form, prefixo):
