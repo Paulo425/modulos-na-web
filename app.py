@@ -938,17 +938,23 @@ def gerar_avaliacao():
                     homogeneizar_amostras, gerar_grafico_aderencia_totais,
                     gerar_grafico_dispersao_mediana
                 )
-
+                #FAZ O TRATAMENTO EM TODAS AS COORDENADAS DO EXCEL*********************
                 df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
-                # Limpar símbolos de grau nas coordenadas do imóvel avaliado
+                # Função que remove graus e espaços
                 def limpar_grau(valor):
-                    if valor and isinstance(valor, str):
+                    if isinstance(valor, str):
                         return valor.replace("°", "").strip()
                     return valor
 
+                # Limpeza das coordenadas do imóvel avaliado
                 dados_imovel["LATITUDE"] = limpar_grau(dados_imovel.get("LATITUDE"))
                 dados_imovel["LONGITUDE"] = limpar_grau(dados_imovel.get("LONGITUDE"))
-                
+
+                # Limpeza das coordenadas das amostras
+                for col in ["LATITUDE", "LONGITUDE"]:
+                    if col in df_amostras.columns:
+                        df_amostras[col] = df_amostras[col].apply(limpar_grau)
+                #**********************************************************************
                 logger.info(f"df_amostras.head():\n{df_amostras.head()}")
                 logger.info(f"dados_imovel: {dados_imovel}")
                 df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_amostras)
