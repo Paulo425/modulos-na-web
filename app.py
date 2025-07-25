@@ -790,8 +790,11 @@ def gerar_avaliacao():
         logger.debug("Iniciando rota gerar_avaliacao()")
         if request.method == "POST":
             logger.debug("Recebendo POST")
-            dados_json = request.get_json(force=True)
-            logger.debug(f"JSON recebido: {dados_json}")
+            dados_json = request.get_json(silent=True)
+            if dados_json:
+                logger.debug(f"JSON recebido: {dados_json}")
+            else:
+                logger.debug("Nenhum JSON recebido na requisição.")
 
             if 'arquivo_excel' in request.files:
                 excel_file = request.files['arquivo_excel']
