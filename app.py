@@ -940,6 +940,15 @@ def gerar_avaliacao():
                 )
 
                 df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
+                # Limpar símbolos de grau nas coordenadas do imóvel avaliado
+                def limpar_grau(valor):
+                    if valor and isinstance(valor, str):
+                        return valor.replace("°", "").strip()
+                    return valor
+
+                dados_imovel["LATITUDE"] = limpar_grau(dados_imovel.get("LATITUDE"))
+                dados_imovel["LONGITUDE"] = limpar_grau(dados_imovel.get("LONGITUDE"))
+                
                 logger.info(f"df_amostras.head():\n{df_amostras.head()}")
                 logger.info(f"dados_imovel: {dados_imovel}")
                 df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_amostras)
