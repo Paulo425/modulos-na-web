@@ -788,23 +788,12 @@ def gerar_avaliacao():
 
     try:
         logger.debug("Iniciando rota gerar_avaliacao()")
-        if request.method == "POST":
-            logger.debug("Recebendo POST")
-            dados_json = request.get_json(silent=True)
-            if dados_json:
-                logger.debug(f"JSON recebido: {dados_json}")
-            else:
-                logger.debug("Nenhum JSON recebido na requisição.")
-
-            if 'arquivo_excel' in request.files:
-                excel_file = request.files['arquivo_excel']
-                logger.debug(f"Arquivo Excel recebido: {excel_file.filename}")
 
         if 'usuario' not in session:
             return redirect(url_for('login'))
 
         resultado = erro_execucao = zip_download = log_relativo = None
-        
+
         if request.method == "POST":
             logger.info("🔧 Início da execução do bloco POST em /avaliacoes")
 
@@ -818,33 +807,24 @@ def gerar_avaliacao():
                 pasta_execucao = f'avaliacao_{id_execucao}'
                 pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
                 os.makedirs(pasta_temp, exist_ok=True)
-                        
-                        
+
                 # 2. Salvar arquivos recebidos
                 caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
                 request.files["planilha_excel"].save(caminho_planilha)
-                logger.info(f"✅ Planilha salva: {caminho_planilha} - {'existe' if os.path.exists(caminho_planilha) else 'NÃO existe'}")
-
-                
-
-                
+                logger.info(f"✅ Planilha salva: {caminho_planilha}")
 
                 def salvar_multiplos(nome_form, prefixo):
                     arquivos = request.files.getlist(nome_form)
                     todos_grupos = []
-
                     for i, arq in enumerate(arquivos):
                         if arq and arq.filename:
                             extensao = arq.filename.rsplit('.', 1)[-1].lower()
                             grupo_imagens = []
-
                             dados_arquivo = arq.read()
-
                             if extensao == "pdf":
                                 nome_pdf_temporario = os.path.join(pasta_temp, f"{prefixo}_{i}.pdf")
                                 with open(nome_pdf_temporario, "wb") as f:
                                     f.write(dados_arquivo)
-
                                 pdf = fitz.open(nome_pdf_temporario)
                                 for p in range(pdf.page_count):
                                     pix = pdf.load_page(p).get_pixmap(dpi=200)
@@ -866,14 +846,9 @@ def gerar_avaliacao():
                                 except UnidentifiedImageError:
                                     logger.error(f"❌ Arquivo inválido: {arq.filename}")
                                     continue
-
                             if grupo_imagens:
                                 todos_grupos.append(grupo_imagens)
-
                     return todos_grupos
-
-
-
 
                 fotos_imovel = salvar_multiplos("fotos_imovel", "foto_imovel")
                 fotos_adicionais = salvar_multiplos("fotos_imovel_adicionais", "doc_adicional")
@@ -1062,14 +1037,13 @@ def gerar_avaliacao():
                 logger.error(erro_execucao)
 
         return render_template("formulario_avaliacao.html",
-                            resultado=resultado,
-                            erro=erro_execucao,
-                            zip_download=zip_download,
-                            log_path=log_path_relativo if os.path.exists(log_path) else None)
+                               resultado=resultado,
+                               erro=erro_execucao,
+                               zip_download=zip_download,
+                               log_path=log_path_relativo if os.path.exists(log_path) else None)
     except Exception as e:
         logger.exception(f"🚨 Erro ao iniciar processamento: {e}")
         return f"Erro interno ao iniciar processamento: {str(e)}", 500
-
 #fazendo comentario
 
 # @app.route('/memoriais-azimute-p1-p2')
