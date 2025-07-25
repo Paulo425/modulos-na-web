@@ -5968,4 +5968,3 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 
     return lista_valores_unitarios
 
-#TRAZDIO DE VOLTA PARA RESGATE
