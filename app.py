@@ -809,6 +809,12 @@ def gerar_avaliacao():
                 os.makedirs(pasta_temp, exist_ok=True)
 
                 # 2. Salvar arquivos recebidos
+                if "planilha_excel" not in request.files:
+                    logger.error("❌ ERRO: O arquivo 'planilha_excel' não foi enviado!")
+                    return "Erro: arquivo planilha_excel faltando!", 400
+
+
+                # 2. Salvar arquivos recebidos
                 caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
                 request.files["planilha_excel"].save(caminho_planilha)
                 logger.info(f"✅ Planilha salva: {caminho_planilha}")
@@ -952,10 +958,6 @@ def gerar_avaliacao():
                 if acao == "avaliar":
                     from executaveis_avaliacao.utils_json import salvar_entrada_corrente_json
                     lista_amostras = []
-                    for _, linha in df_amostras.iterrows():
-                        lista_amostras = []
-                    for _, linha in df_amostras.iterrows():
-                        lista_amostras = []
                     for _, linha in df_amostras.iterrows():
                         lista_amostras.append({
                             "idx": linha.get("AM", ""),
