@@ -966,14 +966,20 @@ def gerar_avaliacao():
                     from executaveis_avaliacao.utils_json import salvar_entrada_corrente_json
                     lista_amostras = []
                     for _, linha in df_amostras.iterrows():
+                        area = float(linha.get("AREA TOTAL", 0))
+                        valor_total = float(linha.get("VALOR TOTAL", 0))
+                        latitude = linha.get("LATITUDE", None)
+                        longitude = linha.get("LONGITUDE", None)
+                        
                         lista_amostras.append({
                             "idx": linha.get("AM", ""),
-                            "valor_total": float(linha.get("VALOR TOTAL", 0)),
-                            "area": float(linha.get("AREA TOTAL", 0)),
-                            "X": float(linha.get("X", 0)),
-                            "Y": float(linha.get("Y", 0)),
+                            "valor_total": valor_total,
+                            "area": area,
+                            "LATITUDE": float(latitude) if latitude not in [None, ""] else None,
+                            "LONGITUDE": float(longitude) if longitude not in [None, ""] else None,
                             "cidade": linha.get("CIDADE", ""),
-                            "fonte": linha.get("FONTE", "")
+                            "fonte": linha.get("FONTE", ""),
+                            "ativo": True
                         })
 
 
