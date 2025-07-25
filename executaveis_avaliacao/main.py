@@ -73,6 +73,9 @@ from docx.oxml.ns import nsdecls, qn
 from docx.oxml.shared import OxmlElement
 from lxml import etree
 import logging
+
+
+
 from uuid import uuid4
 import fitz  # PyMuPDF
 from pathlib import Path
@@ -81,15 +84,10 @@ from docx.enum.text import WD_BREAK
 from docx.oxml.ns import qn
 
 
-logging.basicConfig(
-    filename="erro_detalhado.txt",
-    filemode="w",
-    level=logging.ERROR,
-    format="%(asctime)s %(levelname)s: %(message)s"
-)
 
 
-logging.basicConfig(level=logging.INFO)
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -1706,8 +1704,7 @@ def inserir_fundamentacao_e_enquadramento(
     if lista_todos_os_fatores is None:
         lista_todos_os_fatores = []
 
-    tipo_lower = (tipo_imovel or "").strip().lower()
-
+    tipo_lower = tipo_imovel.strip().lower()
 
     #
     # 1) Checagens que podem ANULAR imediatamente o grau de fundamentação
@@ -3222,20 +3219,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     lista_valores_unitarios = []
 
     for _, linha in dataframe_amostras_validas.iterrows():
-        try:
-            valor_total_amostra = (
-                linha["VALOR TOTAL"]
-                if "VALOR TOTAL" in linha
-                else linha["valor_total"]
-                if "valor_total" in linha
-                else linha["VALOR_TOTAL"]
-                if "VALOR_TOTAL" in linha
-                else None
-            )
-        except Exception as e:
-            print(f"Erro ao acessar 'VALOR TOTAL' em: {linha}")
-            raise e
-
+        valor_total_amostra = linha["VALOR TOTAL"]
         area_da_amostra = float(linha.get("AREA TOTAL", 0))
 
         # Cálculo dos fatores conforme a lógica original:
@@ -5186,21 +5170,17 @@ def gerar_relatorio_avaliacao_com_template(
     valores_homogeneizados_validos,
     caminho_imagem_aderencia,
     caminho_imagem_dispersao,
-    uuid_atual,                          # ← obrigatório
-    finalidade_do_laudo,                # ← obrigatório
-    area_parcial_afetada,              # ← obrigatório
+    uuid_atual,                          # obrigatório, sem valor padrão
+    finalidade_do_laudo,                # agora obrigatório também
+    area_parcial_afetada,              # idem — valor digitado deve ser usado sempre
     fatores_do_usuario=None,
     caminhos_fotos_avaliando=None,
     caminhos_fotos_adicionais=None,
     caminhos_fotos_proprietario=None,
     caminhos_fotos_planta=None,
-    caminho_template="Template.docx",
+    caminho_template="template.docx",
     nome_arquivo_word="relatorio.docx"
 ):
-
-    logger.info(f"🔍 Entrando na função gerar_relatorio_avaliacao_com_template...")
-    logger.info(f"📄 Template recebido: {caminho_template}")
-    logger.info(f"📝 Caminho destino: {nome_arquivo_word}")
 
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
@@ -5208,12 +5188,7 @@ def gerar_relatorio_avaliacao_com_template(
     logger.info(f"Área parcial afetada recebida: {area_parcial_afetada}")
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
-    try:
-        area_disponivel = float(str(area_parcial_afetada).replace(",", "."))
-    except:
-        area_disponivel = 0.0
-        logger.warning(f"⚠️ Área parcial afetada inválida: {area_parcial_afetada}")
-
+    area_disponivel = area_parcial_afetada
     # ──────────────────────────────────────────────────────
     """
     Gera o relatório Word completo, exibindo todos os itens e incluindo
@@ -5225,13 +5200,7 @@ def gerar_relatorio_avaliacao_com_template(
     data_atual = datetime.now().strftime("%d/%m/%Y")
 
     # Carregar template
-    try:
-        documento = Document(caminho_template)
-        logger.info("✅ Template Word carregado com sucesso.")
-    except Exception as e:
-        logger.error(f"❌ Erro ao carregar template: {e}")
-        return
-
+    documento = Document(caminho_template)
 
     cidade_nome = fatores_do_usuario.get("cidade", "CIDADE NÃO INFORMADA").strip().upper()
     data_formatada = datetime.now().strftime("%d-%m-%Y")
@@ -5249,7 +5218,7 @@ def gerar_relatorio_avaliacao_com_template(
     # ------------------------------------------------------------------
     # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO
     # ------------------------------------------------------------------
-    pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid_atual}")
+    pasta_saida = f"/opt/render/project/src/static/arquivos/avaliacao_{uuid_atual}/"
     os.makedirs(pasta_saida, exist_ok=True)
 
     caminho_mapa = os.path.join(pasta_saida, "mapa_amostras.png")
@@ -5358,7 +5327,7 @@ def gerar_relatorio_avaliacao_com_template(
     )
 
 
-    area_total_lida = area_parcial_afetada
+    area_total_lida = float(dados_avaliando.get("AREA TOTAL", 0))
     area_total_str = f"{formatar_numero_brasileiro(area_total_lida)} m²"
 
     substituir_placeholder_por_titulo_e_valor(
@@ -5756,23 +5725,7 @@ def gerar_relatorio_avaliacao_com_template(
     # inserir_tabela_resumo_geral_completo(documento, "[RESUMO GERAL]", {...})
 
     # Salvar
-    try:
-        documento.save(nome_arquivo_word)
-        logger.info(f"✅ Laudo salvo em: {nome_arquivo_word}")
-    except Exception as e:
-        import traceback
-        logger.error(f"❌ Erro ao salvar o laudo: {e}")
-        logger.error(traceback.format_exc())
-        return
-
-    # Verificação extra para garantir que o arquivo foi criado
-    if os.path.exists(nome_arquivo_word):
-        logger.info(f"✅ DOCX verificado: arquivo existe em {nome_arquivo_word}")
-    else:
-        logger.error(f"❌ ERRO CRÍTICO: o DOCX não foi criado em {nome_arquivo_word}")
-
-
-
+    documento.save(nome_arquivo_word)
     # Limpar arquivos PNG temporários gerados a partir de PDFs
     def limpar_arquivos_temp_png(lista_de_caminhos):
         for caminho in lista_de_caminhos:
@@ -5794,6 +5747,8 @@ def gerar_relatorio_avaliacao_com_template(
         os.startfile(nome_arquivo_word)
     except:
         pass
+
+
 
 
 ###############################################################################
@@ -5832,84 +5787,71 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         return R * c
 
     df = pd.read_excel(caminho_arquivo_excel)
-    try:
-        print(df.head()) 
-        df.dropna(how="all", inplace=True)
-        df.reset_index(drop=True, inplace=True)
+    print(df.head()) 
+    df.dropna(how="all", inplace=True)
+    df.reset_index(drop=True, inplace=True)
 
-        for col in ("VALOR TOTAL", "AREA TOTAL", "VALOR UNITARIO"):
-            if col in df.columns:
-                df[col] = df[col].apply(_to_float)
+    for col in ("VALOR TOTAL", "AREA TOTAL", "VALOR UNITARIO"):
+        if col in df.columns:
+            df[col] = df[col].apply(_to_float)
 
-        dados_avaliando = df.iloc[-1].to_dict()
-        dataframe_amostras = df.iloc[:-1].copy()
+    dados_avaliando = df.iloc[-1].to_dict()
+    dataframe_amostras = df.iloc[:-1].copy()
 
-        # Garantindo colunas essenciais para o dataframe_amostras
-        for coluna in ["CIDADE", "FONTE", "LATITUDE", "LONGITUDE"]:
-            if coluna in df.columns:
-                dataframe_amostras[coluna] = df[coluna].iloc[:-1].values
-            else:
-                dataframe_amostras[coluna] = None
+    if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
+        dataframe_amostras["VALOR UNITARIO"] = (
+            dataframe_amostras["VALOR TOTAL"] / dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
+        )
 
-        if {"VALOR TOTAL", "AREA TOTAL"}.issubset(dataframe_amostras.columns):
-            dataframe_amostras["VALOR UNITARIO"] = (
-                dataframe_amostras["VALOR TOTAL"] / dataframe_amostras["AREA TOTAL"].replace({0: pd.NA})
-            )
+    lat_av = _parse_coord(dados_avaliando.get("LATITUDE"))
+    lon_av = _parse_coord(dados_avaliando.get("LONGITUDE"))
 
-        lat_av = _parse_coord(dados_avaliando.get("LATITUDE"))
-        lon_av = _parse_coord(dados_avaliando.get("LONGITUDE"))
-
-        nome_cidade = str(dados_avaliando.get("CIDADE", "")).strip()
-        if nome_cidade:
-            try:
-                geoloc = Nominatim(user_agent="aval-geo")
-                loc = geoloc.geocode(f"{nome_cidade}, Brazil", timeout=10)
-                lat_ctr, lon_ctr = loc.latitude, loc.longitude if loc else (lat_av, lon_av)
-            except:
-                lat_ctr, lon_ctr = lat_av, lon_av
-        else:
+    nome_cidade = str(dados_avaliando.get("CIDADE", "")).strip()
+    if nome_cidade:
+        try:
+            geoloc = Nominatim(user_agent="aval-geo")
+            loc = geoloc.geocode(f"{nome_cidade}, Brazil", timeout=10)
+            lat_ctr, lon_ctr = loc.latitude, loc.longitude if loc else (lat_av, lon_av)
+        except:
             lat_ctr, lon_ctr = lat_av, lon_av
+    else:
+        lat_ctr, lon_ctr = lat_av, lon_av
 
-        dados_avaliando["DISTANCIA CENTRO"] = haversine_km(lat_av, lon_av, lat_ctr, lon_ctr)
+    dados_avaliando["DISTANCIA CENTRO"] = haversine_km(lat_av, lon_av, lat_ctr, lon_ctr)
 
-        dataframe_amostras["LAT_PARS"] = dataframe_amostras["LATITUDE"].apply(_parse_coord)
-        dataframe_amostras["LON_PARS"] = dataframe_amostras["LONGITUDE"].apply(_parse_coord)
-        dataframe_amostras["DISTANCIA CENTRO"] = dataframe_amostras.apply(
-            lambda r: haversine_km(r["LAT_PARS"], r["LON_PARS"], lat_ctr, lon_ctr), axis=1
-        )
+    dataframe_amostras["LAT_PARS"] = dataframe_amostras["LATITUDE"].apply(_parse_coord)
+    dataframe_amostras["LON_PARS"] = dataframe_amostras["LONGITUDE"].apply(_parse_coord)
+    dataframe_amostras["DISTANCIA CENTRO"] = dataframe_amostras.apply(
+        lambda r: haversine_km(r["LAT_PARS"], r["LON_PARS"], lat_ctr, lon_ctr), axis=1
+    )
 
-        logger.info(f"✅ Linhas antes do filtro crítico: {len(dataframe_amostras)}")
-        logger.info(f"Valores nulos em 'VALOR TOTAL': {dataframe_amostras['VALOR TOTAL'].isna().sum()}")
-        logger.info(f"Valores nulos em 'AREA TOTAL': {dataframe_amostras['AREA TOTAL'].isna().sum()}")
-        logger.info(f"Valores nulos em 'DISTANCIA CENTRO': {dataframe_amostras['DISTANCIA CENTRO'].isna().sum()}")
+    logger.info(f"✅ Linhas antes do filtro crítico: {len(dataframe_amostras)}")
+    logger.info(f"Valores nulos em 'VALOR TOTAL': {dataframe_amostras['VALOR TOTAL'].isna().sum()}")
+    logger.info(f"Valores nulos em 'AREA TOTAL': {dataframe_amostras['AREA TOTAL'].isna().sum()}")
+    logger.info(f"Valores nulos em 'DISTANCIA CENTRO': {dataframe_amostras['DISTANCIA CENTRO'].isna().sum()}")
 
-        logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras.head())
+    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras.head())
 
-        mask_excluir = (
-            (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
-            (dataframe_amostras["DISTANCIA CENTRO"].isna()) |
-            (dataframe_amostras["VALOR TOTAL"].isna()) |
-            (dataframe_amostras["AREA TOTAL"].isna()) |
-            (dataframe_amostras["AREA TOTAL"] == 0)
-        )
-        logger.info("Máscara de exclusão:\n", mask_excluir.head())
-        logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir].head())
-        dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
-        logger.info(f"✅ Linhas após o filtro crítico: {len(dataframe_amostras)}")
-        dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
+    mask_excluir = (
+        (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
+        (dataframe_amostras["DISTANCIA CENTRO"].isna()) |
+        (dataframe_amostras["VALOR TOTAL"].isna()) |
+        (dataframe_amostras["AREA TOTAL"].isna()) |
+        (dataframe_amostras["AREA TOTAL"] == 0)
+    )
+    logger.info("Máscara de exclusão:\n", mask_excluir.head())
+    logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir].head())
+    dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
+    logger.info(f"✅ Linhas após o filtro crítico: {len(dataframe_amostras)}")
+    dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
 
-        logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras)
-        logger.info("Mascara de exclusão:\n", mask_excluir)
-        logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir])
+    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras)
+    logger.info("Mascara de exclusão:\n", mask_excluir)
+    logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir])
 
-        return dataframe_amostras, dados_avaliando
+    return dataframe_amostras, dados_avaliando
 
-    except Exception as e:
-        import traceback
-        erro_completo = traceback.format_exc()
-        with open("erro_detalhado.txt", "w", encoding="utf-8") as f:
-            f.write(erro_completo)
-        raise e
+
 
 ###############################################################################
 # HOMOGENEIZAR AMOSTRAS (DATAFRAME FILTRADO)
@@ -6026,3 +5968,4 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 
     return lista_valores_unitarios
 
+#TRAZDIO DE VOLTA PARA RESGATE
