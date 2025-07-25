@@ -1086,21 +1086,30 @@ def visualizar_resultados(uuid):
     fatores = dados.get("fatores_do_usuario", {})
     dados_avaliando = dados.get("dados_avaliando", {})
 
-    # Calcular valor unitário por amostra ativa
-    valores_ativos = [
-        a["valor_total"] / a["area"]
-        for a in amostras if a.get("ativo") and a.get("area", 0) > 0
-    ]
+    # ==== Inserção de depuração definitiva (adicione exatamente esse bloco) ====
+    try:
+        valores_ativos = [
+            a["valor_total"] / a["area"]
+            for a in amostras if a.get("ativo") and a.get("area", 0) > 0
+        ]
 
-    media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
+        media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
 
-    from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
-    amplitude_ic80 = 0.0
-    if len(valores_ativos) > 1:
-        li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
-        if li > 0:
-            amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
+        from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
+        amplitude_ic80 = 0.0
+        if len(valores_ativos) > 1:
+            li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
+            if li > 0:
+                amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
 
+    except Exception as erro:
+        import traceback
+        erro_completo = traceback.format_exc()
+        with open("erro_avaliacao.txt", "w", encoding="utf-8") as arquivo_erro:
+            arquivo_erro.write(erro_completo)
+        flash(f"Erro detalhado capturado: {erro}", "danger")
+        return redirect(url_for("gerar_avaliacao"))
+    # === Fim do bloco seguro de depuração ===
 
     return render_template(
         "visualizar_resultados.html",
@@ -1111,6 +1120,7 @@ def visualizar_resultados(uuid):
         dados_avaliando=dados_avaliando,
         fatores=fatores
     )
+
 @app.route("/gerar_laudo_final/<uuid>", methods=["POST"])
 def gerar_laudo_final(uuid):
     if request.form.get("acao") != "gerar_laudo":
