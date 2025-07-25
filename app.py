@@ -970,7 +970,15 @@ def gerar_avaliacao():
                         valor_total = float(linha.get("VALOR TOTAL", 0))
                         latitude = linha.get("LATITUDE", None)
                         longitude = linha.get("LONGITUDE", None)
-                        
+
+                        def limpar_grau(valor):
+                            if valor and isinstance(valor, str):
+                                return valor.replace("°", "").strip()
+                            return valor
+
+                        latitude = limpar_grau(latitude)
+                        longitude = limpar_grau(longitude)
+
                         lista_amostras.append({
                             "idx": linha.get("AM", ""),
                             "valor_total": valor_total,
@@ -981,6 +989,7 @@ def gerar_avaliacao():
                             "fonte": linha.get("FONTE", ""),
                             "ativo": True
                         })
+
 
 
                     salvar_entrada_corrente_json(
