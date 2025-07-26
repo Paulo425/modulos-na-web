@@ -5218,8 +5218,9 @@ def gerar_relatorio_avaliacao_com_template(
     # ------------------------------------------------------------------
     # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO
     # ------------------------------------------------------------------
-    pasta_saida = f"/opt/render/project/src/static/arquivos/avaliacao_{uuid_atual}/"
+    pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid_atual}")
     os.makedirs(pasta_saida, exist_ok=True)
+
 
     caminho_mapa = os.path.join(pasta_saida, "mapa_amostras.png")
 
