@@ -951,8 +951,24 @@ def gerar_avaliacao():
                     return valor
 
                 # Limpeza das coordenadas do imóvel avaliado
-                dados_imovel["LATITUDE"] = limpar_grau(dados_imovel.get("LATITUDE"))
-                dados_imovel["LONGITUDE"] = limpar_grau(dados_imovel.get("LONGITUDE"))
+                # Limpeza e conversão segura das coordenadas do imóvel avaliado
+                latitude_imovel = limpar_grau(dados_imovel.get("LATITUDE"))
+                longitude_imovel = limpar_grau(dados_imovel.get("LONGITUDE"))
+
+                # Conversão segura da LATITUDE
+                try:
+                    dados_imovel["LATITUDE"] = float(latitude_imovel) if latitude_imovel not in [None, ""] else None
+                except ValueError:
+                    logger.error(f"Falha na conversão da LATITUDE do imóvel avaliado '{latitude_imovel}'")
+                    dados_imovel["LATITUDE"] = None
+
+                # Conversão segura da LONGITUDE
+                try:
+                    dados_imovel["LONGITUDE"] = float(longitude_imovel) if longitude_imovel not in [None, ""] else None
+                except ValueError:
+                    logger.error(f"Falha na conversão da LONGITUDE do imóvel avaliado '{longitude_imovel}'")
+                    dados_imovel["LONGITUDE"] = None
+
 
                 # Limpeza das coordenadas das amostras
                 for col in ["LATITUDE", "LONGITUDE"]:
