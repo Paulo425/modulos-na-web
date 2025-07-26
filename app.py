@@ -943,12 +943,12 @@ def gerar_avaliacao():
                 df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
                 # Função que remove graus e espaços
                 def limpar_grau(valor):
-                if isinstance(valor, str):
-                    # Permite apenas números, vírgula, ponto e sinal de negativo
-                    limpo = re.sub(r"[^0-9.,-]", "", valor)
-                    limpo = limpo.replace(",", ".").strip()
-                    return limpo
-                return valor
+                    if isinstance(valor, str):
+                        # Permite apenas números, vírgula, ponto e sinal de negativo
+                        limpo = re.sub(r"[^0-9.,-]", "", valor)
+                        limpo = limpo.replace(",", ".").strip()
+                        return limpo
+                    return valor
 
                 # Limpeza das coordenadas do imóvel avaliado
                 dados_imovel["LATITUDE"] = limpar_grau(dados_imovel.get("LATITUDE"))
