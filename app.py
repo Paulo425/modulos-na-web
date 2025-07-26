@@ -943,7 +943,7 @@ def gerar_avaliacao():
                 # Função que remove graus e espaços
                 def limpar_grau(valor):
                     if isinstance(valor, str):
-                        return valor.replace("°", "").strip()
+                        return valor.replace("°", "").replace("º", "").replace(",", ".").strip()
                     return valor
 
                 # Limpeza das coordenadas do imóvel avaliado
@@ -987,6 +987,8 @@ def gerar_avaliacao():
                         latitude = linha.get("LATITUDE", None)
                         longitude = linha.get("LONGITUDE", None)
 
+                        logger.info(f"Latitude antes de converter: {latitude}, Longitude antes de converter: {longitude}")
+                        
                         # Adicione exatamente essas duas linhas para garantir a conversão para float:
                         try:
                             latitude = float(latitude) if latitude not in [None, ""] else None
