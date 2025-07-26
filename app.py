@@ -984,21 +984,38 @@ def gerar_avaliacao():
                         area = float(linha.get("AREA TOTAL", 0))
                         valor_total = float(linha.get("VALOR TOTAL", 0))
 
-                        # Apenas use diretamente o valor já limpo, sem redefinir latitude e longitude novamente!
                         latitude = linha.get("LATITUDE", None)
                         longitude = linha.get("LONGITUDE", None)
+
+                        def limpar_grau(valor):
+                            if valor and isinstance(valor, str):
+                                return valor.replace("°", "").strip()
+                            return valor
+
+                        latitude = limpar_grau(latitude)
+                        longitude = limpar_grau(longitude)
+
+                        # Adicione exatamente essas duas linhas para garantir a conversão para float:
+                        try:
+                            latitude = float(latitude) if latitude not in [None, ""] else None
+                        except ValueError:
+                            latitude = None
+
+                        try:
+                            longitude = float(longitude) if longitude not in [None, ""] else None
+                        except ValueError:
+                            longitude = None
 
                         lista_amostras.append({
                             "idx": linha.get("AM", ""),
                             "valor_total": valor_total,
                             "area": area,
-                            "LATITUDE": float(latitude) if latitude not in [None, ""] else None,
-                            "LONGITUDE": float(longitude) if longitude not in [None, ""] else None,
+                            "LATITUDE": latitude,
+                            "LONGITUDE": longitude,
                             "cidade": linha.get("CIDADE", ""),
                             "fonte": linha.get("FONTE", ""),
                             "ativo": True
                         })
-
 
 
                     salvar_entrada_corrente_json(
