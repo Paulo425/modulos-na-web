@@ -58,12 +58,15 @@ from usuarios_mysql import (
 
 
 def _parse_coord(coord):
+    import re
     try:
         if isinstance(coord, str):
-            coord = coord.replace("°", "").replace(",", ".").strip()
+            # Remove tudo exceto dígitos, vírgula, ponto, e sinal de negativo
+            coord = re.sub(r"[^\d,.\-]", "", coord).replace(",", ".").strip()
         return float(coord)
     except:
         return None
+
 
 def salvar_com_nome_unico(arquivo, destino_base):
     """
