@@ -985,19 +985,28 @@ def gerar_avaliacao():
                         valor_total = float(linha.get("VALOR TOTAL", 0))
 
                         latitude = linha.get("LATITUDE", None)
+                        logger.info(f"Latitude antes de converter: {latitude}")
                         longitude = linha.get("LONGITUDE", None)
+                        logger.info(f"Longitude antes de converter: {longitude}")
 
-                        logger.info(f"Latitude antes de converter: {latitude}, Longitude antes de converter: {longitude}")
+                        # APLIQUE NOVAMENTE EXPLICITAMENTE A LIMPEZA AQUI!!!
+                        latitude = limpar_grau(latitude)
+                        longitude = limpar_grau(longitude)
+
+                        # Registre o valor após limpeza imediatamente antes de conversão
+                        logger.info(f"Latitude após limpeza final: {latitude}, Longitude após limpeza final: {longitude}")
                         
-                        # Adicione exatamente essas duas linhas para garantir a conversão para float:
+                       # Conversão segura:
                         try:
                             latitude = float(latitude) if latitude not in [None, ""] else None
                         except ValueError:
+                            logger.error(f"Falha na conversão da latitude '{latitude}'")
                             latitude = None
 
                         try:
                             longitude = float(longitude) if longitude not in [None, ""] else None
                         except ValueError:
+                            logger.error(f"Falha na conversão da longitude '{longitude}'")
                             longitude = None
 
                         lista_amostras.append({
