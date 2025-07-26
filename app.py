@@ -987,14 +987,6 @@ def gerar_avaliacao():
                         latitude = linha.get("LATITUDE", None)
                         longitude = linha.get("LONGITUDE", None)
 
-                        def limpar_grau(valor):
-                            if valor and isinstance(valor, str):
-                                return valor.replace("°", "").strip()
-                            return valor
-
-                        latitude = limpar_grau(latitude)
-                        longitude = limpar_grau(longitude)
-
                         # Adicione exatamente essas duas linhas para garantir a conversão para float:
                         try:
                             latitude = float(latitude) if latitude not in [None, ""] else None
