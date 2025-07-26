@@ -57,6 +57,14 @@ from usuarios_mysql import (
 )
 
 
+def _parse_coord(coord):
+    try:
+        if isinstance(coord, str):
+            coord = coord.replace("°", "").replace(",", ".").strip()
+        return float(coord)
+    except:
+        return None
+
 def salvar_com_nome_unico(arquivo, destino_base):
     """
     Salva o arquivo com um nome único no destino_base.
@@ -942,38 +950,18 @@ def gerar_avaliacao():
                 #FAZ O TRATAMENTO EM TODAS AS COORDENADAS DO EXCEL*********************
                 df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
                 # Função que remove graus e espaços
-                def limpar_grau(valor):
-                    if isinstance(valor, str):
-                        # Permite apenas números, vírgula, ponto e sinal de negativo
-                        limpo = re.sub(r"[^0-9.,-]", "", valor)
-                        limpo = limpo.replace(",", ".").strip()
-                        return limpo
-                    return valor
+               # Limpeza e conversão robusta das coordenadas do imóvel avaliado
+                dados_imovel["LATITUDE"] = _parse_coord(dados_imovel.get("LATITUDE"))
+                dados_imovel["LONGITUDE"] = _parse_coord(dados_imovel.get("LONGITUDE"))
 
-                # Limpeza das coordenadas do imóvel avaliado
-                # Limpeza e conversão segura das coordenadas do imóvel avaliado
-                latitude_imovel = limpar_grau(dados_imovel.get("LATITUDE"))
-                longitude_imovel = limpar_grau(dados_imovel.get("LONGITUDE"))
-
-                # Conversão segura da LATITUDE
-                try:
-                    dados_imovel["LATITUDE"] = float(latitude_imovel) if latitude_imovel not in [None, ""] else None
-                except ValueError:
-                    logger.error(f"Falha na conversão da LATITUDE do imóvel avaliado '{latitude_imovel}'")
-                    dados_imovel["LATITUDE"] = None
-
-                # Conversão segura da LONGITUDE
-                try:
-                    dados_imovel["LONGITUDE"] = float(longitude_imovel) if longitude_imovel not in [None, ""] else None
-                except ValueError:
-                    logger.error(f"Falha na conversão da LONGITUDE do imóvel avaliado '{longitude_imovel}'")
-                    dados_imovel["LONGITUDE"] = None
-
-
-                # Limpeza das coordenadas das amostras
+                # Limpeza robusta das coordenadas das amostras
                 for col in ["LATITUDE", "LONGITUDE"]:
                     if col in df_amostras.columns:
-                        df_amostras[col] = df_amostras[col].apply(limpar_grau)
+                        df_amostras[col] = df_amostras[col].apply(_parse_coord)
+                # Logs detalhados
+                logger.info(f"Coordenadas limpas imóvel: LATITUDE={dados_imovel['LATITUDE']}, LONGITUDE={dados_imovel['LONGITUDE']}")
+                logger.info(f"Primeiras linhas df_amostras após limpeza:\n{df_amostras[['LATITUDE', 'LONGITUDE']].head()}")
+
                 #**********************************************************************
                 logger.info(f"df_amostras.head():\n{df_amostras.head()}")
                 logger.info(f"dados_imovel: {dados_imovel}")
@@ -999,33 +987,16 @@ def gerar_avaliacao():
                     finalidade_tipo = "mercado"
                 if acao == "avaliar":
                     from executaveis_avaliacao.utils_json import salvar_entrada_corrente_json
+                    
                     lista_amostras = []
                     for _, linha in df_amostras.iterrows():
                         area = float(linha.get("AREA TOTAL", 0))
                         valor_total = float(linha.get("VALOR TOTAL", 0))
 
-                        latitude = linha.get("LATITUDE", None)
-                        longitude = linha.get("LONGITUDE", None)
+                        latitude = linha.get("LATITUDE")
+                        longitude = linha.get("LONGITUDE")
 
-                        # APLIQUE NOVAMENTE EXPLICITAMENTE A LIMPEZA AQUI!!!
-                        latitude = limpar_grau(latitude)
-                        longitude = limpar_grau(longitude)
-
-                        # Registre o valor após limpeza imediatamente antes de conversão
-                        logger.info(f"Latitude após limpeza final: {latitude}, Longitude após limpeza final: {longitude}")
-                        
-                       # Conversão segura:
-                        try:
-                            latitude = float(latitude) if latitude not in [None, ""] else None
-                        except ValueError:
-                            logger.error(f"Falha na conversão da latitude '{latitude}'")
-                            latitude = None
-
-                        try:
-                            longitude = float(longitude) if longitude not in [None, ""] else None
-                        except ValueError:
-                            logger.error(f"Falha na conversão da longitude '{longitude}'")
-                            longitude = None
+                        logger.info(f"Latitude final: {latitude}, Longitude final: {longitude}")
 
                         lista_amostras.append({
                             "idx": linha.get("AM", ""),
@@ -1037,6 +1008,7 @@ def gerar_avaliacao():
                             "fonte": linha.get("FONTE", ""),
                             "ativo": True
                         })
+
 
 
                     salvar_entrada_corrente_json(
