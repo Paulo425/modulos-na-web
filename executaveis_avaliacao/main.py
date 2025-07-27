@@ -5595,7 +5595,7 @@ def gerar_relatorio_avaliacao_com_template(
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
         "valor_por_extenso": ""
     }
-    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo)
+    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo, area_parcial_afetada)
 
     # Gráficos de aderência e dispersão
     substituir_placeholder_por_imagem(documento, "[graficoAderencia2]", caminho_imagem_aderencia, largura=Inches(5))
