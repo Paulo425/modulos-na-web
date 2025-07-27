@@ -958,7 +958,7 @@ def gerar_avaliacao():
                 # NOVA LINHA: Pegue a área digitada pelo usuário no input
 
                 area_disponivel = float(request.form.get("area_parcial").replace(".", "").replace(",", "."))
-                dados_imovel["AREA_DISPONIVEL"] = float(area_parcial_afetada)
+                dados_imovel["AREA_DISPONIVEL"] = float(area_disponivel)
 
 
                 # Função que remove graus e espaços
