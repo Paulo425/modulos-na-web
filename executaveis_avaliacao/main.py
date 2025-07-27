@@ -5848,7 +5848,7 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         (dataframe_amostras["AREA TOTAL"].isna()) |
         (dataframe_amostras["AREA TOTAL"] == 0)
     )
-    logger.info(f"Máscara de exclusão:\n{ mask_excluir.head( }"))
+    logger.info(f"Máscara de exclusão:\n{ mask_excluir.head()}"))
     logger.info(f"Depois da exclusão, dataframe_amostras:\n{ dataframe_amostras.loc[~mask_excluir].head( }"))
     dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
     logger.info(f"✅ Linhas após o filtro crítico: {len(dataframe_amostras)}")
