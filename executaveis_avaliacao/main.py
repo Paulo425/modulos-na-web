@@ -5199,7 +5199,7 @@ def gerar_relatorio_avaliacao_com_template(
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
     logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {area_parcial_afetada}")
-    area_utilizada = AREA_PARCIAL_AFETADA
+    area_utilizada = area_parcial_afetada
     logger.info(f"🟢 Área utilizada atribuída no main.py: {area_utilizada}")
 
     # ──────────────────────────────────────────────────────
@@ -5499,12 +5499,13 @@ def gerar_relatorio_avaliacao_com_template(
     # DEFINIÇÃO CRÍTICA: Qual área usar para cálculos
     # (desapropriação/servidão → área digitada // outros → área da planilha)
     if finalidade_do_laudo in ["desapropriacao", "servidao"]:
-        AREA_PARCIAL_AFETADA = dados_imovel.get("AREA_PARCIAL_AFETADA", 0)  # Área digitada pelo usuário no formulário 
-        area_utilizada = AREA_PARCIAL_AFETADA
+        area_parcial_afetada = dados_imovel.get("AREA_PARCIAL_AFETADA", 0)
+        area_utilizada = area_parcial_afetada
         logger.info(f"DEBUG: Usando área parcial afetada (usuário): {area_utilizada} m²")
     else:
-        area_utilizada = area_total_lida  # Área total vinda da planilha
+        area_utilizada = area_total_lida
         logger.info(f"DEBUG: Usando área total da planilha: {area_utilizada} m²")
+
   
 
     restricoes_usuario = fatores_do_usuario.get("restricoes", [])
@@ -5598,7 +5599,7 @@ def gerar_relatorio_avaliacao_com_template(
 
     info_resumo = {
         "valor_unitario": f"{formatar_moeda_brasil(valor_mediano)}/m²",
-        "area_total_considerada": f"{formatar_numero_brasileiro(AREA_PARCIAL_AFETADA)} m²",
+        "area_total_considerada": f"{formatar_numero_brasileiro(area_parcial_afetada)} m²",
         "texto_descritivo_restricoes": texto_rest,
         "restricoes": restricoes_detalhadas_final,
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
