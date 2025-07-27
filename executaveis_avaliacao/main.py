@@ -5838,7 +5838,8 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
     logger.info(f"Valores nulos em 'AREA TOTAL': {dataframe_amostras['AREA TOTAL'].isna().sum()}")
     logger.info(f"Valores nulos em 'DISTANCIA CENTRO': {dataframe_amostras['DISTANCIA CENTRO'].isna().sum()}")
 
-    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras.head())
+    logger.info(f"Antes da exclusão, dataframe_amostras:\n{dataframe_amostras.head()}")
+
 
     mask_excluir = (
         (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
