@@ -950,8 +950,17 @@ def gerar_avaliacao():
                     homogeneizar_amostras, gerar_grafico_aderencia_totais,
                     gerar_grafico_dispersao_mediana
                 )
+
+                # NOVA LINHA: Crie uma nova chave sem alterar AREA TOTAL original
+               
                 #FAZ O TRATAMENTO EM TODAS AS COORDENADAS DO EXCEL*********************
                 df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
+                # NOVA LINHA: Pegue a área digitada pelo usuário no input
+
+                area_disponivel = float(request.form.get("area_parcial").replace(".", "").replace(",", "."))
+                dados_imovel["AREA_DISPONIVEL"] = float(area_parcial_afetada)
+
+
                 # Função que remove graus e espaços
                # Limpeza e conversão robusta das coordenadas do imóvel avaliado
                 dados_imovel["LATITUDE"] = _parse_coord(dados_imovel.get("LATITUDE"))
@@ -1046,7 +1055,7 @@ def gerar_avaliacao():
                     caminho_imagem_dispersao=img2,
                     uuid_atual=id_execucao,
                     finalidade_do_laudo=finalidade_tipo,
-                    area_parcial_afetada=float(request.form.get("area_parcial").replace(".", "").replace(",", ".")),
+                    area_parcial_afetada=area_disponivel, # aqui vai o correto
                     fatores_do_usuario=fatores_usuario,
                     caminhos_fotos_avaliando=fotos_imovel,
                     caminhos_fotos_adicionais=fotos_adicionais,
