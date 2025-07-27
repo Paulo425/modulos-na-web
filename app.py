@@ -1047,6 +1047,7 @@ def gerar_avaliacao():
                     uuid_atual=id_execucao,
                     finalidade_do_laudo=finalidade_tipo,
                     area_parcial_afetada=float(request.form.get("area_parcial").replace(".", "").replace(",", ".")),
+                    logger.info(f"Área parcial afetada informada pelo usuário: {area_parcial_afetada}")
                     fatores_do_usuario=fatores_usuario,
                     caminhos_fotos_avaliando=fotos_imovel,
                     caminhos_fotos_adicionais=fotos_adicionais,
@@ -1250,7 +1251,7 @@ def gerar_laudo_final(uuid):
         caminho_imagem_dispersao=img2,
         uuid_atual=uuid,
         finalidade_do_laudo="mercado",  # ou adaptar conforme seu fluxo
-        area_parcial_afetada=dados["dados_avaliando"].get("AREA TOTAL", 0),
+        area_parcial_afetada=dados["dados_avaliando"].get("area_parcial", 0),
         fatores_do_usuario=dados["fatores_do_usuario"],
         caminhos_fotos_avaliando=fotos_imovel,
         caminhos_fotos_adicionais=fotos_adicionais,
