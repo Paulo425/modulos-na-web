@@ -5198,7 +5198,7 @@ def gerar_relatorio_avaliacao_com_template(
 
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
-    logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {AREA_PARCIAL_AFETADA}")
+    logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {area_parcial_afetada}")
     area_utilizada = AREA_PARCIAL_AFETADA
     logger.info(f"🟢 Área utilizada atribuída no main.py: {area_utilizada}")
 
