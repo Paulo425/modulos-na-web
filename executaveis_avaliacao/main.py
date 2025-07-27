@@ -4862,7 +4862,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
 
             # (2) Área Total de Interesse
             tabela_principal.cell(2,0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2,1).text = area_total
+            tabela_principal.cell(2,1).text = area_disponivel
 
             # (3) Situação das Restrições
             tabela_principal.cell(3,0).text = "Situação das Restrições:"
