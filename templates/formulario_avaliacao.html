@@ -347,7 +347,7 @@
         </label>
         <input type="text"
                id="areaInput"
-               name="area_parcial"
+               name="area_parcial_afetada"
                class="input-change"
                placeholder="Ex: 29.567,89">
 
@@ -844,7 +844,7 @@
         const finalidadeSelect = document.getElementById("finalidadeSelect");
         const valor        = (finalidadeSelect.value || "").trim().toLowerCase();
         const areaLabel    = document.getElementById("areaLabel");
-        const areaInput    = document.querySelector('input[name="area_parcial"]');
+        const areaInput    = document.querySelector('input[name="area_parcial_afetada"]');
     
         if (valor.includes("desapropria")) {
             /* —— DESAPROPRIAÇÃO —— */

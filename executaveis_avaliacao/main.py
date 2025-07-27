@@ -2355,7 +2355,7 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
 # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
 # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
 ###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_parcial_afetada):
+def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
     """
     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
@@ -2469,9 +2469,10 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo,
             tabela_principal.cell(1,0).text = "Valor Unitário Calculado:"
             tabela_principal.cell(1,1).text = valor_unit
 
-            # (2) Área Total de Interesse
+           # (2) Área Total de Interesse
             tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2, 1).text = formatar_numero_brasileiro(area_parcial_afetada)
+            tabela_principal.cell(2, 1).text = informacoes_de_resumo["area_total_considerada"]
+
 
 
             # (3) Situação das Restrições
@@ -4722,7 +4723,7 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
 # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
 # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
 ###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_parcial_afetada):
+def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
     """
     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
@@ -4861,9 +4862,10 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo,
             tabela_principal.cell(1,0).text = "Valor Unitário Calculado:"
             tabela_principal.cell(1,1).text = valor_unit
 
-            # (2) Área Total de Interesse
-            tabela_principal.cell(2,0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2,1).text = f"{area_parcial_afetada:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+           # (2) Área Total de Interesse
+            tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
+            tabela_principal.cell(2, 1).text = f"{area_utilizada:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 
 
             # (3) Situação das Restrições
@@ -5192,12 +5194,14 @@ def gerar_relatorio_avaliacao_com_template(
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
     logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
-    logger.info(f"Área parcial afetada recebida: {area_parcial_afetada}")
+    logger.info(f"Área Parcial Afetada recebida: {AREA_PARCIAL_AFETADA}")
+
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
-    logger.info(f"🔴 Área parcial afetada recebida no main.py: {area_parcial_afetada}")
-    area_disponivel = area_parcial_afetada
-    logger.info(f"🟢 Área disponível atribuída no main.py: {area_disponivel}")
+    logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {AREA_PARCIAL_AFETADA}")
+    area_utilizada = AREA_PARCIAL_AFETADA
+    logger.info(f"🟢 Área utilizada atribuída no main.py: {area_utilizada}")
+
     # ──────────────────────────────────────────────────────
     """
     Gera o relatório Word completo, exibindo todos os itens e incluindo
@@ -5495,11 +5499,12 @@ def gerar_relatorio_avaliacao_com_template(
     # DEFINIÇÃO CRÍTICA: Qual área usar para cálculos
     # (desapropriação/servidão → área digitada // outros → área da planilha)
     if finalidade_do_laudo in ["desapropriacao", "servidao"]:
-        area_disponivel = area_parcial_afetada  # Área digitada pelo usuário no formulário 
-        logger.info(f"DEBUG: Usando área do usuário: {area_disponivel} m²")  # Para verificação
+        AREA_PARCIAL_AFETADA = dados_imovel.get("AREA_PARCIAL_AFETADA", 0)  # Área digitada pelo usuário no formulário 
+        area_utilizada = AREA_PARCIAL_AFETADA
+        logger.info(f"DEBUG: Usando área parcial afetada (usuário): {area_utilizada} m²")
     else:
-        area_disponivel = area_total_lida  # Área da planilha
-        logger.info(f"DEBUG: Usando área da planilha: {area_disponivel} m²")  # Para verificação
+        area_utilizada = area_total_lida  # Área total vinda da planilha
+        logger.info(f"DEBUG: Usando área total da planilha: {area_utilizada} m²")
   
 
     restricoes_usuario = fatores_do_usuario.get("restricoes", [])
@@ -5518,7 +5523,7 @@ def gerar_relatorio_avaliacao_com_template(
             lista_subtotais.append(subtotal)
             valor_acumulado += subtotal
             soma_area_restricoes += a_
-        sobra = area_disponivel - soma_area_restricoes
+        sobra = area_utilizada - soma_area_restricoes
         if sobra > 0:
             valor_acumulado += (valor_unit * sobra)
         return valor_acumulado, lista_subtotais, sobra
@@ -5570,7 +5575,7 @@ def gerar_relatorio_avaliacao_com_template(
             "subtotal": formatar_moeda_brasil(subt)
         })
         soma_atual += a_
-    sobra_of = area_disponivel - soma_atual
+    sobra_of = area_utilizada - soma_atual
     if sobra_of > 0:
         valor_sobra = valor_mediano * sobra_of
         restricoes_detalhadas_final.append({
@@ -5584,7 +5589,7 @@ def gerar_relatorio_avaliacao_com_template(
     if len(restricoes_usuario) == 0:
         texto_rest = "Não aplicada"
     elif len(restricoes_usuario) == 1:
-        if abs(restricoes_usuario[0]["area"] - area_disponivel) < 1e-3:
+        if abs(restricoes_usuario[0]["area"] - area_utilizada) < 1e-3:
             texto_rest = "Aplicada a toda a área"
         else:
             texto_rest = "Aplicada parcialmente"
@@ -5593,13 +5598,13 @@ def gerar_relatorio_avaliacao_com_template(
 
     info_resumo = {
         "valor_unitario": f"{formatar_moeda_brasil(valor_mediano)}/m²",
-        "area_total_considerada": f"{formatar_numero_brasileiro(area_disponivel)} m²",
+        "area_total_considerada": f"{formatar_numero_brasileiro(AREA_PARCIAL_AFETADA)} m²",
         "texto_descritivo_restricoes": texto_rest,
         "restricoes": restricoes_detalhadas_final,
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
         "valor_por_extenso": ""
     }
-    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo, area_parcial_afetada)
+    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo)
 
     # Gráficos de aderência e dispersão
     substituir_placeholder_por_imagem(documento, "[graficoAderencia2]", caminho_imagem_aderencia, largura=Inches(5))
