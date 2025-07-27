@@ -1068,6 +1068,10 @@ def inserir_tabela_amostras_originais(documento, dataframe):
 
     from docx.oxml.ns import nsdecls, qn
 
+    logger.info(f"🔎 DataFrame recebido em inserir_tabela_amostras_originais:\n{dataframe.head()}")
+    logger.info(f"🔎 Colunas recebidas: {list(dataframe.columns)}")
+
+
     # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
     col_widths = [0.2, 1.3, 1.1, 0.8, 2.0, 2.9]
 
@@ -5243,6 +5247,9 @@ def gerar_relatorio_avaliacao_com_template(
         )
     
     # Inserir a tabela de amostras originais
+    logger.info("🔎 DataFrame que será enviado para inserir_tabela_amostras_originais:")
+    logger.info(dataframe_amostras_inicial.head())
+    logger.info(f"🔎 Colunas disponíveis: {list(dataframe_amostras_inicial.columns)}")
     inserir_tabela_amostras_originais(documento, dataframe_amostras_inicial)
 
     # Preencher alguns placeholders básicos
