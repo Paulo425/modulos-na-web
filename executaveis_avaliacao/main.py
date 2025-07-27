@@ -2355,7 +2355,7 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
 # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
 # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
 ###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
+def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_parcial_afetada):
     """
     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
@@ -4722,7 +4722,7 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
 # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
 # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
 ###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
+def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_parcial_afetada):
     """
     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
@@ -4863,7 +4863,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
 
             # (2) Área Total de Interesse
             tabela_principal.cell(2,0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2,1).text = f"{area_disponivel:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            tabela_principal.cell(2,1).text = f"{area_parcial_afetada:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
             # (3) Situação das Restrições
@@ -5599,7 +5599,7 @@ def gerar_relatorio_avaliacao_com_template(
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
         "valor_por_extenso": ""
     }
-    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo)
+    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo, area_parcial_afetada)
 
     # Gráficos de aderência e dispersão
     substituir_placeholder_por_imagem(documento, "[graficoAderencia2]", caminho_imagem_aderencia, largura=Inches(5))
