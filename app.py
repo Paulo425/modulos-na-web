@@ -1046,7 +1046,7 @@ def gerar_avaliacao():
                     caminho_imagem_dispersao=img2,
                     uuid_atual=id_execucao,
                     finalidade_do_laudo=finalidade_tipo,
-                    area_parcial_afetada=area_parcial,
+                    area_parcial_afetada=float(request.form.get("area_parcial").replace(".", "").replace(",", ".")),
                     fatores_do_usuario=fatores_usuario,
                     caminhos_fotos_avaliando=fotos_imovel,
                     caminhos_fotos_adicionais=fotos_adicionais,

@@ -1051,180 +1051,180 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=Non
 
 
 
-#######################################################################
-# FUNÇÕES DE FORMATAÇÃO
-#######################################################################
-def inserir_tabela_amostras_originais(documento, dataframe):
-    """
-    Substitui o placeholder [amostras original] pela tabela de amostras originais,
-    com as colunas: AM, VALOR TOTAL, ÁREA TOTAL (m²), VALOR UNITÁRIO (R$/m²), CIDADE, FONTE.
-    Agora, deixamos um espaço um pouco maior entre as linhas.
-    """
-    from docx.shared import Pt, Inches
-    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml.shared import OxmlElement
-    from lxml import etree
+# #######################################################################
+# # FUNÇÕES DE FORMATAÇÃO
+# #######################################################################
+# def inserir_tabela_amostras_originais(documento, dataframe):
+#     """
+#     Substitui o placeholder [amostras original] pela tabela de amostras originais,
+#     com as colunas: AM, VALOR TOTAL, ÁREA TOTAL (m²), VALOR UNITÁRIO (R$/m²), CIDADE, FONTE.
+#     Agora, deixamos um espaço um pouco maior entre as linhas.
+#     """
+#     from docx.shared import Pt, Inches
+#     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
+#     from docx.enum.text import WD_ALIGN_PARAGRAPH
+#     from docx.oxml.shared import OxmlElement
+#     from lxml import etree
 
-    from docx.oxml.ns import nsdecls, qn
+#     from docx.oxml.ns import nsdecls, qn
 
-    logger.info(f"🔎 DataFrame recebido em inserir_tabela_amostras_originais:\n{dataframe.head()}")
-    logger.info(f"🔎 Colunas recebidas: {list(dataframe.columns)}")
-
-
-    # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
-    col_widths = [0.2, 1.3, 1.1, 0.8, 2.0, 2.9]
-
-    # Títulos visíveis no cabeçalho
-    colunas_visiveis = [
-        "AM",
-        "VALOR TOTAL",
-        "ÁREA TOTAL (m²)",
-        "VALOR UNITÁRIO (R$/m²)",
-        "CIDADE",
-        "FONTE"
-    ]
-
-    # Colunas correspondentes do DataFrame (caso precise filtrar ou renomear)
-    colunas_df = [
-        "idx",
-        "VALOR TOTAL",
-        "AREA TOTAL",
-        "valor_unitario",
-        "cidade",
-        "fonte"
-    ]
+#     logger.info(f"🔎 DataFrame recebido em inserir_tabela_amostras_originais:\n{dataframe.head()}")
+#     logger.info(f"🔎 Colunas recebidas: {list(dataframe.columns)}")
 
 
-    # Localiza o parágrafo onde o placeholder [amostras original] está
-    paragrafo_alvo = None
-    for paragrafo in documento.paragraphs:
-        if "[amostras original]" in paragrafo.text:
-            paragrafo_alvo = paragrafo
-            break
+#     # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
+#     col_widths = [0.2, 1.3, 1.1, 0.8, 2.0, 2.9]
 
-    # Se não encontrou o placeholder, não faz nada
-    if not paragrafo_alvo:
-        return
+#     # Títulos visíveis no cabeçalho
+#     colunas_visiveis = [
+#         "AM",
+#         "VALOR TOTAL",
+#         "ÁREA TOTAL (m²)",
+#         "VALOR UNITÁRIO (R$/m²)",
+#         "CIDADE",
+#         "FONTE"
+#     ]
 
-    # Remove o texto do placeholder
-    paragrafo_alvo.text = paragrafo_alvo.text.replace("[amostras original]", "")
+#     # Colunas correspondentes do DataFrame (caso precise filtrar ou renomear)
+#     colunas_df = [
+#         "idx",
+#         "VALOR TOTAL",
+#         "AREA TOTAL",
+#         "valor_unitario",
+#         "cidade",
+#         "fonte"
+#     ]
 
-    # Número de linhas = registros do dataframe + 1 (para o cabeçalho)
-    num_linhas = len(dataframe) + 1
-    # Número de colunas = quantidade de títulos visíveis
-    num_colunas = len(colunas_visiveis)
 
-    # Cria a tabela
-    tabela = documento.add_table(rows=num_linhas, cols=num_colunas, style="Table Grid")
-    tabela.allow_autofit = False
-    tabela.alignment = WD_TABLE_ALIGNMENT.CENTER
+#     # Localiza o parágrafo onde o placeholder [amostras original] está
+#     paragrafo_alvo = None
+#     for paragrafo in documento.paragraphs:
+#         if "[amostras original]" in paragrafo.text:
+#             paragrafo_alvo = paragrafo
+#             break
 
-    # Função para centralizar verticalmente a célula
-    def set_vertical_alignment(cell):
-        tcPr = cell._tc.get_or_add_tcPr()
-        vAlign = OxmlElement('w:vAlign')
-        vAlign.set(qn('w:val'), "center")
-        tcPr.append(vAlign)
+#     # Se não encontrou o placeholder, não faz nada
+#     if not paragrafo_alvo:
+#         return
 
-    # --- Cabeçalho ---
-    for c, titulo_exib in enumerate(colunas_visiveis):
-        cell_header = tabela.rows[0].cells[c]
-        cell_header.text = titulo_exib
+#     # Remove o texto do placeholder
+#     paragrafo_alvo.text = paragrafo_alvo.text.replace("[amostras original]", "")
 
-        # Fundo azul claro no cabeçalho
-        shading_xml = etree.fromstring(
-            f'<w:shd {nsdecls("w")} w:fill="BDD7EE" w:val="clear"/>'
-        )
-        cell_header._tc.get_or_add_tcPr().append(shading_xml)
+#     # Número de linhas = registros do dataframe + 1 (para o cabeçalho)
+#     num_linhas = len(dataframe) + 1
+#     # Número de colunas = quantidade de títulos visíveis
+#     num_colunas = len(colunas_visiveis)
 
-        # Formatação da fonte do cabeçalho
-        for run in cell_header.paragraphs[0].runs:
-            run.font.name = "Arial"
-            run.font.size = Pt(10)
-            run.font.bold = True
+#     # Cria a tabela
+#     tabela = documento.add_table(rows=num_linhas, cols=num_colunas, style="Table Grid")
+#     tabela.allow_autofit = False
+#     tabela.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-        # Alinhamento horizontal e vertical do cabeçalho
-        cell_header.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        set_vertical_alignment(cell_header)
+#     # Função para centralizar verticalmente a célula
+#     def set_vertical_alignment(cell):
+#         tcPr = cell._tc.get_or_add_tcPr()
+#         vAlign = OxmlElement('w:vAlign')
+#         vAlign.set(qn('w:val'), "center")
+#         tcPr.append(vAlign)
 
-    # --- Linhas de dados ---
-    for i, (_, row) in enumerate(dataframe.iterrows(), start=1):
-        # Monta a lista de valores (na mesma ordem das colunas do cabeçalho)
-        valores_linha = []
+#     # --- Cabeçalho ---
+#     for c, titulo_exib in enumerate(colunas_visiveis):
+#         cell_header = tabela.rows[0].cells[c]
+#         cell_header.text = titulo_exib
 
-        # AM
-        am_str = str(row.get("AM", ""))
-        valores_linha.append(am_str)
+#         # Fundo azul claro no cabeçalho
+#         shading_xml = etree.fromstring(
+#             f'<w:shd {nsdecls("w")} w:fill="BDD7EE" w:val="clear"/>'
+#         )
+#         cell_header._tc.get_or_add_tcPr().append(shading_xml)
 
-        # VALOR TOTAL (exemplo de formatação de moeda)
-        try:
-            vt_str = formatar_moeda_brasil(float(row["VALOR TOTAL"]))
-        except:
-            vt_str = str(row.get("VALOR TOTAL", ""))
-        valores_linha.append(vt_str)
+#         # Formatação da fonte do cabeçalho
+#         for run in cell_header.paragraphs[0].runs:
+#             run.font.name = "Arial"
+#             run.font.size = Pt(10)
+#             run.font.bold = True
 
-        # ÁREA TOTAL
-        try:
-            area_str = formatar_numero_brasileiro(float(row["AREA TOTAL"]))
-        except:
-            area_str = str(row.get("AREA TOTAL", ""))
-        valores_linha.append(area_str)
+#         # Alinhamento horizontal e vertical do cabeçalho
+#         cell_header.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+#         set_vertical_alignment(cell_header)
 
-        # VALOR UNITÁRIO
-        try:
-            vu_str = formatar_moeda_brasil(float(row["VALOR UNITARIO"]))
-        except:
-            vu_str = str(row.get("VALOR UNITARIO", ""))
-        valores_linha.append(vu_str)
+#     # --- Linhas de dados ---
+#     for i, (_, row) in enumerate(dataframe.iterrows(), start=1):
+#         # Monta a lista de valores (na mesma ordem das colunas do cabeçalho)
+#         valores_linha = []
 
-        # CIDADE
-        cidade_str = str(row.get("CIDADE", ""))
-        valores_linha.append(cidade_str)
+#         # AM
+#         am_str = str(row.get("AM", ""))
+#         valores_linha.append(am_str)
 
-        # FONTE
-        fonte_str = str(row.get("FONTE", ""))
-        valores_linha.append(fonte_str)
+#         # VALOR TOTAL (exemplo de formatação de moeda)
+#         try:
+#             vt_str = formatar_moeda_brasil(float(row["VALOR TOTAL"]))
+#         except:
+#             vt_str = str(row.get("VALOR TOTAL", ""))
+#         valores_linha.append(vt_str)
 
-        # Preenche as células
-        for col_index, valor_cel in enumerate(valores_linha):
-            cell_data = tabela.rows[i].cells[col_index]
-            cell_data.text = valor_cel
+#         # ÁREA TOTAL
+#         try:
+#             area_str = formatar_numero_brasileiro(float(row["AREA TOTAL"]))
+#         except:
+#             area_str = str(row.get("AREA TOTAL", ""))
+#         valores_linha.append(area_str)
 
-            # Formatação da fonte das células de dados
-            for run in cell_data.paragraphs[0].runs:
-                run.font.name = "Arial"
-                run.font.size = Pt(8)
-                run.font.bold = False
+#         # VALOR UNITÁRIO
+#         try:
+#             vu_str = formatar_moeda_brasil(float(row["VALOR UNITARIO"]))
+#         except:
+#             vu_str = str(row.get("VALOR UNITARIO", ""))
+#         valores_linha.append(vu_str)
 
-            # Alinhamento horizontal
-            cell_data.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+#         # CIDADE
+#         cidade_str = str(row.get("CIDADE", ""))
+#         valores_linha.append(cidade_str)
 
-            # Espaçamento vertical dentro da célula
-            paragraph_format = cell_data.paragraphs[0].paragraph_format
-            paragraph_format.space_before = Pt(2)
-            paragraph_format.space_after = Pt(2)
+#         # FONTE
+#         fonte_str = str(row.get("FONTE", ""))
+#         valores_linha.append(fonte_str)
 
-            # Alinhamento vertical
-            set_vertical_alignment(cell_data)
+#         # Preenche as células
+#         for col_index, valor_cel in enumerate(valores_linha):
+#             cell_data = tabela.rows[i].cells[col_index]
+#             cell_data.text = valor_cel
 
-    # --- Ajuste de altura das linhas e largura das colunas ---
-    for row_index in range(num_linhas):
-        if row_index == 0:
-            # Aumenta a altura da linha do cabeçalho
-            tabela.rows[row_index].height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
-            tabela.rows[row_index].height = Pt(40)
-        else:
-            # Aumenta a altura das linhas de dados
-            tabela.rows[row_index].height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
-            tabela.rows[row_index].height = Pt(26)
+#             # Formatação da fonte das células de dados
+#             for run in cell_data.paragraphs[0].runs:
+#                 run.font.name = "Arial"
+#                 run.font.size = Pt(8)
+#                 run.font.bold = False
 
-        # Ajusta a largura de cada coluna
-        for col_index, w_inch in enumerate(col_widths):
-            tabela.rows[row_index].cells[col_index].width = Inches(w_inch)
+#             # Alinhamento horizontal
+#             cell_data.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Insere a tabela logo depois do parágrafo alvo
-    paragrafo_alvo._p.addnext(tabela._element)
+#             # Espaçamento vertical dentro da célula
+#             paragraph_format = cell_data.paragraphs[0].paragraph_format
+#             paragraph_format.space_before = Pt(2)
+#             paragraph_format.space_after = Pt(2)
+
+#             # Alinhamento vertical
+#             set_vertical_alignment(cell_data)
+
+#     # --- Ajuste de altura das linhas e largura das colunas ---
+#     for row_index in range(num_linhas):
+#         if row_index == 0:
+#             # Aumenta a altura da linha do cabeçalho
+#             tabela.rows[row_index].height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+#             tabela.rows[row_index].height = Pt(40)
+#         else:
+#             # Aumenta a altura das linhas de dados
+#             tabela.rows[row_index].height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+#             tabela.rows[row_index].height = Pt(26)
+
+#         # Ajusta a largura de cada coluna
+#         for col_index, w_inch in enumerate(col_widths):
+#             tabela.rows[row_index].cells[col_index].width = Inches(w_inch)
+
+#     # Insere a tabela logo depois do parágrafo alvo
+#     paragrafo_alvo._p.addnext(tabela._element)
 
 
 
@@ -4125,12 +4125,12 @@ def inserir_tabela_amostras_originais(documento, dataframe):
 
     # Colunas correspondentes do DataFrame (caso precise filtrar ou renomear)
     colunas_df = [
-        "AM",
+        "idx",
         "VALOR TOTAL",
         "AREA TOTAL",
-        "VALOR UNITARIO",
-        "CIDADE",
-        "FONTE"
+        "valor_unitario",
+        "cidade",
+        "fonte"
     ]
 
     # Localiza o parágrafo onde o placeholder [amostras original] está
@@ -4196,21 +4196,21 @@ def inserir_tabela_amostras_originais(documento, dataframe):
 
         # VALOR TOTAL (exemplo de formatação de moeda)
         try:
-            vt_str = formatar_moeda_brasil(float(row["VALOR TOTAL"]))
+            vt_str = f"R$ {row['VALOR TOTAL']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         except:
             vt_str = str(row.get("VALOR TOTAL", ""))
         valores_linha.append(vt_str)
 
         # ÁREA TOTAL
         try:
-            area_str = formatar_numero_brasileiro(float(row["AREA TOTAL"]))
+            area_str = f"{row['AREA TOTAL']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         except:
             area_str = str(row.get("AREA TOTAL", ""))
         valores_linha.append(area_str)
 
         # VALOR UNITÁRIO
         try:
-            vu_str = formatar_moeda_brasil(float(row["VALOR UNITARIO"]))
+           vu_str = f"R$ {row['valor_unitario']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         except:
             vu_str = str(row.get("VALOR UNITARIO", ""))
         valores_linha.append(vu_str)
