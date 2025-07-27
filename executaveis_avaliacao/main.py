@@ -5194,7 +5194,7 @@ def gerar_relatorio_avaliacao_com_template(
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
     logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
-    logger.info(f"Área Parcial Afetada recebida: {AREA_PARCIAL_AFETADA}")
+    logger.info(f"Área Parcial Afetada recebida: {area_parcial_afetada}")
 
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
