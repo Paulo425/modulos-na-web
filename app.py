@@ -1047,7 +1047,6 @@ def gerar_avaliacao():
                     uuid_atual=id_execucao,
                     finalidade_do_laudo=finalidade_tipo,
                     area_parcial_afetada=float(request.form.get("area_parcial").replace(".", "").replace(",", ".")),
-                    logger.info(f"Área parcial afetada informada pelo usuário: {area_parcial}")
                     fatores_do_usuario=fatores_usuario,
                     caminhos_fotos_avaliando=fotos_imovel,
                     caminhos_fotos_adicionais=fotos_adicionais,
