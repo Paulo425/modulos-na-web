@@ -2355,7 +2355,7 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
 # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
 # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
 ###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
+def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_parcial_afetada):
     """
     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
@@ -4721,7 +4721,7 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
 # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
 # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
 ###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
+def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_parcial_afetada):
     """
     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
@@ -4862,7 +4862,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
 
             # (2) Área Total de Interesse
             tabela_principal.cell(2,0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2,1).text = area_disponivel
+            tabela_principal.cell(2,1).text = area_parcial_afetada
 
             # (3) Situação das Restrições
             tabela_principal.cell(3,0).text = "Situação das Restrições:"
