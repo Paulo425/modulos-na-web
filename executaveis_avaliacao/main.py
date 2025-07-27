@@ -2470,8 +2470,9 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo,
             tabela_principal.cell(1,1).text = valor_unit
 
             # (2) Área Total de Interesse
-            tabela_principal.cell(2,0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2,1).text = area_disponivel
+            tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
+            tabela_principal.cell(2, 1).text = formatar_numero_brasileiro(area_parcial_afetada)
+
 
             # (3) Situação das Restrições
             tabela_principal.cell(3,0).text = "Situação das Restrições:"
@@ -4216,11 +4217,11 @@ def inserir_tabela_amostras_originais(documento, dataframe):
         valores_linha.append(vu_str)
 
         # CIDADE
-        cidade_str = str(row.get("CIDADE", ""))
+        cidade_str = str(row.get("cidade", ""))
         valores_linha.append(cidade_str)
 
         # FONTE
-        fonte_str = str(row.get("FONTE", ""))
+        fonte_str = str(row.get("fonte", ""))
         valores_linha.append(fonte_str)
 
         # Preenche as células
@@ -5194,7 +5195,7 @@ def gerar_relatorio_avaliacao_com_template(
     logger.info(f"Área parcial afetada recebida: {area_parcial_afetada}")
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
-    area_disponivel = area_parcial_afetada
+    #area_disponivel = area_parcial_afetada
     # ──────────────────────────────────────────────────────
     """
     Gera o relatório Word completo, exibindo todos os itens e incluindo
