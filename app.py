@@ -1243,6 +1243,15 @@ def gerar_laudo_final(uuid):
     nome_docx = f"laudo_avaliacao_{uuid}.docx"
     caminho_docx = os.path.join(pasta_saida, nome_docx)
 
+    finalidade_digitada = dados["fatores_do_usuario"].get("finalidade_descricao", "").strip().lower()
+
+    if "desapropria" in finalidade_digitada:
+        finalidade_do_laudo = "desapropriacao"
+    elif "servid" in finalidade_digitada:
+        finalidade_do_laudo = "servidao"
+    else:
+        finalidade_do_laudo = "mercado"
+
     gerar_relatorio_avaliacao_com_template(
         dados_avaliando=dados["dados_avaliando"],
         dataframe_amostras_inicial=df_ativas,
@@ -1259,7 +1268,7 @@ def gerar_laudo_final(uuid):
         caminho_imagem_aderencia=img1,
         caminho_imagem_dispersao=img2,
         uuid_atual=uuid,
-        finalidade_do_laudo="mercado",  # ou adaptar conforme seu fluxo
+        finalidade_do_laudo=finalidade_do_laudo, # <<<< CORREÇÃO AQUI!
         area_parcial_afetada=area_parcial_afetada,
         fatores_do_usuario=dados["fatores_do_usuario"],
         caminhos_fotos_avaliando=fotos_imovel,
@@ -1269,6 +1278,7 @@ def gerar_laudo_final(uuid):
         caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
         nome_arquivo_word=caminho_docx
     )
+
 
     if os.path.exists(caminho_docx):
         logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
