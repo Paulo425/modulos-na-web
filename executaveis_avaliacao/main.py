@@ -5884,7 +5884,8 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     import math
 
     # Área do imóvel avaliado
-    area_do_avaliando = float(dados_avaliando.get("AREA TOTAL", 0))
+    area_do_avaliando = float(dados_avaliando.get("AREA_PARCIAL_AFETADA", dados_avaliando.get("AREA TOTAL", 0)))
+
 
     # Fatores do imóvel avaliado
     f_avaliado_aprov = fator_aproveitamento(dados_avaliando.get("APROVEITAMENTO", "URBANO"))
