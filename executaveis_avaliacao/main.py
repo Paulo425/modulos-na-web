@@ -2351,280 +2351,280 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
             runn.add_picture(caminho_logo, width=Inches(3))
             paragrafo.alignment = WD_ALIGN_PARAGRAPH.RIGHT
             return
-###############################################################################
-# TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
-# AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
-###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
-    """
-    Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
-    sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
-    seja maiúscula, ex.: "Trinta e um mil, cento e setenta e dois reais e seis centavos".
+# ###############################################################################
+# # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
+# # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
+# ###############################################################################
+# def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_utilizada):
+#     """
+#     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
+#     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
+#     seja maiúscula, ex.: "Trinta e um mil, cento e setenta e dois reais e seis centavos".
     
-    Parâmetros em `informacoes_de_resumo`:
-      - valor_unitario (str) => ex: "R$ 35,37/m²"
-      - area_total_considerada (str) => ex: "1.000,00 m²"
-      - texto_descritivo_restricoes (str) => ex: "Múltiplas restrições aplicadas"
-      - restricoes (list[dict]) => cada item: {
-            "area": 345.0,
-            "percentualDepreciacao": 34,
-            "fator": 0.66,
-            "tipo": "APP",
-            "subtotal": "R$ 8.053,23"
-        }
-      - valor_total_indenizatorio (str) => ex: "R$ 30.979,30"
-      - valor_por_extenso (str) => se vier vazio, será calculado via num2words; 
-        em seguida, a inicial é forçada para maiúsculo.
-    """
-    import re
-    from lxml import etree
-    from docx.oxml.ns import nsdecls, qn
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
-    from docx.shared import Pt
+#     Parâmetros em `informacoes_de_resumo`:
+#       - valor_unitario (str) => ex: "R$ 35,37/m²"
+#       - area_total_considerada (str) => ex: "1.000,00 m²"
+#       - texto_descritivo_restricoes (str) => ex: "Múltiplas restrições aplicadas"
+#       - restricoes (list[dict]) => cada item: {
+#             "area": 345.0,
+#             "percentualDepreciacao": 34,
+#             "fator": 0.66,
+#             "tipo": "APP",
+#             "subtotal": "R$ 8.053,23"
+#         }
+#       - valor_total_indenizatorio (str) => ex: "R$ 30.979,30"
+#       - valor_por_extenso (str) => se vier vazio, será calculado via num2words; 
+#         em seguida, a inicial é forçada para maiúsculo.
+#     """
+#     import re
+#     from lxml import etree
+#     from docx.oxml.ns import nsdecls, qn
+#     from docx.enum.text import WD_ALIGN_PARAGRAPH
+#     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
+#     from docx.shared import Pt
 
-    # Se tiver num2words, usamos para converter valor em texto extenso.
-    try:
-        from num2words import num2words
-    except ImportError:
-        num2words = None
+#     # Se tiver num2words, usamos para converter valor em texto extenso.
+#     try:
+#         from num2words import num2words
+#     except ImportError:
+#         num2words = None
 
-    def extrair_valor_numerico(texto_monetario):
-        """
-        Ex: "R$ 30.979,30" => 30979.30 (float).
-        Remove caracteres que não sejam dígitos ou vírgula, então substitui ',' por '.'.
-        """
-        somente_num_virg = re.sub(r"[^\d,]", "", texto_monetario)
-        somente_num_ponto = somente_num_virg.replace(",", ".")
-        try:
-            return float(somente_num_ponto)
-        except:
-            return 0.0
+#     def extrair_valor_numerico(texto_monetario):
+#         """
+#         Ex: "R$ 30.979,30" => 30979.30 (float).
+#         Remove caracteres que não sejam dígitos ou vírgula, então substitui ',' por '.'.
+#         """
+#         somente_num_virg = re.sub(r"[^\d,]", "", texto_monetario)
+#         somente_num_ponto = somente_num_virg.replace(",", ".")
+#         try:
+#             return float(somente_num_ponto)
+#         except:
+#             return 0.0
 
-    def gerar_extenso_por_num2words(texto_valor):
-        """
-        Converte "R$ 30.979,30" em algo como 
-        "Trinta e um mil, cento e setenta e nove reais e trinta centavos",
-        usando a biblioteca num2words(lang='pt_BR'). 
-        Em seguida, forçamos a primeira letra para maiúscula.
-        """
-        if not num2words:
-            return "(num2words não instalado)"
+#     def gerar_extenso_por_num2words(texto_valor):
+#         """
+#         Converte "R$ 30.979,30" em algo como 
+#         "Trinta e um mil, cento e setenta e nove reais e trinta centavos",
+#         usando a biblioteca num2words(lang='pt_BR'). 
+#         Em seguida, forçamos a primeira letra para maiúscula.
+#         """
+#         if not num2words:
+#             return "(num2words não instalado)"
 
-        val = extrair_valor_numerico(texto_valor)
-        inteiro = int(val)
-        centavos = round((val - inteiro) * 100)
-        if inteiro == 0 and centavos == 0:
-            return "Zero real"
+#         val = extrair_valor_numerico(texto_valor)
+#         inteiro = int(val)
+#         centavos = round((val - inteiro) * 100)
+#         if inteiro == 0 and centavos == 0:
+#             return "Zero real"
 
-        extenso_inteiro = num2words(inteiro, lang='pt_BR')
-        if centavos > 0:
-            extenso_centavos = num2words(centavos, lang='pt_BR')
-            texto_final = f"{extenso_inteiro} reais e {extenso_centavos} centavos"
-        else:
-            texto_final = f"{extenso_inteiro} reais"
+#         extenso_inteiro = num2words(inteiro, lang='pt_BR')
+#         if centavos > 0:
+#             extenso_centavos = num2words(centavos, lang='pt_BR')
+#             texto_final = f"{extenso_inteiro} reais e {extenso_centavos} centavos"
+#         else:
+#             texto_final = f"{extenso_inteiro} reais"
 
-        # Forçar a primeira letra para maiúsculo, se não estiver vazio:
-        if texto_final:
-            texto_final = texto_final[0].upper() + texto_final[1:]
-        return texto_final
+#         # Forçar a primeira letra para maiúsculo, se não estiver vazio:
+#         if texto_final:
+#             texto_final = texto_final[0].upper() + texto_final[1:]
+#         return texto_final
 
-    # -------------------------------------------------------------------------
-    # Localiza o placeholder no documento
-    for paragrafo in documento.paragraphs:
-        if marcador in paragrafo.text:
-            # Remove o texto do placeholder
-            paragrafo.text = paragrafo.text.replace(marcador, "")
+#     # -------------------------------------------------------------------------
+#     # Localiza o placeholder no documento
+#     for paragrafo in documento.paragraphs:
+#         if marcador in paragrafo.text:
+#             # Remove o texto do placeholder
+#             paragrafo.text = paragrafo.text.replace(marcador, "")
 
-            # Carrega dados
-            valor_unit = informacoes_de_resumo.get("valor_unitario", "N/D")
-            area_total = informacoes_de_resumo.get("area_total_considerada", "N/D")
-            sit_rest = informacoes_de_resumo.get("texto_descritivo_restricoes", "N/D")
-            restricoes = informacoes_de_resumo.get("restricoes", [])
-            valor_total = informacoes_de_resumo.get("valor_total_indenizatorio", "R$ 0,00")
-            valor_extenso = informacoes_de_resumo.get("valor_por_extenso", "").strip()
+#             # Carrega dados
+#             valor_unit = informacoes_de_resumo.get("valor_unitario", "N/D")
+#             area_total = informacoes_de_resumo.get("area_total_considerada", "N/D")
+#             sit_rest = informacoes_de_resumo.get("texto_descritivo_restricoes", "N/D")
+#             restricoes = informacoes_de_resumo.get("restricoes", [])
+#             valor_total = informacoes_de_resumo.get("valor_total_indenizatorio", "R$ 0,00")
+#             valor_extenso = informacoes_de_resumo.get("valor_por_extenso", "").strip()
 
-            # Se valor_por_extenso for vazio, gerar automaticamente
-            if not valor_extenso:
-                valor_extenso = gerar_extenso_por_num2words(valor_total)
+#             # Se valor_por_extenso for vazio, gerar automaticamente
+#             if not valor_extenso:
+#                 valor_extenso = gerar_extenso_por_num2words(valor_total)
 
-            # Cria a tabela principal (7 linhas, 2 colunas)
-            tabela_principal = documento.add_table(rows=7, cols=2)
-            tabela_principal.style = "Table Grid"
-            tabela_principal.alignment = WD_TABLE_ALIGNMENT.CENTER
+#             # Cria a tabela principal (7 linhas, 2 colunas)
+#             tabela_principal = documento.add_table(rows=7, cols=2)
+#             tabela_principal.style = "Table Grid"
+#             tabela_principal.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-            # (0) Cabeçalho mesclado
-            cel_titulo = tabela_principal.cell(0, 0).merge(tabela_principal.cell(0, 1))
-            cel_titulo.text = "RESUMO DOS VALORES TOTAIS"
-            shading_cab = etree.fromstring(r'<w:shd {} w:fill="D9D9D9" w:val="clear"/>'.format(nsdecls('w')))
-            cel_titulo._tc.get_or_add_tcPr().append(shading_cab)
-            for p_ in cel_titulo.paragraphs:
-                p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                for run_ in p_.runs:
-                    run_.font.name = "Arial"
-                    run_.font.size = Pt(11)
-                    run_.font.bold = True
+#             # (0) Cabeçalho mesclado
+#             cel_titulo = tabela_principal.cell(0, 0).merge(tabela_principal.cell(0, 1))
+#             cel_titulo.text = "RESUMO DOS VALORES TOTAIS"
+#             shading_cab = etree.fromstring(r'<w:shd {} w:fill="D9D9D9" w:val="clear"/>'.format(nsdecls('w')))
+#             cel_titulo._tc.get_or_add_tcPr().append(shading_cab)
+#             for p_ in cel_titulo.paragraphs:
+#                 p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                 for run_ in p_.runs:
+#                     run_.font.name = "Arial"
+#                     run_.font.size = Pt(11)
+#                     run_.font.bold = True
 
-            # (1) Valor Unitário Calculado
-            tabela_principal.cell(1,0).text = "Valor Unitário Calculado:"
-            tabela_principal.cell(1,1).text = valor_unit
+#             # (1) Valor Unitário Calculado
+#             tabela_principal.cell(1,0).text = "Valor Unitário Calculado:"
+#             tabela_principal.cell(1,1).text = valor_unit
 
-           # (2) Área Total de Interesse
-            tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2, 1).text = informacoes_de_resumo["area_total_considerada"]
+#            # (2) Área Total de Interesse
+#             tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
+#             tabela_principal.cell(2, 1).text = informacoes_de_resumo["area_total_considerada"]
 
 
 
-            # (3) Situação das Restrições
-            tabela_principal.cell(3,0).text = "Situação das Restrições:"
-            tabela_principal.cell(3,1).text = sit_rest
+#             # (3) Situação das Restrições
+#             tabela_principal.cell(3,0).text = "Situação das Restrições:"
+#             tabela_principal.cell(3,1).text = sit_rest
 
-            # (4) Sub-tabela => célula mesclada
-            cel_sub = tabela_principal.cell(4,0).merge(tabela_principal.cell(4,1))
-            shading_light_blue = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
-            cel_sub._tc.get_or_add_tcPr().append(shading_light_blue)
+#             # (4) Sub-tabela => célula mesclada
+#             cel_sub = tabela_principal.cell(4,0).merge(tabela_principal.cell(4,1))
+#             shading_light_blue = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
+#             cel_sub._tc.get_or_add_tcPr().append(shading_light_blue)
 
-            # Remove margens internas da célula mesclada
-            tc_pr_sub = cel_sub._tc.get_or_add_tcPr()
-            tc_margins_sub = tc_pr_sub.xpath('./w:tcMar')
-            if not tc_margins_sub:
-                tcMar = OxmlElement('w:tcMar')
-                tcMar.set(qn('w:top'), "0")
-                tcMar.set(qn('w:left'), "0")
-                tcMar.set(qn('w:right'), "0")
-                tcMar.set(qn('w:bottom'), "0")
-                tc_pr_sub.append(tcMar)
-            else:
-                for m_ in tc_margins_sub:
-                    m_.set(qn('w:top'), "0")
-                    m_.set(qn('w:left'), "0")
-                    m_.set(qn('w:right'), "0")
-                    m_.set(qn('w:bottom'), "0")
+#             # Remove margens internas da célula mesclada
+#             tc_pr_sub = cel_sub._tc.get_or_add_tcPr()
+#             tc_margins_sub = tc_pr_sub.xpath('./w:tcMar')
+#             if not tc_margins_sub:
+#                 tcMar = OxmlElement('w:tcMar')
+#                 tcMar.set(qn('w:top'), "0")
+#                 tcMar.set(qn('w:left'), "0")
+#                 tcMar.set(qn('w:right'), "0")
+#                 tcMar.set(qn('w:bottom'), "0")
+#                 tc_pr_sub.append(tcMar)
+#             else:
+#                 for m_ in tc_margins_sub:
+#                     m_.set(qn('w:top'), "0")
+#                     m_.set(qn('w:left'), "0")
+#                     m_.set(qn('w:right'), "0")
+#                     m_.set(qn('w:bottom'), "0")
 
-            # Se não tiver restrições, mostra texto simples
-            if not restricoes:
-                cel_sub.text = "Nenhuma restrição aplicada."
-                for r_ in cel_sub.paragraphs[0].runs:
-                    r_.font.name = "Arial"
-                    r_.font.size = Pt(10)
-            else:
-                # Cria sub-tabela sem bordas
-                subtab = documento.add_table(rows=len(restricoes)+1, cols=5)
-                borders = subtab._element.xpath(".//w:tblBorders")
-                for b_ in borders:
-                    b_.getparent().remove(b_)
+#             # Se não tiver restrições, mostra texto simples
+#             if not restricoes:
+#                 cel_sub.text = "Nenhuma restrição aplicada."
+#                 for r_ in cel_sub.paragraphs[0].runs:
+#                     r_.font.name = "Arial"
+#                     r_.font.size = Pt(10)
+#             else:
+#                 # Cria sub-tabela sem bordas
+#                 subtab = documento.add_table(rows=len(restricoes)+1, cols=5)
+#                 borders = subtab._element.xpath(".//w:tblBorders")
+#                 for b_ in borders:
+#                     b_.getparent().remove(b_)
 
-                # Adicionar manualmente <w:tblPr>, se não existir
-                tblPr = subtab._element.tblPr
-                if tblPr is None:
-                    tblPr = OxmlElement('w:tblPr')
-                    subtab._element.insert(0, tblPr)
+#                 # Adicionar manualmente <w:tblPr>, se não existir
+#                 tblPr = subtab._element.tblPr
+#                 if tblPr is None:
+#                     tblPr = OxmlElement('w:tblPr')
+#                     subtab._element.insert(0, tblPr)
 
-                # <w:tblCellMar> p/ zerar margens
-                tblCellMar = OxmlElement('w:tblCellMar')
-                tblCellMar.set(qn('w:top'), "0")
-                tblCellMar.set(qn('w:left'), "0")
-                tblCellMar.set(qn('w:right'), "0")
-                tblCellMar.set(qn('w:bottom'), "0")
-                tblPr.append(tblCellMar)
+#                 # <w:tblCellMar> p/ zerar margens
+#                 tblCellMar = OxmlElement('w:tblCellMar')
+#                 tblCellMar.set(qn('w:top'), "0")
+#                 tblCellMar.set(qn('w:left'), "0")
+#                 tblCellMar.set(qn('w:right'), "0")
+#                 tblCellMar.set(qn('w:bottom'), "0")
+#                 tblPr.append(tblCellMar)
 
-                # Cabeçalhos
-                cabecalhos = ["Área (m²)", "% Depreciação", "Fator aplicado", "Tipo Restrição", "Subtotal (R$)"]
-                for cidx, hh in enumerate(cabecalhos):
-                    subtab.cell(0,cidx).text = hh
-                    for run_ in subtab.cell(0,cidx).paragraphs[0].runs:
-                        run_.font.name = "Arial"
-                        run_.font.size = Pt(9)
-                        run_.font.bold = True
-                    subtab.cell(0,cidx).paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                 # Cabeçalhos
+#                 cabecalhos = ["Área (m²)", "% Depreciação", "Fator aplicado", "Tipo Restrição", "Subtotal (R$)"]
+#                 for cidx, hh in enumerate(cabecalhos):
+#                     subtab.cell(0,cidx).text = hh
+#                     for run_ in subtab.cell(0,cidx).paragraphs[0].runs:
+#                         run_.font.name = "Arial"
+#                         run_.font.size = Pt(9)
+#                         run_.font.bold = True
+#                     subtab.cell(0,cidx).paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-                # Linhas de dados
-                for i, restr in enumerate(restricoes, start=1):
-                    area_ = formatar_area_brasil(restr.get("area", ""))
-                    perc_ = restr.get("percentualDepreciacao", 0)
-                    fat_ = restr.get("fator", 1.0)
-                    tipo_ = restr.get("tipo", "")
-                    sub_ = restr.get("subtotal", "R$ 0,00")
+#                 # Linhas de dados
+#                 for i, restr in enumerate(restricoes, start=1):
+#                     area_ = formatar_area_brasil(restr.get("area", ""))
+#                     perc_ = restr.get("percentualDepreciacao", 0)
+#                     fat_ = restr.get("fator", 1.0)
+#                     tipo_ = restr.get("tipo", "")
+#                     sub_ = restr.get("subtotal", "R$ 0,00")
 
-                    subtab.cell(i,0).text = area_
-                    subtab.cell(i,1).text = f"{perc_:.0f}%"
-                    subtab.cell(i,2).text = f"{fat_:.2f}"
-                    subtab.cell(i,3).text = tipo_
-                    subtab.cell(i,4).text = sub_
+#                     subtab.cell(i,0).text = area_
+#                     subtab.cell(i,1).text = f"{perc_:.0f}%"
+#                     subtab.cell(i,2).text = f"{fat_:.2f}"
+#                     subtab.cell(i,3).text = tipo_
+#                     subtab.cell(i,4).text = sub_
 
-                    for cc_ in range(5):
-                        p_run = subtab.cell(i, cc_).paragraphs[0]
-                        p_run.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                        for r_ in p_run.runs:
-                            r_.font.name = "Arial"
-                            r_.font.size = Pt(9)
+#                     for cc_ in range(5):
+#                         p_run = subtab.cell(i, cc_).paragraphs[0]
+#                         p_run.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                         for r_ in p_run.runs:
+#                             r_.font.name = "Arial"
+#                             r_.font.size = Pt(9)
 
-                # Fundo azul e remover margens em todas as células
-                for row_ in subtab.rows:
-                    for cell_ in row_.cells:
-                        shade_cell = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
-                        cell_._tc.get_or_add_tcPr().append(shade_cell)
-                        cell_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-                        tcpr = cell_._tc.get_or_add_tcPr()
-                        tc_marg = tcpr.xpath('./w:tcMar')
-                        if not tc_marg:
-                            newMar = OxmlElement('w:tcMar')
-                            newMar.set(qn('w:top'), "0")
-                            newMar.set(qn('w:left'), "0")
-                            newMar.set(qn('w:right'), "0")
-                            newMar.set(qn('w:bottom'), "0")
-                            tcpr.append(newMar)
-                        else:
-                            for mm in tc_marg:
-                                mm.set(qn('w:top'), "0")
-                                mm.set(qn('w:left'), "0")
-                                mm.set(qn('w:right'), "0")
-                                mm.set(qn('w:bottom'), "0")
+#                 # Fundo azul e remover margens em todas as células
+#                 for row_ in subtab.rows:
+#                     for cell_ in row_.cells:
+#                         shade_cell = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
+#                         cell_._tc.get_or_add_tcPr().append(shade_cell)
+#                         cell_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+#                         tcpr = cell_._tc.get_or_add_tcPr()
+#                         tc_marg = tcpr.xpath('./w:tcMar')
+#                         if not tc_marg:
+#                             newMar = OxmlElement('w:tcMar')
+#                             newMar.set(qn('w:top'), "0")
+#                             newMar.set(qn('w:left'), "0")
+#                             newMar.set(qn('w:right'), "0")
+#                             newMar.set(qn('w:bottom'), "0")
+#                             tcpr.append(newMar)
+#                         else:
+#                             for mm in tc_marg:
+#                                 mm.set(qn('w:top'), "0")
+#                                 mm.set(qn('w:left'), "0")
+#                                 mm.set(qn('w:right'), "0")
+#                                 mm.set(qn('w:bottom'), "0")
 
-                # Anexa a sub-tabela à célula
-                cel_sub._tc.clear_content()
-                cel_sub._tc.append(subtab._element)
+#                 # Anexa a sub-tabela à célula
+#                 cel_sub._tc.clear_content()
+#                 cel_sub._tc.append(subtab._element)
 
-            # (5) Valor Total Indenizatório
-            tabela_principal.cell(5,0).text = "Valor Total Indenizatório:"
-            tabela_principal.cell(5,1).text = valor_total
+#             # (5) Valor Total Indenizatório
+#             tabela_principal.cell(5,0).text = "Valor Total Indenizatório:"
+#             tabela_principal.cell(5,1).text = valor_total
 
-            # (6) Valor por Extenso
-            cel_ext = tabela_principal.cell(6,0).merge(tabela_principal.cell(6,1))
-            cel_ext.text = valor_extenso
+#             # (6) Valor por Extenso
+#             cel_ext = tabela_principal.cell(6,0).merge(tabela_principal.cell(6,1))
+#             cel_ext.text = valor_extenso
 
-            # Ajustes de layout da Tabela Principal
-            for row_idx in range(7):
-                row_ = tabela_principal.rows[row_idx]
-                row_.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
-                row_.height = Pt(18)
-                for col_idx in range(2):
-                    c_ = row_.cells[col_idx]
-                    c_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-                    for pp_ in c_.paragraphs:
-                        pp_.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                        for rr_ in pp_.runs:
-                            rr_.font.name = "Arial"
-                            rr_.font.size = Pt(10)
-                            rr_.font.bold = False
+#             # Ajustes de layout da Tabela Principal
+#             for row_idx in range(7):
+#                 row_ = tabela_principal.rows[row_idx]
+#                 row_.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
+#                 row_.height = Pt(18)
+#                 for col_idx in range(2):
+#                     c_ = row_.cells[col_idx]
+#                     c_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+#                     for pp_ in c_.paragraphs:
+#                         pp_.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                         for rr_ in pp_.runs:
+#                             rr_.font.name = "Arial"
+#                             rr_.font.size = Pt(10)
+#                             rr_.font.bold = False
 
-            # Valor Unitário (linha 1 => col 1) e Valor Total (linha 5 => col 1) em negrito
-            for run_ in tabela_principal.rows[1].cells[1].paragraphs[0].runs:
-                run_.font.bold = True
-            for run_ in tabela_principal.rows[5].cells[1].paragraphs[0].runs:
-                run_.font.bold = True
-                run_.font.size = Pt(11)
+#             # Valor Unitário (linha 1 => col 1) e Valor Total (linha 5 => col 1) em negrito
+#             for run_ in tabela_principal.rows[1].cells[1].paragraphs[0].runs:
+#                 run_.font.bold = True
+#             for run_ in tabela_principal.rows[5].cells[1].paragraphs[0].runs:
+#                 run_.font.bold = True
+#                 run_.font.size = Pt(11)
 
-            # Valor por Extenso (linha 6) => central e em negrito
-            for p_ in tabela_principal.rows[6].cells[0].paragraphs:
-                p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                for rn_ in p_.runs:
-                    rn_.font.size = Pt(10)
-                    rn_.font.bold = True
+#             # Valor por Extenso (linha 6) => central e em negrito
+#             for p_ in tabela_principal.rows[6].cells[0].paragraphs:
+#                 p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                 for rn_ in p_.runs:
+#                     rn_.font.size = Pt(10)
+#                     rn_.font.bold = True
 
-            # Insere a tabela após o parágrafo do placeholder
-            paragrafo._p.addnext(tabela_principal._element)
-            break
+#             # Insere a tabela após o parágrafo do placeholder
+#             paragrafo._p.addnext(tabela_principal._element)
+#             break
 
 ###############################################################################
 # DIAGNÓSTICO DE MERCADO
@@ -4723,7 +4723,7 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
 # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
 # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
 ###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
+def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_utilizada):
     """
     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
@@ -5605,7 +5605,7 @@ def gerar_relatorio_avaliacao_com_template(
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
         "valor_por_extenso": ""
     }
-    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo)
+    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo, area_utilizada)
 
     # Gráficos de aderência e dispersão
     substituir_placeholder_por_imagem(documento, "[graficoAderencia2]", caminho_imagem_aderencia, largura=Inches(5))
