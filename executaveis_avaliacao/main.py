@@ -4864,7 +4864,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo,
 
            # (2) Área Total de Interesse
             tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2, 1).text = f"{area_final:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            tabela_principal.cell(2, 1).text = f"{area_utilizada:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 
