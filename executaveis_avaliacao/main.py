@@ -5599,7 +5599,7 @@ def gerar_relatorio_avaliacao_com_template(
 
     info_resumo = {
         "valor_unitario": f"{formatar_moeda_brasil(valor_mediano)}/m²",
-        "area_total_considerada": f"{formatar_numero_brasileiro(area_parcial_afetada)} m²",
+        "area_total_considerada": f"{formatar_numero_brasileiro(area_utilizada)} m²",
         "texto_descritivo_restricoes": texto_rest,
         "restricoes": restricoes_detalhadas_final,
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),

@@ -958,7 +958,7 @@ def gerar_avaliacao():
                 # NOVA LINHA: Pegue a área digitada pelo usuário no input
 
                 area_parcial_afetada = float(request.form.get("area_parcial_afetada", "0").replace(".", "").replace(",", "."))
-                dados_imovel["area_parcial_afetada"] = float(area_parcial_afetada)
+                dados_imovel["AREA_PARCIAL_AFETADA"] = float(area_parcial_afetada)
 
 
                 # Função que remove graus e espaços
@@ -1259,7 +1259,7 @@ def gerar_laudo_final(uuid):
         caminho_imagem_dispersao=img2,
         uuid_atual=uuid,
         finalidade_do_laudo="mercado",  # ou adaptar conforme seu fluxo
-        area_parcial_afetada=dados["dados_avaliando"].get("AREA_PARCIAL_AFETADA", 0),
+        area_parcial_afetada=area_parcial_afetada,
         fatores_do_usuario=dados["fatores_do_usuario"],
         caminhos_fotos_avaliando=fotos_imovel,
         caminhos_fotos_adicionais=fotos_adicionais,
