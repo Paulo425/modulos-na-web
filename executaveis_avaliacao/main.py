@@ -5499,7 +5499,6 @@ def gerar_relatorio_avaliacao_com_template(
     # DEFINIÇÃO CRÍTICA: Qual área usar para cálculos
     # (desapropriação/servidão → área digitada // outros → área da planilha)
     if finalidade_do_laudo in ["desapropriacao", "servidao"]:
-        area_parcial_afetada = dados_avaliando.get("AREA_PARCIAL_AFETADA", 0)
         area_utilizada = area_parcial_afetada
         logger.info(f"DEBUG: Usando área parcial afetada (usuário): {area_utilizada} m²")
     else:
