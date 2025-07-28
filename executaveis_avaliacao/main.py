@@ -4864,7 +4864,7 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo,
 
            # (2) Área Total de Interesse
             tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2, 1).text = f"{area_utilizada:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            tabela_principal.cell(2, 1).text = f"{area_final:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 
@@ -5190,7 +5190,9 @@ def gerar_relatorio_avaliacao_com_template(
     caminho_template="template.docx",
     nome_arquivo_word="relatorio.docx"
 ):
-
+    # DEFINIÇÃO DEFINITIVA DA ÁREA UTILIZADA (corrigido!)
+    area_utilizada = area_parcial_afetada if finalidade_do_laudo in ["desapropriacao", "servidao"] else float(dados_avaliando.get("AREA TOTAL", 0))
+    logger.info(f"✅ Área utilizada definitiva definida imediatamente após parâmetros: {area_utilizada}")
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
     logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
@@ -5198,9 +5200,9 @@ def gerar_relatorio_avaliacao_com_template(
 
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
-    logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {area_parcial_afetada}")
-    area_utilizada = area_parcial_afetada
-    logger.info(f"🟢 Área utilizada atribuída no main.py: {area_utilizada}")
+    # logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {area_parcial_afetada}")
+    # area_utilizada = area_parcial_afetada
+    # logger.info(f"🟢 Área utilizada atribuída no main.py: {area_utilizada}")
 
     # ──────────────────────────────────────────────────────
     """
@@ -5596,14 +5598,20 @@ def gerar_relatorio_avaliacao_com_template(
     else:
         texto_rest = "Múltiplas restrições aplicadas"
 
+    if finalidade_do_laudo in ["desapropriacao", "servidao"]:
+        area_final = area_parcial_afetada
+    else:
+        area_final = float(dados_avaliando.get("AREA TOTAL", 0))
+
     info_resumo = {
         "valor_unitario": f"{formatar_moeda_brasil(valor_mediano)}/m²",
-        "area_total_considerada": f"{formatar_numero_brasileiro(area_utilizada)} m²",
+        "area_total_considerada": f"{formatar_numero_brasileiro(area_final)} m²",
         "texto_descritivo_restricoes": texto_rest,
         "restricoes": restricoes_detalhadas_final,
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
         "valor_por_extenso": ""
     }
+
     inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo, area_utilizada)
 
     # Gráficos de aderência e dispersão
