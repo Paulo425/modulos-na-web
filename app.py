@@ -1180,7 +1180,8 @@ def gerar_laudo_final(uuid):
         fotos_adicionais = dados.get("fotos_adicionais", [])
         fotos_proprietario = dados.get("fotos_proprietario", [])
         fotos_planta = dados.get("fotos_planta", [])
-
+        # NOVA LINHA ADICIONADA: Carregar explicitamente a área parcial afetada do JSON
+        area_parcial_afetada = float(dados["dados_avaliando"].get("AREA_PARCIAL_AFETADA", 0))
 
     # 2. Atualiza estado das amostras com base nos checkboxes
     for amostra in dados["amostras"]:
