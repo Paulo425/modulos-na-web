@@ -985,7 +985,13 @@ def gerar_avaliacao():
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
                 gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
-                gerar_grafico_dispersao_mediana(homog, img2)
+                gerar_grafico_dispersao_mediana(
+                    homog, 
+                    caminho_saida,   # caminho da imagem já existente
+                    ativos_frontend,
+                    amostras_usuario_retirou,
+                    amostras_excluidas_chauvenet
+                )
 
                 logger.info(f"Enviando para relatório (valores originais): {df_filtrado['VALOR TOTAL'].tolist()}")
                 logger.info(f"Homogeneizados válidos: {homog}")
@@ -1237,7 +1243,14 @@ def gerar_laudo_final(uuid):
     img1 = os.path.join(pasta_saida, "grafico_aderencia.png")
     img2 = os.path.join(pasta_saida, "grafico_dispersao.png")
     gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
-    gerar_grafico_dispersao_mediana(homog, img2)
+    gerar_grafico_dispersao_mediana(
+        homog, 
+        caminho_saida,   # caminho da imagem já existente
+        ativos_frontend,
+        amostras_usuario_retirou,
+        amostras_excluidas_chauvenet
+    )
+
 
     # Chamada final
     nome_docx = f"laudo_avaliacao_{uuid}.docx"
