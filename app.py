@@ -986,7 +986,7 @@ def gerar_avaliacao():
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
                 gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
                 # solução imediata e recomendada para gerar_avaliacao
-                idx_todas_amostras = [int(a["idx"]) for a in dados["amostras"]]
+                idx_todas_amostras = [int(idx) for idx in df_amostras["idx"]]
                 gerar_grafico_dispersao_mediana(
                     homog,
                     img2,
