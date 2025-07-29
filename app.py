@@ -978,6 +978,8 @@ def gerar_avaliacao():
                 logger.info(f"df_amostras.head():\n{df_amostras.head()}")
                 logger.info(f"dados_imovel: {dados_imovel}")
                 df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_amostras)
+                df_filtrado = pd.DataFrame(df_filtrado)  # ← Essa linha corrige definitivamente o problema atual
+
                 logger.info(f"df_filtrado.head():\n{df_filtrado.head()}")
                 logger.info(f"Média: {media}, Mediana: {mediana}")
                 homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
