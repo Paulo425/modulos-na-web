@@ -1373,21 +1373,22 @@ def calcular_valores_iterativos(uuid):
     else:
         valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
 
-    # Gerar gráficos dinamicamente após cada interação
+    # AGORA ADICIONADO CORRETAMENTE:
     pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
     os.makedirs(pasta_saida, exist_ok=True)
 
-    img_disp = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
-    img_ader = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+    img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+    img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
 
     gerar_grafico_dispersao_mediana(
         homog,
         img2,
-        ativos_frontend,  # amostras ativas no frontend
-        amostras_usuario_retirou,  # usuário retirou
-        amostras_excluidas_chauvenet  # Chauvenet retirou
+        ativos_frontend,
+        amostras_usuario_retirou,
+        amostras_excluidas_chauvenet
     )
-    gerar_grafico_aderencia_totais(df_filtrado, homog, img_ader)
+
+    gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
 
     resposta = {
         "valor_minimo": valor_minimo,
@@ -1404,6 +1405,7 @@ def calcular_valores_iterativos(uuid):
     }
 
     return jsonify(resposta)
+
 
 
 # @app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
