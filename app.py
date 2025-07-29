@@ -1380,7 +1380,7 @@ def calcular_valores_iterativos(uuid):
 
     gerar_grafico_dispersao_mediana(
         homog,
-        img_disp,
+        img2,
         ativos_frontend,  # amostras ativas no frontend
         amostras_usuario_retirou,  # usuário retirou
         amostras_excluidas_chauvenet  # Chauvenet retirou
