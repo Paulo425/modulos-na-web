@@ -45,7 +45,10 @@
       <tbody>
         {% for a in amostras %}
         <tr>
-          <td><input type="checkbox" name="ativo_{{ a.idx }}" checked></td>
+          <td>
+          <input type="checkbox" class="amostra-checkbox" data-idx="{{ a.idx }}" name="ativo_{{ a.idx }}" checked>
+          </td>
+
           <td>{{ a.idx }}</td>
           <td>R$ {{ '%.2f'|format(a.valor_total | float) }}</td>
           <td>{{ '%.2f'|format(a.area | float) }} m²</td>
@@ -76,6 +79,13 @@
     <p style="font-weight: bold; color: #444;">
       Amplitude do Intervalo de Confiança 80%: <span style="color: darkred;">{{ amplitude_ic80 }}%</span>
     </p>
+    <div style="margin-top: 25px; padding: 15px; background-color: #eef7ff; border-radius: 6px; border: 1px solid #bdd7ee;">
+      <h3 style="color: #004085; margin-bottom: 10px;">Resultados Iterativos em Tempo Real</h3>
+      <p style="font-weight: bold;">Valor Unitário Mínimo: <span id="valor-minimo">-</span></p>
+      <p style="font-weight: bold;">Valor Unitário Médio: <span id="valor-medio">-</span></p>
+      <p style="font-weight: bold;">Valor Unitário Máximo: <span id="valor-maximo">-</span></p>
+      <p style="font-weight: bold;">Quantidade de Amostras Ativas: <span id="quantidade-amostras">-</span></p>
+    </div>
 
     <hr style="margin: 40px 0;">
     <h4 style="text-align: center; color: #333;">Gráfico de Dispersão das Amostras Selecionadas</h4>
@@ -94,5 +104,40 @@
     </div>
   </form>
 </div>
+
+<script>
+function atualizarValoresIterativos(uuid_execucao) {
+    const ativos = Array.from(document.querySelectorAll(".amostra-checkbox:checked"))
+                        .map(el => parseInt(el.dataset.idx));
+
+    fetch(`/calcular_valores_iterativos/${uuid_execucao}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ativos: ativos})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.erro) {
+            alert(data.erro);
+        } else {
+            document.getElementById("valor-minimo").innerText = `R$ ${data.valor_minimo.toFixed(2)}`;
+            document.getElementById("valor-medio").innerText = `R$ ${data.valor_medio.toFixed(2)}`;
+            document.getElementById("valor-maximo").innerText = `R$ ${data.valor_maximo.toFixed(2)}`;
+            document.getElementById("quantidade-amostras").innerText = data.quantidade_amostras;
+        }
+    })
+    .catch(error => console.error("Erro ao atualizar valores iterativos:", error));
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const uuid_execucao = "{{ uuid }}";
+    atualizarValoresIterativos(uuid_execucao);
+
+    document.querySelectorAll(".amostra-checkbox").forEach(el => {
+        el.addEventListener("change", () => atualizarValoresIterativos(uuid_execucao));
+    });
+});
+</script>
+
 
 {% endblock %}
