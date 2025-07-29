@@ -3912,11 +3912,14 @@ def gerar_grafico_dispersao_mediana(
     mapa_homog = dict(zip(idx_amostras_ativas, homog))
 
     # Ativos válidos (ativos - chauvenet)
-    ativos_validos_idx = [
-        idx for idx in idx_amostras_ativas if idx not in idx_amostras_chauvenet_retirou
-    ]
-    ativos_validos_valores = [mapa_homog[idx] for idx in ativos_validos_idx if idx in mapa_homog]
+    # Ativos válidos (ativos - chauvenet) - versão segura e robusta definitiva
+    ativos_validos_idx = []
+    ativos_validos_valores = []
 
+    for idx in idx_amostras_ativas:
+        if idx not in idx_amostras_chauvenet_retirou and idx in mapa_homog:
+            ativos_validos_idx.append(idx)
+            ativos_validos_valores.append(mapa_homog[idx])
 
     plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
 
