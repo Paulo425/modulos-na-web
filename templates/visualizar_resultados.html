@@ -87,14 +87,27 @@
       <p style="font-weight: bold;">Quantidade de Amostras Ativas: <span id="quantidade-amostras">-</span></p>
     </div>
 
-    <hr style="margin: 40px 0;">
-    <h4 style="text-align: center; color: #333;">Gráfico de Dispersão das Amostras Selecionadas</h4>
 
-    <div style="text-align: center;">
-      <img src="{{ url_for('static', filename='arquivos/avaliacao_' + uuid + '/grafico_dispersao.png') }}"
-           alt="Gráfico de Dispersão"
-           style="max-width: 700px; width: 100%; border: 1px solid #ccc; padding: 10px;">
+    <hr style="margin: 40px 0;">
+    <h4 style="text-align: center; color: #333;">Gráficos Iterativos das Amostras Selecionadas</h4>
+
+    <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h5>Gráfico de Dispersão</h5>
+        <img id="grafico-dispersao-iterativo" 
+            src="{{ url_for('static', filename='arquivos/avaliacao_' + uuid + '/grafico_dispersao.png') }}"
+            alt="Gráfico de Dispersão"
+            style="max-width: 450px; width: 100%; border: 1px solid #ccc; padding: 10px;">
+      </div>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h5>Gráfico de Aderência</h5>
+        <img id="grafico-aderencia-iterativo" 
+            src="{{ url_for('static', filename='arquivos/avaliacao_' + uuid + '/grafico_aderencia.png') }}"
+            alt="Gráfico de Aderência"
+            style="max-width: 450px; width: 100%; border: 1px solid #ccc; padding: 10px;">
+      </div>
     </div>
+
 
     <div style="text-align: center; margin-top: 30px;">
       <a href="{{ url_for('gerar_avaliacao') }}" class="btn btn-secondary">← Voltar</a>
@@ -128,9 +141,17 @@ function atualizarValoresIterativos(uuid_execucao) {
             document.getElementById("valor-minimo").innerText = `R$ ${data.valor_minimo.toFixed(2)}`;
             document.getElementById("valor-medio").innerText = `R$ ${data.valor_medio.toFixed(2)}`;
             document.getElementById("valor-maximo").innerText = `R$ ${data.valor_maximo.toFixed(2)}`;
-            document.getElementById("quantidade-amostras").innerText = data.quantidade_amostras;
+
+            document.getElementById("quantidade-amostras-usuario").innerText = data.quantidade_amostras_usuario_retirou;
+            document.getElementById("quantidade-amostras-chauvenet").innerText = data.quantidade_amostras_chauvenet_retirou;
+            document.getElementById("quantidade-amostras-restantes").innerText = data.quantidade_amostras_restantes;
+
+            // Atualização dinâmica dos gráficos
+            document.getElementById("grafico-dispersao-iterativo").src = data.grafico_dispersao_url + "?t=" + new Date().getTime();
+            document.getElementById("grafico-aderencia-iterativo").src = data.grafico_aderencia_url + "?t=" + new Date().getTime();
         }
     })
+
     .catch(error => console.error("Erro ao atualizar valores iterativos:", error));
 }
 

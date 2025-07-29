@@ -1308,6 +1308,83 @@ def gerar_laudo_final(uuid):
     # 3. Retornar ZIP ao invés do DOCX
     return send_file(caminho_zip, as_attachment=True)
 
+@app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
+def calcular_valores_iterativos(uuid):
+    import json, os
+    import numpy as np
+    import pandas as pd
+    from flask import jsonify, request, url_for
+    from executaveis_avaliacao.main import (
+        aplicar_chauvenet_e_filtrar,
+        homogeneizar_amostras,
+        intervalo_confianca_bootstrap_mediana,
+        gerar_grafico_dispersao_mediana,
+        gerar_grafico_aderencia_totais,
+    )
+
+    caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+    if not os.path.exists(caminho_json):
+        return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
+
+    with open(caminho_json, "r", encoding="utf-8") as f:
+        dados = json.load(f)
+
+    ativos_frontend = request.json.get("ativos", [])
+    ativos_frontend = [int(idx) for idx in ativos_frontend]
+
+    amostras_usuario_retirou = [int(a["idx"]) for a in dados["amostras"] if int(a["idx"]) not in ativos_frontend]
+
+    df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
+    df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+
+    df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+
+    amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
+
+    homog = homogeneizar_amostras(
+        df_filtrado,
+        dados["dados_avaliando"],
+        dados["fatores_do_usuario"],
+        finalidade_do_laudo="desapropriacao" if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "servidao" if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "mercado"
+    )
+
+    array_homog = np.array(homog, dtype=float)
+    if len(array_homog) > 1:
+        limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
+        valor_minimo = round(limite_inf, 2)
+        valor_maximo = round(limite_sup, 2)
+        valor_medio = round(np.median(array_homog), 2)
+    else:
+        valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
+
+    # Gerar gráficos dinamicamente após cada interação
+    pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
+    os.makedirs(pasta_saida, exist_ok=True)
+
+    img_disp = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+    img_ader = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+
+    gerar_grafico_dispersao_mediana(homog, img_disp)
+    gerar_grafico_aderencia_totais(df_filtrado, homog, img_ader)
+
+    resposta = {
+        "valor_minimo": valor_minimo,
+        "valor_medio": valor_medio,
+        "valor_maximo": valor_maximo,
+        "quantidade_amostras_iniciais": len(dados["amostras"]),
+        "quantidade_amostras_usuario_retirou": len(amostras_usuario_retirou),
+        "amostras_usuario_retirou": amostras_usuario_retirou,
+        "quantidade_amostras_chauvenet_retirou": len(amostras_excluidas_chauvenet),
+        "amostras_chauvenet_retirou": amostras_excluidas_chauvenet,
+        "quantidade_amostras_restantes": len(df_filtrado),
+        "grafico_dispersao_url": url_for("static", filename=f"arquivos/avaliacao_{uuid}/grafico_dispersao_iterativo.png"),
+        "grafico_aderencia_url": url_for("static", filename=f"arquivos/avaliacao_{uuid}/grafico_aderencia_iterativo.png")
+    }
+
+    return jsonify(resposta)
+
+
 # @app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
 # def calcular_valores_iterativos(uuid):
 #     import json, os
@@ -1318,6 +1395,7 @@ def gerar_laudo_final(uuid):
 #     )
 #     import numpy as np
 #     import pandas as pd
+#     from flask import jsonify, request  # confirmar essa importação!
 
 #     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
 
@@ -1328,24 +1406,23 @@ def gerar_laudo_final(uuid):
 #     with open(caminho_json, "r", encoding="utf-8") as f:
 #         dados = json.load(f)
 
-#     # Receber índices das amostras ativas via AJAX
+#     # Ajuste seguro explicitamente com inteiros
 #     ativos_frontend = request.json.get("ativos", [])
+#     ativos_frontend = [int(idx) for idx in ativos_frontend]
 
-#     # Atualiza status das amostras com base no frontend
 #     for amostra in dados["amostras"]:
-#         amostra["ativo"] = amostra["idx"] in ativos_frontend
+#         amostra["ativo"] = int(amostra["idx"]) in ativos_frontend
 
-#     # Filtrar amostras ativas
+#     # Filtrar amostras ativas corretamente
 #     amostras_ativas = [a for a in dados["amostras"] if a["ativo"] and a["area"] > 0]
 
 #     if not amostras_ativas:
 #         return jsonify({"erro": "Nenhuma amostra ativa selecionada."}), 400
 
-#     # DataFrame das amostras ativas
+#     # DataFrame e cálculos (sem mudanças)
 #     df_ativas = pd.DataFrame(amostras_ativas)
 #     df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
 
-#     # Chauvenet e homogeneização
 #     df_filtrado, _, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
 #     homog = homogeneizar_amostras(
 #         df_filtrado,
@@ -1354,7 +1431,6 @@ def gerar_laudo_final(uuid):
 #         finalidade_do_laudo="desapropriacao" if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "servidao" if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "mercado"
 #     )
 
-#     # Calcular intervalo confiança
 #     array_homog = np.array(homog, dtype=float)
 #     if len(array_homog) > 1:
 #         limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
@@ -1372,70 +1448,6 @@ def gerar_laudo_final(uuid):
 #     }
 
 #     return jsonify(resposta)
-
-@app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
-def calcular_valores_iterativos(uuid):
-    import json, os
-    from executaveis_avaliacao.main import (
-        aplicar_chauvenet_e_filtrar,
-        homogeneizar_amostras,
-        intervalo_confianca_bootstrap_mediana,
-    )
-    import numpy as np
-    import pandas as pd
-    from flask import jsonify, request  # confirmar essa importação!
-
-    caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
-
-    if not os.path.exists(caminho_json):
-        return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
-
-    # Ler JSON
-    with open(caminho_json, "r", encoding="utf-8") as f:
-        dados = json.load(f)
-
-    # Ajuste seguro explicitamente com inteiros
-    ativos_frontend = request.json.get("ativos", [])
-    ativos_frontend = [int(idx) for idx in ativos_frontend]
-
-    for amostra in dados["amostras"]:
-        amostra["ativo"] = int(amostra["idx"]) in ativos_frontend
-
-    # Filtrar amostras ativas corretamente
-    amostras_ativas = [a for a in dados["amostras"] if a["ativo"] and a["area"] > 0]
-
-    if not amostras_ativas:
-        return jsonify({"erro": "Nenhuma amostra ativa selecionada."}), 400
-
-    # DataFrame e cálculos (sem mudanças)
-    df_ativas = pd.DataFrame(amostras_ativas)
-    df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
-
-    df_filtrado, _, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
-    homog = homogeneizar_amostras(
-        df_filtrado,
-        dados["dados_avaliando"],
-        dados["fatores_do_usuario"],
-        finalidade_do_laudo="desapropriacao" if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "servidao" if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "mercado"
-    )
-
-    array_homog = np.array(homog, dtype=float)
-    if len(array_homog) > 1:
-        limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
-        valor_minimo = round(limite_inf, 2)
-        valor_maximo = round(limite_sup, 2)
-        valor_medio = round(np.median(array_homog), 2)
-    else:
-        valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
-
-    resposta = {
-        "valor_minimo": valor_minimo,
-        "valor_medio": valor_medio,
-        "valor_maximo": valor_maximo,
-        "quantidade_amostras": len(df_filtrado)
-    }
-
-    return jsonify(resposta)
 
 
 
