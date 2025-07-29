@@ -987,7 +987,7 @@ def gerar_avaliacao():
                 gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
                 gerar_grafico_dispersao_mediana(
                     homog, 
-                    caminho_saida,   # caminho da imagem já existente
+                    img2,   # caminho da imagem já existente
                     ativos_frontend,
                     amostras_usuario_retirou,
                     amostras_excluidas_chauvenet
@@ -1245,7 +1245,7 @@ def gerar_laudo_final(uuid):
     gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
     gerar_grafico_dispersao_mediana(
         homog, 
-        caminho_saida,   # caminho da imagem já existente
+        img2,   # caminho da imagem já existente
         ativos_frontend,
         amostras_usuario_retirou,
         amostras_excluidas_chauvenet
