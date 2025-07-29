@@ -985,12 +985,14 @@ def gerar_avaliacao():
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
                 gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+                # solução imediata e recomendada para gerar_avaliacao
+                idx_todas_amostras = [int(a["idx"]) for a in dados["amostras"]]
                 gerar_grafico_dispersao_mediana(
-                    homog, 
-                    img2,   # caminho da imagem já existente
-                    ativos_frontend,
-                    amostras_usuario_retirou,
-                    amostras_excluidas_chauvenet
+                    homog,
+                    img2,
+                    idx_todas_amostras,  # amostras iniciais (usuário ainda não retirou nenhuma)
+                    [],                  # nenhuma retirada manual
+                    []                   # nenhuma retirada Chauvenet
                 )
 
                 logger.info(f"Enviando para relatório (valores originais): {df_filtrado['VALOR TOTAL'].tolist()}")
