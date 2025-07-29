@@ -85,6 +85,7 @@ from docx.oxml.ns import qn
 
 
 
+import numpy as np
 
 
 
@@ -3789,39 +3790,74 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
     plt.close(fig)
 
 
-def gerar_grafico_dispersao_mediana(valores_homogeneizados, nome_arquivo):
-    """
-    Gera um gráfico de dispersão simples (index vs. valores homogeneizados)
-    e destaca a mediana com uma linha horizontal.
-    """
-    import numpy as np
-    import matplotlib.pyplot as plt
+# def gerar_grafico_dispersao_mediana(valores_homogeneizados, nome_arquivo):
+#     """
+#     Gera um gráfico de dispersão simples (index vs. valores homogeneizados)
+#     e destaca a mediana com uma linha horizontal.
+#     """
+#     import numpy as np
+#     import matplotlib.pyplot as plt
 
-    arr = np.array(valores_homogeneizados, dtype=float)
-    if arr.size < 1:
-        plt.figure()
-        plt.text(0.5, 0.5, "Sem valores para exibir", 
-                 ha='center', va='center', 
-                 transform=plt.gca().transAxes, fontsize=12)
-        plt.title("Dispersão dos Valores Homogeneizados")
-        plt.savefig(nome_arquivo, bbox_inches='tight')
-        plt.close()
-        return
+#     arr = np.array(valores_homogeneizados, dtype=float)
+#     if arr.size < 1:
+#         plt.figure()
+#         plt.text(0.5, 0.5, "Sem valores para exibir", 
+#                  ha='center', va='center', 
+#                  transform=plt.gca().transAxes, fontsize=12)
+#         plt.title("Dispersão dos Valores Homogeneizados")
+#         plt.savefig(nome_arquivo, bbox_inches='tight')
+#         plt.close()
+#         return
 
-    indices = np.arange(1, len(arr) + 1)
+#     indices = np.arange(1, len(arr) + 1)
 
-    plt.figure(figsize=(8, 6))
-    plt.scatter(indices, arr, marker='o', label="Valores Homogeneizados")
-    mediana = np.median(arr)
-    plt.axhline(y=mediana, color='r', linestyle='--', label=f"Mediana: {mediana:,.2f}")
+#     plt.figure(figsize=(8, 6))
+#     plt.scatter(indices, arr, marker='o', label="Valores Homogeneizados")
+#     mediana = np.median(arr)
+#     plt.axhline(y=mediana, color='r', linestyle='--', label=f"Mediana: {mediana:,.2f}")
 
-    plt.xlabel("Índice da Amostra")
-    plt.ylabel("Valor Unitário Homogeneizado (R$/m²)")
-    plt.title("Gráfico de Dispersão dos Valores Homogeneizados")
+#     plt.xlabel("Índice da Amostra")
+#     plt.ylabel("Valor Unitário Homogeneizado (R$/m²)")
+#     plt.title("Gráfico de Dispersão dos Valores Homogeneizados")
+#     plt.legend()
+#     plt.tight_layout()
+#     plt.savefig(nome_arquivo, bbox_inches='tight')
+#     plt.close()
+
+# ACRESCIMO PARA VISUALIZR OS GRAFICOS COM CORES DIFERENTES
+
+
+
+def gerar_grafico_dispersao_mediana(homog, caminho_saida, idx_amostras_ativas, idx_amostras_usuario_retirou, idx_amostras_chauvenet_retirou):
+    plt.figure(figsize=(8,6))
+
+    # plotar amostras ativas em azul
+    ativos_idx = [idx for idx in idx_amostras_ativas if idx not in idx_amostras_chauvenet_retirou]
+    ativos_valores = [homog[idx_amostras_ativas.index(idx)] for idx in ativos_idx]
+
+    plt.scatter(ativos_idx, ativos_valores, color='blue', label='Amostras Ativas')
+
+    # plotar amostras retiradas pelo usuário em cinza
+    for idx in idx_amostras_usuario_retirou:
+        plt.scatter(idx, np.nan, color='gray', label='Retiradas Usuário' if idx == idx_amostras_usuario_retirou[0] else "")
+
+    # plotar amostras retiradas pelo chauvenet em vermelho
+    chauvenet_idx = idx_amostras_chauvenet_retirou
+    chauvenet_valores = [homog[idx_amostras_ativas.index(idx)] for idx in chauvenet_idx if idx in idx_amostras_ativas]
+
+    plt.scatter(chauvenet_idx, chauvenet_valores, color='red', label='Retiradas Chauvenet')
+
+    plt.axhline(np.median(ativos_valores), color='green', linestyle='--', label=f'Mediana: {np.median(ativos_valores):.2f}')
+
+    plt.xlabel('Índice da Amostra')
+    plt.ylabel('Valor Unitário Homogeneizado (R$/m²)')
+    plt.title('Gráfico de Dispersão das Amostras Selecionadas')
     plt.legend()
+    plt.grid(True)
     plt.tight_layout()
-    plt.savefig(nome_arquivo, bbox_inches='tight')
+    plt.savefig(caminho_saida)
     plt.close()
+
     
 #########################################################################################################################
 # TABELA DE AMOSTRAS HOMOGENEIZADAS

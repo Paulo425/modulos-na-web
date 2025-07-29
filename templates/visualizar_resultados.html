@@ -79,13 +79,30 @@
     <p style="font-weight: bold; color: #444;">
       Amplitude do Intervalo de Confiança 80%: <span style="color: darkred;">{{ amplitude_ic80 }}%</span>
     </p>
+
+
     <div style="margin-top: 25px; padding: 15px; background-color: #eef7ff; border-radius: 6px; border: 1px solid #bdd7ee;">
       <h3 style="color: #004085; margin-bottom: 10px;">Resultados Iterativos em Tempo Real</h3>
+
       <p style="font-weight: bold;">Valor Unitário Mínimo: <span id="valor-minimo">-</span></p>
       <p style="font-weight: bold;">Valor Unitário Médio: <span id="valor-medio">-</span></p>
       <p style="font-weight: bold;">Valor Unitário Máximo: <span id="valor-maximo">-</span></p>
-      <p style="font-weight: bold;">Quantidade de Amostras Ativas: <span id="quantidade-amostras">-</span></p>
+
+      <p style="font-weight: bold;">Amostras iniciais totais: <span id="total-amostras-iniciais">-</span></p>
+
+      <p style="font-weight: bold; color: darkred;">
+        Retiradas pelo usuário: <span id="quantidade-amostras-usuario">-</span>
+      </p>
+
+      <p style="font-weight: bold; color: darkorange;">
+        Retiradas por Chauvenet: <span id="quantidade-amostras-chauvenet">-</span>
+      </p>
+
+      <p style="font-weight: bold; color: darkgreen;">
+        Amostras restantes (pós-filtros): <span id="quantidade-amostras-restantes">-</span>
+      </p>
     </div>
+
 
 
     <hr style="margin: 40px 0;">
@@ -134,6 +151,8 @@ function atualizarValoresIterativos(uuid_execucao) {
         body: JSON.stringify({ativos: ativos})
     })
     .then(response => response.json())
+
+    .then(response => response.json())
     .then(data => {
         if (data.erro) {
             alert(data.erro);
@@ -142,17 +161,23 @@ function atualizarValoresIterativos(uuid_execucao) {
             document.getElementById("valor-medio").innerText = `R$ ${data.valor_medio.toFixed(2)}`;
             document.getElementById("valor-maximo").innerText = `R$ ${data.valor_maximo.toFixed(2)}`;
 
-            document.getElementById("quantidade-amostras-usuario").innerText = data.quantidade_amostras_usuario_retirou;
-            document.getElementById("quantidade-amostras-chauvenet").innerText = data.quantidade_amostras_chauvenet_retirou;
-            document.getElementById("quantidade-amostras-restantes").innerText = data.quantidade_amostras_restantes;
+            document.getElementById("total-amostras-iniciais").innerText = data.quantidade_amostras_iniciais;
 
-            // Atualização dinâmica dos gráficos
+            document.getElementById("quantidade-amostras-usuario").innerText =
+              `${data.quantidade_amostras_usuario_retirou} [${data.amostras_usuario_retirou.join(", ")}]`;
+
+            document.getElementById("quantidade-amostras-chauvenet").innerText =
+              `${data.quantidade_amostras_chauvenet_retirou} [${data.amostras_chauvenet_retirou.join(", ")}]`;
+
+            document.getElementById("quantidade-amostras-restantes").innerText =
+              data.quantidade_amostras_restantes;
+
             document.getElementById("grafico-dispersao-iterativo").src = data.grafico_dispersao_url + "?t=" + new Date().getTime();
             document.getElementById("grafico-aderencia-iterativo").src = data.grafico_aderencia_url + "?t=" + new Date().getTime();
         }
     })
-
     .catch(error => console.error("Erro ao atualizar valores iterativos:", error));
+
 }
 
 document.addEventListener("DOMContentLoaded", function() {
