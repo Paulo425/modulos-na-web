@@ -3915,7 +3915,8 @@ def gerar_grafico_dispersao_mediana(
     ativos_validos_idx = [
         idx for idx in idx_amostras_ativas if idx not in idx_amostras_chauvenet_retirou
     ]
-    ativos_validos_valores = [mapa_homog[idx] for idx in ativos_validos_idx]
+    ativos_validos_valores = [mapa_homog[idx] for idx in ativos_validos_idx if idx in mapa_homog]
+
 
     plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
 
