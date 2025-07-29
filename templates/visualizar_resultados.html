@@ -98,6 +98,11 @@
 
     <div style="text-align: center; margin-top: 30px;">
       <a href="{{ url_for('gerar_avaliacao') }}" class="btn btn-secondary">← Voltar</a>
+
+      <button type="button" id="btn-novo-cenario" class="btn btn-primary">
+        Novo Cenário ↺
+      </button>
+
       <button type="submit" name="acao" value="gerar_laudo" formaction="{{ url_for('gerar_laudo_final', uuid=uuid) }}" class="btn btn-success">
         Gerar Laudo Final
       </button>
@@ -138,6 +143,19 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 </script>
+
+<script>
+document.getElementById("btn-novo-cenario").addEventListener("click", function() {
+  // Ao clicar, reseta todas as checkboxes para o estado inicial (checked)
+  document.querySelectorAll(".amostra-checkbox").forEach(el => {
+    el.checked = true;
+  });
+
+  // Após resetar, atualiza novamente os valores iterativos
+  atualizarValoresIterativos("{{ uuid }}");
+});
+</script>
+
 
 
 {% endblock %}
