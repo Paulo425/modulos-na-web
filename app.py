@@ -20,6 +20,8 @@ from PIL import Image, UnidentifiedImageError
 import uuid
 import logging
 import re
+import pandas as pd  # ← inclusão imediata dessa linha resolve definitivamente
+
 
 # 🔧 Configuração do logger (definitiva e funcional)
 logging.basicConfig(
