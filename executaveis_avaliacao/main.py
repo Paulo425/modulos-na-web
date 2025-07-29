@@ -3897,46 +3897,47 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
 #     import matplotlib.pyplot as plt
 # import numpy as np
 
+
+
 def gerar_grafico_dispersao_mediana(
-    df_filtrado,
     homog,
     caminho_saida,
+    idx_amostras_ativas,
     idx_amostras_usuario_retirou,
     idx_amostras_chauvenet_retirou
 ):
     plt.figure(figsize=(8, 6))
 
-    # Índices das amostras válidas e valores diretamente do df_filtrado
-    ativos_validos_idx = df_filtrado["AM"].tolist()
-    ativos_validos_valores = homog  # homog já corresponde exatamente a df_filtrado
+    # Mapeamento claro e explícito (idx_amostra: valor homog)
+    mapa_homog = dict(zip(idx_amostras_ativas, homog))
+
+    # Ativos válidos (ativos - chauvenet)
+    ativos_validos_idx = [
+        idx for idx in idx_amostras_ativas if idx not in idx_amostras_chauvenet_retirou
+    ]
+    ativos_validos_valores = [mapa_homog[idx] for idx in ativos_validos_idx]
 
     plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
 
-    # Amostras retiradas pelo usuário (valores originais)
+    # Retiradas pelo usuário (em cinza)
     usuario_retirou_idx_filtrados = [
-        idx for idx in idx_amostras_usuario_retirou if idx in ativos_validos_idx
+        idx for idx in idx_amostras_usuario_retirou if idx in mapa_homog
     ]
-    usuario_retirou_valores = [
-        homog[ativos_validos_idx.index(idx)]
-        for idx in usuario_retirou_idx_filtrados
-    ]
+    usuario_retirou_valores = [mapa_homog[idx] for idx in usuario_retirou_idx_filtrados]
 
-    if usuario_retirou_idx_filtrados and usuario_retirou_valores:
+    if usuario_retirou_idx_filtrados:
         plt.scatter(usuario_retirou_idx_filtrados, usuario_retirou_valores, color='gray', label='Retiradas pelo Usuário')
 
-    # Amostras retiradas pelo Chauvenet
+    # Retiradas por Chauvenet (em vermelho)
     chauvenet_idx_filtrados = [
-        idx for idx in idx_amostras_chauvenet_retirou if idx in ativos_validos_idx
+        idx for idx in idx_amostras_chauvenet_retirou if idx in mapa_homog
     ]
-    chauvenet_valores = [
-        homog[ativos_validos_idx.index(idx)]
-        for idx in chauvenet_idx_filtrados
-    ]
+    chauvenet_valores = [mapa_homog[idx] for idx in chauvenet_idx_filtrados]
 
-    if chauvenet_idx_filtrados and chauvenet_valores:
+    if chauvenet_idx_filtrados:
         plt.scatter(chauvenet_idx_filtrados, chauvenet_valores, color='red', label='Retiradas Chauvenet')
 
-    # linha mediana claramente das ativas válidas
+    # Linha mediana (seguros)
     if ativos_validos_valores:
         plt.axhline(np.median(ativos_validos_valores), color='green', linestyle='--',
                     label=f'Mediana: {np.median(ativos_validos_valores):.2f}')
@@ -3950,6 +3951,7 @@ def gerar_grafico_dispersao_mediana(
 
     plt.savefig(caminho_saida)
     plt.close()
+
 
 
 
