@@ -1308,7 +1308,7 @@ def gerar_laudo_final(uuid):
     # 3. Retornar ZIP ao invés do DOCX
     return send_file(caminho_zip, as_attachment=True)
 
- @app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
+@app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
 def calcular_valores_iterativos(uuid):
     import json, os
     from executaveis_avaliacao.main import (
