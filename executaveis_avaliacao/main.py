@@ -3828,26 +3828,44 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
 
 
 
-def gerar_grafico_dispersao_mediana(homog, caminho_saida, idx_amostras_ativas, idx_amostras_usuario_retirou, idx_amostras_chauvenet_retirou):
-    plt.figure(figsize=(8,6))
+def gerar_grafico_dispersao_mediana(
+    homog,
+    caminho_saida,
+    idx_amostras_ativas,
+    idx_amostras_usuario_retirou,
+    idx_amostras_chauvenet_retirou
+):
+    plt.figure(figsize=(8, 6))
 
-    # plotar amostras ativas em azul
-    ativos_idx = [idx for idx in idx_amostras_ativas if idx not in idx_amostras_chauvenet_retirou]
-    ativos_valores = [homog[idx_amostras_ativas.index(idx)] for idx in ativos_idx]
+    # índices das amostras válidas após todos filtros (ativas - chauvenet)
+    ativos_validos_idx = [idx for idx in idx_amostras_ativas if idx not in idx_amostras_chauvenet_retirou]
 
-    plt.scatter(ativos_idx, ativos_valores, color='blue', label='Amostras Ativas')
+    # valores homogeneizados correspondentes aos índices válidos
+    ativos_validos_valores = []
+    for idx in ativos_validos_idx:
+        if idx in idx_amostras_ativas:
+            ativos_validos_valores.append(homog[idx_amostras_ativas.index(idx)])
 
-    # plotar amostras retiradas pelo usuário em cinza
+    plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
+
+    # plotar amostras retiradas pelo usuário (em cinza claro)
     for idx in idx_amostras_usuario_retirou:
         plt.scatter(idx, np.nan, color='gray', label='Retiradas Usuário' if idx == idx_amostras_usuario_retirou[0] else "")
 
-    # plotar amostras retiradas pelo chauvenet em vermelho
-    chauvenet_idx = idx_amostras_chauvenet_retirou
-    chauvenet_valores = [homog[idx_amostras_ativas.index(idx)] for idx in chauvenet_idx if idx in idx_amostras_ativas]
+    # plotar amostras retiradas pelo chauvenet (em vermelho)
+    chauvenet_valores = []
+    chauvenet_idx = []
+    for idx in idx_amostras_chauvenet_retirou:
+        if idx in idx_amostras_ativas:
+            chauvenet_idx.append(idx)
+            chauvenet_valores.append(homog[idx_amostras_ativas.index(idx)])
 
     plt.scatter(chauvenet_idx, chauvenet_valores, color='red', label='Retiradas Chauvenet')
 
-    plt.axhline(np.median(ativos_valores), color='green', linestyle='--', label=f'Mediana: {np.median(ativos_valores):.2f}')
+    # linha mediana dos ativos válidos
+    if ativos_validos_valores: # verifica claramente se a lista não está vazia
+        plt.axhline(np.median(ativos_validos_valores), color='green', linestyle='--',
+                    label=f'Mediana: {np.median(ativos_validos_valores):.2f}')
 
     plt.xlabel('Índice da Amostra')
     plt.ylabel('Valor Unitário Homogeneizado (R$/m²)')
@@ -3855,8 +3873,10 @@ def gerar_grafico_dispersao_mediana(homog, caminho_saida, idx_amostras_ativas, i
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
+
     plt.savefig(caminho_saida)
     plt.close()
+
 
     
 #########################################################################################################################
