@@ -114,7 +114,7 @@
 function atualizarValoresIterativos(uuid_execucao) {
     const ativos = Array.from(document.querySelectorAll(".amostra-checkbox:checked"))
                         .map(el => parseInt(el.dataset.idx));
-
+    console.log("Amostras ativas enviadas ao backend:", ativos); // Adicione este log para debug
     fetch(`/calcular_valores_iterativos/${uuid_execucao}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
