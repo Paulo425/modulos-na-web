@@ -3970,7 +3970,7 @@ def gerar_grafico_dispersao_mediana(
 
     plt.figure(figsize=(8, 6))
 
-    mapa_homog = dict(zip(df_filtrado["idx"], homog))
+    mapa_homog = dict(zip(df_filtrado["AM"], homog))
 
     ativos_validos_idx = [
         idx for idx in ativos_frontend if idx not in amostras_chauvenet_retirou
