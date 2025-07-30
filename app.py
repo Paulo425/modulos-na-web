@@ -992,6 +992,7 @@ def gerar_avaliacao():
                 # solução imediata e recomendada para gerar_avaliacao
                 idx_todas_amostras = [int(idx) for idx in df_amostras["AM"]]
                 gerar_grafico_dispersao_mediana(
+                    df_filtrado,
                     homog,
                     img2,
                     idx_todas_amostras,  # amostras iniciais (usuário ainda não retirou nenhuma)
