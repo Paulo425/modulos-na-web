@@ -1372,7 +1372,7 @@ def gerar_laudo_final(uuid):
         flash("Arquivo de entrada não encontrado.", "danger")
         return redirect(url_for("gerar_avaliacao"))
 
-    # 1. Carrega JSON
+    # Carrega JSON
     with open(caminho_json, "r", encoding="utf-8") as f:
         dados = json.load(f)
         fotos_imovel = dados.get("fotos_imovel", [])
@@ -1381,34 +1381,37 @@ def gerar_laudo_final(uuid):
         fotos_planta = dados.get("fotos_planta", [])
         area_parcial_afetada = float(dados["dados_avaliando"].get("AREA_PARCIAL_AFETADA", 0))
 
-    # 2. Atualiza estado das amostras com base nos checkboxes
+    # Atualiza estado das amostras
     for amostra in dados["amostras"]:
         campo = f"ativo_{amostra['idx']}"
         amostra["ativo"] = campo in request.form
 
-    # 3. Salva JSON atualizado
+    # Salva JSON atualizado
     with open(caminho_json, "w", encoding="utf-8") as f:
         json.dump(dados, f, indent=2, ensure_ascii=False)
 
-    # 4. Filtra amostras ativas
-    amostras_ativas = [
-        a for a in dados["amostras"]
-        if a.get("ativo") and a.get("area", 0) > 0
-    ]
+    # Importações obrigatórias ANTES de usar as funções
+    import pandas as pd
+    from executaveis_avaliacao.main import (
+        aplicar_chauvenet_e_filtrar,
+        homogeneizar_amostras,
+        gerar_grafico_aderencia_totais,
+        gerar_grafico_dispersao_mediana,
+        gerar_relatorio_avaliacao_com_template
+    )
+
+    # Continuar sem alterações:
+    ativos_frontend = [a["idx"] for a in dados["amostras"] if a.get("ativo", False)]
+    amostras_usuario_retirou = [a["idx"] for a in dados["amostras"] if not a.get("ativo", False)]
+
+    # Filtra amostras ativas
+    amostras_ativas = [a for a in dados["amostras"] if a.get("ativo") and a.get("area", 0) > 0]
 
     if not amostras_ativas:
         flash("Nenhuma amostra ativa para gerar o laudo.", "warning")
         return redirect(url_for("visualizar_resultados", uuid=uuid))
 
-    # 5. Executa cálculo simplificado apenas para demonstração
-    valores_unitarios = [a["valor_total"] / a["area"] for a in amostras_ativas]
-    media = round(sum(valores_unitarios) / len(valores_unitarios), 2)
-
-    # DataFrame das amostras ativas para processamento
-    import pandas as pd
     df_ativas = pd.DataFrame(amostras_ativas)
-
-    # Padroniza nomes de colunas esperadas
     df_ativas.rename(columns={
         "valor_total": "VALOR TOTAL",
         "area": "AREA TOTAL",
@@ -1419,25 +1422,14 @@ def gerar_laudo_final(uuid):
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
     homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
 
+    amostras_chauvenet_retirou = [idx for idx in ativos_frontend if idx not in df_filtrado["AM"].tolist()]
+
     pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
     os.makedirs(pasta_saida, exist_ok=True)
 
     img1 = os.path.join(pasta_saida, "grafico_aderencia.png")
     img2 = os.path.join(pasta_saida, "grafico_dispersao.png")
 
-    # EXATAMENTE AQUI (após df_filtrado) você define claramente os índices atualizados corretamente
-    ativos_frontend = [a["idx"] for a in dados["amostras"] if a.get("ativo", False)]
-
-    amostras_usuario_retirou = [
-        a["idx"] for a in dados["amostras"] 
-        if not a.get("ativo", False)
-    ]
-
-    amostras_chauvenet_retirou = [
-        idx for idx in ativos_frontend if idx not in df_filtrado["AM"].tolist()
-    ]
-
-    # Agora chama a função gráfica corretamente com todas as variáveis já definidas
     gerar_grafico_dispersao_mediana(
         df_filtrado,
         homog,
@@ -1447,7 +1439,6 @@ def gerar_laudo_final(uuid):
         amostras_chauvenet_retirou
     )
 
-    # Chamada final do relatório sem alteração
     finalidade_digitada = dados["fatores_do_usuario"].get("finalidade_descricao", "").strip().lower()
 
     if "desapropria" in finalidade_digitada:
@@ -1486,13 +1477,11 @@ def gerar_laudo_final(uuid):
         nome_arquivo_word=caminho_docx
     )
 
-    # Verifica se o DOCX foi gerado corretamente
     if os.path.exists(caminho_docx):
         logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
     else:
         logger.error(f"❌ Erro: o DOCX não foi gerado em {caminho_docx}")
 
-    # Cria ZIP do resultado final (sem alterações aqui)
     nome_zip = f"pacote_avaliacao_{uuid}.zip"
     caminho_zip = os.path.join(BASE_DIR, "static", "arquivos", nome_zip)
 
@@ -1510,6 +1499,7 @@ def gerar_laudo_final(uuid):
                 zipf.write(full_path, arcname=file)
 
     return send_file(caminho_zip, as_attachment=True)
+
 
 
 
