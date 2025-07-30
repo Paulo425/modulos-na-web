@@ -1566,6 +1566,10 @@ def calcular_valores_iterativos(uuid):
     img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
     img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
 
+    amostras_chauvenet_retirou = [
+        idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()
+    ]
+
     gerar_grafico_dispersao_mediana(
         df_filtrado,
         homog,
