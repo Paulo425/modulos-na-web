@@ -1422,7 +1422,7 @@ def gerar_laudo_final(uuid):
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
     homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
 
-    amostras_chauvenet_retirou = [idx for idx in ativos_frontend if idx not in df_filtrado["AM"].tolist()]
+    amostras_chauvenet_retirou = [idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()]
 
     pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
     os.makedirs(pasta_saida, exist_ok=True)
