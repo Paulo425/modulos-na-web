@@ -1432,8 +1432,9 @@ def gerar_laudo_final(uuid):
     pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
     os.makedirs(pasta_saida, exist_ok=True)
 
-    img1 = os.path.join(pasta_saida, "grafico_aderencia.png")
-    img2 = os.path.join(pasta_saida, "grafico_dispersao.png")
+    img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+    img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+
 
     gerar_grafico_dispersao_mediana(
         df_filtrado,
