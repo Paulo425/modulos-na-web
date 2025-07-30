@@ -1566,11 +1566,12 @@ def calcular_valores_iterativos(uuid):
     img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
 
     gerar_grafico_dispersao_mediana(
+        df_filtrado,
         homog,
         img2,
         ativos_frontend,
         amostras_usuario_retirou,
-        amostras_excluidas_chauvenet
+        amostras_chauvenet_retirou
     )
 
     gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
