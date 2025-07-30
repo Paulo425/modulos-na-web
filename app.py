@@ -1207,6 +1207,17 @@ def gerar_laudo_final(uuid):
     # AQUI ADICIONE explicitamente a correção robusta:
     ativos_frontend = [a["idx"] for a in dados["amostras"] if a.get("ativo", False)]
 
+    # Amostras que o usuário retirou explicitamente:
+    amostras_usuario_retirou = [
+        a["idx"] for a in dados["amostras"] 
+        if not a.get("ativo", False)
+    ]
+
+    # Chauvenet retirou (usa função existente explicitamente):
+    amostras_chauvenet_retirou = [
+        idx for idx in ativos_frontend if idx not in df_filtrado["AM"].tolist()
+    ]
+
     # 4. Filtra amostras ativas
     amostras_ativas = [
         a for a in dados["amostras"]
@@ -1253,11 +1264,12 @@ def gerar_laudo_final(uuid):
     img2 = os.path.join(pasta_saida, "grafico_dispersao.png")
     gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
     gerar_grafico_dispersao_mediana(
+        df_filtrado,
         homog, 
         img2,   # caminho da imagem já existente
         ativos_frontend,
         amostras_usuario_retirou,
-        amostras_excluidas_chauvenet
+        amostras_chauvenet_retirou
     )
 
 
