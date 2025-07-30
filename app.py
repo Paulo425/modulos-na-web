@@ -957,6 +957,10 @@ def gerar_avaliacao():
                
                 #FAZ O TRATAMENTO EM TODAS AS COORDENADAS DO EXCEL*********************
                 df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
+
+                # Adicione imediatamente após essa linha:
+                df_amostras["idx"] = df_amostras["AM"].astype(int)
+
                 # NOVA LINHA: Pegue a área digitada pelo usuário no input
 
                 area_parcial_afetada = float(request.form.get("area_parcial_afetada", "0").replace(".", "").replace(",", "."))
@@ -990,7 +994,7 @@ def gerar_avaliacao():
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
                 gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
                 # solução imediata e recomendada para gerar_avaliacao
-                idx_todas_amostras = df_amostras["AM"].tolist()
+                idx_todas_amostras = df_amostras["idx"].tolist()
                 gerar_grafico_dispersao_mediana(
                     df_filtrado,
                     homog,
@@ -1540,6 +1544,7 @@ def calcular_valores_iterativos(uuid):
     df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
 
     df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+    logger.info(f"Colunas no df_filtrado após Chauvenet: {df_filtrado.columns.tolist()}")
 
     amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
 
