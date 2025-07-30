@@ -1203,6 +1203,9 @@ def gerar_laudo_final(uuid):
     # 3. Salva JSON atualizado
     with open(caminho_json, "w", encoding="utf-8") as f:
         json.dump(dados, f, indent=2, ensure_ascii=False)
+    
+    # AQUI ADICIONE explicitamente a correção robusta:
+    ativos_frontend = [a["idx"] for a in dados["amostras"] if a.get("ativo", False)]
 
     # 4. Filtra amostras ativas
     amostras_ativas = [
