@@ -50,6 +50,7 @@ def main():
     caminho_dxf = sys.argv[3]
     uuid_str = str(uuid.uuid4())[:8]
     caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
+    
 
     if not os.path.exists(caminho_template):
         logger.error(f"Template não encontrado em '{caminho_template}'.")
@@ -67,13 +68,14 @@ def main():
 
     # 🔷 Processar poligonal fechada
     main_poligonal_fechada(
+        uuid_str,
         variaveis["arquivo_excel_recebido"],
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
-        caminho_template,
-        uuid_str
+        caminho_template
     )
+
 
     logger.info("✅ Processamento da poligonal fechada concluído.")
 
