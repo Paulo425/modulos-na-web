@@ -788,10 +788,17 @@ def create_memorial_descritivo(
     # Formatar Excel
     wb = openpyxl.load_workbook(excel_file_path)
     ws = wb.active
+
+    # Formatação do cabeçalho (negrito e centralizado)
     for cell in ws[1]:
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
+    # Definir largura das colunas para 30
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 30
+
+    # Centralizar o conteúdo das células
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
         for cell in row:
             cell.alignment = Alignment(horizontal="center", vertical="center")
