@@ -22,10 +22,21 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
 # Configuração manual para nomes dos meses em português (independente do locale)
-MESES_PT_BR = [
-    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
-]
+MESES_PT_BR = {
+    'January': 'janeiro',
+    'February': 'fevereiro',
+    'March': 'março',
+    'April': 'abril',
+    'May': 'maio',
+    'June': 'junho',
+    'July': 'julho',
+    'August': 'agosto',
+    'September': 'setembro',
+    'October': 'outubro',
+    'November': 'novembro',
+    'December': 'dezembro'
+}
+
 
 def obter_data_formatada(data):
     dia = data.day
@@ -991,7 +1002,7 @@ def create_memorial_document(
         v1 = (df.iloc[0]['E'], df.iloc[0]['N'])
 
         # Converter para formatos amigáveis
-        area_dxf_formatada = f"{area_dxf:.2f}".replace(".", ",")
+        area_dxf_formatada = f"{area_dxf:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         ponto_amarracao_1 = f"{ponto_amarracao[0]:.3f}".replace(".", ",")
         ponto_amarracao_2 = f"{ponto_amarracao[1]:.3f}".replace(".", ",")
         distancia_str = f"{distancia_amarracao_v1:.2f}".replace(".", ",")
@@ -1136,6 +1147,12 @@ def create_memorial_document(
 
         # Rodapé
         data_atual = datetime.now().strftime("%d de %B de %Y")
+
+        # converte mês para português
+        for ingles, portugues in MESES_PT_BR.items():
+            if ingles in data_atual:
+                data_atual = data_atual.replace(ingles, portugues)
+                break
         doc_word.add_paragraph(f"\nPorto Alegre, RS, {data_atual}.", style='Normal')
         doc_word.add_paragraph("\n\n")
 
