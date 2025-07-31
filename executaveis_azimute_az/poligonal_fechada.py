@@ -39,17 +39,20 @@ if not logger.handlers:
 
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
-try:
-    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # Para Render (Linux)
-except locale.Error:
-    try:
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')  # Para Windows
-    except locale.Error:
-        locale.setlocale(locale.LC_TIME, 'C')  # Fallback universal
-
-# Obter data atual formatada
-data_atual = datetime.now().strftime("%d de %B de %Y")
-
+MESES_PT_BR = {
+    'January': 'janeiro',
+    'February': 'fevereiro',
+    'March': 'março',
+    'April': 'abril',
+    'May': 'maio',
+    'June': 'junho',
+    'July': 'julho',
+    'August': 'agosto',
+    'September': 'setembro',
+    'October': 'outubro',
+    'November': 'novembro',
+    'December': 'dezembro'
+}
 def limpar_dxf(original_path, saida_path):
     try:
         doc_antigo = ezdxf.readfile(original_path)
@@ -497,6 +500,7 @@ def create_memorial_descritivo(
 
     # Adicionar arco de Azimute ao DXF
     try:
+        msp = doc.modelspace()
         v1 = ordered_points[0]
         azimuth = calculate_azimuth(ponto_az, v1)
         add_azimuth_arc(doc, msp, ponto_az, v1, azimuth)
@@ -506,6 +510,7 @@ def create_memorial_descritivo(
 
     # Adicionar distância entre Az e V1 no DXF
     try:
+        msp = doc.modelspace()
         add_label_and_distance(doc, msp, ponto_az, v1, "Az-V1", distance_az_v1)
         logger.info(f"✅ Distância Az-V1 ({distance_az_v1:.2f} m) adicionada ao DXF.")
     except Exception as e:
@@ -620,6 +625,13 @@ def create_memorial_document(
             doc_word.add_paragraph()
 
         data_atual = datetime.now().strftime("%d de %B de %Y")
+        data_atual = datetime.now().strftime("%d de %B de %Y")
+
+        # converte mês para português
+        for ingles, portugues in MESES_PT_BR.items():
+            if ingles in data_atual:
+                data_atual = data_atual.replace(ingles, portugues)
+                break
         doc_word.add_paragraph(f"\nPorto Alegre, RS, {data_atual}.", style='Normal')
         doc_word.add_paragraph("\n\n")
 
