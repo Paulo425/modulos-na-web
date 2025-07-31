@@ -38,15 +38,6 @@ MESES_PT_BR = {
 }
 
 
-def obter_data_formatada(data):
-    dia = data.day
-    mes = MESES_PT_BR[data.month - 1]
-    ano = data.year
-    return f"{dia:02d} de {mes} de {ano}"
-
-# Obter data atual formatada manualmente
-data_atual = obter_data_formatada(datetime.now())
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Garanta que está em DEBUG
 
