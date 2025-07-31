@@ -15,8 +15,27 @@ import openpyxl
 from openpyxl.styles import Alignment, Font
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+import logging
 
+
+# Diretório para logs
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Arquivo de log específico para poligonal_fechada
+log_file = os.path.join(LOG_DIR, f'poligonal_fechada_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+
+# Configuração básica do logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+
+# Verificar se já não existem handlers para não duplicar
+if not logger.handlers:
+    logger.addHandler(file_handler)
 
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
