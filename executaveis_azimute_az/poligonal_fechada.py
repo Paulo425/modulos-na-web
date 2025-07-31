@@ -226,7 +226,70 @@ def calculate_point_on_line(start, end, distance):
         start[0] + (dx / length) * distance,
         start[1] + (dy / length) * distance
     )
+def add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute):
+    """
+    Adiciona o arco do azimute ao DXF usando ezdxf.
+    """
+    try:
+        logger.info(f"Iniciando a adição do arco de azimute. Azimute: {azimute}°")
 
+        # Criar camada 'Azimute', se não existir
+        if 'Azimute' not in msp.doc.layers:
+            msp.doc.layers.new(name='Azimute', dxfattribs={'color': 1})
+            logger.info("Camada 'Azimute' criada com sucesso.")
+
+        # Traçar segmento entre Az e V1
+        msp.add_line(start=ponto_az, end=v1, dxfattribs={'layer': 'Azimute'})
+        logger.info(f"Segmento entre Az e V1 desenhado de {ponto_az} para {v1}")
+
+        # Traçar segmento para o norte
+        north_point = (ponto_az[0], ponto_az[1] + 2)
+        msp.add_line(start=ponto_az, end=north_point, dxfattribs={'layer': 'Azimute'})
+        logger.info(f"Linha para o norte desenhada com sucesso de {ponto_az} para {north_point}")
+
+        # Calcular o ponto inicial (1 metro de Az para V1)
+        # Calcular distância entre ponto Az e V1 para definir raio adaptativo
+        dist = calculate_distance(ponto_az, v1)
+        radius = 0.4 if dist <= 0.5 else 1.0
+
+        # Calcular os pontos do arco com esse raio
+        start_arc = calculate_point_on_line(ponto_az, v1, radius)
+        end_arc = calculate_point_on_line(ponto_az, north_point, radius)
+
+        # Traçar o arco do azimute
+        msp.add_arc(
+            center=ponto_az,
+            radius=radius,
+            start_angle=math.degrees(math.atan2(start_arc[1] - ponto_az[1], start_arc[0] - ponto_az[0])),
+            end_angle=math.degrees(math.atan2(end_arc[1] - ponto_az[1], end_arc[0] - ponto_az[0])),
+            dxfattribs={'layer': 'Azimute'}
+        )
+        logger.info(f"Arco do azimute desenhado com sucesso com valor de {azimute}° no ponto {ponto_az}")
+
+       # Adicionar rótulo do azimute diretamente com o texto "Azimute:"
+        azimuth_label = f"Azimute: {convert_to_dms(azimute)}"  # Incluir o prefixo "Azimute:"
+
+        # Calcular a posição do rótulo
+        label_position = (
+            ponto_az[0] + 1.0 * math.cos(math.radians(azimute / 2)),
+            ponto_az[1] + 1.0 * math.sin(math.radians(azimute / 2))
+        )
+
+        # Adicionar o texto ao desenho
+        msp.add_text(
+            azimuth_label,
+            dxfattribs={
+                'height': 0.25,
+                'layer': 'Azimute',
+                'insert': label_position  # Define a posição diretamente
+            }
+        )
+
+        logger.info(f"Rótulo do azimute adicionado com sucesso: '{azimuth_label}' em {label_position}")
+
+
+    except Exception as e:
+        logger.error(f"Erro na função `add_azimuth_arc_to_dxf`: {e}")
 
 def calculate_azimuth(p1, p2):
     """
@@ -517,7 +580,7 @@ def create_memorial_descritivo(
         msp = doc.modelspace()
         v1 = ordered_points[0]
         azimuth = calculate_azimuth(ponto_az, v1)
-        add_azimuth_arc(doc, msp, ponto_az, v1, azimuth)
+        add_azimuth_arc_to_dxf(doc, msp, ponto_az, v1, azimuth)
         logger.info("✅ Arco de azimute adicionado ao DXF.")
     except Exception as e:
         logger.error(f"❌ Erro ao adicionar arco de azimute: {e}")
