@@ -607,6 +607,15 @@ def create_memorial_descritivo(
         logger.info("✅ Arco de azimute adicionado ao DXF.")
     except Exception as e:
         logger.error(f"❌ Erro ao adicionar arco de azimute: {e}")
+    
+    # Adicionar linha entre ponto Az e V1 (parte faltante adicionada aqui)
+    try:
+        msp = doc.modelspace()
+        msp.add_line(start=ponto_az, end=v1, dxfattribs={'layer': 'LAYOUT_AZIMUTES'})
+        logger.info("✅ Linha Az→V1 adicionada ao DXF.")
+    except Exception as e:
+        logger.error(f"❌ Erro ao adicionar linha Az→V1: {e}")
+
 
     # Adicionar distância entre Az e V1 no DXF
     try:
