@@ -350,32 +350,55 @@ def calculate_azimuth_and_distance(start_point, end_point):
     return azimuth, distance
 
 
-def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth):
+def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth, radius=8):
     """
-    Adiciona o arco do azimute no ModelSpace.
+    Adiciona o arco geométrico representando o ângulo de Azimute entre o norte e a linha Az→V1.
     """
     try:
+        # Cria a camada específica caso não exista
         if 'LAYOUT_AZIMUTES' not in doc.layers:
             doc.layers.new(name='LAYOUT_AZIMUTES', dxfattribs={'color': 5})
 
-        # Traçar segmento entre Az e V1
-        msp.add_line(start=ponto_az, end=v1, dxfattribs={'layer': 'LAYOUT_AZIMUTES'})
+        # Ângulo inicial sempre aponta para o norte (90° na convenção CAD)
+        start_angle = 90.0
 
-        # Adicionar rótulo do azimute
-        azimuth_label = f"Azimute = {convert_to_dms(azimuth)}"
-        label_position = (
-            ponto_az[0] + 1.5 * math.cos(math.radians(azimuth / 2)),
-            ponto_az[1] + 1.5 * math.sin(math.radians(azimuth / 2))
+        # O ângulo final é obtido subtraindo do azimute (pois CAD mede no sentido anti-horário)
+        end_angle = 90.0 - azimuth
+
+        # Garante que os ângulos estejam no intervalo 0-360
+        if end_angle < 0:
+            end_angle += 360
+
+        # Adiciona o arco geométrico ao DXF
+        msp.add_arc(
+            center=ponto_az,
+            radius=radius,
+            start_angle=end_angle,
+            end_angle=start_angle,
+            dxfattribs={'layer': 'LAYOUT_AZIMUTES'}
         )
+
+        # Adiciona o texto de rótulo próximo ao arco (já está correto)
+        mid_angle_rad = math.radians((start_angle + end_angle) / 2)
+        label_position = (
+            ponto_az[0] + (radius + 1.5) * math.cos(mid_angle_rad),
+            ponto_az[1] + (radius + 1.5) * math.sin(mid_angle_rad)
+        )
+        azimuth_label = f"Azimute = {convert_to_dms(azimuth)}"
         msp.add_text(
             azimuth_label,
-            dxfattribs={'height': 0.5, 'layer': 'LAYOUT_AZIMUTES', 'insert': label_position}
+            dxfattribs={
+                'height': 1.0,
+                'layer': 'LAYOUT_AZIMUTES',
+                'insert': label_position
+            }
         )
 
-        print(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}")
+        logger.info(f"✅ Arco do azimute ({azimuth_label}) adicionado com sucesso.")
 
     except Exception as e:
-        print(f"Erro ao adicionar arco do azimute: {e}")
+        logger.error(f"❌ Erro ao adicionar arco do azimute: {e}")
+
 
 
 # Função para converter graus decimais para DMS
@@ -580,7 +603,7 @@ def create_memorial_descritivo(
         msp = doc.modelspace()
         v1 = ordered_points[0]
         azimuth = calculate_azimuth(ponto_az, v1)
-        add_azimuth_arc_to_dxf(doc, msp, ponto_az, v1, azimuth)
+        add_azimuth_arc(doc, msp, ponto_az, v1, azimuth)
         logger.info("✅ Arco de azimute adicionado ao DXF.")
     except Exception as e:
         logger.error(f"❌ Erro ao adicionar arco de azimute: {e}")
