@@ -794,14 +794,30 @@ def create_memorial_descritivo(
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # Definir largura das colunas para 30
-    for col in ws.columns:
-        ws.column_dimensions[col[0].column_letter].width = 30
+    # Definir larguras específicas para cada coluna
+    column_widths = {
+        "A": 8,   # V
+        "B": 15,  # E
+        "C": 15,  # N
+        "D": 10,  # Z
+        "E": 20,  # Divisa
+        "F": 15,  # Azimute
+        "G": 15,  # Distancia(m)
+        "H": 40,  # Confrontante
+        "I": 20,  # Coord_E_ponto_Az
+        "J": 20,  # Coord_N_ponto_Az
+        "K": 18,  # Giro angular ou distância adicional
+        "L": 18,  # Outra coluna adicional
+    }
 
-    # Centralizar o conteúdo das células
+    for col, width in column_widths.items():
+        ws.column_dimensions[col].width = width
+
+    # Centralizar conteúdo das células (linhas de dados)
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
         for cell in row:
             cell.alignment = Alignment(horizontal="center", vertical="center")
+
 
     wb.save(excel_file_path)
     logger.info(f"📄 Excel salvo e formatado: {excel_file_path}")

@@ -585,7 +585,7 @@ def create_memorial_descritivo(
 
     column_widths = {
         "A": 8, "B": 15, "C": 15, "D": 10, "E": 20,
-        "F": 15, "G": 15, "H": 30, "I": 20, "J": 20,
+        "F": 15, "G": 15, "H": 40, "I": 20, "J": 20,
         "K": 18, "L": 18,
     }
     for col, width in column_widths.items():
@@ -741,7 +741,7 @@ def create_memorial_document(
             p.add_run(f"{complemento} de coordenadas N(Y) {coord_N_formatada} e E(X) {coord_E_formatada};")
             doc_word.add_paragraph()
 
-        data_atual = datetime.now().strftime("%d de %B de %Y")
+        
         data_atual = datetime.now().strftime("%d de %B de %Y")
 
         # converte mês para português
