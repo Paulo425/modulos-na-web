@@ -409,7 +409,7 @@ def sanitize_filename(filename):
 # Função para criar memorial descritivo
 def create_memorial_descritivo(
     uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar,
-    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo, encoding='ISO-8859-1'
+    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo, diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
     # Carregar confrontantes da planilha FECHADA
