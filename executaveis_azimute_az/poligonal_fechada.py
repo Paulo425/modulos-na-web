@@ -259,6 +259,20 @@ def calculate_distance(point1, point2):
     dy = point2[1] - point1[1]
     return math.sqrt(dx**2 + dy**2)
 
+def add_north_arrow(msp, base_point, length=10):
+    """
+    Adiciona uma seta (linha) apontando para o Norte a partir do ponto base (Az).
+    """
+    # Linha vertical representando o Norte
+    north_end = (base_point[0], base_point[1] + length)
+    msp.add_line(start=base_point, end=north_end, dxfattribs={'layer': 'LAYOUT_AZIMUTES'})
+
+    # Adiciona o texto "N"
+    msp.add_text("N", dxfattribs={
+        'height': 1.0,
+        'insert': (north_end[0], north_end[1] + 1),
+        'layer': 'LAYOUT_AZIMUTES'
+    })
 
 
 
@@ -515,6 +529,14 @@ def create_memorial_descritivo(
         logger.info(f"✅ Distância Az-V1 ({distance_az_v1:.2f} m) adicionada ao DXF.")
     except Exception as e:
         logger.error(f"❌ Erro ao adicionar distância Az-V1: {e}")
+
+    # Adicionar linha apontando para o Norte no ponto Az
+    try:
+        msp = doc.modelspace()  # É importante garantir o msp atualizado aqui também
+        add_north_arrow(msp, ponto_az)
+        logger.info("✅ Linha Norte adicionada ao DXF.")
+    except Exception as e:
+        logger.error(f"❌ Erro ao adicionar linha Norte: {e}")
 
     # Salvar o DXF com as alterações
     try:
