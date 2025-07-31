@@ -388,369 +388,244 @@ def sanitize_filename(filename):
 
 
 # Função para criar memorial descritivo
-def create_memorial_descritivo(doc,msp, lines, proprietario, matricula, caminho_salvar, excel_file_path, ponto_az,distance_az_v1, azimute_az_v1, tipo, uuid_str=None, encoding='ISO-8859-1'):
-    """
-    Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
-    """
-    # Carregar a planilha de confrontantes
+def create_memorial_descritivo(
+    uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar,
+    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo, encoding='ISO-8859-1'
+):
+
+    # Carregar confrontantes da planilha FECHADA
     confrontantes_df = pd.read_excel(excel_file_path)
-
-    # Número de registros no arquivo
-    num_registros = len(confrontantes_df)
-
-    # Transformar o dataframe em um dicionário de código -> confrontante
     confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
 
-    # Verificar se a planilha foi carregada corretamente
-    if not confrontantes_dict:
-        print("Erro ao carregar confrontantes.")
+    if confrontantes_df.empty:
+        logger.error("❌ Planilha de confrontantes está vazia.")
         return None
 
     if not lines:
-        print("Nenhuma linha disponível para criar o memorial descritivo.")
+        logger.error("❌ Sem linhas disponíveis no DXF.")
         return None
 
+    ordered_points = [line[0] for line in lines] + [lines[-1][1]]
 
-
-    # Coletar os pontos diretamente na ordem dos vértices no DXF
-    ordered_points = [line[0] for line in lines] + [lines[-1][1]]  # Fechando a poligonal
-    num_vertices = len(ordered_points)
-    
-    # Calcular a área da poligonal
     area = calculate_polygon_area(ordered_points)
 
-    # Ajustar para o sentido horário se necessário
-    if area < 0:  # Sentido horário ou antihorário
-        ordered_points.reverse()  # Reorganizar para sentido horário
-        print(f"Pontos reorganizados para sentido horário: {ordered_points}")
-       
-    # Preparar os dados para o Excel
+    if area < 0:
+        ordered_points.reverse()
+        logger.info("Pontos reorganizados para sentido horário.")
+
     data = []
-    for i in range(len(ordered_points) - 1):
+    total_vertices = len(ordered_points) - 1
+
+    for i in range(total_vertices):
         start_point = ordered_points[i]
         end_point = ordered_points[i + 1]
 
-        # Calcular azimute e distância
         azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
         azimuth_dms = convert_to_dms(azimuth)
 
-        # Buscar o confrontante
         confrontante = confrontantes_df.iloc[i]['Confrontante'] if i < len(confrontantes_df) else "Desconhecido"
 
-        # Adicionar as coordenadas do ponto Az apenas na primeira linha
         coord_e_ponto_az = f"{ponto_az[0]:.3f}".replace('.', ',') if i == 0 else ""
         coord_n_ponto_az = f"{ponto_az[1]:.3f}".replace('.', ',') if i == 0 else ""
 
-
-        # Adicionar linha ao conjunto de dados
         data.append({
             "V": f"V{i + 1}",
             "E": f"{start_point[0]:.3f}".replace('.', ','),
             "N": f"{start_point[1]:.3f}".replace('.', ','),
-            "Z": "0.000",
-            "Divisa": f"V{i + 1}_V{1 if (i + 1) == len(ordered_points) - 1 else i + 2}", 
+            "Z": "0,000",
+            "Divisa": f"V{i + 1}_V{1 if (i + 1) == total_vertices else i + 2}",
             "Azimute": azimuth_dms,
             "Distancia(m)": f"{distance:.2f}".replace('.', ','),
             "Confrontante": confrontante,
             "Coord_E_ponto_Az": coord_e_ponto_az,
             "Coord_N_ponto_Az": coord_n_ponto_az,
-            "distancia_Az_V1": f"{distance_az_v1:.2f}".replace('.', ',') if i == 0 else "",  # Adicionar apenas na primeira linha
-            "Azimute Az_V1":convert_to_dms(azimute_az_v1)  if i == 0 else ""  # Adicionar apenas na primeira linha
-
+            "distancia_Az_V1": f"{distance_az_v1:.2f}".replace('.', ',') if i == 0 else "",
+            "Azimute Az_V1": convert_to_dms(azimute_az_v1) if i == 0 else ""
         })
 
-        # Adicionar rótulos e distância ao DXF
+        # Adicionar labels no DXF
         add_label_and_distance(doc, msp, start_point, end_point, f"V{i + 1}", distance)
 
+    # Caminho padronizado do Excel de saída
+    excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
 
-    # Criar DataFrame e salvar em Excel
+    # Salvar no Excel
     df = pd.DataFrame(data, dtype=str)
-    excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_{tipo}_Memorial_{matricula}.xlsx")
-
     df.to_excel(excel_output_path, index=False)
 
-    # Formatar o Excel
+    # Formatar Excel
     wb = openpyxl.load_workbook(excel_output_path)
     ws = wb.active
 
-    # Formatar cabeçalho
     for cell in ws[1]:
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # Ajustar largura das colunas
     column_widths = {
-        "A": 8,   # V
-        "B": 15,  # E
-        "C": 15,  # N
-        "D": 10,  # Z
-        "E": 20,  # Divisa
-        "F": 15,  # Azimute
-        "G": 15,  # Distancia(m)
-        "H": 30,  # Confrontante
-        "I": 20,  # Coord_E_ponto_Az
-        "J": 20,   # Coord_N_ponto_Az
-        "K": 15,  # Coluna distancia_Az_V1  (Nova coluna)
-        "L": 15,  # Coluna Azimute Az_V1   (Nova coluna)
-
+        "A": 8, "B": 15, "C": 15, "D": 10, "E": 20,
+        "F": 15, "G": 15, "H": 30, "I": 20, "J": 20,
+        "K": 18, "L": 18,
     }
     for col, width in column_widths.items():
         ws.column_dimensions[col].width = width
 
-    # Centralizar o conteúdo das células
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
         for cell in row:
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # Salvar o arquivo formatado
     wb.save(excel_output_path)
-    print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
+    logger.info(f"✅ Excel salvo e formatado: {excel_output_path}")
 
-    # Adicionar o arco de azimute e o segmento ao desenho
+    # Adicionar arco de Azimute ao DXF
     try:
-        msp = doc.modelspace()  # Obtenha o ModelSpace do documento
-        v1 = ordered_points[0]  # Primeiro vértice
+        v1 = ordered_points[0]
         azimuth = calculate_azimuth(ponto_az, v1)
-        add_azimuth_arc(doc,msp, ponto_az, v1, azimuth)  # Use msp diretamente
-        print("Ângulo de Azimute adicionado ao arquivo DXF com sucesso.")
+        add_azimuth_arc(doc, msp, ponto_az, v1, azimuth)
+        logger.info("✅ Arco de azimute adicionado ao DXF.")
     except Exception as e:
-        print(f"Erro ao adicionar Azimute ao arquivo DXF: {e}")
+        logger.error(f"❌ Erro ao adicionar arco de azimute: {e}")
 
-    # Calcular a distância entre ponto Az e V1 e adicionar ao DXF
+    # Adicionar distância entre Az e V1 no DXF
     try:
-        distance_az_v1 = calculate_distance(ponto_az, v1)
-        add_label_and_distance(doc,msp, ponto_az, v1, "", distance_az_v1)
-        print(f"Distância entre ponto Az e V1: {distance_az_v1:.2f} m adicionada ao DXF.")
+        add_label_and_distance(doc, msp, ponto_az, v1, "Az-V1", distance_az_v1)
+        logger.info(f"✅ Distância Az-V1 ({distance_az_v1:.2f} m) adicionada ao DXF.")
     except Exception as e:
-        print(f"Erro ao adicionar a distância entre ponto Az e V1 ao DXF: {e}")
+        logger.error(f"❌ Erro ao adicionar distância Az-V1: {e}")
 
-    # Salvar o arquivo DXF com as alterações
-    # Salvar o arquivo DXF com as alterações
+    # Salvar o DXF com as alterações
     try:
-        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_{tipo}_Memorial_{matricula}.dxf")
+        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
         doc.saveas(dxf_output_path)
-        print(f"Arquivo DXF atualizado salvo em: {dxf_output_path}")
-
+        logger.info(f"✅ DXF atualizado salvo: {dxf_output_path}")
     except Exception as e:
-        print(f"Erro ao salvar o arquivo DXF final: {e}")
+        logger.error(f"❌ Erro ao salvar DXF atualizado: {e}")
 
     return excel_output_path
 
 
 
 
+
 def create_memorial_document(
-    proprietario, matricula, descricao, excel_file_path, template_path, output_path,
-    perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
-    azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar,tipo,uuid_str=None
+    uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
+    output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
+    azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
 ):
-
-
-
     try:
-        # Ler o arquivo Excel
+        # Ler arquivo Excel
         df = pd.read_excel(excel_file_path)
         df['N'] = pd.to_numeric(df['N'].astype(str).str.replace(',', '.'), errors='coerce')
         df['E'] = pd.to_numeric(df['E'].astype(str).str.replace(',', '.'), errors='coerce')
         df['Distancia(m)'] = pd.to_numeric(df['Distancia(m)'].astype(str).str.replace(',', '.'), errors='coerce')
-        # Criar o documento Word
+
+        # Criar documento Word
         doc_word = Document(template_path)
-        set_default_font(doc_word)  # 🔹 Aplica a fonte Arial 12 ao documento
-        # Adiciona o preâmbulo centralizado com texto em negrito
-        p1 = doc_word.add_paragraph(style='Normal')
-        run = p1.add_run("MEMORIAL DESCRITIVO")
-        run.bold = True
+        set_default_font(doc_word)
+
+        p1 = doc_word.add_paragraph("MEMORIAL DESCRITIVO", style='Normal')
+        p1.runs[0].bold = True
         p1.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        # Método recomendado para garantir espaço visível:
-        p_espaco = doc_word.add_paragraph()
-        p_espaco.add_run('\n')  # Garantindo espaçamento vertical.
+        doc_word.add_paragraph()
 
+        texto_tipo = {
+            "ETE": f"Área da matrícula {matricula} destinada a {descricao} - SES de {cidade}",
+            "REM": f"Área remanescente da matrícula {matricula} destinada a {descricao}",
+            "SER": f"Área da matrícula {matricula} destinada à SERVIDÃO ADMINISTRATIVA DE ACESSO À {descricao}",
+            "ACE": f"Área da matrícula {matricula} destinada ao ACESSO DA SERVIDÃO ADMINISTRATIVA DA {descricao}",
+        }.get(tipo, "Tipo não especificado")
 
-        #doc_word.add_paragraph(f"Imóvel: Área da matrícula {matricula} destinada a {descricao} ", style='Normal')
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Imóvel: ")
+        p.add_run(texto_tipo).bold = True
 
-        if tipo == "ETE":
-            texto = f"Área da matrícula {matricula} destinada a {descricao} - SES de {cidade}"
-        elif tipo == "REM":
-            texto = f"Área remanescente da matrícula {matricula} destinada a {descricao}"
-        elif tipo == "SER":
-            texto = f"Área da matrícula {matricula} destinada a SERVIDÃO ADMINISTRATIVA ACESSO À {descricao}"
-        elif tipo == "ACE":
-            texto = f"Área da matrícula {matricula} destinada ao ACESSO DA SERVIDÃO ADMINISTRATIVA DA {descricao}"
-        else:
-            texto = "Tipo não especificado"
-
-        run_bold = p.add_run(texto)
-        run_bold.bold = True
-
-        doc_word.add_paragraph(f"Matrícula: Número - {matricula} do {RI} de {comarca} ", style='Normal')
+        doc_word.add_paragraph(f"Matrícula: Número - {matricula} do {RI} de {comarca}", style='Normal')
         doc_word.add_paragraph(f"Proprietário: {proprietario}", style='Normal')
         doc_word.add_paragraph(f"Local: {rua} - {cidade}", style='Normal')
-        
         doc_word.add_paragraph(f"Área: {area_dxf:,.2f} m²".replace(",", "X").replace(".", ",").replace("X", "."), style='Normal')
         doc_word.add_paragraph(f"Perímetro: {perimeter_dxf:,.2f} m".replace(",", "X").replace(".", ",").replace("X", "."), style='Normal')
-        # Pula uma linha antes deste parágrafo
         doc_word.add_paragraph()
-        
-        
-        # Primeiro, formate corretamente a área uma única vez antes do parágrafo:
+
         area_dxf_formatada = f"{area_dxf:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-        # Cria o parágrafo com variáveis formatadas (em uma única linha no Python para clareza)
-        texto_paragrafo = (f"Área {uso_solo} com {area_dxf_formatada} m², parte de um todo maior da Matrícula N° {matricula} com {area_imovel} do {RI} de {comarca}, localizada na {rua}, na cidade de {cidade}, definida através do seguinte levantamento topográfico, onde os ângulos foram medidos no sentido horário.")
-        
-        # Cria o parágrafo e remove qualquer indentação especial (recuo pendente ou primeira linha)
+        texto_paragrafo = (f"Área {uso_solo} com {area_dxf_formatada} m², parte de um todo maior da Matrícula Nº {matricula} com {area_imovel} "
+                           f"do {RI} de {comarca}, localizada na {rua}, na cidade de {cidade}, definida através do seguinte levantamento "
+                           "topográfico, onde os ângulos foram medidos no sentido horário.")
         p = doc_word.add_paragraph(texto_paragrafo, style='Normal')
-        p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY  # alinhamento justificado, se desejar
-        doc_word.add_paragraph()  # Linha em branco após o parágrafo
-        
-        # Remove indentação/recuos
-        p.paragraph_format.first_line_indent = Pt(0)
-        p.paragraph_format.left_indent = Pt(0)
-        p.paragraph_format.right_indent = Pt(0)
-        p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(0)
-        p.paragraph_format.keep_together = True
-        
-        # Removendo explicitamente recuo pendente (esse é o ajuste essencial!)
-        p.paragraph_format.first_line_indent = None
-        p.paragraph_format.hanging_indent = None
+        p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+        doc_word.add_paragraph()
 
-        # Formata coordenadas individualmente (sem milhar)
         coord_E_ponto_Az = f"{Coorde_E_ponto_Az:.3f}".replace(".", ",")
         coord_N_ponto_Az = f"{Coorde_N_ponto_Az:.3f}".replace(".", ",")
-        
-        # Primeiro parágrafo ajustado corretamente
-        p = doc_word.add_paragraph(
+        doc_word.add_paragraph(
             f"O Ponto Az, ponto de amarração, está localizado na {desc_ponto_Az} nas coordenadas "
-            f"E(X) {coord_E_ponto_Az} e N(Y) {coord_N_ponto_Az}.",
-            style='Normal'
-        )
-        p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        doc_word.add_paragraph()  # Linha em branco após o primeiro parágrafo
-        
-        # Formatação correta da distância (com ponto do milhar)
+            f"E(X) {coord_E_ponto_Az} e N(Y) {coord_N_ponto_Az}.", style='Normal'
+        ).alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+        doc_word.add_paragraph()
+
         distance_formatada = f"{distance:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        
-        # Segundo parágrafo ajustado corretamente
-        # Cria o parágrafo vazio inicialmente
         p = doc_word.add_paragraph(style='Normal')
         p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        
-        # Primeira parte sem negrito até "Vértice"
         p.add_run(f"Daí, com Azimute de {convert_to_dms(azimuth)} e distância de {distance_formatada} m, chega-se ao Vértice ")
-        
-        # Insere o vértice V1 em negrito
-        run_v1 = p.add_run("V1")
-        run_v1.bold = True  # V1 em negrito
-        
-        # Restante do texto normal
+        p.add_run("V1").bold = True
         p.add_run(", origem da descrição desta área.")
+        doc_word.add_paragraph()
 
-        doc_word.add_paragraph()  # Linha em branco após o primeiro parágrafo
-        
-        # Início da descrição do perímetro
         initial = df.iloc[0]
         coord_N_inicial = f"{initial['N']:.3f}".replace(".", ",")
         coord_E_inicial = f"{initial['E']:.3f}".replace(".", ",")
-        
-        # Primeiro parágrafo
-        p1 = doc_word.add_paragraph("Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000.", style='Normal')
-        p1.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        
-        # Pula uma linha
+        doc_word.add_paragraph("Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000.", style='Normal')
         doc_word.add_paragraph()
-        
-        # Segundo parágrafo
-        # Cria o parágrafo vazio inicialmente
+
         p2 = doc_word.add_paragraph(style='Normal')
         p2.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        
-        # Texto inicial sem negrito até "vértice"
         p2.add_run("Inicia-se a descrição deste perímetro no vértice ")
-        
-        # Insere o vértice inicial em negrito
-        run_v_inicial = p2.add_run(f"{initial['V']}")
-        run_v_inicial.bold = True  # Define negrito
-        
-        # Restante do texto sem negrito
-        p2.add_run(
-            f", de coordenadas N(Y) {coord_N_inicial} e E(X) {coord_E_inicial}, "
-            f"situado no limite com {initial['Confrontante']}."
-        )
+        p2.add_run(f"{initial['V']}").bold = True
+        p2.add_run(f", de coordenadas N(Y) {coord_N_inicial} e E(X) {coord_E_inicial}, situado no limite com {initial['Confrontante']}.")
+        doc_word.add_paragraph()
 
-
-        doc_word.add_paragraph()  # Linha em branco após o parágrafo
-
-        # Descrição dos segmentos
-        num_points = len(df)
-        for i in range(num_points):
+        for i in range(len(df)):
             current = df.iloc[i]
-            next_index = (i + 1) % num_points
-            next_point = df.iloc[next_index]
-        
+            next_point = df.iloc[(i + 1) % len(df)]
+
             distancia_formatada = f"{current['Distancia(m)']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             coord_N_formatada = f"{next_point['N']:.3f}".replace(".", ",")
             coord_E_formatada = f"{next_point['E']:.3f}".replace(".", ",")
-        
-            # Checa se o próximo vértice é V1, para inserir texto especial
-            if next_point['V'] == 'V1':
-                complemento = ", origem desta descrição,"
-            else:
-                complemento = ""
-        
-            # Criação do parágrafo inicialmente vazio
+
+            complemento = ", origem desta descrição," if next_point['V'] == 'V1' else ""
+
             p = doc_word.add_paragraph(style='Normal')
             p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        
-            # Primeira parte do texto sem negrito
-            p.add_run(
-                f"Deste, segue com azimute de {current['Azimute']} e distância de {distancia_formatada} m, "
-                f"confrontando neste trecho com área pertencente à {current['Confrontante']}, até o vértice "
-            )
-        
-            # Adiciona o rótulo do vértice em negrito
-            run_vertice = p.add_run(f"{next_point['V']}")
-            run_vertice.bold = True  # Aqui é definido o negrito para o vértice
-        
-            # Completa o restante do texto sem negrito
-            p.add_run(
-                f"{complemento} de coordenadas N(Y) {coord_N_formatada} e E(X) {coord_E_formatada};"
-            )
-        
-            # Adiciona uma linha em branco após cada parágrafo
+            p.add_run(f"Deste, segue com azimute de {current['Azimute']} e distância de {distancia_formatada} m, "
+                      f"confrontando neste trecho com área pertencente à {current['Confrontante']}, até o vértice ")
+            p.add_run(f"{next_point['V']}").bold = True
+            p.add_run(f"{complemento} de coordenadas N(Y) {coord_N_formatada} e E(X) {coord_E_formatada};")
             doc_word.add_paragraph()
 
-        # Adicionar data e assinatura
         data_atual = datetime.now().strftime("%d de %B de %Y")
-        doc_word.add_paragraph(f"\n Porto Alegre, RS, {data_atual}.", style='Normal')
+        doc_word.add_paragraph(f"\nPorto Alegre, RS, {data_atual}.", style='Normal')
         doc_word.add_paragraph("\n\n")
-        output_path = os.path.normpath(os.path.join(caminho_salvar, f"{uuid_str}_{tipo}_Memorial_MAT_{matricula}.docx"))
 
-
+        output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
         doc_word.save(output_path)
-        print(f"Memorial descritivo salvo em: {output_path}")
+        logger.info(f"✅ Memorial descritivo salvo em: {output_path}")
+
     except Exception as e:
-        print(f"Erro ao criar o documento memorial: {e}")
+        logger.error(f"❌ Erro ao criar memorial descritivo: {e}")
+
 
         
 # Função principal
-def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, caminho_template, uuid_str):
+def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
 
-    # Carrega arquivo Excel com os dados do imóvel
-    #dados_imovel_excel_path = input("Digite o caminho completo do arquivo Excel com Dados do Imóvel: ").strip('"')
-    dados_imovel_excel_path = arquivo_excel_recebido
-    # Ler especificamente a aba "Dados_do_Imóvel", sem cabeçalho
-    dados_imovel_df = pd.read_excel(dados_imovel_excel_path, sheet_name='Dados_do_Imóvel', header=None)
-    
-    # Converter diretamente colunas em dicionário para extração direta dos dados
+    caminho_salvar = diretorio_concluido 
+    os.makedirs(caminho_salvar, exist_ok=True)
+
+    # 🔹 Carrega dados do imóvel
+    dados_imovel_df = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None)
     dados_imovel = dict(zip(dados_imovel_df.iloc[:, 0], dados_imovel_df.iloc[:, 1]))
-    
-    # Carregar variáveis conforme correspondência solicitada
+
+    # 🔹 Extrai variáveis necessárias
     proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
-    matricula = dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip()
-    matricula = sanitize_filename(matricula)  # preserva lógica original
+    matricula = sanitize_filename(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip())
     descricao = dados_imovel.get("OBRA", "").strip()
     uso_solo = dados_imovel.get("ZONA", "").strip()
     area_imovel = dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").replace("\t", "").replace("\n", "").strip()
@@ -760,23 +635,8 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
     RI = dados_imovel.get("RI", "").strip()
     desc_ponto_Az = dados_imovel.get("AZ", "").strip()
 
-    #caminho_salvar = input("Digite o caminho de salvamento: ").strip('"') # remove aspas
-    caminho_salvar = diretorio_concluido
-    os.makedirs(caminho_salvar, exist_ok=True)
-
-    # Pedir o caminho do arquivo DXF
-    #dxf_file_path = input("Digite o caminho completo do arquivo DXF: ").strip('"')  # Remove aspas ao redor do caminho
-    # Pedir o caminho do arquivo DXF original
-    #original_dxf = input("Digite o caminho completo do arquivo DXF: ").strip('"')
-    original_dxf = arquivo_dxf_recebido
-    # Define o caminho do arquivo limpo usando a pasta indicada pelo usuário
-    limpo_dxf = os.path.join(caminho_salvar, "arquivo_limpo.dxf")
-    # Pedir o caminho do arquivo EXCEL com os codigos dos vertices e confrontantes
-    #exc_file_path = input("Digite o caminho completo do arquivo Excel(codigos e confrontantes): ").strip('"')  # Remove aspas ao redor do caminho
-    exc_file_path = diretorio_preparado
-    dxf_file_path = limpar_dxf(original_dxf, limpo_dxf)
-    # Extração automática do tipo (ETE, REM, SER, ACE) a partir do nome DXF
-    dxf_filename = os.path.basename(original_dxf).upper()
+    # 🔹 Define tipo pela nomenclatura do DXF
+    dxf_filename = os.path.basename(dxf_path).upper()
 
     if "ETE" in dxf_filename:
         tipo = "ETE"
@@ -787,112 +647,103 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
     elif "ACE" in dxf_filename:
         tipo = "ACE"
     else:
-        print("❌ Não foi possível determinar automaticamente o tipo (ETE, REM, SER ou ACE).")
+        logger.error("❌ Tipo (ETE, REM, SER ou ACE) não identificado no nome do DXF.")
         return
 
-    diretorio_confrontantes = diretorio_preparado  # definir corretamente antes
-    padrao_busca = os.path.join(diretorio_confrontantes, f"FECHADA_*_{tipo}.xlsx")
+    # 🔹 Busca planilha FECHADA correta com uuid_str
+    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
     arquivos_encontrados = glob.glob(padrao_busca)
 
     if not arquivos_encontrados:
-        print(f"❌ Arquivo de confrontantes não encontrado com o padrão: {padrao_busca}")
+        logger.error(f"❌ Planilha confrontantes FECHADA não encontrada: {padrao_busca}")
         return
 
-    exc_file_path = arquivos_encontrados[0]
+    excel_confrontantes = arquivos_encontrados[0]
 
-    doc,lines, perimeter_dxf, area_dxf, ponto_az, area_poligonal = get_document_info_from_dxf(dxf_file_path)
+    # 🔹 Limpa DXF
+    dxf_limpo_path = os.path.join(caminho_salvar, f"{uuid_str}_DXF_LIMPO_{matricula}.dxf")
+    dxf_file_path = limpar_dxf(dxf_path, dxf_limpo_path)
+
+    # 🔹 Extrair geometria e ponto Az automaticamente do DXF
+    doc, lines, perimeter_dxf, area_dxf, ponto_az, _ = get_document_info_from_dxf(dxf_file_path)
+
+    if not doc or not ponto_az:
+        logger.error("❌ Documento inválido ou ponto Az não encontrado no DXF.")
+        return
+
+    v1 = lines[0][0]
+    distance_az_v1 = calculate_distance(ponto_az, v1)
+    azimute_az_v1 = calculate_azimuth(ponto_az, v1)
+
+    logger.info(f"📌 Azimute Az→V1: {azimute_az_v1:.4f}°, Distância: {distance_az_v1:.2f} m")
 
     try:
         doc_dxf = ezdxf.readfile(dxf_file_path)
-        msp = doc_dxf.modelspace()  # Acessar o espaço de modelo
+        msp = doc_dxf.modelspace()
     except Exception as e:
-        print(f"Erro ao abrir o arquivo DXF para edição: {e}")
-        return None
-    
-    if not doc or not ponto_az:
-        print("Erro ao processar o arquivo DXF.")
+        logger.error(f"Erro ao abrir DXF limpo: {e}")
         return
-    if ponto_az is None:
-        print("Erro: O ponto Az não foi encontrado no arquivo DXF.")
-        return
-    else:
-        print(f"Ponto Az identificado: {ponto_az}")
 
-    # Desenhar a linha entre ponto Az e V1
-    v1 = lines[0][0]  # Primeiro vértice da poligonal
-    distance_az_v1 = calculate_distance(ponto_az, v1)
-    azimute_az_v1 = calculate_azimuth(ponto_az, v1)
-    distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
-    
-    # Calcular o azimute entre Az e V1 e adicionar arco do azimute
-    azimuth = calculate_azimuth(ponto_az, v1)
-    print(f"Azimute do ponto Az para V1: {azimuth:.2f}°")
+    # 🔹 Criar memorial descritivo (planilha Excel final)
+    excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
 
-    # (Opcional) Adicionar o arco do azimute (se necessário)
-    add_azimuth_arc(doc,msp, ponto_az, v1, azimuth)
-    
-    if doc and lines:
+    excel_resultado = create_memorial_descritivo(
+        uuid_str=uuid_str,
+        doc=doc,
+        msp=msp,
+        lines=lines,
+        proprietario=proprietario,
+        matricula=matricula,
+        caminho_salvar=caminho_salvar,
+        excel_file_path=excel_confrontantes,
+        ponto_az=ponto_az,
+        distance_az_v1=distance_az_v1,
+        azimute_az_v1=azimute_az_v1,
+        tipo=tipo,
+        diretorio_concluido=caminho_salvar
+    )
 
-        print(f"Nome do documento: {doc}")
-        print(f"Número de linhas: {len(lines)}")
-        
-        # Criar o memorial descritivo diretamente (coleta de confrontantes interna)
-        excel_output_path = create_memorial_descritivo(
-            doc=doc,
-            msp=msp,
-            lines=lines,
+    if excel_resultado:
+        # 🔹 Gerar Memorial DOCX final
+        output_docx_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
+
+        create_memorial_document(
+            uuid_str=uuid_str,
             proprietario=proprietario,
             matricula=matricula,
+            descricao=descricao,
+            excel_file_path=excel_output_path,
+            template_path=caminho_template,
+            output_path=output_docx_path,
+            perimeter_dxf=perimeter_dxf,
+            area_dxf=area_dxf,
+            desc_ponto_Az=desc_ponto_Az,
+            Coorde_E_ponto_Az=ponto_az[0],
+            Coorde_N_ponto_Az=ponto_az[1],
+            azimuth=azimute_az_v1,
+            distance=distance_az_v1,
+            uso_solo=uso_solo,
+            area_imovel=area_imovel,
+            cidade=cidade,
+            rua=rua,
+            comarca=comarca,
+            RI=RI,
             caminho_salvar=caminho_salvar,
-            excel_file_path=exc_file_path,
-            ponto_az=ponto_az,distance_az_v1=distance_az_v1,
-            azimute_az_v1=azimute_az_v1,
-            tipo=tipo,
-            uuid_str=uuid_str
-            )
+            tipo=tipo
+        )
 
-        if excel_output_path:
-            # Caminhos para o template e saída do documento
-            template_path = caminho_template
-            output_path = os.path.normpath(os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.docx"))
-            #pdf_file_path = os.path.normpath(os.path.join(caminho_salvar, f"{tipo}_Memorial_MAT_{matricula}.pdf"))
+        logger.info(f"✅ Memorial DOCX gerado: {output_docx_path}")
+        logger.info(f"✅ Excel gerado: {excel_output_path}")
 
-
-            create_memorial_document(
-                proprietario=proprietario,
-                matricula=matricula,
-                descricao=descricao,
-                excel_file_path=excel_output_path,
-                template_path=template_path,
-                output_path=output_path,
-                perimeter_dxf=perimeter_dxf,
-                area_dxf=area_dxf,
-                desc_ponto_Az=desc_ponto_Az,
-                Coorde_E_ponto_Az=ponto_az[0],
-                Coorde_N_ponto_Az=ponto_az[1],
-                azimuth=azimuth,
-                distance=distance,
-                uso_solo=uso_solo,
-                area_imovel=area_imovel,
-                cidade=cidade,
-                rua=rua,
-                comarca=comarca,
-                RI=RI,
-                caminho_salvar=caminho_salvar,
-                tipo=tipo,
-                uuid_str=uuid_str
-            )
-
-                                
-           
-            
-            # Fechar o documento do AutoCAD (se necessário)
-            
-            print("Processamento concluído com sucesso.")
-
+        # Salvar alterações no DXF se necessário
+        doc_dxf.saveas(dxf_limpo_path)
+        logger.info(f"✅ DXF limpo salvo: {dxf_limpo_path}")
 
     else:
-        print("Erro ao processar o arquivo DXF.")
+        logger.error("❌ Falha ao gerar memorial descritivo.")
+
+    logger.info("🔵 [main_poligonal_fechada] Processamento concluído.")
+
 
 
 
