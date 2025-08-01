@@ -705,7 +705,7 @@ def calculate_angular_turn(p1, p2, p3):
 
 def create_memorial_descritivo(
     uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar,
-    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo,dxf_file_path,
+    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo,
     diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
@@ -714,7 +714,6 @@ def create_memorial_descritivo(
     logger.info(f"uuid_str: {uuid_str}")
     logger.info(f"matricula: {matricula}")
     logger.info(f"tipo: {tipo}")
-    logger.info(f"dxf_file_path: {dxf_file_path}")
     logger.info(f"excel_file_path: {excel_file_path}")
     logger.info(f"diretorio_concluido: {diretorio_concluido}")
 
@@ -1288,8 +1287,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             distance_az_v1=distancia_az_v1,
             azimute_az_v1=azimute,
             tipo=tipo,
-            diretorio_concluido=caminho_salvar,
-            dxf_file_path=dxf_file_path
+            diretorio_concluido=caminho_salvar
+            
             
         )
 
