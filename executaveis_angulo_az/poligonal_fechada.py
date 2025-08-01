@@ -184,13 +184,10 @@ def get_document_info_from_dxf(dxf_file_path):
                 ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
                 print(f"Ponto Az encontrado no bloco: {ponto_az}")
 
-        # Buscar claramente apenas um ponto AZ na layer específica ou condição especial
         for entity in msp.query('POINT'):
-            if entity.dxf.layer.upper() == "PONTO_AZ":  # Exemplo de segurança adicional
-                ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
-                logger.info(f"Ponto Az encontrado claramente na camada 'PONTO_AZ': {ponto_az}")
-                break  # Garantir apenas um ponto Az encontrado
-
+            ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
+            print(f"Ponto Az encontrado como ponto: {ponto_az}")
+            
         if not ponto_az:
             print("Ponto Az não encontrado no arquivo DXF.")
             return None, lines, 0, 0, None, None
