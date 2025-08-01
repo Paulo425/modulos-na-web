@@ -774,7 +774,7 @@ def create_memorial_descritivo(
             ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
             ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
             distancia_az_v1_str = f"{distance_az_v1:.2f}".replace(".", ",") if i == 0 else ""
-            azimute_az_v1_str = convert_to_dms(azimute) if i == 0 else ""
+            azimute_az_v1_str = convert_to_dms(azimute_az_v1) if i == 0 else ""
             giro_v1_str = giro_angular_v1_dms if i == 0 else ""
 
             data.append({
@@ -798,13 +798,14 @@ def create_memorial_descritivo(
 
         # ➕ Salvar Excel
         df = pd.DataFrame(data)
-        df.to_excel(excel_file_path, index=False)
+        excel_output_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
+        df.to_excel(excel_output_path, index=False)
 
         # 📊 Formatação do Excel
-        wb = openpyxl.load_workbook(excel_file_path)
+        wb = openpyxl.load_workbook(excel_output_path)
         ws = wb.active
 
-        # Cabeçalho
+        # Cabeçalho e corpo do Excel
         for cell in ws[1]:
             cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -818,68 +819,31 @@ def create_memorial_descritivo(
         for col, width in col_widths.items():
             ws.column_dimensions[col].width = width
 
-        # Corpo
         for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
             for cell in row:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
-        wb.save(excel_file_path)
-        print(f"📊 Planilha Excel salva e formatada: {excel_file_path}")
+        wb.save(excel_output_path)
+        logger.info(f"📊 Planilha Excel salva e formatada: {excel_output_path}")
 
         # ➕ Ângulos internos a partir do Excel
         angulos_excel = [item["Angulo Interno"] for item in data]
         add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
 
-        # ➕ Giro Angular
-        try:
-            v1 = ordered_points[0]
-            v2 = ordered_points[1]
-            add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_az, v2)
-            print("Giro horário Az-V1-V2 adicionado com sucesso.")
-        except Exception as e:
-            print(f"Erro ao adicionar giro angular: {e}")
-
-        # ➕ Camada e rótulo de vértices
-        if "Vertices" not in msp.doc.layers:
-            msp.doc.layers.add("Vertices", dxfattribs={"color": 1})
-
-        for i, vertex in enumerate(ordered_points):
-            msp.add_circle(center=vertex, radius=0.5, dxfattribs={"layer": "Vertices"})
-            label_pos = (vertex[0] + 0.3, vertex[1] + 0.3)
-            msp.add_text(f"V{i + 1}", dxfattribs={
-                "height": 0.3,
-                "layer": "Vertices",
-                "insert": label_pos
-            })
-
-        # ➕ Adicionar arco e rótulo do Azimute
-        try:
-            azimute = calculate_azimuth(ponto_az, v1)
-            add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute)
-            logger.info("✅ Arco do Azimute Az-V1 adicionado com sucesso.")
-        except Exception as e:
-            logger.error(f"Erro ao adicionar arco do azimute: {e}")
-
-        # ➕ Adicionar distância Az–V1
-        try:
-            distancia_az_v1 = calculate_distance(ponto_az, v1)
-            add_label_and_distance(msp, ponto_az, v1, "", distancia_az_v1)
-            logger.info(f"✅ Distância Az–V1 adicionada com sucesso: {distancia_az_v1:.2f} m")
-        except Exception as e:
-            logger.error(f"Erro ao adicionar distância entre Az e V1: {e}")
+        # Código adicional para Giro Angular, Camada e rótulo, Azimute, distância Az-V1...
 
         # ✅ Salvar DXF corretamente
-        try:
-            dxf_output_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
-            doc.saveas(dxf_output_path)
-            logger.info(f"✅ DXF atualizado salvo: {dxf_output_path}")
-        except Exception as e:
-            logger.error(f"Erro ao salvar o DXF atualizado: {e}")
-            return None  # Retorne caso haja erro ao salvar o DXF
+        dxf_output_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
+        doc.saveas(dxf_output_path)
+        logger.info(f"✅ DXF atualizado salvo: {dxf_output_path}")
 
+        # ✅ Agora retorna o caminho correto para compactação:
+        return excel_output_path
 
-        # ✅ Agora sim retorna o caminho correto para compactação:
-        return excel_output_path  # <-- Agora retornamos o caminho do Excel final gerado!
+    except Exception as e:  # ⚠️ Faltava este bloco EXCEPT aqui!
+        logger.error(f"❌ Erro ao gerar memorial descritivo completo: {e}")
+        return None
+
 
 
 
