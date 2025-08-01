@@ -868,8 +868,8 @@ def create_memorial_descritivo(
             print(f"Erro ao adicionar distância entre Az e V1: {e}")
 
         # ➕ Salvar DXF
-        doc_dxf.saveas(dxf_output_path)
-        print(f"📁 Arquivo DXF final salvo em: {dxf_output_path}")
+        doc_dxf.saveas(dxf_limpo_path)
+        print(f"📁 Arquivo DXF final salvo em: {dxf_limpo_path}")
 
     except Exception as e:
         print(f"❌ Erro ao gerar o memorial descritivo: {e}")
