@@ -18,7 +18,8 @@ logger.addHandler(file_handler)
 
 def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
     logger.info(f"Iniciando montagem dos pacotes ZIP em {diretorio}")
-
+    # Inclua esta linha temporariamente para debugar o problema
+    logger.info(f"[DEBUG ANGULO_AZ] Arquivos no diretório antes do ZIP: {os.listdir(diretorio)}")
     tipos = ["ETE", "REM", "SER", "ACE"]
 
     for tipo in tipos:
