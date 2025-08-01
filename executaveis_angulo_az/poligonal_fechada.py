@@ -1245,7 +1245,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
         giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
-        excel_file_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.xlsx")
+        # DEPOIS (PADRÃO AZIMUTE_AZ, recomendado):
+        excel_file_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
 
 
         # ✅ Geração do Excel e atualização do DXF
@@ -1270,13 +1271,31 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         # ✅ Geração do DOCX
         if excel_resultado:
             output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
-            #assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
 
-            create_memorial_document(
-                uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
-                output_path_docx, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
-                azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
-            )
+        create_memorial_document(
+            uuid_str=uuid_str,
+            proprietario=proprietario,
+            matricula=matricula,
+            descricao=descricao,
+            excel_file_path=excel_resultado, # ⬅️ CORREÇÃO AQUI! use o Excel final gerado
+            template_path=caminho_template,
+            output_path=output_path_docx,
+            perimeter_dxf=perimeter_dxf,
+            area_dxf=area_dxf,
+            desc_ponto_Az=desc_ponto_Az,
+            Coorde_E_ponto_Az=ponto_az[0],  # ⬅️ corrigindo coordenadas
+            Coorde_N_ponto_Az=ponto_az[1],
+            azimuth=azimute,
+            distance=distancia_az_v1,
+            uso_solo=uso_solo,
+            area_imovel=area_imovel,
+            cidade=cidade,
+            rua=rua,
+            comarca=comarca,
+            RI=RI,
+            caminho_salvar=caminho_salvar,
+            tipo=tipo
+        )
 
 
 
