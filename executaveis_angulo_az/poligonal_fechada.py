@@ -727,7 +727,8 @@ def create_memorial_descritivo(
         print("Nenhuma linha disponível para criar o memorial descritivo.")
         return None
 
-    dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_POLIGONAL_COM_AZ_{matricula}.dxf")
+    dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
+
 
 
     try:
@@ -855,25 +856,27 @@ def create_memorial_descritivo(
         try:
             azimute = calculate_azimuth(ponto_az, v1)
             add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute)
-            print("Arco do Azimute Az-V1 adicionado com sucesso.")
+            logger.info("✅ Arco do Azimute Az-V1 adicionado com sucesso.")
         except Exception as e:
-            print(f"Erro ao adicionar arco do azimute: {e}")
+            logger.error(f"Erro ao adicionar arco do azimute: {e}")
 
         # ➕ Adicionar distância Az–V1
         try:
             distancia_az_v1 = calculate_distance(ponto_az, v1)
             add_label_and_distance(msp, ponto_az, v1, "", distancia_az_v1)
-            print(f"Distância Az-V1 ({distancia_az_v1:.2f} m) adicionada com sucesso.")
+            logger.info(f"✅ Distância Az–V1 adicionada com sucesso: {distancia_az_v1:.2f} m")
         except Exception as e:
-            print(f"Erro ao adicionar distância entre Az e V1: {e}")
+            logger.error(f"Erro ao adicionar distância entre Az e V1: {e}")
 
-        # ➕ Salvar DXF
-        doc_dxf.saveas(dxf_limpo_path)
-        print(f"📁 Arquivo DXF final salvo em: {dxf_limpo_path}")
+        # ✅ Salvar DXF corretamente
+        try:
+            dxf_output_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
+            doc.saveas(dxf_output_path)
+            logger.info(f"✅ DXF atualizado salvo: {dxf_output_path}")
+        except Exception as e:
+            logger.error(f"Erro ao salvar o DXF atualizado: {e}")
+            return None  # Retorne caso haja erro ao salvar o DXF
 
-    except Exception as e:
-        print(f"❌ Erro ao gerar o memorial descritivo: {e}")
-        return None
 
     return excel_file_path
 

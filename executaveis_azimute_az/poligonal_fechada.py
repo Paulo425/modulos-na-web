@@ -880,19 +880,30 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             tipo=tipo
         )
 
-        logger.info(f"✅ Memorial DOCX gerado: {output_docx_path}")
-        logger.info(f"✅ Excel gerado: {excel_output_path}")
+    #     logger.info(f"✅ Memorial DOCX gerado: {output_docx_path}")
+    #     logger.info(f"✅ Excel gerado: {excel_output_path}")
 
-        # Salvar alterações no DXF se necessário
-        doc_dxf.saveas(dxf_limpo_path)
-        logger.info(f"✅ DXF limpo salvo: {dxf_limpo_path}")
+    #     try:
+    #         dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
+    #         doc.saveas(dxf_output_path)
+    #         logger.info(f"✅ DXF atualizado salvo: {dxf_output_path}")
+    #     except Exception as e:
+    #         logger.error(f"Erro ao salvar o DXF atualizado: {e}")
+
+    # else:
+    #     logger.error("❌ Falha ao gerar memorial descritivo.")
+
+    # logger.info("🔵 [main_poligonal_fechada] Processamento concluído.")
+
+       
+            
+            # Fechar o documento do AutoCAD (se necessário)
+            
+            print("Processamento concluído com sucesso.")
+
 
     else:
-        logger.error("❌ Falha ao gerar memorial descritivo.")
-
-    logger.info("🔵 [main_poligonal_fechada] Processamento concluído.")
-
-
+        print("Erro ao processar o arquivo DXF.")
 
 
 
