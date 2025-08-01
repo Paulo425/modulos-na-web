@@ -15,6 +15,8 @@ import openpyxl
 from openpyxl.styles import Alignment, Font
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+import logging
+
 
 # Diretório para logs
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
