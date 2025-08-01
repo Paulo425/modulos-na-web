@@ -1282,7 +1282,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
         # DEPOIS (PADRÃO AZIMUTE_AZ, recomendado):
-        excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
+        excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}.xlsx")
 
 
         # ✅ Geração do Excel e atualização do DXF
