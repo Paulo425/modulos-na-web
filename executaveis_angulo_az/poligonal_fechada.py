@@ -709,6 +709,16 @@ def create_memorial_descritivo(
     diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
+    logger.info("🚩 [DEBUG] Entrando em create_memorial_descritivo")
+    logger.info(f"🚩 [DEBUG] parâmetros recebidos:")
+    logger.info(f"uuid_str: {uuid_str}")
+    logger.info(f"matricula: {matricula}")
+    logger.info(f"tipo: {tipo}")
+    logger.info(f"dxf_file_path: {dxf_file_path}")
+    logger.info(f"excel_file_path: {excel_file_path}")
+    logger.info(f"diretorio_concluido: {diretorio_concluido}")
+
+
     """
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
     """
@@ -728,6 +738,8 @@ def create_memorial_descritivo(
 
     # Ordena os pontos da poligonal
     ordered_points = [line[0] for line in lines]
+    logger.info(f"🚩 [DEBUG] ordered_points: {ordered_points}")
+
     if ordered_points[-1] != lines[-1][1]:
         ordered_points.append(lines[-1][1])
 
@@ -745,13 +757,19 @@ def create_memorial_descritivo(
         data = []
         total_pontos = len(ordered_points)
 
+        logger.info(f"🚩 [DEBUG] Iniciando cálculo dos ângulos internos")
         for i in range(total_pontos):
+            logger.info(f"🚩 [DEBUG] Vértice atual (V{i+1}): {ordered_points[i]}")
             p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
             p2 = ordered_points[i]
             p3 = ordered_points[(i + 1) % total_pontos]
 
+
+
+
             internal_angle = 360 - calculate_internal_angle(p1, p2, p3)
             internal_angle_dms = convert_to_dms(internal_angle)
+            logger.info(f"🚩 [DEBUG] Ângulo interno calculado V{i+1}: {internal_angle_dms}")
 
             description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
             dx = p3[0] - p2[0]
@@ -765,6 +783,7 @@ def create_memorial_descritivo(
             azimute_az_v1_str = convert_to_dms(azimute_az_v1) if i == 0 else ""
             giro_v1_str = giro_angular_v1_dms if i == 0 else ""
 
+            logger.info(f"🚩 [DEBUG] Adicionando linha ao DataFrame (V{i+1})")
             data.append({
                 "V": f"V{i + 1}",
                 "E": f"{p2[0]:,.3f}".replace(",", "").replace(".", ","),
@@ -780,18 +799,23 @@ def create_memorial_descritivo(
                 "Azimute Az_V1": azimute_az_v1_str,
                 "Giro Angular Az_V1_V2": giro_v1_str
             })
-
+            logger.info("🚩 [DEBUG] Adicionando labels ao DXF")
             if distance > 0.01:
                 add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
+            logger.info(f"✅ [DEBUG] Label e distância adicionada corretamente no DXF: V{i+1}")
 
         # ➕ Salvar Excel
+        logger.info("🚩 [DEBUG] Preparando para salvar DataFrame no Excel")
         df = pd.DataFrame(data)
         excel_output_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
         df.to_excel(excel_output_path, index=False)
+        logger.info(f"🚩 [DEBUG] Excel salvo em: {excel_file_path}")
 
         # 📊 Formatação do Excel
+        logger.info("🚩 [DEBUG] Preparando formatação do Excel")
         wb = openpyxl.load_workbook(excel_output_path)
         ws = wb.active
+        logger.info("🚩 [DEBUG] Excel formatado e salvo com sucesso.")
 
         # Cabeçalho e corpo do Excel
         for cell in ws[1]:
@@ -822,6 +846,7 @@ def create_memorial_descritivo(
 
         # ✅ Salvar DXF corretamente
         dxf_output_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
+        logger.info("🚩 [DEBUG] Preparando para salvar DXF final")
         doc.saveas(dxf_output_path)
         logger.info(f"✅ DXF atualizado salvo: {dxf_output_path}")
 
@@ -829,7 +854,7 @@ def create_memorial_descritivo(
         return excel_output_path
 
     except Exception as e:  # ⚠️ Faltava este bloco EXCEPT aqui!
-        logger.error(f"❌ Erro ao gerar memorial descritivo completo: {e}")
+        logger.error(f"❌ [DEBUG] Erro geral em create_memorial_descritivo: {e}", exc_info=True)
         return None
 
 
