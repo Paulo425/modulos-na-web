@@ -1174,7 +1174,7 @@ def sanitize_filename(filename):
 def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
 
     # 🔹 Leitura dos dados do Excel
-    df_excel = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None)
+    df_excel = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None, engine='openpyxl')
     dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
 
     # 🔹 Extração dos campos
