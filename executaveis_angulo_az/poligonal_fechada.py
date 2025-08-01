@@ -705,14 +705,14 @@ def calculate_angular_turn(p1, p2, p3):
 
 def create_memorial_descritivo(
     uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar,
-    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo,
+    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo, dxf_file_path,
     diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
     """
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
     """
-
+ 
     # Carregar confrontantes diretamente da planilha Excel recebida
     confrontantes_df = pd.read_excel(excel_file_path)
 
@@ -731,12 +731,12 @@ def create_memorial_descritivo(
 
 
 
-    try:
-        doc_dxf = ezdxf.readfile(dxf_file_path)
-        msp = doc_dxf.modelspace()
-    except Exception as e:
-        print(f"Erro ao abrir o arquivo DXF para edição: {e}")
-        return None
+    # try:
+    #     doc_dxf = ezdxf.readfile(dxf_file_path)
+    #     msp = doc_dxf.modelspace()
+    # except Exception as e:
+    #     print(f"Erro ao abrir o arquivo DXF para edição: {e}")
+    #     return None
 
     # Ordena os pontos da poligonal
     ordered_points = [line[0] for line in lines]
@@ -1274,7 +1274,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             distance_az_v1=distancia_az_v1,
             azimute_az_v1=azimute,
             tipo=tipo,
-            diretorio_concluido=caminho_salvar
+            diretorio_concluido=caminho_salvar,
+            dxf_file_path=dxf_limpo_path
         )
 
 
