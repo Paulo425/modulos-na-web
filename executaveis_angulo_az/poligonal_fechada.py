@@ -1282,8 +1282,11 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
         # DEPOIS (PADRÃO AZIMUTE_AZ, recomendado):
-        excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+        logger.info("🚩🚩🚩 [DEBUG] Imediatamente antes da chamada de create_memorial_descritivo.")
 
+        excel_file_path = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+
+        logger.info(f"🚩🚩🚩 [DEBUG] excel_file_path definido como: {excel_file_path}")
 
         # ✅ Geração do Excel e atualização do DXF
         excel_resultado = create_memorial_descritivo(
@@ -1294,7 +1297,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             proprietario=proprietario,
             matricula=matricula,
             caminho_salvar=caminho_salvar,
-            excel_file_path=excel_output_path,
+            excel_file_path=excel_file_path,
             ponto_az=ponto_az,
             distance_az_v1=distancia_az_v1,
             azimute_az_v1=azimute,
