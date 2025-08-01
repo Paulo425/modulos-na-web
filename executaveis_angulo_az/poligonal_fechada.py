@@ -910,7 +910,7 @@ def generate_final_text(df, rua, confrontantes):
 def create_memorial_document(
     uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
     output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
-    azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
+    azimuth, distance, giro_angular_v1_dms, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
 ):
 
     try:
@@ -1277,16 +1277,17 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
                 proprietario=proprietario,
                 matricula=matricula,
                 descricao=descricao,
-                excel_file_path=excel_resultado, # ⬅️ CORREÇÃO AQUI! use o Excel final gerado
+                excel_file_path=excel_resultado,
                 template_path=caminho_template,
                 output_path=output_path_docx,
                 perimeter_dxf=perimeter_dxf,
                 area_dxf=area_dxf,
                 desc_ponto_Az=desc_ponto_Az,
-                Coorde_E_ponto_Az=ponto_az[0],  # ⬅️ corrigindo coordenadas
+                Coorde_E_ponto_Az=ponto_az[0],
                 Coorde_N_ponto_Az=ponto_az[1],
                 azimuth=azimute,
                 distance=distancia_az_v1,
+                giro_angular_v1_dms=giro_angular_v1_dms,  # 👈 importante
                 uso_solo=uso_solo,
                 area_imovel=area_imovel,
                 cidade=cidade,
@@ -1296,6 +1297,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
                 caminho_salvar=caminho_salvar,
                 tipo=tipo
             )
+
 
 
 
