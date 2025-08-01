@@ -881,11 +881,11 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         )
 
         logger.info("🔵 [main_poligonal_fechada] Processamento concluído com sucesso.")
-            print("Processamento concluído com sucesso.")
+        print("Processamento concluído com sucesso.")
 
-        else:
-            logger.error("❌ Falha ao gerar memorial descritivo.")
-            print("Erro ao processar o arquivo DXF.")
+    else:
+        logger.error("❌ Falha ao gerar memorial descritivo.")
+        print("Erro ao processar o arquivo DXF.")
 
 
 
