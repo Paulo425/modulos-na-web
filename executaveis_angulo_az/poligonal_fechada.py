@@ -112,68 +112,73 @@ def limpar_dxf(original_path, saida_path):
 # Função que processa as linhas da poligonal
 def get_document_info_from_dxf(dxf_file_path):
     try:
-        doc = ezdxf.readfile(dxf_file_path)  # Carregar o arquivo DXF com ezdxf
-        msp = doc.modelspace()  # Acessar o ModelSpace do DXF
+        doc = ezdxf.readfile(dxf_file_path)  
+        msp = doc.modelspace()
 
         lines = []
+        perimeter_dxf = 0
+        area_dxf = 0
         ponto_az = None
         area_poligonal = None
 
-        # Iterar pelas entidades no ModelSpace
-        for entity in msp.query('LWPOLYLINE'):  # Trabalhar com LWPOLYLINE
+        for entity in msp.query('LWPOLYLINE'):
             if entity.closed:
-                points = entity.get_points('xy')  # Obter os pontos da polilinha
-                num_points = len(points)
+                points = entity.get_points('xy')
                 
-                # Processar os pontos da polilinha, evitando duplicação do último ponto
-                for i in range(num_points - 1):
-                    start_point = (points[i][0], points[i][1], 0)
-                    end_point = (points[i + 1][0], points[i + 1][1], 0)
+                if points[0] == points[-1]:
+                    points.pop()
+
+                num_points = len(points)
+
+                for i in range(num_points):
+                    start_point = (points[i][0], points[i][1])
+                    end_point = (points[(i + 1) % num_points][0], points[(i + 1) % num_points][1])
                     lines.append((start_point, end_point))
 
-                # Conectar o último ponto ao primeiro
-                start_point = (points[-1][0], points[-1][1], 0)
-                end_point = (points[0][0], points[0][1], 0)
-                lines.append((start_point, end_point))
-                
-                # Calcular a área
+                    segment_length = ((end_point[0] - start_point[0]) ** 2 + 
+                                      (end_point[1] - start_point[1]) ** 2) ** 0.5
+                    perimeter_dxf += segment_length
+
                 x = [point[0] for point in points]
                 y = [point[1] for point in points]
-                area_poligonal = abs(sum(x[i] * y[(i + 1) % num_points] - x[(i + 1) % num_points] * y[i] for i in range(num_points)) / 2)
+                area_dxf = abs(sum(x[i] * y[(i + 1) % num_points] - x[(i + 1) % num_points] * y[i] for i in range(num_points)) / 2)
 
-        # Verificar se nenhuma linha foi encontrada
+                break  
+
         if not lines:
             print("Nenhuma polilinha encontrada no arquivo DXF.")
-            return None, [], None, None
+            return None, [], 0, 0, None, None
 
-        # Verificar Ponto Az em textos e blocos
+        # Buscar Ponto Az:
         for entity in msp.query('TEXT'):
             if "Az" in entity.dxf.text:
                 ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
                 print(f"Ponto Az encontrado em texto: {ponto_az}")
 
-        for entity in msp.query('INSERT'):  # Verificar blocos
+        for entity in msp.query('INSERT'):
             if "Az" in entity.dxf.name:
                 ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
                 print(f"Ponto Az encontrado no bloco: {ponto_az}")
 
-        for entity in msp.query('POINT'):  # Verificar pontos
+        for entity in msp.query('POINT'):
             ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
             print(f"Ponto Az encontrado como ponto: {ponto_az}")
 
-        # Se não encontrou o Ponto Az
         if not ponto_az:
             print("Ponto Az não encontrado no arquivo DXF.")
-            return None, lines, None, None
+            return None, lines, perimeter_dxf, area_dxf, None, None
 
         print(f"Linhas processadas: {len(lines)}")
-        print(f"Área da poligonal: {area_poligonal:.6f} m²")
+        print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
+        print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
 
-        return doc, lines, ponto_az, area_poligonal
+        # Retorno compatível com AZIMUTE_AZ
+        return doc, lines, perimeter_dxf, area_dxf, ponto_az, area_poligonal
 
     except Exception as e:
         print(f"Erro ao obter informações do documento: {e}")
-        return None, [], None, None
+        return None, [], 0, 0, None, None
+
 
 def is_clockwise(points):
     """
