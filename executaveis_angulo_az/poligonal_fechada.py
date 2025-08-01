@@ -1221,7 +1221,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     excel_confrontantes = arquivos_encontrados[0]
 
     # Agora carrega exatamente a aba correta (conforme o tipo)
-    confrontantes_df = pd.read_excel(excel_confrontantes, sheet_name=sheet_name)
+    confrontantes_df = pd.read_excel(excel_confrontantes)
 
     if confrontantes_df.empty:
         logger.error("❌ Planilha de confrontantes está vazia.")
