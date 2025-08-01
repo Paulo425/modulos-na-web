@@ -1282,11 +1282,11 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
             #assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
 
-            def create_memorial_document(
-                uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
-                output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
+            create_memorial_document(
+                uuid_str, proprietario, matricula, descricao, arquivos_encontrados[0], template_path, 
+                output_path_docx, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
                 azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
-            ):
+            )
 
 
 
