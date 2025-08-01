@@ -20,17 +20,20 @@ file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
 logger.addHandler(file_handler)
 
-def preparar_planilhas(arquivo_recebido, diretorio_preparado):
-    def processar_planilha(df, coluna_codigo, identificador, diretorio_destino):
+def preparar_planilhas(arquivo_recebido, diretorio_preparado, uuid_str):
+    def processar_planilha(df, coluna_codigo, sufixo, diretorio_destino, uuid_str, identificador):
         if coluna_codigo not in df.columns:
             print(f"⚠️ Coluna '{coluna_codigo}' não encontrada.")
             return
 
+        # Apenas os vértices V1, V2... são relevantes (Poligonal FECHADA)
         df_v = df[df[coluna_codigo].astype(str).str.match(r'^[Vv][0-9]*$', na=False)][[coluna_codigo, "Confrontante"]]
-        df_outros = df[~df[coluna_codigo].astype(str).str.match(r'^[Vv][0-9]*$', na=False)]
 
-        df_v.to_excel(os.path.join(diretorio_destino, f"FECHADA_{identificador}.xlsx"), index=False)
-        df_outros.to_excel(os.path.join(diretorio_destino, f"ABERTA_{identificador}.xlsx"), index=False)
+        # Salva apenas a FECHADA
+        df_v.to_excel(os.path.join(diretorio_destino, f"{uuid_str}_FECHADA_{sufixo}.xlsx"), index=False)
+
+        print(f"✅ Planilha FECHADA processada para: {sufixo}")
+
         print(f"✅ Planilhas processadas para: {identificador}")
 
     xls = pd.ExcelFile(arquivo_recebido)
@@ -38,8 +41,8 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
                                ("Confrontantes_Servidao", "SER"), ("Confrontantes_Acesso", "ACE")]:
         if sheet_name in xls.sheet_names:
             df = pd.read_excel(xls, sheet_name=sheet_name)
-            identificador = f"{os.path.splitext(os.path.basename(arquivo_recebido))[0]}_{sufixo}"
-            processar_planilha(df, "Código", identificador, diretorio_preparado)
+            identificador = os.path.splitext(os.path.basename(arquivo_recebido))[0]
+            processar_planilha(df, "Código", sufixo, diretorio_preparado, uuid_str, identificador)
         else:
             print(f"⚠️ Planilha '{sheet_name}' não encontrada.")
 
@@ -70,7 +73,8 @@ def preparar_arquivos(cidade, caminho_excel, caminho_dxf, base_dir, id_execucao)
         shutil.copy(caminho_dxf, destino_dxf)
         print(f"✅ Arquivo DXF copiado para: {destino_dxf}")
 
-        preparar_planilhas(destino_excel, PREPARADO)
+        preparar_planilhas(destino_excel, PREPARADO, id_execucao)
+
 
         return {
             "arquivo_excel_recebido": destino_excel,

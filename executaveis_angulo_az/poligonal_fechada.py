@@ -31,6 +31,83 @@ except locale.Error:
 # Obter data atual formatada
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
+def limpar_dxf(original_path, saida_path):
+    try:
+        doc_antigo = ezdxf.readfile(original_path)
+        msp_antigo = doc_antigo.modelspace()
+        doc_novo = ezdxf.new(dxfversion='R2010')
+        msp_novo = doc_novo.modelspace()
+
+        pontos_polilinha = None
+
+        # Copiar polilinha fechada
+        for entity in msp_antigo.query('LWPOLYLINE'):
+            if entity.closed:
+                pontos_polilinha = [point[:2] for point in entity.get_points('xy')]
+                
+                # Remover pontos duplicados consecutivos
+                pontos_unicos = []
+                tolerancia = 1e-6
+                for pt in pontos_polilinha:
+                    if not pontos_unicos or math.hypot(pt[0] - pontos_unicos[-1][0], pt[1] - pontos_unicos[-1][1]) > tolerancia:
+                        pontos_unicos.append(pt)
+
+                if math.hypot(pontos_unicos[0][0] - pontos_unicos[-1][0], pontos_unicos[0][1] - pontos_unicos[-1][1]) < tolerancia:
+                    pontos_unicos.pop()
+
+                # Inserir polilinha limpa no DXF
+                msp_novo.add_lwpolyline(
+                    pontos_unicos,
+                    close=True,
+                    dxfattribs={'layer': 'DIVISA_PROJETADA'}
+                )
+                break
+
+        # Copiar Ponto Az do arquivo original (TEXT, INSERT ou POINT)
+        ponto_az_copiado = False
+
+        # Copiar TEXT
+        for entity in msp_antigo.query('TEXT'):
+            if "Az" in entity.dxf.text:
+                msp_novo.add_text(
+                    entity.dxf.text,
+                    dxfattribs={
+                        'insert': (entity.dxf.insert.x, entity.dxf.insert.y),
+                        'height': entity.dxf.height,
+                        'rotation': entity.dxf.rotation,
+                        'layer': entity.dxf.layer
+                    }
+                )
+                ponto_az_copiado = True
+
+        # Copiar INSERT (blocos com nome contendo Az)
+        for entity in msp_antigo.query('INSERT'):
+            if "Az" in entity.dxf.name:
+                msp_novo.add_blockref(
+                    entity.dxf.name,
+                    insert=(entity.dxf.insert.x, entity.dxf.insert.y),
+                    dxfattribs={'layer': entity.dxf.layer}
+                )
+                ponto_az_copiado = True
+
+        # Copiar POINT (ponto simples chamado Az)
+        for entity in msp_antigo.query('POINT'):
+            msp_novo.add_point(
+                (entity.dxf.location.x, entity.dxf.location.y),
+                dxfattribs={'layer': entity.dxf.layer}
+            )
+            ponto_az_copiado = True
+
+        if not ponto_az_copiado:
+            print("⚠️ Atenção: Ponto Az não foi encontrado para copiar!")
+
+        doc_novo.saveas(saida_path)
+        print(f"✅ DXF limpo salvo em: {saida_path}")
+        return saida_path
+
+    except Exception as e:
+        print(f"❌ Erro ao limpar DXF: {e}")
+        return original_path
 
 # Função que processa as linhas da poligonal
 def get_document_info_from_dxf(dxf_file_path):
@@ -599,13 +676,25 @@ def calculate_angular_turn(p1, p2, p3):
 
 
 def create_memorial_descritivo(
-    doc, lines, proprietario, matricula, caminho_salvar, confrontantes,
-    ponto_az, dxf_file_path, area_poligonal, azimute, v1, msp,
-    base_filename, excel_file_path, tipo=None, giro_angular_v1_dms=None, uuid_str=None
+    uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar,
+    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo,
+    diretorio_concluido=None, encoding='ISO-8859-1'
 ):
+
     """
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
     """
+
+    # Carregar confrontantes diretamente da planilha Excel recebida
+    confrontantes_df = pd.read_excel(excel_file_path)
+
+    if confrontantes_df.empty:
+        logger.error("❌ Planilha de confrontantes está vazia.")
+        return None
+
+    confrontantes = confrontantes_df.iloc[:, 1].dropna().tolist()
+
+
     if not lines:
         print("Nenhuma linha disponível para criar o memorial descritivo.")
         return None
@@ -836,30 +925,16 @@ def generate_final_text(df, rua, confrontantes):
 
 
 def create_memorial_document(
-    proprietario,
-    matricula,
-    matricula_texto,
-    area_total,
-    cpf,
-    rgi,
-    excel_file_path,
-    template_path,
-    output_path,
-    assinatura_path,
-    ponto_amarracao,
-    azimute,
-    distancia_amarracao_v1,
-    rua,
-    cidade,
-    confrontantes,
-    area_dxf,
-    desc_ponto_amarracao,
-    perimeter_dxf,
-    giro_angular_v1_dms,
-    uuid_str=None
+    uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
+    output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
+    azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
 ):
+
     try:
         df = pd.read_excel(excel_file_path, engine='openpyxl', dtype=str)
+
+        # Carrega confrontantes diretamente da coluna do Excel
+        confrontantes = df['Confrontante'].dropna().tolist()
 
         # Processa colunas numéricas
         df['Distancia(m)'] = df['Distancia(m)'].str.replace(',', '.').astype(float)
@@ -872,7 +947,7 @@ def create_memorial_document(
         y = df['N'].values
         area = abs(sum(x[i] * y[(i + 1) % len(x)] - x[(i + 1) % len(x)] * y[i] for i in range(len(x))) / 2)
 
-        doc_word = Document(template_path)
+        doc_word = Document(caminho_template)
 
         # 🔴 Remover linhas vazias ou parágrafos indesejados no topo
         while doc_word.paragraphs and not doc_word.paragraphs[0].text.strip():
@@ -1096,64 +1171,83 @@ def sanitize_filename(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
         
-def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretorio_preparado, diretorio_concluido, template_path, uuid_str):
+def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
+
     # 🔹 Leitura dos dados do Excel
-    df_excel = pd.read_excel(arquivo_excel_recebido, sheet_name='Dados_do_Imóvel', header=None)
+    df_excel = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None)
     dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
 
     # 🔹 Extração dos campos
-    proprietario = str(dados_imovel.get("NOME DO PROPRIETÁRIO", "")).strip()
-    cpf = str(dados_imovel.get("CPF/CNPJ", "")).strip()
-    rgi = str(dados_imovel.get("RGI", "")).strip()
-    matricula_texto = str(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "")).strip()
-    matricula = sanitize_filename(matricula_texto)
-    descricao = str(dados_imovel.get("OBRA", "")).strip()
-    area_total = str(dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "")).strip()
-    cidade = str(dados_imovel.get("CIDADE", "")).strip().capitalize()
-    rua = str(dados_imovel.get("LOCAL", "")).strip()
-    desc_ponto_az = str(dados_imovel.get("AZ", "")).strip()
+    proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
+    matricula = sanitize_filename(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip())
+    descricao = dados_imovel.get("OBRA", "").strip()
+    uso_solo = dados_imovel.get("ZONA", "").strip()
+    area_imovel = dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").replace("\t", "").replace("\n", "").strip()
+    cidade = dados_imovel.get("CIDADE", "").strip()
+    rua = dados_imovel.get("LOCAL", "").strip()
+    comarca = dados_imovel.get("COMARCA", "").strip()
+    RI = dados_imovel.get("RI", "").strip()
+    desc_ponto_Az = dados_imovel.get("AZ", "").strip()
 
     caminho_salvar = diretorio_concluido
     os.makedirs(caminho_salvar, exist_ok=True)
 
     # 🔍 Determina tipo do memorial a partir do nome do arquivo DXF
-    dxf_filename = os.path.basename(arquivo_dxf_recebido).upper()
+    # 🔍 Determina tipo do memorial a partir do nome do arquivo DXF
+    dxf_filename = os.path.basename(dxf_path).upper()
     if "ETE" in dxf_filename:
         tipo = "ETE"
+        sheet_name = "ETE"
     elif "REM" in dxf_filename:
         tipo = "REM"
+        sheet_name = "Confrontantes_Remanescente"
     elif "SER" in dxf_filename:
         tipo = "SER"
+        sheet_name = "Confrontantes_Servidao"
     elif "ACE" in dxf_filename:
         tipo = "ACE"
+        sheet_name = "Confrontantes_Acesso"
     else:
-        print("❌ Tipo de memorial (ETE, REM, SER ou ACE) não identificado no nome do DXF.")
+        logger.error("❌ Tipo de memorial (ETE, REM, SER ou ACE) não identificado no nome do DXF.")
         return
 
-    # 🔍 Busca automática de confrontantes
-    padrao_busca = os.path.join(diretorio_preparado, f"FECHADA_*_{tipo}.xlsx")
+    # 🔍 Busca automática de confrontantes (padrão AZIMUTE_AZ)
+    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
     arquivos_encontrados = glob.glob(padrao_busca)
     if not arquivos_encontrados:
-        print(f"❌ Nenhum arquivo de confrontantes encontrado com o padrão: {padrao_busca}")
-        return
-    confrontantes_df = pd.read_excel(arquivos_encontrados[0])
-    confrontantes = confrontantes_df.iloc[:, 1].dropna().tolist()
+        logger.error(f"❌ Nenhum arquivo de confrontantes encontrado com o padrão: {padrao_busca}")
+        return None
+
+    excel_confrontantes = arquivos_encontrados[0]
+
+    # Agora carrega exatamente a aba correta (conforme o tipo)
+    confrontantes_df = pd.read_excel(excel_confrontantes, sheet_name=sheet_name)
+
+    if confrontantes_df.empty:
+        logger.error("❌ Planilha de confrontantes está vazia.")
+        return None
+
+    
+    # 🔹 Limpa DXF
+    dxf_limpo_path = os.path.join(caminho_salvar, f"{uuid_str}_DXF_LIMPO_{matricula}.dxf")
+    dxf_file_path = limpar_dxf(dxf_path, dxf_limpo_path)
 
     # 🔍 Extrai geometria do DXF
-    doc, lines, ponto_az, area_dxf = get_document_info_from_dxf(arquivo_dxf_recebido)
+    doc, lines, perimeter_dxf, area_dxf, ponto_az, _ = get_document_info_from_dxf(dxf_file_path)
+
     if not doc or not ponto_az:
-        print("❌ Erro ao extrair geometria ou encontrar o ponto Az.")
+        logger.error("❌ Erro ao extrair geometria ou encontrar o ponto Az.")
         return
 
     try:
-        doc_dxf = ezdxf.readfile(arquivo_dxf_recebido)
+        doc_dxf = ezdxf.readfile(dxf_limpo_path)
         msp = doc_dxf.modelspace()
     except Exception as e:
-        print(f"❌ Erro ao abrir o DXF com ezdxf: {e}")
+        logger.error(f"❌ Erro ao abrir o DXF com ezdxf: {e}")
         return
 
     if doc and lines:
-        print(f"📐 Área da poligonal: {area_dxf:.6f} m²")
+        logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
 
         v1 = lines[0][0]
         v2 = lines[1][0]
@@ -1166,69 +1260,50 @@ def main_poligonal_fechada(arquivo_excel_recebido, arquivo_dxf_recebido, diretor
 
 
         # ✅ Geração do Excel e atualização do DXF
-        create_memorial_descritivo(
+        excel_resultado = create_memorial_descritivo(
+            uuid_str=uuid_str,
             doc=doc,
+            msp=msp,
             lines=lines,
             proprietario=proprietario,
             matricula=matricula,
             caminho_salvar=caminho_salvar,
-            confrontantes=confrontantes,
+            excel_file_path=arquivos_encontrados[0],
             ponto_az=ponto_az,
-            dxf_file_path=arquivo_dxf_recebido,
-            area_poligonal=area_dxf,
-            azimute=azimute,
-            v1=v1,
-            msp=msp,
-            base_filename=dxf_filename,
-            excel_file_path=excel_file_path,
+            distance_az_v1=distancia_az_v1,
+            azimute_az_v1=azimute,
             tipo=tipo,
-            giro_angular_v1_dms=giro_angular_v1_dms,
-            uuid_str=uuid_str
+            diretorio_concluido=caminho_salvar
         )
 
-        # ✅ Geração do DOCX
-        if excel_file_path:
-            output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
-            assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
 
-            create_memorial_document(
-                proprietario=proprietario,
-                matricula=matricula,
-                matricula_texto=matricula_texto,
-                area_total=area_total,
-                cpf=cpf,
-                rgi=rgi,
-                excel_file_path=excel_file_path,
-                template_path=template_path,
-                output_path=output_path_docx,
-                assinatura_path=assinatura_path,
-                ponto_amarracao=ponto_az,  # continua usando ponto_amarracao como nome
-                azimute=azimute,
-                distancia_amarracao_v1=distancia_az_v1,
-                rua=rua,
-                cidade=cidade,
-                confrontantes=confrontantes,
-                area_dxf=area_dxf,
-                desc_ponto_amarracao=desc_ponto_az,
-                perimeter_dxf=0,  # atualizar se desejar calcular
-                giro_angular_v1_dms=giro_angular_v1_dms,
-                uuid_str=uuid_str
-            )
+        # ✅ Geração do DOCX
+        if excel_resultado:
+            output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
+            #assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
+
+            def create_memorial_document(
+                uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
+                output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
+                azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
+            ):
+
+
 
             # ✅ Geração do PDF
             # time.sleep(2)
             # if os.path.exists(output_path_docx):
             #     pdf_file_path = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.pdf")
             #     convert_docx_to_pdf(output_path_docx, pdf_file_path)
-            #     print(f"✅ PDF salvo em: {pdf_file_path}")
+            #     logger.info(f"✅ PDF salvo em: {pdf_file_path}")
             # else:
-            #     print("❌ Arquivo DOCX não gerado para conversão.")
+            #     logger.info("❌ Arquivo DOCX não gerado para conversão.")
 
         else:
-            print("❌ Planilha Excel não gerada.")
+            logger.error("❌ Planilha Excel não gerada.")
 
     else:
-        print("❌ Não foi possível processar a geometria.")
+        logger.error("❌ Não foi possível processar a geometria.")
 
 
 
