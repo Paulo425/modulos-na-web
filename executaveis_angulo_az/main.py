@@ -72,12 +72,13 @@ def main():
 
 
     main_poligonal_fechada(
+        uuid_str,
         variaveis["arquivo_excel_recebido"],
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
         caminho_template,
-        uuid_str
+  
     )
 
     logger.info("✅ Processamento da poligonal fechada concluído.")
