@@ -1283,10 +1283,11 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             #assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
 
             create_memorial_document(
-                uuid_str, proprietario, matricula, descricao, arquivos_encontrados[0], template_path, 
+                uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
                 output_path_docx, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
                 azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
             )
+
 
 
 
