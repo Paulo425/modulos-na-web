@@ -16,20 +16,41 @@ from openpyxl.styles import Alignment, Font
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
+# Diretório para logs
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Arquivo de log específico para poligonal_fechada
+log_file = os.path.join(LOG_DIR, f'poligonal_fechada_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+
+# Configuração básica do logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+
+# Verificar se já não existem handlers para não duplicar
+if not logger.handlers:
+    logger.addHandler(file_handler)
 
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
-try:
-    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')  # Para Render (Linux)
-except locale.Error:
-    try:
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')  # Para Windows
-    except locale.Error:
-        locale.setlocale(locale.LC_TIME, 'C')  # Fallback universal
-
-# Obter data atual formatada
-data_atual = datetime.now().strftime("%d de %B de %Y")
+MESES_PT_BR = {
+    'January': 'janeiro',
+    'February': 'fevereiro',
+    'March': 'março',
+    'April': 'abril',
+    'May': 'maio',
+    'June': 'junho',
+    'July': 'julho',
+    'August': 'agosto',
+    'September': 'setembro',
+    'October': 'outubro',
+    'November': 'novembro',
+    'December': 'dezembro'
+}
 
 def limpar_dxf(original_path, saida_path):
     try:
@@ -1095,6 +1116,12 @@ def create_memorial_document(
         p.add_run(f"Os angulos foram medidos no sentido horário.")
 
         data_atual = datetime.now().strftime("%d de %B de %Y")
+
+        # converte mês para português
+        for ingles, portugues in MESES_PT_BR.items():
+            if ingles in data_atual:
+                data_atual = data_atual.replace(ingles, portugues)
+                break
         doc_word.add_paragraph(f"\nPorto Alegre, RS, {data_atual}.", style='Normal')
         doc_word.add_paragraph("\n\n")
         doc_word.save(output_path)
