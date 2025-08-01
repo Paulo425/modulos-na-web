@@ -1272,30 +1272,30 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         if excel_resultado:
             output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
 
-        create_memorial_document(
-            uuid_str=uuid_str,
-            proprietario=proprietario,
-            matricula=matricula,
-            descricao=descricao,
-            excel_file_path=excel_resultado, # ⬅️ CORREÇÃO AQUI! use o Excel final gerado
-            template_path=caminho_template,
-            output_path=output_path_docx,
-            perimeter_dxf=perimeter_dxf,
-            area_dxf=area_dxf,
-            desc_ponto_Az=desc_ponto_Az,
-            Coorde_E_ponto_Az=ponto_az[0],  # ⬅️ corrigindo coordenadas
-            Coorde_N_ponto_Az=ponto_az[1],
-            azimuth=azimute,
-            distance=distancia_az_v1,
-            uso_solo=uso_solo,
-            area_imovel=area_imovel,
-            cidade=cidade,
-            rua=rua,
-            comarca=comarca,
-            RI=RI,
-            caminho_salvar=caminho_salvar,
-            tipo=tipo
-        )
+            create_memorial_document(
+                uuid_str=uuid_str,
+                proprietario=proprietario,
+                matricula=matricula,
+                descricao=descricao,
+                excel_file_path=excel_resultado, # ⬅️ CORREÇÃO AQUI! use o Excel final gerado
+                template_path=caminho_template,
+                output_path=output_path_docx,
+                perimeter_dxf=perimeter_dxf,
+                area_dxf=area_dxf,
+                desc_ponto_Az=desc_ponto_Az,
+                Coorde_E_ponto_Az=ponto_az[0],  # ⬅️ corrigindo coordenadas
+                Coorde_N_ponto_Az=ponto_az[1],
+                azimuth=azimute,
+                distance=distancia_az_v1,
+                uso_solo=uso_solo,
+                area_imovel=area_imovel,
+                cidade=cidade,
+                rua=rua,
+                comarca=comarca,
+                RI=RI,
+                caminho_salvar=caminho_salvar,
+                tipo=tipo
+            )
 
 
 
