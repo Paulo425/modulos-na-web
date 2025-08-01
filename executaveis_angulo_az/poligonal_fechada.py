@@ -878,8 +878,8 @@ def create_memorial_descritivo(
             return None  # Retorne caso haja erro ao salvar o DXF
 
 
-    return excel_file_path
-
+        # ✅ Agora sim retorna o caminho correto para compactação:
+        return excel_output_path  # <-- Agora retornamos o caminho do Excel final gerado!
 
 
 
