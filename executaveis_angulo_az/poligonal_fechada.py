@@ -132,11 +132,12 @@ def limpar_dxf(original_path, saida_path):
         print(f"❌ Erro ao limpar DXF: {e}")
         return original_path
 
+
 # Função que processa as linhas da poligonal
 def get_document_info_from_dxf(dxf_file_path):
     try:
         doc = ezdxf.readfile(dxf_file_path)  
-        msp = doc.modelspace()
+        msp = doc.modelspace()  
 
         lines = []
         perimeter_dxf = 0
@@ -148,9 +149,10 @@ def get_document_info_from_dxf(dxf_file_path):
             if entity.closed:
                 points = entity.get_points('xy')
                 
+                # Verifica e remove vértice repetido no final, se houver
                 if points[0] == points[-1]:
                     points.pop()
-
+                
                 num_points = len(points)
 
                 for i in range(num_points):
@@ -172,7 +174,6 @@ def get_document_info_from_dxf(dxf_file_path):
             print("Nenhuma polilinha encontrada no arquivo DXF.")
             return None, [], 0, 0, None, None
 
-        # Buscar Ponto Az:
         for entity in msp.query('TEXT'):
             if "Az" in entity.dxf.text:
                 ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
@@ -183,19 +184,21 @@ def get_document_info_from_dxf(dxf_file_path):
                 ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
                 print(f"Ponto Az encontrado no bloco: {ponto_az}")
 
+        # Buscar claramente apenas um ponto AZ na layer específica ou condição especial
         for entity in msp.query('POINT'):
-            ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
-            print(f"Ponto Az encontrado como ponto: {ponto_az}")
+            if entity.dxf.layer.upper() == "PONTO_AZ":  # Exemplo de segurança adicional
+                ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
+                logger.info(f"Ponto Az encontrado claramente na camada 'PONTO_AZ': {ponto_az}")
+                break  # Garantir apenas um ponto Az encontrado
 
         if not ponto_az:
             print("Ponto Az não encontrado no arquivo DXF.")
-            return None, lines, perimeter_dxf, area_dxf, None, None
+            return None, lines, 0, 0, None, None
 
         print(f"Linhas processadas: {len(lines)}")
         print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
         print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
 
-        # Retorno compatível com AZIMUTE_AZ
         return doc, lines, perimeter_dxf, area_dxf, ponto_az, area_poligonal
 
     except Exception as e:
