@@ -1288,7 +1288,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             distance_az_v1=distancia_az_v1,
             azimute_az_v1=azimute,
             tipo=tipo,
-            diretorio_concluido=caminho_salvar
+            diretorio_concluido=caminho_salvar,
+            dxf_file_path=dxf_file_path
             
         )
 
