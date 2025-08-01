@@ -1224,21 +1224,33 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.error("❌ Tipo de memorial (ETE, REM, SER ou ACE) não identificado no nome do DXF.")
         return
 
-    # 🔍 Busca automática de confrontantes (padrão AZIMUTE_AZ)
+    # # 🔍 Busca automática de confrontantes (padrão AZIMUTE_AZ)
+    # padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+    # arquivos_encontrados = glob.glob(padrao_busca)
+    # if not arquivos_encontrados:
+    #     logger.error(f"❌ Nenhum arquivo de confrontantes encontrado com o padrão: {padrao_busca}")
+    #     return None
+
+    #excel_confrontantes = arquivos_encontrados[0]
+
+    # Agora carrega exatamente a aba correta (conforme o tipo)
+    # 🔹 Busca planilha FECHADA correta com uuid_str (versão AZIMUTE_AZ, mais robusta)
     padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
     arquivos_encontrados = glob.glob(padrao_busca)
+
     if not arquivos_encontrados:
-        logger.error(f"❌ Nenhum arquivo de confrontantes encontrado com o padrão: {padrao_busca}")
+        logger.error(f"❌ Planilha confrontantes FECHADA não encontrada: {padrao_busca}")
         return None
 
     excel_confrontantes = arquivos_encontrados[0]
 
-    # Agora carrega exatamente a aba correta (conforme o tipo)
-    confrontantes_df = pd.read_excel(excel_confrontantes)
+    # # Ler o arquivo Excel encontrado
+    # confrontantes_df = pd.read_excel(excel_confrontantes)
 
-    if confrontantes_df.empty:
-        logger.error("❌ Planilha de confrontantes está vazia.")
-        return None
+    # if confrontantes_df.empty:
+    #     logger.error("❌ Planilha de confrontantes está vazia.")
+    #     return None
+
 
     
     # 🔹 Limpa DXF
