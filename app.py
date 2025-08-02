@@ -44,6 +44,9 @@ console_handler.setFormatter(logging.Formatter(
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
+# Adicione essa linha imediatamente abaixo:
+logger.propagate = False
+
 # 📁 Diretórios base e públicos
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
