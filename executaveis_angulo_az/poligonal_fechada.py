@@ -1193,7 +1193,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
 
     # adicione um logger para ver se está lendo corretamente os dados iniciais
-        logger.info(f"🚩 Dados do imóvel: {dados_imovel}")
+    logger.info(f"🚩 Dados do imóvel: {dados_imovel}")
     
     except Exception as e:
         logger.error(f"❌ ERRO ao ler dados do Excel inicial: {e}")
