@@ -86,10 +86,26 @@ from docx.oxml.ns import qn
 
 
 import numpy as np
+import sys
 
 
+logger = logging.getLogger("meu_app_logger")
+# Para garantir que o logger esteja configurado se o main.py executar separadamente:
+if not logger.handlers:
+    file_handler = logging.FileHandler('flask_app.log', encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter('%(asctime)s %(levelname)s : %(message)s')
+    file_handler.setFormatter(file_formatter)
 
-logger = logging.getLogger(__name__)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(levelname)s : %(message)s')
+    console_handler.setFormatter(console_formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+logger.info("✅ Logger MAIN.py inicializado corretamente!")
 
 
 def adicionar_paragrafo_apos(paragrafo):
