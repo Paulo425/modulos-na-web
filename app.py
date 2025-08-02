@@ -1139,47 +1139,120 @@ def gerar_avaliacao():
 # def memoriais_angulos_internos_p1_p2():
 #     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
 
+# EESA ROTA ABAIXO FOI COMENTADA PARA SER SUBSTIUIDA PELOS LOGGERS NECESSARIOS PARA ANALISE DO TIME OUT ERRO 500 NO APP
+# @app.route("/visualizar_resultados/<uuid>")
+# def visualizar_resultados(uuid):
+#     import json
+#     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+#     if not os.path.exists(caminho_json):
+#         flash("Arquivo JSON de entrada não encontrado.", "danger")
+#         return redirect(url_for("gerar_avaliacao"))
+
+#     with open(caminho_json, "r", encoding="utf-8") as f:
+#         dados = json.load(f)
+
+#     amostras = dados.get("amostras", [])
+#     fatores = dados.get("fatores_do_usuario", {})
+#     dados_avaliando = dados.get("dados_avaliando", {})
+
+#     # ==== Inserção de depuração definitiva (adicione exatamente esse bloco) ====
+#     try:
+#         valores_ativos = [
+#             a["valor_total"] / a["area"]
+#             for a in amostras if a.get("ativo") and a.get("area", 0) > 0
+#         ]
+
+#         media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
+
+#         from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
+#         amplitude_ic80 = 0.0
+#         if len(valores_ativos) > 1:
+#             li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
+#             if li > 0:
+#                 amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
+
+#     except Exception as erro:
+#         import traceback
+#         erro_completo = traceback.format_exc()
+#         with open("erro_avaliacao.txt", "w", encoding="utf-8") as arquivo_erro:
+#             arquivo_erro.write(erro_completo)
+#         flash(f"Erro detalhado capturado: {erro}", "danger")
+#         return redirect(url_for("gerar_avaliacao"))
+#     # === Fim do bloco seguro de depuração ===
+
+#     return render_template(
+#         "visualizar_resultados.html",
+#         uuid=uuid,
+#         amostras=amostras,
+#         media=media,
+#         amplitude_ic80=amplitude_ic80,
+#         dados_avaliando=dados_avaliando,
+#         fatores=fatores
+#     )
+
+
+
 @app.route("/visualizar_resultados/<uuid>")
 def visualizar_resultados(uuid):
     import json
     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
 
+    logger.info(f"✅ Iniciando visualizar_resultados() para UUID: {uuid}")
+    logger.info(f"📂 Caminho JSON: {caminho_json}")
+
     if not os.path.exists(caminho_json):
+        logger.error("❌ Arquivo JSON não encontrado.")
         flash("Arquivo JSON de entrada não encontrado.", "danger")
         return redirect(url_for("gerar_avaliacao"))
 
-    with open(caminho_json, "r", encoding="utf-8") as f:
-        dados = json.load(f)
-
-    amostras = dados.get("amostras", [])
-    fatores = dados.get("fatores_do_usuario", {})
-    dados_avaliando = dados.get("dados_avaliando", {})
-
-    # ==== Inserção de depuração definitiva (adicione exatamente esse bloco) ====
     try:
+        with open(caminho_json, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+        logger.info("📌 JSON carregado com sucesso.")
+
+        amostras = dados.get("amostras", [])
+        fatores = dados.get("fatores_do_usuario", {})
+        dados_avaliando = dados.get("dados_avaliando", {})
+
+        logger.info(f"📌 {len(amostras)} amostras carregadas.")
         valores_ativos = [
             a["valor_total"] / a["area"]
             for a in amostras if a.get("ativo") and a.get("area", 0) > 0
         ]
 
-        media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
+        if valores_ativos:
+            media = round(sum(valores_ativos) / len(valores_ativos), 2)
+            logger.info(f"📊 Média calculada: {media}")
+        else:
+            media = 0.0
+            logger.warning("⚠️ Nenhum valor ativo encontrado para média.")
 
         from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
         amplitude_ic80 = 0.0
         if len(valores_ativos) > 1:
+            logger.info("📌 Iniciando cálculo do intervalo de confiança bootstrap.")
             li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
+            logger.info(f"📌 IC 80% calculado: LI={li}, LS={ls}")
             if li > 0:
                 amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
+                logger.info(f"📊 Amplitude IC 80%: {amplitude_ic80}%")
+            else:
+                logger.warning("⚠️ LI do intervalo é menor ou igual a zero.")
+        else:
+            logger.warning("⚠️ Não há valores suficientes para calcular IC 80%.")
 
     except Exception as erro:
+        logger.exception(f"🚨 Exceção capturada em visualizar_resultados: {erro}")
         import traceback
         erro_completo = traceback.format_exc()
-        with open("erro_avaliacao.txt", "w", encoding="utf-8") as arquivo_erro:
+        erro_arquivo = os.path.join(BASE_DIR, "erro_avaliacao.txt")
+        with open(erro_arquivo, "w", encoding="utf-8") as arquivo_erro:
             arquivo_erro.write(erro_completo)
         flash(f"Erro detalhado capturado: {erro}", "danger")
         return redirect(url_for("gerar_avaliacao"))
-    # === Fim do bloco seguro de depuração ===
 
+    logger.info("🚩 Renderizando template visualizar_resultados.html")
     return render_template(
         "visualizar_resultados.html",
         uuid=uuid,
@@ -1189,6 +1262,14 @@ def visualizar_resultados(uuid):
         dados_avaliando=dados_avaliando,
         fatores=fatores
     )
+
+
+
+
+
+
+
+
 
 # @app.route("/gerar_laudo_final/<uuid>", methods=["POST"])
 # def gerar_laudo_final(uuid):
