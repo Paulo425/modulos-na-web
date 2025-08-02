@@ -1193,11 +1193,13 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
 
     # adicione um logger para ver se está lendo corretamente os dados iniciais
-    logger.info(f"🚩 Dados do imóvel: {dados_imovel}")
     
+    try:
+        logger.info(f"🚩 Dados do imóvel: {dados_imovel}")
     except Exception as e:
         logger.error(f"❌ ERRO ao ler dados do Excel inicial: {e}")
         return
+
 
     # 🔹 Extração dos campos
     proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
@@ -1298,7 +1300,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         # DEPOIS (PADRÃO AZIMUTE_AZ, recomendado):
         logger.info("🚩🚩🚩 [DEBUG] Imediatamente antes da chamada de create_memorial_descritivo.")
 
-        excel_file_path = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+        
+        excel_file_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
 
         logger.info(f"🚩🚩🚩 [DEBUG] excel_file_path definido como: {excel_file_path}")
         # Antes de chamar create_memorial_descritivo
