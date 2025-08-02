@@ -1301,7 +1301,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.info("🚩🚩🚩 [DEBUG] Imediatamente antes da chamada de create_memorial_descritivo.")
 
         
-        excel_file_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
+        excel_file_path = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+
 
         logger.info(f"🚩🚩🚩 [DEBUG] excel_file_path definido como: {excel_file_path}")
         # Antes de chamar create_memorial_descritivo
