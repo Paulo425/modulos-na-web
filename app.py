@@ -26,34 +26,34 @@ import sys
 # 🔧 Configuração do logger DEFINITIVA (completa e segura)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-log_file = os.path.join(BASE_DIR, 'flask_app.log')
+log_path = os.path.join(BASE_DIR, 'flask_app.log')
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("app_logger")
+logger.setLevel(logging.DEBUG)  # 👈 ALTERE PARA DEBUG imediatamente agora!
 
-# Limpa handlers anteriores para evitar conflitos
+# Limpar handlers antigos (imprescindível agora)
 if logger.hasHandlers():
     logger.handlers.clear()
 
-# Handler arquivo (grava TUDO em arquivo flask_app.log)
-file_handler = logging.FileHandler(log_file)
+# Handler arquivo
+file_handler = logging.FileHandler(log_path, encoding='utf-8')
 file_handler.setLevel(logging.DEBUG)
-file_formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s : %(message)s')
-file_handler.setFormatter(file_formatter)
 
-# Handler console (stdout - grava INFO e acima)
+# Handler console
 console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setLevel(logging.INFO)
-console_formatter = logging.Formatter('%(levelname)s : %(message)s')
-console_handler.setFormatter(console_formatter)
+console_handler.setLevel(logging.DEBUG)
 
-# Adiciona handlers definitivos ao logger
+# Formatter robusto e completo (inclui timestamp e traceback)
+formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
-# Teste rápido inicial (garante gravação imediata)
-logger.info("✅ Logger Flask inicializado corretamente!")
+# Confirmar imediatamente inicialização correta no log
+logger.info("✅ Logger Flask configurado DEFINITIVAMENTE (nível DEBUG).")
+
 
 
 # 📁 Diretórios base e públicos
