@@ -797,33 +797,8 @@ from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 @app.route("/avaliacoes", methods=["GET", "POST"])
 def gerar_avaliacao():
 
-    # ===== INÍCIO CONFIGURAÇÃO LOGGER ===== #
-    LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
-    os.makedirs(LOG_DIR, exist_ok=True)
-    log_path = os.path.join(LOG_DIR, f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-    log_path_relativo = f'logs/{os.path.basename(log_path)}'
+    logger.debug("🚀 Iniciando rota gerar_avaliacao()")
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    file_handler = logging.FileHandler(log_path, encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
-    logger.info(f"✅ Log criado em: {log_path_relativo}")
-    # ===== FIM CONFIGURAÇÃO LOGGER ===== #
 
     try:
         logger.debug("Iniciando rota gerar_avaliacao()")
