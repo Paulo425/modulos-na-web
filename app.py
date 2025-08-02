@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Handler que grava logs no arquivo flask_app.log
-file_handler = logging.FileHandler('flask_app.log')
+file_handler = logging.FileHandler(os.path.join(BASE_DIR, 'flask_app.log'))
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(logging.Formatter(
     '%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s'
