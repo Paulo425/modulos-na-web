@@ -21,31 +21,40 @@ import uuid
 import logging
 import re
 import pandas as pd  # ← inclusão imediata dessa linha resolve definitivamente
+import sys
 
-# 🔧 Configuração do logger definitiva (arquivo + console)
+# 🔧 Configuração do logger DEFINITIVA (completa e segura)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+log_file = os.path.join(BASE_DIR, 'flask_app.log')
+
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Handler que grava logs no arquivo flask_app.log
-file_handler = logging.FileHandler(os.path.join(BASE_DIR, 'flask_app.log'))
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(logging.Formatter(
-    '%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s'
-))
+# Limpa handlers anteriores para evitar conflitos
+if logger.hasHandlers():
+    logger.handlers.clear()
 
-# Handler que exibe logs no console (stdout)
+# Handler arquivo (grava TUDO em arquivo flask_app.log)
+file_handler = logging.FileHandler(log_file)
+file_handler.setLevel(logging.DEBUG)
+file_formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s : %(message)s')
+file_handler.setFormatter(file_formatter)
+
+# Handler console (stdout - grava INFO e acima)
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
-console_handler.setFormatter(logging.Formatter(
-    '%(levelname)s: %(message)s'
-))
+console_formatter = logging.Formatter('%(levelname)s : %(message)s')
+console_handler.setFormatter(console_formatter)
 
-# Adiciona ambos handlers ao logger
+# Adiciona handlers definitivos ao logger
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
-# Adicione essa linha imediatamente abaixo:
-logger.propagate = False
+# Teste rápido inicial (garante gravação imediata)
+logger.info("✅ Logger Flask inicializado corretamente!")
+
 
 # 📁 Diretórios base e públicos
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
