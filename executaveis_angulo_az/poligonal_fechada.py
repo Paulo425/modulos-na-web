@@ -1186,9 +1186,18 @@ def sanitize_filename(filename):
         
 def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
 
+    logger.info(f"🚩 [INÍCIO] main_poligonal_fechada com UUID: {uuid_str}")
+
     # 🔹 Leitura dos dados do Excel
     df_excel = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None, engine='openpyxl')
     dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
+
+    # adicione um logger para ver se está lendo corretamente os dados iniciais
+        logger.info(f"🚩 Dados do imóvel: {dados_imovel}")
+    
+    except Exception as e:
+        logger.error(f"❌ ERRO ao ler dados do Excel inicial: {e}")
+        return
 
     # 🔹 Extração dos campos
     proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
@@ -1235,6 +1244,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     # Agora carrega exatamente a aba correta (conforme o tipo)
     # 🔹 Busca planilha FECHADA correta com uuid_str (versão AZIMUTE_AZ, mais robusta)
+
+    logger.info(f"🚩 Antes da busca dos confrontantes: {os.path.join(diretorio_preparado, f'{uuid_str}_FECHADA_{tipo}.xlsx')}")
+
     padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
     arquivos_encontrados = glob.glob(padrao_busca)
 
@@ -1256,6 +1268,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # 🔹 Limpa DXF
     dxf_limpo_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{matricula}.dxf")
     dxf_file_path = limpar_dxf(dxf_path, dxf_limpo_path)
+
+    logger.info(f"🚩 DXF LIMPO gerado em: {dxf_file_path}")
 
     # 🔍 Extrai geometria do DXF
     doc, lines, perimeter_dxf, area_dxf, ponto_az, _ = get_document_info_from_dxf(dxf_file_path)
