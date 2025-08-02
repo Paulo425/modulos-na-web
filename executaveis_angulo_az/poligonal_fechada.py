@@ -1287,6 +1287,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         excel_file_path = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
 
         logger.info(f"🚩🚩🚩 [DEBUG] excel_file_path definido como: {excel_file_path}")
+        # Antes de chamar create_memorial_descritivo
+        logger.info(f"✅ [ANTES create_memorial_descritivo] caminho_salvar = {caminho_salvar}")
+        logger.info(f"✅ [ANTES create_memorial_descritivo] excel_file_path (entrada) = {excel_file_path}")
 
         # ✅ Geração do Excel e atualização do DXF
         excel_resultado = create_memorial_descritivo(
@@ -1306,11 +1309,18 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             
             
         )
+        # Após create_memorial_descritivo
+        if excel_resultado:
+            logger.info(f"✅ [DEPOIS create_memorial_descritivo] Arquivo Excel salvo em: {excel_resultado}")
+        else:
+            logger.error("❌ [DEPOIS create_memorial_descritivo] Excel_resultado retornou None.")
 
 
         # ✅ Geração do DOCX
         if excel_resultado:
             output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
+            logger.info(f"✅ [ANTES create_memorial_document] DOCX será salvo em: {output_path_docx}")
+
 
             create_memorial_document(
                 uuid_str=uuid_str,
@@ -1350,6 +1360,11 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             #     logger.info(f"✅ PDF salvo em: {pdf_file_path}")
             # else:
             #     logger.info("❌ Arquivo DOCX não gerado para conversão.")
+            # Após create_memorial_document
+            if os.path.exists(output_path_docx):
+                logger.info(f"✅ [DEPOIS create_memorial_document] DOCX confirmado salvo em: {output_path_docx}")
+            else:
+                logger.error("❌ [DEPOIS create_memorial_document] DOCX NÃO ENCONTRADO após salvar.")
 
         else:
             logger.error("❌ Planilha Excel não gerada.")
