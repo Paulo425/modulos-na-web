@@ -1254,7 +1254,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     
     # 🔹 Limpa DXF
-    dxf_limpo_path = os.path.join(caminho_salvar, f"{uuid_str}_DXF_LIMPO_{matricula}.dxf")
+    dxf_limpo_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{matricula}.dxf")
     dxf_file_path = limpar_dxf(dxf_path, dxf_limpo_path)
 
     # 🔍 Extrai geometria do DXF
