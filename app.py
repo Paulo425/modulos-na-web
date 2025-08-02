@@ -1595,6 +1595,97 @@ def gerar_laudo_final(uuid):
 
 
 
+#ROTA SUBSTITUIDA PELA DEBAIXO PARA VERIFICAR O PROBLEMA DE TIMEOUT NA VERSAO FINAL DE PRODUÇÃO
+# @app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
+# def calcular_valores_iterativos(uuid):
+#     import json, os
+#     import numpy as np
+#     import pandas as pd
+#     from flask import jsonify, request, url_for
+#     from executaveis_avaliacao.main import (
+#         aplicar_chauvenet_e_filtrar,
+#         homogeneizar_amostras,
+#         intervalo_confianca_bootstrap_mediana,
+#         gerar_grafico_dispersao_mediana,
+#         gerar_grafico_aderencia_totais,
+#     )
+
+#     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+#     if not os.path.exists(caminho_json):
+#         return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
+
+#     with open(caminho_json, "r", encoding="utf-8") as f:
+#         dados = json.load(f)
+
+#     ativos_frontend = request.json.get("ativos", [])
+#     ativos_frontend = [int(idx) for idx in ativos_frontend]
+
+#     amostras_usuario_retirou = [int(a["idx"]) for a in dados["amostras"] if int(a["idx"]) not in ativos_frontend]
+
+#     df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
+#     df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+
+#     df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+#     logger.info(f"Colunas no df_filtrado após Chauvenet: {df_filtrado.columns.tolist()}")
+
+#     amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
+
+#     homog = homogeneizar_amostras(
+#         df_filtrado,
+#         dados["dados_avaliando"],
+#         dados["fatores_do_usuario"],
+#         finalidade_do_laudo="desapropriacao" if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "servidao" if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "mercado"
+#     )
+
+#     array_homog = np.array(homog, dtype=float)
+#     if len(array_homog) > 1:
+#         limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
+#         valor_minimo = round(limite_inf, 2)
+#         valor_maximo = round(limite_sup, 2)
+#         valor_medio = round(np.median(array_homog), 2)
+#     else:
+#         valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
+
+#     # AGORA ADICIONADO CORRETAMENTE:
+#     pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
+#     os.makedirs(pasta_saida, exist_ok=True)
+
+#     img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+#     img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+
+#     amostras_chauvenet_retirou = [
+#         idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()
+#     ]
+
+#     gerar_grafico_dispersao_mediana(
+#         df_filtrado,
+#         homog,
+#         img2,
+#         ativos_frontend,
+#         amostras_usuario_retirou,
+#         amostras_chauvenet_retirou
+#     )
+
+#     gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+
+#     resposta = {
+#         "valor_minimo": valor_minimo,
+#         "valor_medio": valor_medio,
+#         "valor_maximo": valor_maximo,
+#         "quantidade_amostras_iniciais": len(dados["amostras"]),
+#         "quantidade_amostras_usuario_retirou": len(amostras_usuario_retirou),
+#         "amostras_usuario_retirou": amostras_usuario_retirou,
+#         "quantidade_amostras_chauvenet_retirou": len(amostras_excluidas_chauvenet),
+#         "amostras_chauvenet_retirou": amostras_excluidas_chauvenet,
+#         "quantidade_amostras_restantes": len(df_filtrado),
+#         "grafico_dispersao_url": url_for("static", filename=f"arquivos/avaliacao_{uuid}/grafico_dispersao_iterativo.png"),
+#         "grafico_aderencia_url": url_for("static", filename=f"arquivos/avaliacao_{uuid}/grafico_aderencia_iterativo.png")
+#     }
+
+#     return jsonify(resposta)
+
+
 
 @app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
 def calcular_valores_iterativos(uuid):
@@ -1610,80 +1701,113 @@ def calcular_valores_iterativos(uuid):
         gerar_grafico_aderencia_totais,
     )
 
-    caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+    try:
+        logger.info("🚀 Rota calcular_valores_iterativos iniciada")
 
-    if not os.path.exists(caminho_json):
-        return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
+        caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
 
-    with open(caminho_json, "r", encoding="utf-8") as f:
-        dados = json.load(f)
+        if not os.path.exists(caminho_json):
+            logger.error(f"❌ Arquivo não encontrado: {caminho_json}")
+            return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
 
-    ativos_frontend = request.json.get("ativos", [])
-    ativos_frontend = [int(idx) for idx in ativos_frontend]
+        with open(caminho_json, "r", encoding="utf-8") as f:
+            dados = json.load(f)
 
-    amostras_usuario_retirou = [int(a["idx"]) for a in dados["amostras"] if int(a["idx"]) not in ativos_frontend]
+        ativos_frontend = request.json.get("ativos", [])
+        ativos_frontend = [int(idx) for idx in ativos_frontend]
 
-    df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
-    df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+        amostras_usuario_retirou = [
+            int(a["idx"]) for a in dados["amostras"] if int(a["idx"]) not in ativos_frontend
+        ]
 
-    df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
-    logger.info(f"Colunas no df_filtrado após Chauvenet: {df_filtrado.columns.tolist()}")
+        df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
+        df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
 
-    amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
+        logger.info("📌 Aplicando Chauvenet e filtro nas amostras ativas")
+        df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+        logger.info(f"✅ Chauvenet concluído: {len(df_filtrado)} amostras restaram")
 
-    homog = homogeneizar_amostras(
-        df_filtrado,
-        dados["dados_avaliando"],
-        dados["fatores_do_usuario"],
-        finalidade_do_laudo="desapropriacao" if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "servidao" if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "mercado"
-    )
+        amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
 
-    array_homog = np.array(homog, dtype=float)
-    if len(array_homog) > 1:
-        limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
-        valor_minimo = round(limite_inf, 2)
-        valor_maximo = round(limite_sup, 2)
-        valor_medio = round(np.median(array_homog), 2)
-    else:
-        valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
+        logger.info("📌 Iniciando homogeneização das amostras")
+        homog = homogeneizar_amostras(
+            df_filtrado,
+            dados["dados_avaliando"],
+            dados["fatores_do_usuario"],
+            finalidade_do_laudo=(
+                "desapropriacao"
+                if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower()
+                else "servidao"
+                if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower()
+                else "mercado"
+            ),
+        )
+        logger.info("✅ Homogeneização concluída com sucesso")
 
-    # AGORA ADICIONADO CORRETAMENTE:
-    pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
-    os.makedirs(pasta_saida, exist_ok=True)
+        array_homog = np.array(homog, dtype=float)
+        if len(array_homog) > 1:
+            limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
+            valor_minimo = round(limite_inf, 2)
+            valor_maximo = round(limite_sup, 2)
+            valor_medio = round(np.median(array_homog), 2)
+        else:
+            valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
 
-    img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
-    img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+        pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
+        os.makedirs(pasta_saida, exist_ok=True)
 
-    amostras_chauvenet_retirou = [
-        idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()
-    ]
+        img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+        img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
 
-    gerar_grafico_dispersao_mediana(
-        df_filtrado,
-        homog,
-        img2,
-        ativos_frontend,
-        amostras_usuario_retirou,
-        amostras_chauvenet_retirou
-    )
+        amostras_chauvenet_retirou = [
+            idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()
+        ]
 
-    gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+        logger.info("📌 Gerando gráfico de dispersão iterativo")
+        gerar_grafico_dispersao_mediana(
+            df_filtrado,
+            homog,
+            img2,
+            ativos_frontend,
+            amostras_usuario_retirou,
+            amostras_chauvenet_retirou,
+        )
+        logger.info("✅ Gráfico dispersão gerado com sucesso")
 
-    resposta = {
-        "valor_minimo": valor_minimo,
-        "valor_medio": valor_medio,
-        "valor_maximo": valor_maximo,
-        "quantidade_amostras_iniciais": len(dados["amostras"]),
-        "quantidade_amostras_usuario_retirou": len(amostras_usuario_retirou),
-        "amostras_usuario_retirou": amostras_usuario_retirou,
-        "quantidade_amostras_chauvenet_retirou": len(amostras_excluidas_chauvenet),
-        "amostras_chauvenet_retirou": amostras_excluidas_chauvenet,
-        "quantidade_amostras_restantes": len(df_filtrado),
-        "grafico_dispersao_url": url_for("static", filename=f"arquivos/avaliacao_{uuid}/grafico_dispersao_iterativo.png"),
-        "grafico_aderencia_url": url_for("static", filename=f"arquivos/avaliacao_{uuid}/grafico_aderencia_iterativo.png")
-    }
+        logger.info("📌 Gerando gráfico de aderência iterativo")
+        gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+        logger.info("✅ Gráfico aderência gerado com sucesso")
 
-    return jsonify(resposta)
+        resposta = {
+            "valor_minimo": valor_minimo,
+            "valor_medio": valor_medio,
+            "valor_maximo": valor_maximo,
+            "quantidade_amostras_iniciais": len(dados["amostras"]),
+            "quantidade_amostras_usuario_retirou": len(amostras_usuario_retirou),
+            "amostras_usuario_retirou": amostras_usuario_retirou,
+            "quantidade_amostras_chauvenet_retirou": len(amostras_excluidas_chauvenet),
+            "amostras_chauvenet_retirou": amostras_excluidas_chauvenet,
+            "quantidade_amostras_restantes": len(df_filtrado),
+            "grafico_dispersao_url": url_for(
+                "static",
+                filename=f"arquivos/avaliacao_{uuid}/grafico_dispersao_iterativo.png",
+            ),
+            "grafico_aderencia_url": url_for(
+                "static",
+                filename=f"arquivos/avaliacao_{uuid}/grafico_aderencia_iterativo.png",
+            ),
+        }
+
+        logger.info("✅ Resposta JSON pronta para envio ao frontend")
+        return jsonify(resposta)
+
+    except Exception as e:
+        logger.exception(f"🚨 ERRO CRÍTICO NA ROTA calcular_valores_iterativos: {e}")
+        return jsonify({"erro": f"Erro crítico interno: {str(e)}"}), 500
+
+
+
+
 
 
 
