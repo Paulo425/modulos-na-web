@@ -1127,6 +1127,8 @@ def gerar_avaliacao():
     except Exception as e:
         logger.exception(f"🚨 Erro ao iniciar processamento: {e}")
         return f"Erro interno ao iniciar processamento: {str(e)}", 500
+
+#ATULIZADO
 #fazendo comentario
 
 # @app.route('/memoriais-azimute-p1-p2')
