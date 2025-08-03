@@ -799,12 +799,12 @@ from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 @app.route("/avaliacoes", methods=["GET", "POST"])
 def gerar_avaliacao():
     
-    #logger = logging.getLogger(__name__)  # ← ajuste definitivo aqui!
-    logger.debug("🚀 Iniciando rota gerar_avaliacao()")
+    ## logger = logging.get# logger(__name__)  # ← ajuste definitivo aqui!
+    # logger.debug("🚀 Iniciando rota gerar_avaliacao()")
 
 
     try:
-        logger.debug("Iniciando rota gerar_avaliacao()")
+        # logger.debug("Iniciando rota gerar_avaliacao()")
 
         if 'usuario' not in session:
             return redirect(url_for('login'))
@@ -812,20 +812,20 @@ def gerar_avaliacao():
         resultado = erro_execucao = zip_download = log_relativo = None
 
         if request.method == "POST":
-            logger.info("🔧 Início da execução do bloco POST em /avaliacoes")
+            # logger.info("🔧 Início da execução do bloco POST em /avaliacoes")
 
             # Indispensável! Identifica o botão clicado pelo usuário
             acao = request.form.get("acao", "").lower()
-            logger.debug(f"Ação recebida: {acao}")
+            # logger.debug(f"Ação recebida: {acao}")
 
             # Indispensável! Verifica o envio da planilha Excel
             if "planilha_excel" not in request.files:
-                logger.error("❌ ERRO: O arquivo 'planilha_excel' não foi enviado!")
+                # logger.error("❌ ERRO: O arquivo 'planilha_excel' não foi enviado!")
                 return "Erro: arquivo planilha_excel faltando!", 400
 
             excel_file = request.files["planilha_excel"]
             if excel_file.filename == '':
-                logger.error("❌ ERRO: Arquivo planilha_excel vazio ou nome inválido.")
+                # logger.error("❌ ERRO: Arquivo planilha_excel vazio ou nome inválido.")
                 return "Erro: arquivo planilha_excel vazio.", 400
 
             try:
@@ -841,7 +841,7 @@ def gerar_avaliacao():
                 # 2. Salvar arquivo Excel recebido
                 caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
                 excel_file.save(caminho_planilha)
-                logger.info(f"✅ Planilha salva: {caminho_planilha}")
+                # logger.info(f"✅ Planilha salva: {caminho_planilha}")
 
                 def salvar_multiplos(nome_form, prefixo):
                     arquivos = request.files.getlist(nome_form)
@@ -862,7 +862,7 @@ def gerar_avaliacao():
                                     caminho_img = os.path.join(pasta_temp, nome_img)
                                     pix.save(caminho_img)
                                     grupo_imagens.append(caminho_img)
-                                    logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")
+                                    # logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")
                                 pdf.close()
                             else:
                                 try:
@@ -872,9 +872,9 @@ def gerar_avaliacao():
                                     caminho_img = os.path.join(pasta_temp, nome_img)
                                     imagem.save(caminho_img, optimize=True, quality=70)
                                     grupo_imagens.append(caminho_img)
-                                    logger.info(f"✅ Imagem salva: {caminho_img}")
+                                    # logger.info(f"✅ Imagem salva: {caminho_img}")
                                 except UnidentifiedImageError:
-                                    logger.error(f"❌ Arquivo inválido: {arq.filename}")
+                                    # logger.error(f"❌ Arquivo inválido: {arq.filename}")
                                     continue
                             if grupo_imagens:
                                 todos_grupos.append(grupo_imagens)
@@ -890,7 +890,7 @@ def gerar_avaliacao():
                 if logo and logo.filename:
                     caminho_logo = os.path.join(pasta_temp, "logo.png")
                     logo.save(caminho_logo)
-                    logger.info(f"✅ Logo salvo: {caminho_logo} - {'existe' if os.path.exists(caminho_logo) else 'NÃO existe'}")
+                    # logger.info(f"✅ Logo salvo: {caminho_logo} - {'existe' if os.path.exists(caminho_logo) else 'NÃO existe'}")
                 # 3. Inputs simples
                 f = request.form
                 def chk(nome): return f.get(nome, "").lower() == "sim"
@@ -980,17 +980,17 @@ def gerar_avaliacao():
                     if col in df_amostras.columns:
                         df_amostras[col] = df_amostras[col].apply(_parse_coord)
                 # Logs detalhados
-                logger.info(f"Coordenadas limpas imóvel: LATITUDE={dados_imovel['LATITUDE']}, LONGITUDE={dados_imovel['LONGITUDE']}")
-                logger.info(f"Primeiras linhas df_amostras após limpeza:\n{df_amostras[['LATITUDE', 'LONGITUDE']].head()}")
+                # logger.info(f"Coordenadas limpas imóvel: LATITUDE={dados_imovel['LATITUDE']}, LONGITUDE={dados_imovel['LONGITUDE']}")
+                # logger.info(f"Primeiras linhas df_amostras após limpeza:\n{df_amostras[['LATITUDE', 'LONGITUDE']].head()}")
 
                 #**********************************************************************
-                logger.info(f"df_amostras.head():\n{df_amostras.head()}")
-                logger.info(f"dados_imovel: {dados_imovel}")
+                # logger.info(f"df_amostras.head():\n{df_amostras.head()}")
+                # logger.info(f"dados_imovel: {dados_imovel}")
                 df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_amostras)
                 #df_filtrado = pd.DataFrame(df_filtrado)  # ← Essa linha corrige definitivamente o problema atual
 
-                logger.info(f"df_filtrado.head():\n{df_filtrado.head()}")
-                logger.info(f"Média: {media}, Mediana: {mediana}")
+                # logger.info(f"df_filtrado.head():\n{df_filtrado.head()}")
+                # logger.info(f"Média: {media}, Mediana: {mediana}")
                 homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
 
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
@@ -1007,8 +1007,8 @@ def gerar_avaliacao():
                     []                   # nenhuma retirada Chauvenet
                 )
 
-                logger.info(f"Enviando para relatório (valores originais): {df_filtrado['VALOR TOTAL'].tolist()}")
-                logger.info(f"Homogeneizados válidos: {homog}")
+                # logger.info(f"Enviando para relatório (valores originais): {df_filtrado['VALOR TOTAL'].tolist()}")
+                # logger.info(f"Homogeneizados válidos: {homog}")
 
                 finalidade_bruta = f.get("finalidade_lido", "").lower()
                 if "desapropria" in finalidade_bruta:
@@ -1028,7 +1028,7 @@ def gerar_avaliacao():
                         latitude = linha.get("LATITUDE")
                         longitude = linha.get("LONGITUDE")
 
-                        logger.info(f"Latitude final: {latitude}, Longitude final: {longitude}")
+                        # logger.info(f"Latitude final: {latitude}, Longitude final: {longitude}")
 
                         lista_amostras.append({
                             "idx": linha.get("AM", ""),
@@ -1086,20 +1086,20 @@ def gerar_avaliacao():
                 )
                 # 3. Verificar se foi realmente criado
                 if os.path.exists(caminho_docx):
-                    logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
+                    # logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
                 else:
-                    logger.error(f"❌ Erro: o DOCX não foi gerado em {caminho_docx}")
+                    # logger.error(f"❌ Erro: o DOCX não foi gerado em {caminho_docx}")
                             
                 # 5. Gerar ZIP
                 nome_zip = f"relatorio_avaliacao_{id_execucao}.zip"
                 caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos', nome_zip)
                 with zipfile.ZipFile(caminho_zip, 'w') as zipf:
-                    logger.info(f"✅ ZIP criado em: {caminho_zip}")
+                    # logger.info(f"✅ ZIP criado em: {caminho_zip}")
                     for root, dirs, files in os.walk(pasta_temp):
                         for file in files:
                             zipf.write(os.path.join(root, file), arcname=file)
 
-                logger.info("✅ Relatório gerado com sucesso!")
+                # logger.info("✅ Relatório gerado com sucesso!")
                 resultado = "✅ Relatório gerado com sucesso!"
                 zip_download = nome_zip
 
@@ -1109,7 +1109,7 @@ def gerar_avaliacao():
 
             except Exception as e:
                 erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
-                logger.error(erro_execucao)
+                # logger.error(erro_execucao)
                 # NOVO BLOCO CRÍTICO: logar em arquivo adicional
                 with open("/home/admin/domains/phoenixappraisal.com.br/public_html/memoriais/erro_critico.log", "a") as f:
                     f.write(erro_execucao + "\n")
