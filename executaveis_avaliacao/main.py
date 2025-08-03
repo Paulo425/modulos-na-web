@@ -10,6 +10,8 @@ import os
 import math
 import pandas as pd
 import numpy
+import matplotlib
+matplotlib.use('Agg')  # ← fundamental essa linha antes do pyplot
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 import unicodedata
@@ -36,6 +38,8 @@ from docx.oxml.shared import OxmlElement
 from lxml import etree
 
 from docx.oxml.ns import nsdecls, qn
+
+from typing import Union
 
 # Para seleção de múltiplas fotos e da planilha (file dialog).
 
@@ -83,10 +87,27 @@ from docx.oxml.ns import qn
 
 
 
+import numpy as np
+import sys
 
 
+logger = logging.getLogger("meu_app_logger")
+# Para garantir que o logger esteja configurado se o main.py executar separadamente:
+if not logger.handlers:
+    file_handler = logging.FileHandler('flask_app.log', encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter('%(asctime)s %(levelname)s : %(message)s')
+    file_handler.setFormatter(file_formatter)
 
-logger = logging.getLogger(__name__)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(levelname)s : %(message)s')
+    console_handler.setFormatter(console_formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+logger.info("✅ Logger MAIN.py inicializado corretamente!")
 
 
 def adicionar_paragrafo_apos(paragrafo):
@@ -1049,175 +1070,180 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=Non
 
 
 
-#######################################################################
-# FUNÇÕES DE FORMATAÇÃO
-#######################################################################
-def inserir_tabela_amostras_originais(documento, dataframe):
-    """
-    Substitui o placeholder [amostras original] pela tabela de amostras originais,
-    com as colunas: AM, VALOR TOTAL, ÁREA TOTAL (m²), VALOR UNITÁRIO (R$/m²), CIDADE, FONTE.
-    Agora, deixamos um espaço um pouco maior entre as linhas.
-    """
-    from docx.shared import Pt, Inches
-    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml.shared import OxmlElement
-    from lxml import etree
+# #######################################################################
+# # FUNÇÕES DE FORMATAÇÃO
+# #######################################################################
+# def inserir_tabela_amostras_originais(documento, dataframe):
+#     """
+#     Substitui o placeholder [amostras original] pela tabela de amostras originais,
+#     com as colunas: AM, VALOR TOTAL, ÁREA TOTAL (m²), VALOR UNITÁRIO (R$/m²), CIDADE, FONTE.
+#     Agora, deixamos um espaço um pouco maior entre as linhas.
+#     """
+#     from docx.shared import Pt, Inches
+#     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
+#     from docx.enum.text import WD_ALIGN_PARAGRAPH
+#     from docx.oxml.shared import OxmlElement
+#     from lxml import etree
 
-    from docx.oxml.ns import nsdecls, qn
+#     from docx.oxml.ns import nsdecls, qn
 
-    # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
-    col_widths = [0.2, 1.3, 1.1, 0.8, 2.0, 2.9]
+#     logger.info(f"🔎 DataFrame recebido em inserir_tabela_amostras_originais:\n{dataframe.head()}")
+#     logger.info(f"🔎 Colunas recebidas: {list(dataframe.columns)}")
 
-    # Títulos visíveis no cabeçalho
-    colunas_visiveis = [
-        "AM",
-        "VALOR TOTAL",
-        "ÁREA TOTAL (m²)",
-        "VALOR UNITÁRIO (R$/m²)",
-        "CIDADE",
-        "FONTE"
-    ]
 
-    # Colunas correspondentes do DataFrame (caso precise filtrar ou renomear)
-    colunas_df = [
-        "AM",
-        "VALOR TOTAL",
-        "AREA TOTAL",
-        "VALOR UNITARIO",
-        "CIDADE",
-        "FONTE"
-    ]
+#     # Ajuste conforme as larguras desejadas (em polegadas) para cada coluna
+#     col_widths = [0.2, 1.3, 1.1, 0.8, 2.0, 2.9]
 
-    # Localiza o parágrafo onde o placeholder [amostras original] está
-    paragrafo_alvo = None
-    for paragrafo in documento.paragraphs:
-        if "[amostras original]" in paragrafo.text:
-            paragrafo_alvo = paragrafo
-            break
+#     # Títulos visíveis no cabeçalho
+#     colunas_visiveis = [
+#         "AM",
+#         "VALOR TOTAL",
+#         "ÁREA TOTAL (m²)",
+#         "VALOR UNITÁRIO (R$/m²)",
+#         "CIDADE",
+#         "FONTE"
+#     ]
 
-    # Se não encontrou o placeholder, não faz nada
-    if not paragrafo_alvo:
-        return
+#     # Colunas correspondentes do DataFrame (caso precise filtrar ou renomear)
+#     colunas_df = [
+#         "idx",
+#         "VALOR TOTAL",
+#         "AREA TOTAL",
+#         "valor_unitario",
+#         "cidade",
+#         "fonte"
+#     ]
 
-    # Remove o texto do placeholder
-    paragrafo_alvo.text = paragrafo_alvo.text.replace("[amostras original]", "")
 
-    # Número de linhas = registros do dataframe + 1 (para o cabeçalho)
-    num_linhas = len(dataframe) + 1
-    # Número de colunas = quantidade de títulos visíveis
-    num_colunas = len(colunas_visiveis)
+#     # Localiza o parágrafo onde o placeholder [amostras original] está
+#     paragrafo_alvo = None
+#     for paragrafo in documento.paragraphs:
+#         if "[amostras original]" in paragrafo.text:
+#             paragrafo_alvo = paragrafo
+#             break
 
-    # Cria a tabela
-    tabela = documento.add_table(rows=num_linhas, cols=num_colunas, style="Table Grid")
-    tabela.allow_autofit = False
-    tabela.alignment = WD_TABLE_ALIGNMENT.CENTER
+#     # Se não encontrou o placeholder, não faz nada
+#     if not paragrafo_alvo:
+#         return
 
-    # Função para centralizar verticalmente a célula
-    def set_vertical_alignment(cell):
-        tcPr = cell._tc.get_or_add_tcPr()
-        vAlign = OxmlElement('w:vAlign')
-        vAlign.set(qn('w:val'), "center")
-        tcPr.append(vAlign)
+#     # Remove o texto do placeholder
+#     paragrafo_alvo.text = paragrafo_alvo.text.replace("[amostras original]", "")
 
-    # --- Cabeçalho ---
-    for c, titulo_exib in enumerate(colunas_visiveis):
-        cell_header = tabela.rows[0].cells[c]
-        cell_header.text = titulo_exib
+#     # Número de linhas = registros do dataframe + 1 (para o cabeçalho)
+#     num_linhas = len(dataframe) + 1
+#     # Número de colunas = quantidade de títulos visíveis
+#     num_colunas = len(colunas_visiveis)
 
-        # Fundo azul claro no cabeçalho
-        shading_xml = etree.fromstring(
-            f'<w:shd {nsdecls("w")} w:fill="BDD7EE" w:val="clear"/>'
-        )
-        cell_header._tc.get_or_add_tcPr().append(shading_xml)
+#     # Cria a tabela
+#     tabela = documento.add_table(rows=num_linhas, cols=num_colunas, style="Table Grid")
+#     tabela.allow_autofit = False
+#     tabela.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-        # Formatação da fonte do cabeçalho
-        for run in cell_header.paragraphs[0].runs:
-            run.font.name = "Arial"
-            run.font.size = Pt(10)
-            run.font.bold = True
+#     # Função para centralizar verticalmente a célula
+#     def set_vertical_alignment(cell):
+#         tcPr = cell._tc.get_or_add_tcPr()
+#         vAlign = OxmlElement('w:vAlign')
+#         vAlign.set(qn('w:val'), "center")
+#         tcPr.append(vAlign)
 
-        # Alinhamento horizontal e vertical do cabeçalho
-        cell_header.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        set_vertical_alignment(cell_header)
+#     # --- Cabeçalho ---
+#     for c, titulo_exib in enumerate(colunas_visiveis):
+#         cell_header = tabela.rows[0].cells[c]
+#         cell_header.text = titulo_exib
 
-    # --- Linhas de dados ---
-    for i, (_, row) in enumerate(dataframe.iterrows(), start=1):
-        # Monta a lista de valores (na mesma ordem das colunas do cabeçalho)
-        valores_linha = []
+#         # Fundo azul claro no cabeçalho
+#         shading_xml = etree.fromstring(
+#             f'<w:shd {nsdecls("w")} w:fill="BDD7EE" w:val="clear"/>'
+#         )
+#         cell_header._tc.get_or_add_tcPr().append(shading_xml)
 
-        # AM
-        am_str = str(row.get("AM", ""))
-        valores_linha.append(am_str)
+#         # Formatação da fonte do cabeçalho
+#         for run in cell_header.paragraphs[0].runs:
+#             run.font.name = "Arial"
+#             run.font.size = Pt(10)
+#             run.font.bold = True
 
-        # VALOR TOTAL (exemplo de formatação de moeda)
-        try:
-            vt_str = formatar_moeda_brasil(float(row["VALOR TOTAL"]))
-        except:
-            vt_str = str(row.get("VALOR TOTAL", ""))
-        valores_linha.append(vt_str)
+#         # Alinhamento horizontal e vertical do cabeçalho
+#         cell_header.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+#         set_vertical_alignment(cell_header)
 
-        # ÁREA TOTAL
-        try:
-            area_str = formatar_numero_brasileiro(float(row["AREA TOTAL"]))
-        except:
-            area_str = str(row.get("AREA TOTAL", ""))
-        valores_linha.append(area_str)
+#     # --- Linhas de dados ---
+#     for i, (_, row) in enumerate(dataframe.iterrows(), start=1):
+#         # Monta a lista de valores (na mesma ordem das colunas do cabeçalho)
+#         valores_linha = []
 
-        # VALOR UNITÁRIO
-        try:
-            vu_str = formatar_moeda_brasil(float(row["VALOR UNITARIO"]))
-        except:
-            vu_str = str(row.get("VALOR UNITARIO", ""))
-        valores_linha.append(vu_str)
+#         # AM
+#         am_str = str(row.get("AM", ""))
+#         valores_linha.append(am_str)
 
-        # CIDADE
-        cidade_str = str(row.get("CIDADE", ""))
-        valores_linha.append(cidade_str)
+#         # VALOR TOTAL (exemplo de formatação de moeda)
+#         try:
+#             vt_str = formatar_moeda_brasil(float(row["VALOR TOTAL"]))
+#         except:
+#             vt_str = str(row.get("VALOR TOTAL", ""))
+#         valores_linha.append(vt_str)
 
-        # FONTE
-        fonte_str = str(row.get("FONTE", ""))
-        valores_linha.append(fonte_str)
+#         # ÁREA TOTAL
+#         try:
+#             area_str = formatar_numero_brasileiro(float(row["AREA TOTAL"]))
+#         except:
+#             area_str = str(row.get("AREA TOTAL", ""))
+#         valores_linha.append(area_str)
 
-        # Preenche as células
-        for col_index, valor_cel in enumerate(valores_linha):
-            cell_data = tabela.rows[i].cells[col_index]
-            cell_data.text = valor_cel
+#         # VALOR UNITÁRIO
+#         try:
+#             vu_str = formatar_moeda_brasil(float(row["VALOR UNITARIO"]))
+#         except:
+#             vu_str = str(row.get("VALOR UNITARIO", ""))
+#         valores_linha.append(vu_str)
 
-            # Formatação da fonte das células de dados
-            for run in cell_data.paragraphs[0].runs:
-                run.font.name = "Arial"
-                run.font.size = Pt(8)
-                run.font.bold = False
+#         # CIDADE
+#         cidade_str = str(row.get("CIDADE", ""))
+#         valores_linha.append(cidade_str)
 
-            # Alinhamento horizontal
-            cell_data.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+#         # FONTE
+#         fonte_str = str(row.get("FONTE", ""))
+#         valores_linha.append(fonte_str)
 
-            # Espaçamento vertical dentro da célula
-            paragraph_format = cell_data.paragraphs[0].paragraph_format
-            paragraph_format.space_before = Pt(2)
-            paragraph_format.space_after = Pt(2)
+#         # Preenche as células
+#         for col_index, valor_cel in enumerate(valores_linha):
+#             cell_data = tabela.rows[i].cells[col_index]
+#             cell_data.text = valor_cel
 
-            # Alinhamento vertical
-            set_vertical_alignment(cell_data)
+#             # Formatação da fonte das células de dados
+#             for run in cell_data.paragraphs[0].runs:
+#                 run.font.name = "Arial"
+#                 run.font.size = Pt(8)
+#                 run.font.bold = False
 
-    # --- Ajuste de altura das linhas e largura das colunas ---
-    for row_index in range(num_linhas):
-        if row_index == 0:
-            # Aumenta a altura da linha do cabeçalho
-            tabela.rows[row_index].height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
-            tabela.rows[row_index].height = Pt(40)
-        else:
-            # Aumenta a altura das linhas de dados
-            tabela.rows[row_index].height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
-            tabela.rows[row_index].height = Pt(26)
+#             # Alinhamento horizontal
+#             cell_data.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        # Ajusta a largura de cada coluna
-        for col_index, w_inch in enumerate(col_widths):
-            tabela.rows[row_index].cells[col_index].width = Inches(w_inch)
+#             # Espaçamento vertical dentro da célula
+#             paragraph_format = cell_data.paragraphs[0].paragraph_format
+#             paragraph_format.space_before = Pt(2)
+#             paragraph_format.space_after = Pt(2)
 
-    # Insere a tabela logo depois do parágrafo alvo
-    paragrafo_alvo._p.addnext(tabela._element)
+#             # Alinhamento vertical
+#             set_vertical_alignment(cell_data)
+
+#     # --- Ajuste de altura das linhas e largura das colunas ---
+#     for row_index in range(num_linhas):
+#         if row_index == 0:
+#             # Aumenta a altura da linha do cabeçalho
+#             tabela.rows[row_index].height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+#             tabela.rows[row_index].height = Pt(40)
+#         else:
+#             # Aumenta a altura das linhas de dados
+#             tabela.rows[row_index].height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+#             tabela.rows[row_index].height = Pt(26)
+
+#         # Ajusta a largura de cada coluna
+#         for col_index, w_inch in enumerate(col_widths):
+#             tabela.rows[row_index].cells[col_index].width = Inches(w_inch)
+
+#     # Insere a tabela logo depois do parágrafo alvo
+#     paragrafo_alvo._p.addnext(tabela._element)
 
 
 
@@ -2344,278 +2370,280 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
             runn.add_picture(caminho_logo, width=Inches(3))
             paragrafo.alignment = WD_ALIGN_PARAGRAPH.RIGHT
             return
-###############################################################################
-# TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
-# AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
-###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
-    """
-    Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
-    sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
-    seja maiúscula, ex.: "Trinta e um mil, cento e setenta e dois reais e seis centavos".
+# ###############################################################################
+# # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
+# # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
+# ###############################################################################
+# def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_utilizada):
+#     """
+#     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
+#     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
+#     seja maiúscula, ex.: "Trinta e um mil, cento e setenta e dois reais e seis centavos".
     
-    Parâmetros em `informacoes_de_resumo`:
-      - valor_unitario (str) => ex: "R$ 35,37/m²"
-      - area_total_considerada (str) => ex: "1.000,00 m²"
-      - texto_descritivo_restricoes (str) => ex: "Múltiplas restrições aplicadas"
-      - restricoes (list[dict]) => cada item: {
-            "area": 345.0,
-            "percentualDepreciacao": 34,
-            "fator": 0.66,
-            "tipo": "APP",
-            "subtotal": "R$ 8.053,23"
-        }
-      - valor_total_indenizatorio (str) => ex: "R$ 30.979,30"
-      - valor_por_extenso (str) => se vier vazio, será calculado via num2words; 
-        em seguida, a inicial é forçada para maiúsculo.
-    """
-    import re
-    from lxml import etree
-    from docx.oxml.ns import nsdecls, qn
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
-    from docx.shared import Pt
+#     Parâmetros em `informacoes_de_resumo`:
+#       - valor_unitario (str) => ex: "R$ 35,37/m²"
+#       - area_total_considerada (str) => ex: "1.000,00 m²"
+#       - texto_descritivo_restricoes (str) => ex: "Múltiplas restrições aplicadas"
+#       - restricoes (list[dict]) => cada item: {
+#             "area": 345.0,
+#             "percentualDepreciacao": 34,
+#             "fator": 0.66,
+#             "tipo": "APP",
+#             "subtotal": "R$ 8.053,23"
+#         }
+#       - valor_total_indenizatorio (str) => ex: "R$ 30.979,30"
+#       - valor_por_extenso (str) => se vier vazio, será calculado via num2words; 
+#         em seguida, a inicial é forçada para maiúsculo.
+#     """
+#     import re
+#     from lxml import etree
+#     from docx.oxml.ns import nsdecls, qn
+#     from docx.enum.text import WD_ALIGN_PARAGRAPH
+#     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
+#     from docx.shared import Pt
 
-    # Se tiver num2words, usamos para converter valor em texto extenso.
-    try:
-        from num2words import num2words
-    except ImportError:
-        num2words = None
+#     # Se tiver num2words, usamos para converter valor em texto extenso.
+#     try:
+#         from num2words import num2words
+#     except ImportError:
+#         num2words = None
 
-    def extrair_valor_numerico(texto_monetario):
-        """
-        Ex: "R$ 30.979,30" => 30979.30 (float).
-        Remove caracteres que não sejam dígitos ou vírgula, então substitui ',' por '.'.
-        """
-        somente_num_virg = re.sub(r"[^\d,]", "", texto_monetario)
-        somente_num_ponto = somente_num_virg.replace(",", ".")
-        try:
-            return float(somente_num_ponto)
-        except:
-            return 0.0
+#     def extrair_valor_numerico(texto_monetario):
+#         """
+#         Ex: "R$ 30.979,30" => 30979.30 (float).
+#         Remove caracteres que não sejam dígitos ou vírgula, então substitui ',' por '.'.
+#         """
+#         somente_num_virg = re.sub(r"[^\d,]", "", texto_monetario)
+#         somente_num_ponto = somente_num_virg.replace(",", ".")
+#         try:
+#             return float(somente_num_ponto)
+#         except:
+#             return 0.0
 
-    def gerar_extenso_por_num2words(texto_valor):
-        """
-        Converte "R$ 30.979,30" em algo como 
-        "Trinta e um mil, cento e setenta e nove reais e trinta centavos",
-        usando a biblioteca num2words(lang='pt_BR'). 
-        Em seguida, forçamos a primeira letra para maiúscula.
-        """
-        if not num2words:
-            return "(num2words não instalado)"
+#     def gerar_extenso_por_num2words(texto_valor):
+#         """
+#         Converte "R$ 30.979,30" em algo como 
+#         "Trinta e um mil, cento e setenta e nove reais e trinta centavos",
+#         usando a biblioteca num2words(lang='pt_BR'). 
+#         Em seguida, forçamos a primeira letra para maiúscula.
+#         """
+#         if not num2words:
+#             return "(num2words não instalado)"
 
-        val = extrair_valor_numerico(texto_valor)
-        inteiro = int(val)
-        centavos = round((val - inteiro) * 100)
-        if inteiro == 0 and centavos == 0:
-            return "Zero real"
+#         val = extrair_valor_numerico(texto_valor)
+#         inteiro = int(val)
+#         centavos = round((val - inteiro) * 100)
+#         if inteiro == 0 and centavos == 0:
+#             return "Zero real"
 
-        extenso_inteiro = num2words(inteiro, lang='pt_BR')
-        if centavos > 0:
-            extenso_centavos = num2words(centavos, lang='pt_BR')
-            texto_final = f"{extenso_inteiro} reais e {extenso_centavos} centavos"
-        else:
-            texto_final = f"{extenso_inteiro} reais"
+#         extenso_inteiro = num2words(inteiro, lang='pt_BR')
+#         if centavos > 0:
+#             extenso_centavos = num2words(centavos, lang='pt_BR')
+#             texto_final = f"{extenso_inteiro} reais e {extenso_centavos} centavos"
+#         else:
+#             texto_final = f"{extenso_inteiro} reais"
 
-        # Forçar a primeira letra para maiúsculo, se não estiver vazio:
-        if texto_final:
-            texto_final = texto_final[0].upper() + texto_final[1:]
-        return texto_final
+#         # Forçar a primeira letra para maiúsculo, se não estiver vazio:
+#         if texto_final:
+#             texto_final = texto_final[0].upper() + texto_final[1:]
+#         return texto_final
 
-    # -------------------------------------------------------------------------
-    # Localiza o placeholder no documento
-    for paragrafo in documento.paragraphs:
-        if marcador in paragrafo.text:
-            # Remove o texto do placeholder
-            paragrafo.text = paragrafo.text.replace(marcador, "")
+#     # -------------------------------------------------------------------------
+#     # Localiza o placeholder no documento
+#     for paragrafo in documento.paragraphs:
+#         if marcador in paragrafo.text:
+#             # Remove o texto do placeholder
+#             paragrafo.text = paragrafo.text.replace(marcador, "")
 
-            # Carrega dados
-            valor_unit = informacoes_de_resumo.get("valor_unitario", "N/D")
-            area_total = informacoes_de_resumo.get("area_total_considerada", "N/D")
-            sit_rest = informacoes_de_resumo.get("texto_descritivo_restricoes", "N/D")
-            restricoes = informacoes_de_resumo.get("restricoes", [])
-            valor_total = informacoes_de_resumo.get("valor_total_indenizatorio", "R$ 0,00")
-            valor_extenso = informacoes_de_resumo.get("valor_por_extenso", "").strip()
+#             # Carrega dados
+#             valor_unit = informacoes_de_resumo.get("valor_unitario", "N/D")
+#             area_total = informacoes_de_resumo.get("area_total_considerada", "N/D")
+#             sit_rest = informacoes_de_resumo.get("texto_descritivo_restricoes", "N/D")
+#             restricoes = informacoes_de_resumo.get("restricoes", [])
+#             valor_total = informacoes_de_resumo.get("valor_total_indenizatorio", "R$ 0,00")
+#             valor_extenso = informacoes_de_resumo.get("valor_por_extenso", "").strip()
 
-            # Se valor_por_extenso for vazio, gerar automaticamente
-            if not valor_extenso:
-                valor_extenso = gerar_extenso_por_num2words(valor_total)
+#             # Se valor_por_extenso for vazio, gerar automaticamente
+#             if not valor_extenso:
+#                 valor_extenso = gerar_extenso_por_num2words(valor_total)
 
-            # Cria a tabela principal (7 linhas, 2 colunas)
-            tabela_principal = documento.add_table(rows=7, cols=2)
-            tabela_principal.style = "Table Grid"
-            tabela_principal.alignment = WD_TABLE_ALIGNMENT.CENTER
+#             # Cria a tabela principal (7 linhas, 2 colunas)
+#             tabela_principal = documento.add_table(rows=7, cols=2)
+#             tabela_principal.style = "Table Grid"
+#             tabela_principal.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-            # (0) Cabeçalho mesclado
-            cel_titulo = tabela_principal.cell(0, 0).merge(tabela_principal.cell(0, 1))
-            cel_titulo.text = "RESUMO DOS VALORES TOTAIS"
-            shading_cab = etree.fromstring(r'<w:shd {} w:fill="D9D9D9" w:val="clear"/>'.format(nsdecls('w')))
-            cel_titulo._tc.get_or_add_tcPr().append(shading_cab)
-            for p_ in cel_titulo.paragraphs:
-                p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                for run_ in p_.runs:
-                    run_.font.name = "Arial"
-                    run_.font.size = Pt(11)
-                    run_.font.bold = True
+#             # (0) Cabeçalho mesclado
+#             cel_titulo = tabela_principal.cell(0, 0).merge(tabela_principal.cell(0, 1))
+#             cel_titulo.text = "RESUMO DOS VALORES TOTAIS"
+#             shading_cab = etree.fromstring(r'<w:shd {} w:fill="D9D9D9" w:val="clear"/>'.format(nsdecls('w')))
+#             cel_titulo._tc.get_or_add_tcPr().append(shading_cab)
+#             for p_ in cel_titulo.paragraphs:
+#                 p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                 for run_ in p_.runs:
+#                     run_.font.name = "Arial"
+#                     run_.font.size = Pt(11)
+#                     run_.font.bold = True
 
-            # (1) Valor Unitário Calculado
-            tabela_principal.cell(1,0).text = "Valor Unitário Calculado:"
-            tabela_principal.cell(1,1).text = valor_unit
+#             # (1) Valor Unitário Calculado
+#             tabela_principal.cell(1,0).text = "Valor Unitário Calculado:"
+#             tabela_principal.cell(1,1).text = valor_unit
 
-            # (2) Área Total de Interesse
-            tabela_principal.cell(2,0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2,1).text = area_total
+#            # (2) Área Total de Interesse
+#             tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
+#             tabela_principal.cell(2, 1).text = informacoes_de_resumo["area_total_considerada"]
 
-            # (3) Situação das Restrições
-            tabela_principal.cell(3,0).text = "Situação das Restrições:"
-            tabela_principal.cell(3,1).text = sit_rest
 
-            # (4) Sub-tabela => célula mesclada
-            cel_sub = tabela_principal.cell(4,0).merge(tabela_principal.cell(4,1))
-            shading_light_blue = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
-            cel_sub._tc.get_or_add_tcPr().append(shading_light_blue)
 
-            # Remove margens internas da célula mesclada
-            tc_pr_sub = cel_sub._tc.get_or_add_tcPr()
-            tc_margins_sub = tc_pr_sub.xpath('./w:tcMar')
-            if not tc_margins_sub:
-                tcMar = OxmlElement('w:tcMar')
-                tcMar.set(qn('w:top'), "0")
-                tcMar.set(qn('w:left'), "0")
-                tcMar.set(qn('w:right'), "0")
-                tcMar.set(qn('w:bottom'), "0")
-                tc_pr_sub.append(tcMar)
-            else:
-                for m_ in tc_margins_sub:
-                    m_.set(qn('w:top'), "0")
-                    m_.set(qn('w:left'), "0")
-                    m_.set(qn('w:right'), "0")
-                    m_.set(qn('w:bottom'), "0")
+#             # (3) Situação das Restrições
+#             tabela_principal.cell(3,0).text = "Situação das Restrições:"
+#             tabela_principal.cell(3,1).text = sit_rest
 
-            # Se não tiver restrições, mostra texto simples
-            if not restricoes:
-                cel_sub.text = "Nenhuma restrição aplicada."
-                for r_ in cel_sub.paragraphs[0].runs:
-                    r_.font.name = "Arial"
-                    r_.font.size = Pt(10)
-            else:
-                # Cria sub-tabela sem bordas
-                subtab = documento.add_table(rows=len(restricoes)+1, cols=5)
-                borders = subtab._element.xpath(".//w:tblBorders")
-                for b_ in borders:
-                    b_.getparent().remove(b_)
+#             # (4) Sub-tabela => célula mesclada
+#             cel_sub = tabela_principal.cell(4,0).merge(tabela_principal.cell(4,1))
+#             shading_light_blue = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
+#             cel_sub._tc.get_or_add_tcPr().append(shading_light_blue)
 
-                # Adicionar manualmente <w:tblPr>, se não existir
-                tblPr = subtab._element.tblPr
-                if tblPr is None:
-                    tblPr = OxmlElement('w:tblPr')
-                    subtab._element.insert(0, tblPr)
+#             # Remove margens internas da célula mesclada
+#             tc_pr_sub = cel_sub._tc.get_or_add_tcPr()
+#             tc_margins_sub = tc_pr_sub.xpath('./w:tcMar')
+#             if not tc_margins_sub:
+#                 tcMar = OxmlElement('w:tcMar')
+#                 tcMar.set(qn('w:top'), "0")
+#                 tcMar.set(qn('w:left'), "0")
+#                 tcMar.set(qn('w:right'), "0")
+#                 tcMar.set(qn('w:bottom'), "0")
+#                 tc_pr_sub.append(tcMar)
+#             else:
+#                 for m_ in tc_margins_sub:
+#                     m_.set(qn('w:top'), "0")
+#                     m_.set(qn('w:left'), "0")
+#                     m_.set(qn('w:right'), "0")
+#                     m_.set(qn('w:bottom'), "0")
 
-                # <w:tblCellMar> p/ zerar margens
-                tblCellMar = OxmlElement('w:tblCellMar')
-                tblCellMar.set(qn('w:top'), "0")
-                tblCellMar.set(qn('w:left'), "0")
-                tblCellMar.set(qn('w:right'), "0")
-                tblCellMar.set(qn('w:bottom'), "0")
-                tblPr.append(tblCellMar)
+#             # Se não tiver restrições, mostra texto simples
+#             if not restricoes:
+#                 cel_sub.text = "Nenhuma restrição aplicada."
+#                 for r_ in cel_sub.paragraphs[0].runs:
+#                     r_.font.name = "Arial"
+#                     r_.font.size = Pt(10)
+#             else:
+#                 # Cria sub-tabela sem bordas
+#                 subtab = documento.add_table(rows=len(restricoes)+1, cols=5)
+#                 borders = subtab._element.xpath(".//w:tblBorders")
+#                 for b_ in borders:
+#                     b_.getparent().remove(b_)
 
-                # Cabeçalhos
-                cabecalhos = ["Área (m²)", "% Depreciação", "Fator aplicado", "Tipo Restrição", "Subtotal (R$)"]
-                for cidx, hh in enumerate(cabecalhos):
-                    subtab.cell(0,cidx).text = hh
-                    for run_ in subtab.cell(0,cidx).paragraphs[0].runs:
-                        run_.font.name = "Arial"
-                        run_.font.size = Pt(9)
-                        run_.font.bold = True
-                    subtab.cell(0,cidx).paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                 # Adicionar manualmente <w:tblPr>, se não existir
+#                 tblPr = subtab._element.tblPr
+#                 if tblPr is None:
+#                     tblPr = OxmlElement('w:tblPr')
+#                     subtab._element.insert(0, tblPr)
 
-                # Linhas de dados
-                for i, restr in enumerate(restricoes, start=1):
-                    area_ = formatar_area_brasil(restr.get("area", ""))
-                    perc_ = restr.get("percentualDepreciacao", 0)
-                    fat_ = restr.get("fator", 1.0)
-                    tipo_ = restr.get("tipo", "")
-                    sub_ = restr.get("subtotal", "R$ 0,00")
+#                 # <w:tblCellMar> p/ zerar margens
+#                 tblCellMar = OxmlElement('w:tblCellMar')
+#                 tblCellMar.set(qn('w:top'), "0")
+#                 tblCellMar.set(qn('w:left'), "0")
+#                 tblCellMar.set(qn('w:right'), "0")
+#                 tblCellMar.set(qn('w:bottom'), "0")
+#                 tblPr.append(tblCellMar)
 
-                    subtab.cell(i,0).text = area_
-                    subtab.cell(i,1).text = f"{perc_:.0f}%"
-                    subtab.cell(i,2).text = f"{fat_:.2f}"
-                    subtab.cell(i,3).text = tipo_
-                    subtab.cell(i,4).text = sub_
+#                 # Cabeçalhos
+#                 cabecalhos = ["Área (m²)", "% Depreciação", "Fator aplicado", "Tipo Restrição", "Subtotal (R$)"]
+#                 for cidx, hh in enumerate(cabecalhos):
+#                     subtab.cell(0,cidx).text = hh
+#                     for run_ in subtab.cell(0,cidx).paragraphs[0].runs:
+#                         run_.font.name = "Arial"
+#                         run_.font.size = Pt(9)
+#                         run_.font.bold = True
+#                     subtab.cell(0,cidx).paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-                    for cc_ in range(5):
-                        p_run = subtab.cell(i, cc_).paragraphs[0]
-                        p_run.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                        for r_ in p_run.runs:
-                            r_.font.name = "Arial"
-                            r_.font.size = Pt(9)
+#                 # Linhas de dados
+#                 for i, restr in enumerate(restricoes, start=1):
+#                     area_ = formatar_area_brasil(restr.get("area", ""))
+#                     perc_ = restr.get("percentualDepreciacao", 0)
+#                     fat_ = restr.get("fator", 1.0)
+#                     tipo_ = restr.get("tipo", "")
+#                     sub_ = restr.get("subtotal", "R$ 0,00")
 
-                # Fundo azul e remover margens em todas as células
-                for row_ in subtab.rows:
-                    for cell_ in row_.cells:
-                        shade_cell = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
-                        cell_._tc.get_or_add_tcPr().append(shade_cell)
-                        cell_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-                        tcpr = cell_._tc.get_or_add_tcPr()
-                        tc_marg = tcpr.xpath('./w:tcMar')
-                        if not tc_marg:
-                            newMar = OxmlElement('w:tcMar')
-                            newMar.set(qn('w:top'), "0")
-                            newMar.set(qn('w:left'), "0")
-                            newMar.set(qn('w:right'), "0")
-                            newMar.set(qn('w:bottom'), "0")
-                            tcpr.append(newMar)
-                        else:
-                            for mm in tc_marg:
-                                mm.set(qn('w:top'), "0")
-                                mm.set(qn('w:left'), "0")
-                                mm.set(qn('w:right'), "0")
-                                mm.set(qn('w:bottom'), "0")
+#                     subtab.cell(i,0).text = area_
+#                     subtab.cell(i,1).text = f"{perc_:.0f}%"
+#                     subtab.cell(i,2).text = f"{fat_:.2f}"
+#                     subtab.cell(i,3).text = tipo_
+#                     subtab.cell(i,4).text = sub_
 
-                # Anexa a sub-tabela à célula
-                cel_sub._tc.clear_content()
-                cel_sub._tc.append(subtab._element)
+#                     for cc_ in range(5):
+#                         p_run = subtab.cell(i, cc_).paragraphs[0]
+#                         p_run.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                         for r_ in p_run.runs:
+#                             r_.font.name = "Arial"
+#                             r_.font.size = Pt(9)
 
-            # (5) Valor Total Indenizatório
-            tabela_principal.cell(5,0).text = "Valor Total Indenizatório:"
-            tabela_principal.cell(5,1).text = valor_total
+#                 # Fundo azul e remover margens em todas as células
+#                 for row_ in subtab.rows:
+#                     for cell_ in row_.cells:
+#                         shade_cell = etree.fromstring(r'<w:shd {} w:fill="E0ECF8" w:val="clear"/>'.format(nsdecls('w')))
+#                         cell_._tc.get_or_add_tcPr().append(shade_cell)
+#                         cell_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+#                         tcpr = cell_._tc.get_or_add_tcPr()
+#                         tc_marg = tcpr.xpath('./w:tcMar')
+#                         if not tc_marg:
+#                             newMar = OxmlElement('w:tcMar')
+#                             newMar.set(qn('w:top'), "0")
+#                             newMar.set(qn('w:left'), "0")
+#                             newMar.set(qn('w:right'), "0")
+#                             newMar.set(qn('w:bottom'), "0")
+#                             tcpr.append(newMar)
+#                         else:
+#                             for mm in tc_marg:
+#                                 mm.set(qn('w:top'), "0")
+#                                 mm.set(qn('w:left'), "0")
+#                                 mm.set(qn('w:right'), "0")
+#                                 mm.set(qn('w:bottom'), "0")
 
-            # (6) Valor por Extenso
-            cel_ext = tabela_principal.cell(6,0).merge(tabela_principal.cell(6,1))
-            cel_ext.text = valor_extenso
+#                 # Anexa a sub-tabela à célula
+#                 cel_sub._tc.clear_content()
+#                 cel_sub._tc.append(subtab._element)
 
-            # Ajustes de layout da Tabela Principal
-            for row_idx in range(7):
-                row_ = tabela_principal.rows[row_idx]
-                row_.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
-                row_.height = Pt(18)
-                for col_idx in range(2):
-                    c_ = row_.cells[col_idx]
-                    c_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-                    for pp_ in c_.paragraphs:
-                        pp_.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                        for rr_ in pp_.runs:
-                            rr_.font.name = "Arial"
-                            rr_.font.size = Pt(10)
-                            rr_.font.bold = False
+#             # (5) Valor Total Indenizatório
+#             tabela_principal.cell(5,0).text = "Valor Total Indenizatório:"
+#             tabela_principal.cell(5,1).text = valor_total
 
-            # Valor Unitário (linha 1 => col 1) e Valor Total (linha 5 => col 1) em negrito
-            for run_ in tabela_principal.rows[1].cells[1].paragraphs[0].runs:
-                run_.font.bold = True
-            for run_ in tabela_principal.rows[5].cells[1].paragraphs[0].runs:
-                run_.font.bold = True
-                run_.font.size = Pt(11)
+#             # (6) Valor por Extenso
+#             cel_ext = tabela_principal.cell(6,0).merge(tabela_principal.cell(6,1))
+#             cel_ext.text = valor_extenso
 
-            # Valor por Extenso (linha 6) => central e em negrito
-            for p_ in tabela_principal.rows[6].cells[0].paragraphs:
-                p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                for rn_ in p_.runs:
-                    rn_.font.size = Pt(10)
-                    rn_.font.bold = True
+#             # Ajustes de layout da Tabela Principal
+#             for row_idx in range(7):
+#                 row_ = tabela_principal.rows[row_idx]
+#                 row_.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
+#                 row_.height = Pt(18)
+#                 for col_idx in range(2):
+#                     c_ = row_.cells[col_idx]
+#                     c_.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+#                     for pp_ in c_.paragraphs:
+#                         pp_.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                         for rr_ in pp_.runs:
+#                             rr_.font.name = "Arial"
+#                             rr_.font.size = Pt(10)
+#                             rr_.font.bold = False
 
-            # Insere a tabela após o parágrafo do placeholder
-            paragrafo._p.addnext(tabela_principal._element)
-            break
+#             # Valor Unitário (linha 1 => col 1) e Valor Total (linha 5 => col 1) em negrito
+#             for run_ in tabela_principal.rows[1].cells[1].paragraphs[0].runs:
+#                 run_.font.bold = True
+#             for run_ in tabela_principal.rows[5].cells[1].paragraphs[0].runs:
+#                 run_.font.bold = True
+#                 run_.font.size = Pt(11)
+
+#             # Valor por Extenso (linha 6) => central e em negrito
+#             for p_ in tabela_principal.rows[6].cells[0].paragraphs:
+#                 p_.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                 for rn_ in p_.runs:
+#                     rn_.font.size = Pt(10)
+#                     rn_.font.bold = True
+
+#             # Insere a tabela após o parágrafo do placeholder
+#             paragrafo._p.addnext(tabela_principal._element)
+#             break
 
 ###############################################################################
 # DIAGNÓSTICO DE MERCADO
@@ -3052,7 +3080,7 @@ from math import radians, sin, cos, sqrt, atan2   # usado pelo haversine_km
 # --------------------------------------------------------------------------
 # Helpers internos (os dois já estavam no nosso “arsenal”)
 # --------------------------------------------------------------------------
-def _parse_coord(val: str|float|int):
+def _parse_coord(val: Union[str, float, int]):
     """
     Converte qualquer string de coordenada (-29.08°, 53,842 etc.) em float.
     Retorna None se não conseguir.
@@ -3779,40 +3807,227 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
     fig.savefig(nome_arquivo_imagem, bbox_inches='tight')
     plt.close(fig)
 
+### essa é a original do PAULO
+# def gerar_grafico_dispersao_mediana(valores_homogeneizados, nome_arquivo):
+#     """
+#     Gera um gráfico de dispersão simples (index vs. valores homogeneizados)
+#     e destaca a mediana com uma linha horizontal.
+#     """
+#     import numpy as np
+#     import matplotlib.pyplot as plt
 
-def gerar_grafico_dispersao_mediana(valores_homogeneizados, nome_arquivo):
-    """
-    Gera um gráfico de dispersão simples (index vs. valores homogeneizados)
-    e destaca a mediana com uma linha horizontal.
-    """
-    import numpy as np
+#     arr = np.array(valores_homogeneizados, dtype=float)
+#     if arr.size < 1:
+#         plt.figure()
+#         plt.text(0.5, 0.5, "Sem valores para exibir", 
+#                  ha='center', va='center', 
+#                  transform=plt.gca().transAxes, fontsize=12)
+#         plt.title("Dispersão dos Valores Homogeneizados")
+#         plt.savefig(nome_arquivo, bbox_inches='tight')
+#         plt.close()
+#         return
+
+#     indices = np.arange(1, len(arr) + 1)
+
+#     plt.figure(figsize=(8, 6))
+#     plt.scatter(indices, arr, marker='o', label="Valores Homogeneizados")
+#     mediana = np.median(arr)
+#     plt.axhline(y=mediana, color='r', linestyle='--', label=f"Mediana: {mediana:,.2f}")
+
+#     plt.xlabel("Índice da Amostra")
+#     plt.ylabel("Valor Unitário Homogeneizado (R$/m²)")
+#     plt.title("Gráfico de Dispersão dos Valores Homogeneizados")
+#     plt.legend()
+#     plt.tight_layout()
+#     plt.savefig(nome_arquivo, bbox_inches='tight')
+#     plt.close()
+
+# ACRESCIMO PARA VISUALIZR OS GRAFICOS COM CORES DIFERENTES
+
+
+##### essa funcionou razoavelmente bem
+# def gerar_grafico_dispersao_mediana(
+#     homog,
+#     caminho_saida,
+#     idx_amostras_ativas,
+#     idx_amostras_usuario_retirou,
+#     idx_amostras_chauvenet_retirou
+# ):
+#     plt.figure(figsize=(8, 6))
+
+#     # Ativos válidos (ativos - chauvenet)
+#     ativos_validos_idx = [
+#         idx for idx in idx_amostras_ativas if idx not in idx_amostras_chauvenet_retirou
+#     ]
+#     ativos_validos_valores = []
+#     for idx in ativos_validos_idx:
+#         if idx in idx_amostras_ativas:
+#             pos = idx_amostras_ativas.index(idx)
+#             if pos < len(homog):  # segurança extra
+#                 ativos_validos_valores.append(homog[pos])
+
+#     plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
+
+#     # Usuário retirou (ativos - usuario)
+#     usuario_retirou_idx_filtrados = [
+#         idx for idx in idx_amostras_usuario_retirou if idx in idx_amostras_ativas
+#     ]
+#     usuario_retirou_valores = []
+#     for idx in usuario_retirou_idx_filtrados:
+#         if idx in idx_amostras_ativas:
+#             pos = idx_amostras_ativas.index(idx)
+#             if pos < len(homog):  # segurança extra
+#                 usuario_retirou_valores.append(homog[pos])
+
+#     if usuario_retirou_idx_filtrados and usuario_retirou_valores:
+#         plt.scatter(usuario_retirou_idx_filtrados, usuario_retirou_valores, color='gray', label='Retiradas pelo Usuário')
+
+#     # Chauvenet retirou
+#     chauvenet_idx_filtrados = [
+#         idx for idx in idx_amostras_chauvenet_retirou if idx in idx_amostras_ativas
+#     ]
+#     chauvenet_valores = []
+#     for idx in chauvenet_idx_filtrados:
+#         if idx in idx_amostras_ativas:
+#             pos = idx_amostras_ativas.index(idx)
+#             if pos < len(homog):  # segurança extra
+#                 chauvenet_valores.append(homog[pos])
+
+#     if chauvenet_idx_filtrados and chauvenet_valores:
+#         plt.scatter(chauvenet_idx_filtrados, chauvenet_valores, color='red', label='Retiradas Chauvenet')
+
+#     # Mediana linha (seguro)
+#     if ativos_validos_valores:
+#         plt.axhline(np.median(ativos_validos_valores), color='green', linestyle='--',
+#                     label=f'Mediana: {np.median(ativos_validos_valores):.2f}')
+
+#     plt.xlabel('Índice da Amostra')
+#     plt.ylabel('Valor Unitário Homogeneizado (R$/m²)')
+#     plt.title('Gráfico de Dispersão das Amostras Selecionadas')
+#     plt.legend()
+#     plt.grid(True)
+#     plt.tight_layout()
+
+#     plt.savefig(caminho_saida)
+#     plt.close()
+
+
+#     import matplotlib.pyplot as plt
+# import numpy as np
+
+
+
+# def gerar_grafico_dispersao_mediana(
+#     df_filtrado,
+#     homog,
+#     caminho_saida,
+#     idx_amostras_ativas,
+#     idx_amostras_usuario_retirou,
+#     idx_amostras_chauvenet_retirou
+# ):
+#     plt.figure(figsize=(8, 6))
+
+#     # Mapeamento claro e explícito (idx_amostra: valor homog)
+#     mapa_homog = dict(zip(idx_amostras_ativas, homog))
+
+#     # Ativos válidos (ativos - chauvenet)
+#     # Ativos válidos (ativos - chauvenet) - versão segura e robusta definitiva
+#     ativos_validos_idx = []
+#     ativos_validos_valores = []
+
+#     for idx in idx_amostras_ativas:
+#         if idx not in idx_amostras_chauvenet_retirou and idx in mapa_homog:
+#             ativos_validos_idx.append(idx)
+#             ativos_validos_valores.append(mapa_homog[idx])
+
+#     plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
+
+#     # Retiradas pelo usuário (em cinza)
+#     usuario_retirou_idx_filtrados = [
+#         idx for idx in idx_amostras_usuario_retirou if idx in mapa_homog
+#     ]
+#     usuario_retirou_valores = [mapa_homog[idx] for idx in usuario_retirou_idx_filtrados]
+
+#     if usuario_retirou_idx_filtrados:
+#         plt.scatter(usuario_retirou_idx_filtrados, usuario_retirou_valores, color='gray', label='Retiradas pelo Usuário')
+
+#     # Retiradas por Chauvenet (em vermelho)
+#     chauvenet_idx_filtrados = [
+#         idx for idx in idx_amostras_chauvenet_retirou if idx in mapa_homog
+#     ]
+#     chauvenet_valores = [mapa_homog[idx] for idx in chauvenet_idx_filtrados]
+
+#     if chauvenet_idx_filtrados:
+#         plt.scatter(chauvenet_idx_filtrados, chauvenet_valores, color='red', label='Retiradas Chauvenet')
+
+#     # Linha mediana (seguros)
+#     if ativos_validos_valores:
+#         plt.axhline(np.median(ativos_validos_valores), color='green', linestyle='--',
+#                     label=f'Mediana: {np.median(ativos_validos_valores):.2f}')
+
+#     plt.xlabel('Índice da Amostra')
+#     plt.ylabel('Valor Unitário Homogeneizado (R$/m²)')
+#     plt.title('Gráfico de Dispersão das Amostras Selecionadas')
+#     plt.legend()
+#     plt.grid(True)
+#     plt.tight_layout()
+
+#     plt.savefig(caminho_saida)
+#     plt.close()
+
+def gerar_grafico_dispersao_mediana(
+    df_filtrado,
+    homog,
+    caminho_saida,
+    ativos_frontend,
+    amostras_usuario_retirou,
+    amostras_chauvenet_retirou  # ← adicione explicitamente este argumento faltante
+):
     import matplotlib.pyplot as plt
-
-    arr = np.array(valores_homogeneizados, dtype=float)
-    if arr.size < 1:
-        plt.figure()
-        plt.text(0.5, 0.5, "Sem valores para exibir", 
-                 ha='center', va='center', 
-                 transform=plt.gca().transAxes, fontsize=12)
-        plt.title("Dispersão dos Valores Homogeneizados")
-        plt.savefig(nome_arquivo, bbox_inches='tight')
-        plt.close()
-        return
-
-    indices = np.arange(1, len(arr) + 1)
+    import numpy as np
 
     plt.figure(figsize=(8, 6))
-    plt.scatter(indices, arr, marker='o', label="Valores Homogeneizados")
-    mediana = np.median(arr)
-    plt.axhline(y=mediana, color='r', linestyle='--', label=f"Mediana: {mediana:,.2f}")
 
-    plt.xlabel("Índice da Amostra")
-    plt.ylabel("Valor Unitário Homogeneizado (R$/m²)")
-    plt.title("Gráfico de Dispersão dos Valores Homogeneizados")
+    mapa_homog = dict(zip(df_filtrado["idx"], homog))
+
+    ativos_validos_idx = [
+        idx for idx in ativos_frontend if idx not in amostras_chauvenet_retirou
+    ]
+
+    ativos_validos_valores = [mapa_homog[idx] for idx in ativos_validos_idx if idx in mapa_homog]
+
+    plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
+
+    # Amostras excluídas explicitamente pelo usuário
+    usuario_retirou_valores = [mapa_homog[idx] for idx in amostras_usuario_retirou if idx in mapa_homog]
+    if amostras_usuario_retirou and usuario_retirou_valores:
+        plt.scatter(amostras_usuario_retirou, usuario_retirou_valores, color='gray', label='Retiradas pelo Usuário')
+
+    # Amostras excluídas por Chauvenet
+    chauvenet_valores = [mapa_homog[idx] for idx in amostras_chauvenet_retirou if idx in mapa_homog]
+    if amostras_chauvenet_retirou and chauvenet_valores:
+        plt.scatter(amostras_chauvenet_retirou, chauvenet_valores, color='red', label='Retiradas Chauvenet')
+
+    # Linha da mediana
+    if ativos_validos_valores:
+        plt.axhline(np.median(ativos_validos_valores), color='green', linestyle='--',
+                    label=f'Mediana: {np.median(ativos_validos_valores):.2f}')
+
+    plt.xlabel('Índice da Amostra')
+    plt.ylabel('Valor Unitário Homogeneizado (R$/m²)')
+    plt.title('Gráfico de Dispersão das Amostras Selecionadas')
     plt.legend()
+    plt.grid(True)
     plt.tight_layout()
-    plt.savefig(nome_arquivo, bbox_inches='tight')
+
+    plt.savefig(caminho_saida)
     plt.close()
+
+
+
+
+
+
     
 #########################################################################################################################
 # TABELA DE AMOSTRAS HOMOGENEIZADAS
@@ -4118,12 +4333,12 @@ def inserir_tabela_amostras_originais(documento, dataframe):
 
     # Colunas correspondentes do DataFrame (caso precise filtrar ou renomear)
     colunas_df = [
-        "AM",
+        "idx",
         "VALOR TOTAL",
         "AREA TOTAL",
-        "VALOR UNITARIO",
-        "CIDADE",
-        "FONTE"
+        "valor_unitario",
+        "cidade",
+        "fonte"
     ]
 
     # Localiza o parágrafo onde o placeholder [amostras original] está
@@ -4189,31 +4404,31 @@ def inserir_tabela_amostras_originais(documento, dataframe):
 
         # VALOR TOTAL (exemplo de formatação de moeda)
         try:
-            vt_str = formatar_moeda_brasil(float(row["VALOR TOTAL"]))
+            vt_str = f"R$ {row['VALOR TOTAL']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         except:
             vt_str = str(row.get("VALOR TOTAL", ""))
         valores_linha.append(vt_str)
 
         # ÁREA TOTAL
         try:
-            area_str = formatar_numero_brasileiro(float(row["AREA TOTAL"]))
+            area_str = f"{row['AREA TOTAL']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         except:
             area_str = str(row.get("AREA TOTAL", ""))
         valores_linha.append(area_str)
 
         # VALOR UNITÁRIO
         try:
-            vu_str = formatar_moeda_brasil(float(row["VALOR UNITARIO"]))
+           vu_str = f"R$ {row['valor_unitario']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         except:
             vu_str = str(row.get("VALOR UNITARIO", ""))
         valores_linha.append(vu_str)
 
         # CIDADE
-        cidade_str = str(row.get("CIDADE", ""))
+        cidade_str = str(row.get("cidade", ""))
         valores_linha.append(cidade_str)
 
         # FONTE
-        fonte_str = str(row.get("FONTE", ""))
+        fonte_str = str(row.get("fonte", ""))
         valores_linha.append(fonte_str)
 
         # Preenche as células
@@ -4714,7 +4929,7 @@ def inserir_logo_no_placeholder(documento, placeholder, caminho_logo):
 # TABELA DE RESUMO DE VALORES ([RESUMO VALORES])
 # AGORA MODIFICADA PARA EXIBIR MÚLTIPLAS RESTRIÇÕES
 ###############################################################################
-def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo):
+def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo, area_utilizada):
     """
     Cria a tabela de resumo de valores, compatível com versões antigas do python-docx,
     sem usar get_or_add_tblPr(), e forçando que a primeira letra do valor por extenso 
@@ -4853,9 +5068,11 @@ def inserir_tabela_resumo_de_valores(documento, marcador, informacoes_de_resumo)
             tabela_principal.cell(1,0).text = "Valor Unitário Calculado:"
             tabela_principal.cell(1,1).text = valor_unit
 
-            # (2) Área Total de Interesse
-            tabela_principal.cell(2,0).text = "Área Total de Interesse:"
-            tabela_principal.cell(2,1).text = area_total
+           # (2) Área Total de Interesse
+            tabela_principal.cell(2, 0).text = "Área Total de Interesse:"
+            tabela_principal.cell(2, 1).text = f"{area_utilizada:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 
             # (3) Situação das Restrições
             tabela_principal.cell(3,0).text = "Situação das Restrições:"
@@ -5179,14 +5396,20 @@ def gerar_relatorio_avaliacao_com_template(
     caminho_template="template.docx",
     nome_arquivo_word="relatorio.docx"
 ):
-
+    # DEFINIÇÃO DEFINITIVA DA ÁREA UTILIZADA (corrigido!)
+    area_utilizada = area_parcial_afetada if finalidade_do_laudo in ["desapropriacao", "servidao"] else float(dados_avaliando.get("AREA TOTAL", 0))
+    logger.info(f"✅ Área utilizada definitiva definida imediatamente após parâmetros: {area_utilizada}")
     # Insira logs aqui para depuração detalhada:
     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
     logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
-    logger.info(f"Área parcial afetada recebida: {area_parcial_afetada}")
+    logger.info(f"Área Parcial Afetada recebida: {area_parcial_afetada}")
+
     # ──────────────────────────────────────────────────────
     # Alias para compatibilizar o novo nome:
-    area_disponivel = area_parcial_afetada
+    # logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {area_parcial_afetada}")
+    # area_utilizada = area_parcial_afetada
+    # logger.info(f"🟢 Área utilizada atribuída no main.py: {area_utilizada}")
+
     # ──────────────────────────────────────────────────────
     """
     Gera o relatório Word completo, exibindo todos os itens e incluindo
@@ -5216,8 +5439,9 @@ def gerar_relatorio_avaliacao_com_template(
     # ------------------------------------------------------------------
     # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO
     # ------------------------------------------------------------------
-    pasta_saida = f"/opt/render/project/src/static/arquivos/avaliacao_{uuid_atual}/"
+    pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid_atual}")
     os.makedirs(pasta_saida, exist_ok=True)
+
 
     caminho_mapa = os.path.join(pasta_saida, "mapa_amostras.png")
 
@@ -5240,6 +5464,9 @@ def gerar_relatorio_avaliacao_com_template(
         )
     
     # Inserir a tabela de amostras originais
+    logger.info("🔎 DataFrame que será enviado para inserir_tabela_amostras_originais:")
+    logger.info(dataframe_amostras_inicial.head())
+    logger.info(f"🔎 Colunas disponíveis: {list(dataframe_amostras_inicial.columns)}")
     inserir_tabela_amostras_originais(documento, dataframe_amostras_inicial)
 
     # Preencher alguns placeholders básicos
@@ -5480,11 +5707,12 @@ def gerar_relatorio_avaliacao_com_template(
     # DEFINIÇÃO CRÍTICA: Qual área usar para cálculos
     # (desapropriação/servidão → área digitada // outros → área da planilha)
     if finalidade_do_laudo in ["desapropriacao", "servidao"]:
-        area_disponivel = area_parcial_afetada  # Área digitada pelo usuário no formulário 
-        logger.info(f"DEBUG: Usando área do usuário: {area_disponivel} m²")  # Para verificação
+        area_utilizada = area_parcial_afetada
+        logger.info(f"DEBUG: Usando área parcial afetada (usuário): {area_utilizada} m²")
     else:
-        area_disponivel = area_total_lida  # Área da planilha
-        logger.info(f"DEBUG: Usando área da planilha: {area_disponivel} m²")  # Para verificação
+        area_utilizada = area_total_lida
+        logger.info(f"DEBUG: Usando área total da planilha: {area_utilizada} m²")
+
   
 
     restricoes_usuario = fatores_do_usuario.get("restricoes", [])
@@ -5503,7 +5731,7 @@ def gerar_relatorio_avaliacao_com_template(
             lista_subtotais.append(subtotal)
             valor_acumulado += subtotal
             soma_area_restricoes += a_
-        sobra = area_disponivel - soma_area_restricoes
+        sobra = area_utilizada - soma_area_restricoes
         if sobra > 0:
             valor_acumulado += (valor_unit * sobra)
         return valor_acumulado, lista_subtotais, sobra
@@ -5555,7 +5783,7 @@ def gerar_relatorio_avaliacao_com_template(
             "subtotal": formatar_moeda_brasil(subt)
         })
         soma_atual += a_
-    sobra_of = area_disponivel - soma_atual
+    sobra_of = area_utilizada - soma_atual
     if sobra_of > 0:
         valor_sobra = valor_mediano * sobra_of
         restricoes_detalhadas_final.append({
@@ -5569,22 +5797,28 @@ def gerar_relatorio_avaliacao_com_template(
     if len(restricoes_usuario) == 0:
         texto_rest = "Não aplicada"
     elif len(restricoes_usuario) == 1:
-        if abs(restricoes_usuario[0]["area"] - area_disponivel) < 1e-3:
+        if abs(restricoes_usuario[0]["area"] - area_utilizada) < 1e-3:
             texto_rest = "Aplicada a toda a área"
         else:
             texto_rest = "Aplicada parcialmente"
     else:
         texto_rest = "Múltiplas restrições aplicadas"
 
+    if finalidade_do_laudo in ["desapropriacao", "servidao"]:
+        area_final = area_parcial_afetada
+    else:
+        area_final = float(dados_avaliando.get("AREA TOTAL", 0))
+
     info_resumo = {
         "valor_unitario": f"{formatar_moeda_brasil(valor_mediano)}/m²",
-        "area_total_considerada": f"{formatar_numero_brasileiro(area_disponivel)} m²",
+        "area_total_considerada": f"{formatar_numero_brasileiro(area_final)} m²",
         "texto_descritivo_restricoes": texto_rest,
         "restricoes": restricoes_detalhadas_final,
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
         "valor_por_extenso": ""
     }
-    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo)
+
+    inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo, area_utilizada)
 
     # Gráficos de aderência e dispersão
     substituir_placeholder_por_imagem(documento, "[graficoAderencia2]", caminho_imagem_aderencia, largura=Inches(5))
@@ -5828,7 +6062,8 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
     logger.info(f"Valores nulos em 'AREA TOTAL': {dataframe_amostras['AREA TOTAL'].isna().sum()}")
     logger.info(f"Valores nulos em 'DISTANCIA CENTRO': {dataframe_amostras['DISTANCIA CENTRO'].isna().sum()}")
 
-    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras.head())
+    logger.info(f"Antes da exclusão, dataframe_amostras:\n{dataframe_amostras.head()}")
+
 
     mask_excluir = (
         (dataframe_amostras["DISTANCIA CENTRO"] > raio_limite_km) |
@@ -5837,15 +6072,15 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         (dataframe_amostras["AREA TOTAL"].isna()) |
         (dataframe_amostras["AREA TOTAL"] == 0)
     )
-    logger.info("Máscara de exclusão:\n", mask_excluir.head())
-    logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir].head())
+    logger.info(f"Máscara de exclusão:\n{ mask_excluir.head()}")
+    logger.info(f"Depois da exclusão, dataframe_amostras:\n{ dataframe_amostras.loc[~mask_excluir].head() }")
     dataframe_amostras = dataframe_amostras.loc[~mask_excluir].reset_index(drop=True)
     logger.info(f"✅ Linhas após o filtro crítico: {len(dataframe_amostras)}")
     dataframe_amostras.drop(columns=["LAT_PARS", "LON_PARS"], inplace=True)
 
-    logger.info("Antes da exclusão, dataframe_amostras:\n", dataframe_amostras)
-    logger.info("Mascara de exclusão:\n", mask_excluir)
-    logger.info("Depois da exclusão, dataframe_amostras:\n", dataframe_amostras.loc[~mask_excluir])
+    logger.info(f"Antes da exclusão, dataframe_amostras:\n{ dataframe_amostras }")
+    logger.info(f"Mascara de exclusão:\n{ mask_excluir }")
+    logger.info(f"Depois da exclusão, dataframe_amostras:\n{ dataframe_amostras.loc[~mask_excluir] }")
 
     return dataframe_amostras, dados_avaliando
 
@@ -5862,7 +6097,8 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     import math
 
     # Área do imóvel avaliado
-    area_do_avaliando = float(dados_avaliando.get("AREA TOTAL", 0))
+    area_do_avaliando = float(dados_avaliando.get("AREA_PARCIAL_AFETADA", dados_avaliando.get("AREA TOTAL", 0)))
+
 
     # Fatores do imóvel avaliado
     f_avaliado_aprov = fator_aproveitamento(dados_avaliando.get("APROVEITAMENTO", "URBANO"))

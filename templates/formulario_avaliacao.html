@@ -347,7 +347,7 @@
         </label>
         <input type="text"
                id="areaInput"
-               name="area_parcial"
+               name="area_parcial_afetada"
                class="input-change"
                placeholder="Ex: 29.567,89">
 
@@ -628,9 +628,12 @@
         
         <br><br>
         <div class="center-btn">
-          <button type="submit"
-                  class="btn-small btn-blue"
-                  style="font-size:16px;padding:14px 36px;">Gerar Laudo</button>
+        <button type="submit"
+                class="btn-small btn-blue"
+                name="acao"
+                value="avaliar"
+                formaction="{{ url_for('gerar_avaliacao') }}"
+                style="font-size:16px;padding:14px 36px;">Avaliar Dados de Entrada</button>
         </div>
         
         
@@ -841,7 +844,7 @@
         const finalidadeSelect = document.getElementById("finalidadeSelect");
         const valor        = (finalidadeSelect.value || "").trim().toLowerCase();
         const areaLabel    = document.getElementById("areaLabel");
-        const areaInput    = document.querySelector('input[name="area_parcial"]');
+        const areaInput    = document.querySelector('input[name="area_parcial_afetada"]');
     
         if (valor.includes("desapropria")) {
             /* —— DESAPROPRIAÇÃO —— */

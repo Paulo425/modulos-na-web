@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% block conteudo %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div style="max-width: 800px; margin: 20px auto;">
+      {% for category, message in messages %}
+        <div style="
+            background-color: {% if category == 'success' %}#ccffcc
+                             {% elif category == 'warning' %}#fff3cd
+                             {% elif category == 'danger' %}#f8d7da
+                             {% else %}#e2e3e5{% endif %};
+            color: #000;
+            border: 1px solid #ccc;
+            border-left: 5px solid {% if category == 'warning' %}#856404
+                                      {% elif category == 'danger' %}#721c24
+                                      {% elif category == 'success' %}#155724
+                                      {% else %}#6c757d{% endif %};
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 16px;">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<h2 style="margin-top: 30px; text-align: center;">Avaliação Interativa das Amostras</h2>
+
+<div style="max-width: 900px; margin: auto;">
+  <form method="post">
+    <table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse: collapse;">
+      <thead>
+        <tr style="background-color: #f2f2f2;">
+          <th>Incluir?</th>
+          <th>Identificador</th>
+          <th>Valor Total</th>
+          <th>Área</th>
+          <th>Valor Unitário (R$/m²)</th>
+          <th>Resíduo Rel. (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in amostras %}
+        <tr>
+          <td>
+          <input type="checkbox" class="amostra-checkbox" data-idx="{{ a.idx }}" name="ativo_{{ a.idx }}" checked>
+          </td>
+
+          <td>{{ a.idx }}</td>
+          <td>R$ {{ '%.2f'|format(a.valor_total | float) }}</td>
+          <td>{{ '%.2f'|format(a.area | float) }} m²</td>
+          <td>
+            {% if a.area > 0 %}
+              R$ {{ '%.2f'|format((a.valor_total | float) / (a.area | float)) }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if a.area > 0 and media > 0 %}
+              <span style="color: {% if ((a.valor_total / a.area - media) / media)*100 > 20 %}red{% else %}black{% endif %}">
+                {{ '%.1f'|format((((a.valor_total | float) / (a.area | float) - media) / media) * 100) }}%
+              </span>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <p style="margin-top: 20px; font-weight: bold;">
+      Valor Unitário Médio (amostras ativas): <span style="color: darkblue;">R$ {{ media }}</span>
+    </p>
+    <p style="font-weight: bold; color: #444;">
+      Amplitude do Intervalo de Confiança 80%: <span style="color: darkred;">{{ amplitude_ic80 }}%</span>
+    </p>
+
+
+    <div style="margin-top: 25px; padding: 15px; background-color: #eef7ff; border-radius: 6px; border: 1px solid #bdd7ee;">
+      <h3 style="color: #004085; margin-bottom: 10px;">Resultados Iterativos em Tempo Real</h3>
+
+      <p style="font-weight: bold;">Valor Unitário Mínimo: <span id="valor-minimo">-</span></p>
+      <p style="font-weight: bold;">Valor Unitário Médio: <span id="valor-medio">-</span></p>
+      <p style="font-weight: bold;">Valor Unitário Máximo: <span id="valor-maximo">-</span></p>
+
+      <p style="font-weight: bold;">Amostras iniciais totais: <span id="total-amostras-iniciais">-</span></p>
+
+      <p style="font-weight: bold; color: darkred;">
+        Retiradas pelo usuário: <span id="quantidade-amostras-usuario">-</span>
+      </p>
+
+      <p style="font-weight: bold; color: darkorange;">
+        Retiradas por Chauvenet: <span id="quantidade-amostras-chauvenet">-</span>
+      </p>
+
+      <p style="font-weight: bold; color: darkgreen;">
+        Amostras restantes (pós-filtros): <span id="quantidade-amostras-restantes">-</span>
+      </p>
+    </div>
+
+
+
+    <hr style="margin: 40px 0;">
+    <h4 style="text-align: center; color: #333;">Gráficos Iterativos das Amostras Selecionadas</h4>
+
+    <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h5>Gráfico de Dispersão</h5>
+        <img id="grafico-dispersao-iterativo" 
+            src="{{ url_for('static', filename='arquivos/avaliacao_' + uuid + '/grafico_dispersao.png') }}"
+            alt="Gráfico de Dispersão"
+            style="max-width: 450px; width: 100%; border: 1px solid #ccc; padding: 10px;">
+      </div>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h5>Gráfico de Aderência</h5>
+        <img id="grafico-aderencia-iterativo" 
+            src="{{ url_for('static', filename='arquivos/avaliacao_' + uuid + '/grafico_aderencia.png') }}"
+            alt="Gráfico de Aderência"
+            style="max-width: 450px; width: 100%; border: 1px solid #ccc; padding: 10px;">
+      </div>
+    </div>
+
+
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="{{ url_for('gerar_avaliacao') }}" class="btn btn-secondary">← Voltar</a>
+
+      <button type="button" id="btn-novo-cenario" class="btn btn-primary">
+        Novo Cenário ↺
+      </button>
+
+      <button type="submit" name="acao" value="gerar_laudo" formaction="{{ url_for('gerar_laudo_final', uuid=uuid) }}" class="btn btn-success">
+        Gerar Laudo Final
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+function atualizarValoresIterativos(uuid_execucao) {
+    const ativos = Array.from(document.querySelectorAll(".amostra-checkbox:checked"))
+                        .map(el => parseInt(el.dataset.idx));
+    console.log("Amostras ativas enviadas ao backend:", ativos); // Adicione este log para debug
+    fetch(`/calcular_valores_iterativos/${uuid_execucao}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ativos: ativos})
+    })
+    .then(response => response.json())
+
+    .then(data => {
+        if (data.erro) {
+            alert(data.erro);
+        } else {
+            document.getElementById("valor-minimo").innerText = `R$ ${data.valor_minimo.toFixed(2)}`;
+            document.getElementById("valor-medio").innerText = `R$ ${data.valor_medio.toFixed(2)}`;
+            document.getElementById("valor-maximo").innerText = `R$ ${data.valor_maximo.toFixed(2)}`;
+
+            document.getElementById("total-amostras-iniciais").innerText = data.quantidade_amostras_iniciais;
+
+            document.getElementById("quantidade-amostras-usuario").innerText =
+              `${data.quantidade_amostras_usuario_retirou} [${data.amostras_usuario_retirou.join(", ")}]`;
+
+            document.getElementById("quantidade-amostras-chauvenet").innerText =
+              `${data.quantidade_amostras_chauvenet_retirou} [${data.amostras_chauvenet_retirou.join(", ")}]`;
+
+            document.getElementById("quantidade-amostras-restantes").innerText =
+              data.quantidade_amostras_restantes;
+
+            document.getElementById("grafico-dispersao-iterativo").src = data.grafico_dispersao_url + "?t=" + new Date().getTime();
+            document.getElementById("grafico-aderencia-iterativo").src = data.grafico_aderencia_url + "?t=" + new Date().getTime();
+        }
+    })
+    .catch(error => console.error("Erro ao atualizar valores iterativos:", error));
+
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const uuid_execucao = "{{ uuid }}";
+    atualizarValoresIterativos(uuid_execucao);
+
+    document.querySelectorAll(".amostra-checkbox").forEach(el => {
+        el.addEventListener("change", () => atualizarValoresIterativos(uuid_execucao));
+    });
+});
+</script>
+
+<script>
+document.getElementById("btn-novo-cenario").addEventListener("click", function() {
+  // Ao clicar, reseta todas as checkboxes para o estado inicial (checked)
+  document.querySelectorAll(".amostra-checkbox").forEach(el => {
+    el.checked = true;
+  });
+
+  // Após resetar, atualiza novamente os valores iterativos
+  atualizarValoresIterativos("{{ uuid }}");
+});
+</script>
+
+
+
+{% endblock %}

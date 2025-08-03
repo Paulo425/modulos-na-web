@@ -1,77 +1,101 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
+from flask import (
+    Flask, render_template, request, redirect, url_for, session,
+    send_from_directory, send_file, flash, jsonify
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-from subprocess import Popen, DEVNULL, STDOUT
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, DEVNULL, STDOUT
 import os
 import json
-import subprocess
 import tempfile
 from pathlib import Path
-from subprocess import Popen, PIPE
 import shutil
-import os
-from werkzeug.security import generate_password_hash, check_password_hash
 import traceback
-import sys 
-import fitz  # PyMuPDF
-
-
-
-from usuarios_mysql import (
-    salvar_usuario_mysql,
-    buscar_usuario_mysql,
-    aprovar_usuario_mysql,
-    excluir_usuario_mysql,
-    listar_pendentes_mysql,
-    listar_usuarios_mysql,
-    atualizar_senha_mysql
-)
-
-import logging
 import sys
-import uuid
-import logging, traceback
-from datetime import datetime
+import fitz  # PyMuPDF
+import zipfile
 from pdf2image import convert_from_bytes
 import io
 from PIL import Image, UnidentifiedImageError
-           
+import uuid
+import logging
+import re
+import pandas as pd  # ← inclusão imediata dessa linha resolve definitivamente
+import sys
+import traceback
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s: %(message)s',
-    stream=sys.stdout
-)
+# 🔧 Configuração do logger DEFINITIVA (completa e segura)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+log_path = os.path.join(BASE_DIR, 'flask_app.log')
+
+logger = logging.getLogger("app_logger")
+logger.setLevel(logging.DEBUG)  # 👈 ALTERE PARA DEBUG imediatamente agora!
+
+# Limpar handlers antigos (imprescindível agora)
+if logger.hasHandlers():
+    logger.handlers.clear()
+
+# Handler arquivo
+file_handler = logging.FileHandler(log_path, encoding='utf-8')
+file_handler.setLevel(logging.DEBUG)
+
+# Handler console
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.DEBUG)
+
+# Formatter robusto e completo (inclui timestamp e traceback)
+formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+# Confirmar imediatamente inicialização correta no log
+logger.info("✅ Logger Flask configurado DEFINITIVAMENTE (nível DEBUG).")
+
+
+
+# 📁 Diretórios base e públicos
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
-os.makedirs(CAMINHO_PUBLICO, exist_ok=True)  # ✅ Cria pasta em tempo de execução
-
-
-app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'),
-                       static_folder=os.path.join(BASE_DIR, 'static'))
-
-app.secret_key = 'chave_super_secreta'
-app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
-
-# Diretórios do projeto
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 log_dir = os.path.join(BASE_DIR, "static", "logs")
 arquivos_dir = os.path.join(BASE_DIR, "static", "arquivos")
+
+os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 os.makedirs(arquivos_dir, exist_ok=True)
 
-# @app.context_processor
-# def inject_pendentes_count():
-#     if session.get('usuario') == 'admin':
-#         try:
-#             return dict(pendentes_count=len(listar_pendentes_mysql()))
-#         except:
-#             return dict(pendentes_count=0)
-#     return dict(pendentes_count=0)
-import uuid
+# 🚀 Inicialização do app Flask
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'static')
+)
+app.secret_key = 'chave_super_secreta'
+app.debug = True 
+app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+
+# 🔄 Imports do módulo de usuários
+from usuarios_mysql import (
+    salvar_usuario_mysql, buscar_usuario_mysql, aprovar_usuario_mysql,
+    excluir_usuario_mysql, listar_pendentes_mysql, listar_usuarios_mysql,
+    atualizar_senha_mysql
+)
+
+
+def _parse_coord(coord):
+    import re
+    try:
+        if isinstance(coord, str):
+            # Remove tudo exceto dígitos, vírgula, ponto, e sinal de negativo
+            coord = re.sub(r"[^\d,.\-]", "", coord).replace(",", ".").strip()
+        return float(coord)
+    except:
+        return None
+
 
 def salvar_com_nome_unico(arquivo, destino_base):
     """
@@ -366,9 +390,9 @@ def listar_arquivos():
     arquivos = os.listdir(arquivos_dir)
     return render_template("listar_arquivos.html", arquivos=arquivos)
 
-@app.route("/download/<nome_arquivo>")
-def download_arquivo(nome_arquivo):
-    return send_from_directory(arquivos_dir, nome_arquivo, as_attachment=True)
+# @app.route("/download/<nome_arquivo>")
+# def download_arquivo(nome_arquivo):
+#     return send_from_directory(arquivos_dir, nome_arquivo, as_attachment=True)
 
 @app.route('/memorial_azimute_az', methods=['GET', 'POST'])
 def gerar_memorial_azimute_az():
@@ -774,271 +798,333 @@ from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 
 @app.route("/avaliacoes", methods=["GET", "POST"])
 def gerar_avaliacao():
-
-
-    # Defina o log_path como você fez:
-    LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
-    os.makedirs(LOG_DIR, exist_ok=True)
-    log_path = os.path.join(LOG_DIR, f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-    log_path_relativo = f'logs/{os.path.basename(log_path)}'
-
-    # Configuração avançada de logging (arquivo + console)
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    # Remove handlers existentes (evita duplicações)
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    # Handler para arquivo
-    file_handler = logging.FileHandler(log_path, encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
-
-    # Handler para console (StreamHandler)
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.DEBUG)
-
-    # Formatação comum aos dois handlers
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-
-    # Adiciona handlers ao logger
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
-    log_path_relativo = f'logs/{os.path.basename(log_path)}'
-    logger.info(f"✅ Log criado em: {log_path_relativo}")
     
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-
-    resultado = erro_execucao = zip_download = log_relativo = None
-    
-    if request.method == "POST":
-        try:
-            from werkzeug.utils import secure_filename
-            import uuid, zipfile
-
-            # 1. Criação de diretório temporário para essa execução
-            id_execucao = str(uuid.uuid4())[:8]
-            pasta_execucao = f'avaliacao_{id_execucao}'
-            pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
-            os.makedirs(pasta_temp, exist_ok=True)
-                    
-                      
-            # 2. Salvar arquivos recebidos
-            caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
-            request.files["planilha_excel"].save(caminho_planilha)
-            logger.info(f"✅ Planilha salva: {caminho_planilha} - {'existe' if os.path.exists(caminho_planilha) else 'NÃO existe'}")
-
-             
-
-            
-
-            def salvar_multiplos(nome_form, prefixo):
-                arquivos = request.files.getlist(nome_form)
-                todos_grupos = []
-
-                for i, arq in enumerate(arquivos):
-                    if arq and arq.filename:
-                        extensao = arq.filename.rsplit('.', 1)[-1].lower()
-                        grupo_imagens = []
-
-                        dados_arquivo = arq.read()
-
-                        if extensao == "pdf":
-                            nome_pdf_temporario = os.path.join(pasta_temp, f"{prefixo}_{i}.pdf")
-                            with open(nome_pdf_temporario, "wb") as f:
-                                f.write(dados_arquivo)
-
-                            pdf = fitz.open(nome_pdf_temporario)
-                            for p in range(pdf.page_count):
-                                pix = pdf.load_page(p).get_pixmap(dpi=200)
-                                nome_img = f"{prefixo}_{i}_{p}.png"
-                                caminho_img = os.path.join(pasta_temp, nome_img)
-                                pix.save(caminho_img)
-                                grupo_imagens.append(caminho_img)
-                                logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")
-                            pdf.close()
-                        else:
-                            try:
-                                imagem = Image.open(io.BytesIO(dados_arquivo))
-                                imagem.thumbnail((1024, 1024))
-                                nome_img = secure_filename(f"{prefixo}_{i}.png")
-                                caminho_img = os.path.join(pasta_temp, nome_img)
-                                imagem.save(caminho_img, optimize=True, quality=70)
-                                grupo_imagens.append(caminho_img)
-                                logger.info(f"✅ Imagem salva: {caminho_img}")
-                            except UnidentifiedImageError:
-                                logger.error(f"❌ Arquivo inválido: {arq.filename}")
-                                continue
-
-                        if grupo_imagens:
-                            todos_grupos.append(grupo_imagens)
-
-                return todos_grupos
+    #logger = logging.getlogger(__name__)  # ← ajuste definitivo aqui!
+    logger.debug("🚀 Iniciando rota gerar_avaliacao()")
 
 
+    try:
+        logger.debug("Iniciando rota gerar_avaliacao()")
 
+        if 'usuario' not in session:
+            return redirect(url_for('login'))
 
-            fotos_imovel = salvar_multiplos("fotos_imovel", "foto_imovel")
-            fotos_adicionais = salvar_multiplos("fotos_imovel_adicionais", "doc_adicional")
-            fotos_proprietario = salvar_multiplos("doc_proprietario", "doc_proprietario")
-            fotos_planta = salvar_multiplos("doc_planta", "planta")
+        resultado = erro_execucao = zip_download = log_relativo = None
 
-            caminho_logo = ""
-            logo = request.files.get("arquivo_logo")
-            if logo and logo.filename:
-                caminho_logo = os.path.join(pasta_temp, "logo.png")
-                logo.save(caminho_logo)
-                logger.info(f"✅ Logo salvo: {caminho_logo} - {'existe' if os.path.exists(caminho_logo) else 'NÃO existe'}")
-            # 3. Inputs simples
-            f = request.form
-            def chk(nome): return f.get(nome, "").lower() == "sim"
+        if request.method == "POST":
+            logger.info("🔧 Início da execução do bloco POST em /avaliacoes")
 
-            restricoes = []
-            i = 1
-            while f.get(f"tipo_restricao_{i}"):
-                area = float(f.get(f"area_restricao_{i}", "0").replace(",", ".") or "0")
-                perc = float(f.get(f"depreciacao_restricao_{i}", "0").replace(",", ".") or "0")
-                restricoes.append({
-                    "tipo": f.get(f"tipo_restricao_{i}"),
-                    "area": area,
-                    "percentualDepreciacao": perc,
-                    "fator": (100.0 - perc) / 100.0
-                })
-                i += 1
-            cidade = f.get("cidade", "").strip()
+            # Indispensável! Identifica o botão clicado pelo usuário
+            acao = request.form.get("acao", "").lower()
+            logger.debug(f"Ação recebida: {acao}")
 
-            fatores_usuario = {
-                "nomeSolicitante": f.get("nome_solicitante"),
-                "avaliadorNome": f.get("nome_avaliador"),
-                "avaliadorRegistro": f.get("registro_avaliador"),
-                "tipoImovel": f.get("tipo_imovel_escolhido"),
-                "nomeProprietario": f.get("nome_proprietario"),
-                "telefoneProprietario": f.get("telefone_proprietario") if chk("incluir_tel") else "Não Informado",
-                "emailProprietario": f.get("email_proprietario") if chk("incluir_mail") else "Não Informado",
-                "documentacaoImovel": f"Matrícula n° {f.get('num_doc')}" if f.get("num_doc") else "Documentação não informada",
-                "nomeCartorio": f.get("nome_cartorio"),
-                "nomeComarca": f.get("nome_comarca"),
-                "enderecoCompleto": f.get("endereco_imovel"),
-                "finalidade_descricao": f.get("finalidade_descricao") or f.get("finalidade_lido", ""),
-                "area": chk("usar_fator_area"),
-                "oferta": chk("usar_fator_oferta"),
-                "aproveitamento": chk("usar_fator_aproveitamento"),
-                "localizacao_mesma_regiao": chk("localizacao_mesma_regiao"),
-                "topografia": chk("usar_fator_topografia"),
-                "pedologia": chk("usar_fator_pedologia"),
-                "pavimentacao": chk("usar_fator_pavimentacao"),
-                "esquina": chk("usar_fator_esquina"),
-                "acessibilidade": chk("usar_fator_acessibilidade"),
-                "estrutura_escolha": f.get("estrutura_escolha", "").upper(),
-                "conduta_escolha": f.get("conduta_escolha", "").upper(),
-                "desempenho_escolha": f.get("desempenho_escolha", "").upper(),
-                "caminhoLogo": caminho_logo,
-                "restricoes": restricoes,
-                "cidade": f.get("cidade", "").strip()
+            # Indispensável! Verifica o envio da planilha Excel
+            if "planilha_excel" not in request.files:
+                logger.error("❌ ERRO: O arquivo 'planilha_excel' não foi enviado!")
+                return "Erro: arquivo planilha_excel faltando!", 400
 
-
-            }
+            excel_file = request.files["planilha_excel"]
+            if excel_file.filename == '':
+                logger.error("❌ ERRO: Arquivo planilha_excel vazio ou nome inválido.")
+                return "Erro: arquivo planilha_excel vazio.", 400
 
             try:
-                area_parcial = float(f.get("area_parcial", "0").replace(".", "").replace(",", "."))
-            except:
-                area_parcial = 0.0
+                from werkzeug.utils import secure_filename
+                import uuid, zipfile
 
-            # 4. Geração do relatório
-            nome_docx = "RELATORIO_AVALIACAO_COMPLETO.docx"
-            caminho_docx = os.path.join(pasta_temp, nome_docx)
+                # 1. Criação de diretório temporário para essa execução
+                id_execucao = str(uuid.uuid4())[:8]
+                pasta_execucao = f'avaliacao_{id_execucao}'
+                pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
+                os.makedirs(pasta_temp, exist_ok=True)
 
-            from executaveis_avaliacao.main import (
-                ler_planilha_excel, aplicar_chauvenet_e_filtrar,
-                homogeneizar_amostras, gerar_grafico_aderencia_totais,
-                gerar_grafico_dispersao_mediana
-            )
+                # 2. Salvar arquivo Excel recebido
+                caminho_planilha = os.path.join(pasta_temp, "planilha.xlsx")
+                excel_file.save(caminho_planilha)
+                logger.info(f"✅ Planilha salva: {caminho_planilha}")
 
-            df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
-            logger.info(f"df_amostras.head():\n{df_amostras.head()}")
-            logger.info(f"dados_imovel: {dados_imovel}")
-            df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_amostras)
-            logger.info(f"df_filtrado.head():\n{df_filtrado.head()}")
-            logger.info(f"Média: {media}, Mediana: {mediana}")
-            homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
+                def salvar_multiplos(nome_form, prefixo):
+                    arquivos = request.files.getlist(nome_form)
+                    todos_grupos = []
+                    for i, arq in enumerate(arquivos):
+                        if arq and arq.filename:
+                            extensao = arq.filename.rsplit('.', 1)[-1].lower()
+                            grupo_imagens = []
+                            dados_arquivo = arq.read()
+                            if extensao == "pdf":
+                                nome_pdf_temporario = os.path.join(pasta_temp, f"{prefixo}_{i}.pdf")
+                                with open(nome_pdf_temporario, "wb") as f:
+                                    f.write(dados_arquivo)
+                                pdf = fitz.open(nome_pdf_temporario)
+                                for p in range(pdf.page_count):
+                                    pix = pdf.load_page(p).get_pixmap(dpi=200)
+                                    nome_img = f"{prefixo}_{i}_{p}.png"
+                                    caminho_img = os.path.join(pasta_temp, nome_img)
+                                    pix.save(caminho_img)
+                                    grupo_imagens.append(caminho_img)
+                                    logger.info(f"✅ Página {p+1}/{pdf.page_count} salva: {caminho_img}")
+                                pdf.close()
+                            else:
+                                try:
+                                    imagem = Image.open(io.BytesIO(dados_arquivo))
+                                    imagem.thumbnail((1024, 1024))
+                                    nome_img = secure_filename(f"{prefixo}_{i}.png")
+                                    caminho_img = os.path.join(pasta_temp, nome_img)
+                                    imagem.save(caminho_img, optimize=True, quality=70)
+                                    grupo_imagens.append(caminho_img)
+                                    logger.info(f"✅ Imagem salva: {caminho_img}")
+                                except UnidentifiedImageError:
+                                    logger.error(f"❌ Arquivo inválido: {arq.filename}")
+                                    continue
+                            if grupo_imagens:
+                                todos_grupos.append(grupo_imagens)
+                    return todos_grupos
 
-            img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
-            img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
-            gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
-            gerar_grafico_dispersao_mediana(homog, img2)
+                fotos_imovel = salvar_multiplos("fotos_imovel", "foto_imovel")
+                fotos_adicionais = salvar_multiplos("fotos_imovel_adicionais", "doc_adicional")
+                fotos_proprietario = salvar_multiplos("doc_proprietario", "doc_proprietario")
+                fotos_planta = salvar_multiplos("doc_planta", "planta")
 
-            logger.info(f"Enviando para relatório (valores originais): {df_filtrado['VALOR TOTAL'].tolist()}")
-            logger.info(f"Homogeneizados válidos: {homog}")
+                caminho_logo = ""
+                logo = request.files.get("arquivo_logo")
+                if logo and logo.filename:
+                    caminho_logo = os.path.join(pasta_temp, "logo.png")
+                    logo.save(caminho_logo)
+                    logger.info(f"✅ Logo salvo: {caminho_logo} - {'existe' if os.path.exists(caminho_logo) else 'NÃO existe'}")
+                # 3. Inputs simples
+                f = request.form
+                def chk(nome): return f.get(nome, "").lower() == "sim"
 
-            finalidade_bruta = f.get("finalidade_lido", "").lower()
-            if "desapropria" in finalidade_bruta:
-                finalidade_tipo = "desapropriacao"
-            elif "servid" in finalidade_bruta:
-                finalidade_tipo = "servidao"
-            else:
-                finalidade_tipo = "mercado"
+                restricoes = []
+                i = 1
+                while f.get(f"tipo_restricao_{i}"):
+                    area = float(f.get(f"area_restricao_{i}", "0").replace(",", ".") or "0")
+                    perc = float(f.get(f"depreciacao_restricao_{i}", "0").replace(",", ".") or "0")
+                    restricoes.append({
+                        "tipo": f.get(f"tipo_restricao_{i}"),
+                        "area": area,
+                        "percentualDepreciacao": perc,
+                        "fator": (100.0 - perc) / 100.0
+                    })
+                    i += 1
+                cidade = f.get("cidade", "").strip()
 
-
-            gerar_relatorio_avaliacao_com_template(
-                dados_avaliando=dados_imovel,
-                dataframe_amostras_inicial=df_amostras,
-                dataframe_amostras_filtrado=df_filtrado,
-                indices_excluidos=idx_exc,
-                amostras_excluidas=amostras_exc,
-                media=media,
-                desvio_padrao=dp,
-                menor_valor=menor,
-                maior_valor=maior,
-                mediana_valor=mediana,
-                valores_originais_iniciais=df_filtrado["VALOR TOTAL"].tolist(),
-                valores_homogeneizados_validos=homog,
-                caminho_imagem_aderencia=img1,
-                caminho_imagem_dispersao=img2,
-                uuid_atual=id_execucao,
-                finalidade_do_laudo=finalidade_tipo,
-                area_parcial_afetada=area_parcial,
-                fatores_do_usuario=fatores_usuario,
-                caminhos_fotos_avaliando=fotos_imovel,
-                caminhos_fotos_adicionais=fotos_adicionais,
-                caminhos_fotos_proprietario=fotos_proprietario,
-                caminhos_fotos_planta=fotos_planta,
-                caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
-                nome_arquivo_word=caminho_docx
-            )
-
-            
-            # 5. Gerar ZIP
-            nome_zip = f"relatorio_avaliacao_{id_execucao}.zip"
-            caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos', nome_zip)
-            with zipfile.ZipFile(caminho_zip, 'w') as zipf:
-                logger.info(f"✅ ZIP criado em: {caminho_zip}")
-                for root, dirs, files in os.walk(pasta_temp):
-                    for file in files:
-                        zipf.write(os.path.join(root, file), arcname=file)
-
-            logger.info("✅ Relatório gerado com sucesso!")
-            resultado = "✅ Relatório gerado com sucesso!"
-            zip_download = nome_zip
-
-            # Definir o caminho relativo ao log para o HTML
-            log_path_relativo = f'logs/{os.path.basename(log_path)}'
+                fatores_usuario = {
+                    "nomeSolicitante": f.get("nome_solicitante"),
+                    "avaliadorNome": f.get("nome_avaliador"),
+                    "avaliadorRegistro": f.get("registro_avaliador"),
+                    "tipoImovel": f.get("tipo_imovel_escolhido"),
+                    "nomeProprietario": f.get("nome_proprietario"),
+                    "telefoneProprietario": f.get("telefone_proprietario") if chk("incluir_tel") else "Não Informado",
+                    "emailProprietario": f.get("email_proprietario") if chk("incluir_mail") else "Não Informado",
+                    "documentacaoImovel": f"Matrícula n° {f.get('num_doc')}" if f.get("num_doc") else "Documentação não informada",
+                    "nomeCartorio": f.get("nome_cartorio"),
+                    "nomeComarca": f.get("nome_comarca"),
+                    "enderecoCompleto": f.get("endereco_imovel"),
+                    "finalidade_descricao": f.get("finalidade_descricao") or f.get("finalidade_lido", ""),
+                    "area": chk("usar_fator_area"),
+                    "oferta": chk("usar_fator_oferta"),
+                    "aproveitamento": chk("usar_fator_aproveitamento"),
+                    "localizacao_mesma_regiao": chk("localizacao_mesma_regiao"),
+                    "topografia": chk("usar_fator_topografia"),
+                    "pedologia": chk("usar_fator_pedologia"),
+                    "pavimentacao": chk("usar_fator_pavimentacao"),
+                    "esquina": chk("usar_fator_esquina"),
+                    "acessibilidade": chk("usar_fator_acessibilidade"),
+                    "estrutura_escolha": f.get("estrutura_escolha", "").upper(),
+                    "conduta_escolha": f.get("conduta_escolha", "").upper(),
+                    "desempenho_escolha": f.get("desempenho_escolha", "").upper(),
+                    "caminhoLogo": caminho_logo,
+                    "restricoes": restricoes,
+                    "cidade": f.get("cidade", "").strip()
 
 
-        except Exception as e:
-            erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
-            logger.error(erro_execucao)
+                }
 
-    return render_template("formulario_avaliacao.html",
-                           resultado=resultado,
-                           erro=erro_execucao,
-                           zip_download=zip_download,
-                           log_path=log_path_relativo if os.path.exists(log_path) else None)
+                try:
+                    area_parcial = float(f.get("area_parcial", "0").replace(".", "").replace(",", "."))
+                except:
+                    area_parcial = 0.0
+
+                # 4. Geração do relatório
+                nome_docx = "RELATORIO_AVALIACAO_COMPLETO.docx"
+                caminho_docx = os.path.join(pasta_temp, nome_docx)
+
+                from executaveis_avaliacao.main import (
+                    ler_planilha_excel, aplicar_chauvenet_e_filtrar,
+                    homogeneizar_amostras, gerar_grafico_aderencia_totais,
+                    gerar_grafico_dispersao_mediana
+                )
+
+                # NOVA LINHA: Crie uma nova chave sem alterar AREA TOTAL original
+               
+                #FAZ O TRATAMENTO EM TODAS AS COORDENADAS DO EXCEL********************FOI AQUI RETIRADO TESTE TEMPORATIRO*
+                df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
+
+                # Adicione imediatamente após essa linha:
+                df_amostras["idx"] = df_amostras["AM"].astype(int)
+
+                # NOVA LINHA: Pegue a área digitada pelo usuário no input
+
+                area_parcial_afetada = float(request.form.get("area_parcial_afetada", "0").replace(".", "").replace(",", "."))
+                dados_imovel["AREA_PARCIAL_AFETADA"] = float(area_parcial_afetada)
 
 
+                # Função que remove graus e espaços
+               # Limpeza e conversão robusta das coordenadas do imóvel avaliado
+                dados_imovel["LATITUDE"] = _parse_coord(dados_imovel.get("LATITUDE"))
+                dados_imovel["LONGITUDE"] = _parse_coord(dados_imovel.get("LONGITUDE"))
+
+                # Limpeza robusta das coordenadas das amostras
+                for col in ["LATITUDE", "LONGITUDE"]:
+                    if col in df_amostras.columns:
+                        df_amostras[col] = df_amostras[col].apply(_parse_coord)
+                # Logs detalhados
+                logger.info(f"Coordenadas limpas imóvel: LATITUDE={dados_imovel['LATITUDE']}, LONGITUDE={dados_imovel['LONGITUDE']}")
+                logger.info(f"Primeiras linhas df_amostras após limpeza:\n{df_amostras[['LATITUDE', 'LONGITUDE']].head()}")
+
+                #**********************************************************************
+                logger.info(f"df_amostras.head():\n{df_amostras.head()}")
+                logger.info(f"dados_imovel: {dados_imovel}")
+                # AQUI RETIRADO TEMPORARIAMENTE
+                df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_amostras)
+                
+
+                logger.info(f"df_filtrado.head():\n{df_filtrado.head()}")
+                logger.info(f"Média: {media}, Mediana: {mediana}")
+                #AQUI RETIRADO TEMPORARIAMENTE
+                homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
+
+                img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
+                img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
+                gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+                # solução imediata e recomendada para gerar_avaliacao
+                idx_todas_amostras = df_amostras["idx"].tolist()
+                gerar_grafico_dispersao_mediana(
+                    df_filtrado,
+                    homog,
+                    img2,
+                    idx_todas_amostras,  # amostras iniciais (usuário ainda não retirou nenhuma)
+                    [],                  # nenhuma retirada manual
+                    []                   # nenhuma retirada Chauvenet
+                )
+
+                logger.info(f"Enviando para relatório (valores originais): {df_filtrado['VALOR TOTAL'].tolist()}")
+                logger.info(f"Homogeneizados válidos: {homog}")
+
+                finalidade_bruta = f.get("finalidade_lido", "").lower()
+                if "desapropria" in finalidade_bruta:
+                    finalidade_tipo = "desapropriacao"
+                elif "servid" in finalidade_bruta:
+                    finalidade_tipo = "servidao"
+                else:
+                    finalidade_tipo = "mercado"
+                if acao == "avaliar":
+                    from executaveis_avaliacao.utils_json import salvar_entrada_corrente_json
+                    
+                    lista_amostras = []
+                    for _, linha in df_amostras.iterrows():
+                        area = float(linha.get("AREA TOTAL", 0))
+                        valor_total = float(linha.get("VALOR TOTAL", 0))
+
+                        latitude = linha.get("LATITUDE")
+                        longitude = linha.get("LONGITUDE")
+
+                        logger.info(f"Latitude final: {latitude}, Longitude final: {longitude}")
+
+                        lista_amostras.append({
+                            "idx": linha.get("AM", ""),
+                            "valor_total": valor_total,
+                            "area": area,
+                            "LATITUDE": latitude,
+                            "LONGITUDE": longitude,
+                            "cidade": linha.get("CIDADE", ""),
+                            "fonte": linha.get("FONTE", ""),
+                            "ativo": True
+                        })
+
+
+                    AQUI RTIRADO TEMPORARIAMENTE
+                    salvar_entrada_corrente_json(
+                        dados_imovel,
+                        fatores_usuario,
+                        lista_amostras, 
+                        id_execucao,
+                        fotos_imovel=fotos_imovel,
+                        fotos_adicionais=fotos_adicionais,
+                        fotos_proprietario=fotos_proprietario,
+                        fotos_planta=fotos_planta
+                    )
+                   
+                    return redirect(url_for('visualizar_resultados', uuid=id_execucao))
+
+
+
+                gerar_relatorio_avaliacao_com_template(
+                    dados_avaliando=dados_imovel,
+                    dataframe_amostras_inicial=df_amostras,
+                    dataframe_amostras_filtrado=df_filtrado,
+                    indices_excluidos=idx_exc,
+                    amostras_excluidas=amostras_exc,
+                    media=media,
+                    desvio_padrao=dp,
+                    menor_valor=menor,
+                    maior_valor=maior,
+                    mediana_valor=mediana,
+                    valores_originais_iniciais = df_filtrado.get("VALOR TOTAL", pd.Series()).tolist(),
+                    valores_homogeneizados_validos=homog,
+                    caminho_imagem_aderencia=img1,
+                    caminho_imagem_dispersao=img2,
+                    uuid_atual=id_execucao,
+                    finalidade_do_laudo=finalidade_tipo,
+                    area_parcial_afetada=area_parcial_afetada, # aqui vai o correto
+                    fatores_do_usuario=fatores_usuario,
+                    caminhos_fotos_avaliando=fotos_imovel,
+                    caminhos_fotos_adicionais=fotos_adicionais,
+                    caminhos_fotos_proprietario=fotos_proprietario,
+                    caminhos_fotos_planta=fotos_planta,
+                    caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
+                    nome_arquivo_word=caminho_docx
+                )
+                # 3. Verificar se foi realmente criado
+                if os.path.exists(caminho_docx):
+                    logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
+                else:
+                    logger.error(f"❌ Erro: o DOCX não foi gerado em {caminho_docx}")
+                            
+                # 5. Gerar ZIP
+                nome_zip = f"relatorio_avaliacao_{id_execucao}.zip"
+                caminho_zip = os.path.join(BASE_DIR, 'static', 'arquivos', nome_zip)
+                with zipfile.ZipFile(caminho_zip, 'w') as zipf:
+                    logger.info(f"✅ ZIP criado em: {caminho_zip}")
+                    for root, dirs, files in os.walk(pasta_temp):
+                        for file in files:
+                            zipf.write(os.path.join(root, file), arcname=file)
+
+                logger.info("✅ Relatório gerado com sucesso!")
+                resultado = "✅ Relatório gerado com sucesso!"
+                zip_download = nome_zip
+
+                # Definir o caminho relativo ao log para o HTML
+                log_path_relativo = f'logs/{os.path.basename(log_path)}'
+
+
+            except Exception as e:
+                erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
+                logger.error(erro_execucao)
+                # NOVO BLOCO CRÍTICO: logar em arquivo adicional
+                with open("/home/admin/domains/phoenixappraisal.com.br/public_html/memoriais/erro_critico.log", "a") as f:
+                    f.write(erro_execucao + "\n")
+
+        return render_template("formulario_avaliacao.html",
+                               resultado=resultado,
+                               erro=erro_execucao,
+                               zip_download=zip_download,
+                               log_path=log_path_relativo if os.path.exists(log_path) else None)
+    except Exception as e:
+        logger.exception(f"🚨 Erro ao iniciar processamento: {e}")
+        return f"Erro interno ao iniciar processamento: {str(e)}", 500
+#fazendo comentario
 
 # @app.route('/memoriais-azimute-p1-p2')
 # def memoriais_azimute_p1_p2():
@@ -1047,7 +1133,759 @@ def gerar_avaliacao():
 # @app.route('/memoriais-angulos-internos-p1-p2')
 # def memoriais_angulos_internos_p1_p2():
 #     return render_template('em_breve.html', titulo="MEMORIAIS_ANGULOS_INTERNOS_P1_P2")
-   
+
+# EESA ROTA ABAIXO FOI COMENTADA PARA SER SUBSTIUIDA PELOS LOGGERS NECESSARIOS PARA ANALISE DO TIME OUT ERRO 500 NO APP
+# @app.route("/visualizar_resultados/<uuid>")
+# def visualizar_resultados(uuid):
+#     import json
+#     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+#     if not os.path.exists(caminho_json):
+#         flash("Arquivo JSON de entrada não encontrado.", "danger")
+#         return redirect(url_for("gerar_avaliacao"))
+
+#     with open(caminho_json, "r", encoding="utf-8") as f:
+#         dados = json.load(f)
+
+#     amostras = dados.get("amostras", [])
+#     fatores = dados.get("fatores_do_usuario", {})
+#     dados_avaliando = dados.get("dados_avaliando", {})
+
+#     # ==== Inserção de depuração definitiva (adicione exatamente esse bloco) ====
+#     try:
+#         valores_ativos = [
+#             a["valor_total"] / a["area"]
+#             for a in amostras if a.get("ativo") and a.get("area", 0) > 0
+#         ]
+
+#         media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
+
+#         from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
+#         amplitude_ic80 = 0.0
+#         if len(valores_ativos) > 1:
+#             li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
+#             if li > 0:
+#                 amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
+
+#     except Exception as erro:
+#         import traceback
+#         erro_completo = traceback.format_exc()
+#         with open("erro_avaliacao.txt", "w", encoding="utf-8") as arquivo_erro:
+#             arquivo_erro.write(erro_completo)
+#         flash(f"Erro detalhado capturado: {erro}", "danger")
+#         return redirect(url_for("gerar_avaliacao"))
+#     # === Fim do bloco seguro de depuração ===
+
+#     return render_template(
+#         "visualizar_resultados.html",
+#         uuid=uuid,
+#         amostras=amostras,
+#         media=media,
+#         amplitude_ic80=amplitude_ic80,
+#         dados_avaliando=dados_avaliando,
+#         fatores=fatores
+#     )
+
+
+
+@app.route("/visualizar_resultados/<uuid>")
+def visualizar_resultados(uuid):
+    import json
+    caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+    logger.info(f"✅ Iniciando visualizar_resultados() para UUID: {uuid}")
+    logger.info(f"📂 Caminho JSON: {caminho_json}")
+
+    if not os.path.exists(caminho_json):
+        logger.error("❌ Arquivo JSON não encontrado.")
+        flash("Arquivo JSON de entrada não encontrado.", "danger")
+        return redirect(url_for("gerar_avaliacao"))
+
+    try:
+        with open(caminho_json, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+        logger.info("📌 JSON carregado com sucesso.")
+
+        amostras = dados.get("amostras", [])
+        fatores = dados.get("fatores_do_usuario", {})
+        dados_avaliando = dados.get("dados_avaliando", {})
+
+        logger.info(f"📌 {len(amostras)} amostras carregadas.")
+        valores_ativos = [
+            a["valor_total"] / a["area"]
+            for a in amostras if a.get("ativo") and a.get("area", 0) > 0
+        ]
+
+        if valores_ativos:
+            media = round(sum(valores_ativos) / len(valores_ativos), 2)
+            logger.info(f"📊 Média calculada: {media}")
+        else:
+            media = 0.0
+            logger.warning("⚠️ Nenhum valor ativo encontrado para média.")
+
+        from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
+        amplitude_ic80 = 0.0
+        if len(valores_ativos) > 1:
+            logger.info("📌 Iniciando cálculo do intervalo de confiança bootstrap.")
+            li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
+            logger.info(f"📌 IC 80% calculado: LI={li}, LS={ls}")
+            if li > 0:
+                amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
+                logger.info(f"📊 Amplitude IC 80%: {amplitude_ic80}%")
+            else:
+                logger.warning("⚠️ LI do intervalo é menor ou igual a zero.")
+        else:
+            logger.warning("⚠️ Não há valores suficientes para calcular IC 80%.")
+
+    except Exception as erro:
+        logger.exception(f"🚨 Exceção capturada em visualizar_resultados: {erro}")
+        import traceback
+        erro_completo = traceback.format_exc()
+        erro_arquivo = os.path.join(BASE_DIR, "erro_avaliacao.txt")
+        with open(erro_arquivo, "w", encoding="utf-8") as arquivo_erro:
+            arquivo_erro.write(erro_completo)
+        flash(f"Erro detalhado capturado: {erro}", "danger")
+        return redirect(url_for("gerar_avaliacao"))
+
+    logger.info("🚩 Renderizando template visualizar_resultados.html")
+    return render_template(
+        "visualizar_resultados.html",
+        uuid=uuid,
+        amostras=amostras,
+        media=media,
+        amplitude_ic80=amplitude_ic80,
+        dados_avaliando=dados_avaliando,
+        fatores=fatores
+    )
+
+
+
+
+
+
+
+
+
+# @app.route("/gerar_laudo_final/<uuid>", methods=["POST"])
+# def gerar_laudo_final(uuid):
+#     if request.form.get("acao") != "gerar_laudo":
+#         flash("Ação inválida ou acesso direto sem clique autorizado.", "warning")
+#         return redirect(url_for("visualizar_resultados", uuid=uuid))
+
+#     global logger
+#     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+#     if not os.path.exists(caminho_json):
+#         flash("Arquivo de entrada não encontrado.", "danger")
+#         return redirect(url_for("gerar_avaliacao"))
+
+#     # 1. Carrega JSON
+#     with open(caminho_json, "r", encoding="utf-8") as f:
+#         dados = json.load(f)
+#         fotos_imovel = dados.get("fotos_imovel", [])
+#         fotos_adicionais = dados.get("fotos_adicionais", [])
+#         fotos_proprietario = dados.get("fotos_proprietario", [])
+#         fotos_planta = dados.get("fotos_planta", [])
+#         # NOVA LINHA ADICIONADA: Carregar explicitamente a área parcial afetada do JSON
+#         area_parcial_afetada = float(dados["dados_avaliando"].get("AREA_PARCIAL_AFETADA", 0))
+
+#     # 2. Atualiza estado das amostras com base nos checkboxes
+#     for amostra in dados["amostras"]:
+#         campo = f"ativo_{amostra['idx']}"
+#         amostra["ativo"] = campo in request.form
+
+#     # 3. Salva JSON atualizado
+#     with open(caminho_json, "w", encoding="utf-8") as f:
+#         json.dump(dados, f, indent=2, ensure_ascii=False)
+    
+#     # AQUI ADICIONE explicitamente a correção robusta:
+#     ativos_frontend = [a["idx"] for a in dados["amostras"] if a.get("ativo", False)]
+
+#     # Amostras que o usuário retirou explicitamente:
+#     amostras_usuario_retirou = [
+#         a["idx"] for a in dados["amostras"] 
+#         if not a.get("ativo", False)
+#     ]
+
+#     # AQUI: DEFINA PRIMEIRO df_filtrado claramente (OBRIGATÓRIO ANTES):
+#     df_ativas = pd.DataFrame([a for a in dados["amostras"] if a.get("ativo", False)])
+
+#     # Padronizar nomes das colunas
+#     df_ativas.rename(columns={
+#         "valor_total": "VALOR TOTAL",
+#         "area": "AREA TOTAL",
+#         "distancia_centro": "DISTANCIA CENTRO"
+#     }, inplace=True)
+
+#     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+
+#     # AGORA DEFINA exatamente amostras_chauvenet_retirou (depois de df_filtrado):
+
+
+#     # Chauvenet retirou (usa função existente explicitamente):
+#     amostras_chauvenet_retirou = [
+#         idx for idx in ativos_frontend if idx not in df_filtrado["AM"].tolist()
+#     ]
+
+#     # 4. Filtra amostras ativas
+#     amostras_ativas = [
+#         a for a in dados["amostras"]
+#         if a.get("ativo") and a.get("area", 0) > 0
+#     ]
+
+#     if not amostras_ativas:
+#         flash("Nenhuma amostra ativa para gerar o laudo.", "warning")
+#         return redirect(url_for("visualizar_resultados", uuid=uuid))
+
+#     # 5. Executa cálculo simplificado apenas para demonstração
+#     valores_unitarios = [a["valor_total"] / a["area"] for a in amostras_ativas]
+#     media = round(sum(valores_unitarios) / len(valores_unitarios), 2)
+#     media_formatado = f"R$ {media:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+#     # 6. Gera um arquivo Word simples (você pode adaptar para seu modelo completo)
+#     from executaveis_avaliacao.main import (
+#         aplicar_chauvenet_e_filtrar,
+#         homogeneizar_amostras,
+#         gerar_grafico_aderencia_totais,
+#         gerar_grafico_dispersao_mediana,
+#         gerar_relatorio_avaliacao_com_template
+#     )
+
+    
+#     df_ativas = pd.DataFrame(amostras_ativas)
+
+#     # Padroniza nomes de colunas esperadas
+#     df_ativas.rename(columns={
+#         "valor_total": "VALOR TOTAL",
+#         "area": "AREA TOTAL",
+#         "distancia_centro": "DISTANCIA CENTRO"
+#     }, inplace=True)
+
+
+#     # Aplicar Chauvenet e homogeneização
+#     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+#     homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
+
+#     pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
+#     os.makedirs(pasta_saida, exist_ok=True)
+
+#     img1 = os.path.join(pasta_saida, "grafico_aderencia.png")
+#     img2 = os.path.join(pasta_saida, "grafico_dispersao.png")
+#     gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+#     gerar_grafico_dispersao_mediana(
+#         df_filtrado,
+#         homog, 
+#         img2,   # caminho da imagem já existente
+#         ativos_frontend,
+#         amostras_usuario_retirou,
+#         amostras_chauvenet_retirou
+#     )
+
+
+#     # Chamada final
+#     nome_docx = f"laudo_avaliacao_{uuid}.docx"
+#     caminho_docx = os.path.join(pasta_saida, nome_docx)
+
+#     finalidade_digitada = dados["fatores_do_usuario"].get("finalidade_descricao", "").strip().lower()
+
+#     if "desapropria" in finalidade_digitada:
+#         finalidade_do_laudo = "desapropriacao"
+#     elif "servid" in finalidade_digitada:
+#         finalidade_do_laudo = "servidao"
+#     else:
+#         finalidade_do_laudo = "mercado"
+
+#     gerar_relatorio_avaliacao_com_template(
+#         dados_avaliando=dados["dados_avaliando"],
+#         dataframe_amostras_inicial=df_ativas,
+#         dataframe_amostras_filtrado=df_filtrado,
+#         indices_excluidos=idx_exc,
+#         amostras_excluidas=amostras_exc,
+#         media=media,
+#         desvio_padrao=dp,
+#         menor_valor=menor,
+#         maior_valor=maior,
+#         mediana_valor=mediana,
+#         valores_originais_iniciais=df_filtrado["VALOR TOTAL"].tolist(),
+#         valores_homogeneizados_validos=homog,
+#         caminho_imagem_aderencia=img1,
+#         caminho_imagem_dispersao=img2,
+#         uuid_atual=uuid,
+#         finalidade_do_laudo=finalidade_do_laudo, # <<<< CORREÇÃO AQUI!
+#         area_parcial_afetada=area_parcial_afetada,
+#         fatores_do_usuario=dados["fatores_do_usuario"],
+#         caminhos_fotos_avaliando=fotos_imovel,
+#         caminhos_fotos_adicionais=fotos_adicionais,
+#         caminhos_fotos_proprietario=fotos_proprietario,
+#         caminhos_fotos_planta=fotos_planta,
+#         caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
+#         nome_arquivo_word=caminho_docx
+#     )
+
+
+#     if os.path.exists(caminho_docx):
+#         logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
+#     else:
+#         logger.error(f"❌ Erro: o DOCX não foi gerado em {caminho_docx}")
+
+
+#     # 1. Criar caminho do ZIP
+#     nome_zip = f"pacote_avaliacao_{uuid}.zip"
+#     caminho_zip = os.path.join(BASE_DIR, "static", "arquivos", nome_zip)
+
+
+#     # Copiar o JSON de entrada para a pasta de saída
+#     origem_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+#     destino_json = os.path.join(pasta_saida, f"{uuid}_entrada_corrente.json")
+#     if os.path.exists(origem_json):
+#         import shutil
+#         shutil.copyfile(origem_json, destino_json)
+
+#     # 2. Compactar todos os arquivos da pasta
+#     with zipfile.ZipFile(caminho_zip, 'w') as zipf:
+#         for root, dirs, files in os.walk(pasta_saida):
+#             for file in files:
+#                 full_path = os.path.join(root, file)
+#                 zipf.write(full_path, arcname=file)
+
+#     # 3. Retornar ZIP ao invés do DOCX
+#     return send_file(caminho_zip, as_attachment=True)
+
+
+
+@app.route("/gerar_laudo_final/<uuid>", methods=["POST"])
+def gerar_laudo_final(uuid):
+    if request.form.get("acao") != "gerar_laudo":
+        flash("Ação inválida ou acesso direto sem clique autorizado.", "warning")
+        return redirect(url_for("visualizar_resultados", uuid=uuid))
+
+    global logger
+    caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+    if not os.path.exists(caminho_json):
+        flash("Arquivo de entrada não encontrado.", "danger")
+        return redirect(url_for("gerar_avaliacao"))
+
+    # Carrega JSON
+    with open(caminho_json, "r", encoding="utf-8") as f:
+        dados = json.load(f)
+        fotos_imovel = dados.get("fotos_imovel", [])
+        fotos_adicionais = dados.get("fotos_adicionais", [])
+        fotos_proprietario = dados.get("fotos_proprietario", [])
+        fotos_planta = dados.get("fotos_planta", [])
+        area_parcial_afetada = float(dados["dados_avaliando"].get("AREA_PARCIAL_AFETADA", 0))
+
+    # Atualiza estado das amostras
+    for amostra in dados["amostras"]:
+        campo = f"ativo_{amostra['idx']}"
+        amostra["ativo"] = campo in request.form
+
+    # Salva JSON atualizado
+    with open(caminho_json, "w", encoding="utf-8") as f:
+        json.dump(dados, f, indent=2, ensure_ascii=False)
+
+    # Importações obrigatórias ANTES de usar as funções
+    import pandas as pd
+    from executaveis_avaliacao.main import (
+        aplicar_chauvenet_e_filtrar,
+        homogeneizar_amostras,
+        gerar_grafico_aderencia_totais,
+        gerar_grafico_dispersao_mediana,
+        gerar_relatorio_avaliacao_com_template
+    )
+
+    # Continuar sem alterações:
+    ativos_frontend = [a["idx"] for a in dados["amostras"] if a.get("ativo", False)]
+    amostras_usuario_retirou = [a["idx"] for a in dados["amostras"] if not a.get("ativo", False)]
+
+    # Filtra amostras ativas
+    amostras_ativas = [a for a in dados["amostras"] if a.get("ativo") and a.get("area", 0) > 0]
+
+    if not amostras_ativas:
+        flash("Nenhuma amostra ativa para gerar o laudo.", "warning")
+        return redirect(url_for("visualizar_resultados", uuid=uuid))
+
+    df_ativas = pd.DataFrame(amostras_ativas)
+    df_ativas.rename(columns={
+        "valor_total": "VALOR TOTAL",
+        "area": "AREA TOTAL",
+        "distancia_centro": "DISTANCIA CENTRO"
+    }, inplace=True)
+
+    # Aplicar Chauvenet e homogeneização
+    df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+    homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
+
+    amostras_chauvenet_retirou = [idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()]
+
+    pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
+    os.makedirs(pasta_saida, exist_ok=True)
+
+    img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+    img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+
+
+    gerar_grafico_dispersao_mediana(
+        df_filtrado,
+        homog,
+        img2,
+        ativos_frontend,
+        amostras_usuario_retirou,
+        amostras_chauvenet_retirou
+    )
+
+    finalidade_digitada = dados["fatores_do_usuario"].get("finalidade_descricao", "").strip().lower()
+
+    if "desapropria" in finalidade_digitada:
+        finalidade_do_laudo = "desapropriacao"
+    elif "servid" in finalidade_digitada:
+        finalidade_do_laudo = "servidao"
+    else:
+        finalidade_do_laudo = "mercado"
+
+    caminho_docx = os.path.join(pasta_saida, f"laudo_avaliacao_{uuid}.docx")
+
+    gerar_relatorio_avaliacao_com_template(
+        dados_avaliando=dados["dados_avaliando"],
+        dataframe_amostras_inicial=df_ativas,
+        dataframe_amostras_filtrado=df_filtrado,
+        indices_excluidos=idx_exc,
+        amostras_excluidas=amostras_exc,
+        media=media,
+        desvio_padrao=dp,
+        menor_valor=menor,
+        maior_valor=maior,
+        mediana_valor=mediana,
+        valores_originais_iniciais=df_filtrado["VALOR TOTAL"].tolist(),
+        valores_homogeneizados_validos=homog,
+        caminho_imagem_aderencia=img1,
+        caminho_imagem_dispersao=img2,
+        uuid_atual=uuid,
+        finalidade_do_laudo=finalidade_do_laudo,
+        area_parcial_afetada=area_parcial_afetada,
+        fatores_do_usuario=dados["fatores_do_usuario"],
+        caminhos_fotos_avaliando=fotos_imovel,
+        caminhos_fotos_adicionais=fotos_adicionais,
+        caminhos_fotos_proprietario=fotos_proprietario,
+        caminhos_fotos_planta=fotos_planta,
+        caminho_template=os.path.join(BASE_DIR, "templates_doc", "Template.docx"),
+        nome_arquivo_word=caminho_docx
+    )
+
+    if os.path.exists(caminho_docx):
+        logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")
+    else:
+        logger.error(f"❌ Erro: o DOCX não foi gerado em {caminho_docx}")
+
+    nome_zip = f"pacote_avaliacao_{uuid}.zip"
+    caminho_zip = os.path.join(BASE_DIR, "static", "arquivos", nome_zip)
+
+    origem_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+    destino_json = os.path.join(pasta_saida, f"{uuid}_entrada_corrente.json")
+
+    if os.path.exists(origem_json):
+        import shutil
+        shutil.copyfile(origem_json, destino_json)
+
+    with zipfile.ZipFile(caminho_zip, 'w') as zipf:
+        for root, dirs, files in os.walk(pasta_saida):
+            for file in files:
+                full_path = os.path.join(root, file)
+                zipf.write(full_path, arcname=file)
+
+    return send_file(caminho_zip, as_attachment=True)
+
+
+
+
+
+
+
+
+#ROTA SUBSTITUIDA PELA DEBAIXO PARA VERIFICAR O PROBLEMA DE TIMEOUT NA VERSAO FINAL DE PRODUÇÃO
+# @app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
+# def calcular_valores_iterativos(uuid):
+#     import json, os
+#     import numpy as np
+#     import pandas as pd
+#     from flask import jsonify, request, url_for
+#     from executaveis_avaliacao.main import (
+#         aplicar_chauvenet_e_filtrar,
+#         homogeneizar_amostras,
+#         intervalo_confianca_bootstrap_mediana,
+#         gerar_grafico_dispersao_mediana,
+#         gerar_grafico_aderencia_totais,
+#     )
+
+#     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+#     if not os.path.exists(caminho_json):
+#         return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
+
+#     with open(caminho_json, "r", encoding="utf-8") as f:
+#         dados = json.load(f)
+
+#     ativos_frontend = request.json.get("ativos", [])
+#     ativos_frontend = [int(idx) for idx in ativos_frontend]
+
+#     amostras_usuario_retirou = [int(a["idx"]) for a in dados["amostras"] if int(a["idx"]) not in ativos_frontend]
+
+#     df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
+#     df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+
+#     df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+#     logger.info(f"Colunas no df_filtrado após Chauvenet: {df_filtrado.columns.tolist()}")
+
+#     amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
+
+#     homog = homogeneizar_amostras(
+#         df_filtrado,
+#         dados["dados_avaliando"],
+#         dados["fatores_do_usuario"],
+#         finalidade_do_laudo="desapropriacao" if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "servidao" if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "mercado"
+#     )
+
+#     array_homog = np.array(homog, dtype=float)
+#     if len(array_homog) > 1:
+#         limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
+#         valor_minimo = round(limite_inf, 2)
+#         valor_maximo = round(limite_sup, 2)
+#         valor_medio = round(np.median(array_homog), 2)
+#     else:
+#         valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
+
+#     # AGORA ADICIONADO CORRETAMENTE:
+#     pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
+#     os.makedirs(pasta_saida, exist_ok=True)
+
+#     img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+#     img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+
+#     amostras_chauvenet_retirou = [
+#         idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()
+#     ]
+
+#     gerar_grafico_dispersao_mediana(
+#         df_filtrado,
+#         homog,
+#         img2,
+#         ativos_frontend,
+#         amostras_usuario_retirou,
+#         amostras_chauvenet_retirou
+#     )
+
+#     gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+
+#     resposta = {
+#         "valor_minimo": valor_minimo,
+#         "valor_medio": valor_medio,
+#         "valor_maximo": valor_maximo,
+#         "quantidade_amostras_iniciais": len(dados["amostras"]),
+#         "quantidade_amostras_usuario_retirou": len(amostras_usuario_retirou),
+#         "amostras_usuario_retirou": amostras_usuario_retirou,
+#         "quantidade_amostras_chauvenet_retirou": len(amostras_excluidas_chauvenet),
+#         "amostras_chauvenet_retirou": amostras_excluidas_chauvenet,
+#         "quantidade_amostras_restantes": len(df_filtrado),
+#         "grafico_dispersao_url": url_for("static", filename=f"arquivos/avaliacao_{uuid}/grafico_dispersao_iterativo.png"),
+#         "grafico_aderencia_url": url_for("static", filename=f"arquivos/avaliacao_{uuid}/grafico_aderencia_iterativo.png")
+#     }
+
+#     return jsonify(resposta)
+
+
+
+@app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
+def calcular_valores_iterativos(uuid):
+    import json, os
+    import numpy as np
+    import pandas as pd
+    from flask import jsonify, request, url_for
+    from executaveis_avaliacao.main import (
+        aplicar_chauvenet_e_filtrar,
+        homogeneizar_amostras,
+        intervalo_confianca_bootstrap_mediana,
+        gerar_grafico_dispersao_mediana,
+        gerar_grafico_aderencia_totais,
+    )
+
+    try:
+        logger.info("🚀 Rota calcular_valores_iterativos iniciada")
+
+        caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+        if not os.path.exists(caminho_json):
+            logger.error(f"❌ Arquivo não encontrado: {caminho_json}")
+            return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
+
+        with open(caminho_json, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+
+        ativos_frontend = request.json.get("ativos", [])
+        ativos_frontend = [int(idx) for idx in ativos_frontend]
+
+        amostras_usuario_retirou = [
+            int(a["idx"]) for a in dados["amostras"] if int(a["idx"]) not in ativos_frontend
+        ]
+
+        df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
+        df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+
+        logger.info("📌 Aplicando Chauvenet e filtro nas amostras ativas")
+        df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+        logger.info(f"✅ Chauvenet concluído: {len(df_filtrado)} amostras restaram")
+
+        amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
+
+        logger.info("📌 Iniciando homogeneização das amostras")
+        homog = homogeneizar_amostras(
+            df_filtrado,
+            dados["dados_avaliando"],
+            dados["fatores_do_usuario"],
+            finalidade_do_laudo=(
+                "desapropriacao"
+                if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower()
+                else "servidao"
+                if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower()
+                else "mercado"
+            ),
+        )
+        logger.info("✅ Homogeneização concluída com sucesso")
+
+        array_homog = np.array(homog, dtype=float)
+        if len(array_homog) > 1:
+            limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
+            valor_minimo = round(limite_inf, 2)
+            valor_maximo = round(limite_sup, 2)
+            valor_medio = round(np.median(array_homog), 2)
+        else:
+            valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
+
+        pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
+        os.makedirs(pasta_saida, exist_ok=True)
+
+        img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+        img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+
+        amostras_chauvenet_retirou = [
+            idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()
+        ]
+
+        logger.info("📌 Gerando gráfico de dispersão iterativo")
+        gerar_grafico_dispersao_mediana(
+            df_filtrado,
+            homog,
+            img2,
+            ativos_frontend,
+            amostras_usuario_retirou,
+            amostras_chauvenet_retirou,
+        )
+        logger.info("✅ Gráfico dispersão gerado com sucesso")
+
+        logger.info("📌 Gerando gráfico de aderência iterativo")
+        gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+        logger.info("✅ Gráfico aderência gerado com sucesso")
+
+        resposta = {
+            "valor_minimo": valor_minimo,
+            "valor_medio": valor_medio,
+            "valor_maximo": valor_maximo,
+            "quantidade_amostras_iniciais": len(dados["amostras"]),
+            "quantidade_amostras_usuario_retirou": len(amostras_usuario_retirou),
+            "amostras_usuario_retirou": amostras_usuario_retirou,
+            "quantidade_amostras_chauvenet_retirou": len(amostras_excluidas_chauvenet),
+            "amostras_chauvenet_retirou": amostras_excluidas_chauvenet,
+            "quantidade_amostras_restantes": len(df_filtrado),
+            "grafico_dispersao_url": url_for(
+                "static",
+                filename=f"arquivos/avaliacao_{uuid}/grafico_dispersao_iterativo.png",
+            ),
+            "grafico_aderencia_url": url_for(
+                "static",
+                filename=f"arquivos/avaliacao_{uuid}/grafico_aderencia_iterativo.png",
+            ),
+        }
+
+        logger.info("✅ Resposta JSON pronta para envio ao frontend")
+        return jsonify(resposta)
+
+    except Exception as e:
+        logger.exception(f"🚨 ERRO CRÍTICO NA ROTA calcular_valores_iterativos: {e}")
+        return jsonify({"erro": f"Erro crítico interno: {str(e)}"}), 500
+
+
+
+
+
+
+
+# @app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
+# def calcular_valores_iterativos(uuid):
+#     import json, os
+#     from executaveis_avaliacao.main import (
+#         aplicar_chauvenet_e_filtrar,
+#         homogeneizar_amostras,
+#         intervalo_confianca_bootstrap_mediana,
+#     )
+#     import numpy as np
+#     import pandas as pd
+#     from flask import jsonify, request  # confirmar essa importação!
+
+#     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+#     if not os.path.exists(caminho_json):
+#         return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
+
+#     # Ler JSON
+#     with open(caminho_json, "r", encoding="utf-8") as f:
+#         dados = json.load(f)
+
+#     # Ajuste seguro explicitamente com inteiros
+#     ativos_frontend = request.json.get("ativos", [])
+#     ativos_frontend = [int(idx) for idx in ativos_frontend]
+
+#     for amostra in dados["amostras"]:
+#         amostra["ativo"] = int(amostra["idx"]) in ativos_frontend
+
+#     # Filtrar amostras ativas corretamente
+#     amostras_ativas = [a for a in dados["amostras"] if a["ativo"] and a["area"] > 0]
+
+#     if not amostras_ativas:
+#         return jsonify({"erro": "Nenhuma amostra ativa selecionada."}), 400
+
+#     # DataFrame e cálculos (sem mudanças)
+#     df_ativas = pd.DataFrame(amostras_ativas)
+#     df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+
+#     df_filtrado, _, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+#     homog = homogeneizar_amostras(
+#         df_filtrado,
+#         dados["dados_avaliando"],
+#         dados["fatores_do_usuario"],
+#         finalidade_do_laudo="desapropriacao" if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "servidao" if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower() else "mercado"
+#     )
+
+#     array_homog = np.array(homog, dtype=float)
+#     if len(array_homog) > 1:
+#         limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
+#         valor_minimo = round(limite_inf, 2)
+#         valor_maximo = round(limite_sup, 2)
+#         valor_medio = round(np.median(array_homog), 2)
+#     else:
+#         valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
+
+#     resposta = {
+#         "valor_minimo": valor_minimo,
+#         "valor_medio": valor_medio,
+#         "valor_maximo": valor_maximo,
+#         "quantidade_amostras": len(df_filtrado)
+#     }
+
+#     return jsonify(resposta)
+
+
+
+
+  
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
