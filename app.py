@@ -1120,7 +1120,8 @@ def gerar_avaliacao():
                                resultado=resultado,
                                erro=erro_execucao,
                                zip_download=zip_download,
-                               log_path=log_path_relativo if os.path.exists(log_path) else None)
+                               log_path=log_path_relativo if 'log_path_relativo' in locals() and log_path_relativo and os.path.exists(log_path_relativo) else None
+
     except Exception as e:
         logger.exception(f"🚨 Erro ao iniciar processamento: {e}")
         return f"Erro interno ao iniciar processamento: {str(e)}", 500
