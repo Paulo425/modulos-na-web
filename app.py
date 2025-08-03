@@ -22,6 +22,8 @@ import logging
 import re
 import pandas as pd  # ← inclusão imediata dessa linha resolve definitivamente
 import sys
+import traceback
+
 
 # 🔧 Configuração do logger DEFINITIVA (completa e segura)
 
@@ -1108,6 +1110,9 @@ def gerar_avaliacao():
             except Exception as e:
                 erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
                 logger.error(erro_execucao)
+                # NOVO BLOCO CRÍTICO: logar em arquivo adicional
+                with open("/home/admin/domains/phoenixappraisal.com.br/public_html/memoriais/erro_critico.log", "a") as f:
+                    f.write(erro_execucao + "\n")
 
         return render_template("formulario_avaliacao.html",
                                resultado=resultado,
