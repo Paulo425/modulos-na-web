@@ -10,6 +10,8 @@ import os
 import math
 import pandas as pd
 import numpy
+import matplotlib
+matplotlib.use('Agg')  # ← fundamental essa linha antes do pyplot
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 import unicodedata
