@@ -810,6 +810,8 @@ def gerar_avaliacao():
             return redirect(url_for('login'))
 
         resultado = erro_execucao = zip_download = log_relativo = None
+        log_path_relativo = None
+
 
         if request.method == "POST":
             logger.info("🔧 Início da execução do bloco POST em /avaliacoes")
