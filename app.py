@@ -959,7 +959,7 @@ def gerar_avaliacao():
                 # NOVA LINHA: Crie uma nova chave sem alterar AREA TOTAL original
                
                 #FAZ O TRATAMENTO EM TODAS AS COORDENADAS DO EXCEL********************FOI AQUI RETIRADO TESTE TEMPORATIRO*
-                #df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
+                df_amostras, dados_imovel = ler_planilha_excel(caminho_planilha)
 
                 # Adicione imediatamente após essa linha:
                 df_amostras["idx"] = df_amostras["AM"].astype(int)
@@ -993,7 +993,7 @@ def gerar_avaliacao():
                 logger.info(f"df_filtrado.head():\n{df_filtrado.head()}")
                 logger.info(f"Média: {media}, Mediana: {mediana}")
                 #AQUI RETIRADO TEMPORARIAMENTE
-                #homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
+                homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
 
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
@@ -1044,18 +1044,18 @@ def gerar_avaliacao():
                         })
 
 
-                    # AQUI RTIRADO TEMPORARIAMENTE
-                    # salvar_entrada_corrente_json(
-                    #     dados_imovel,
-                    #     fatores_usuario,
-                    #     lista_amostras, 
-                    #     id_execucao,
-                    #     fotos_imovel=fotos_imovel,
-                    #     fotos_adicionais=fotos_adicionais,
-                    #     fotos_proprietario=fotos_proprietario,
-                    #     fotos_planta=fotos_planta
-                    # )
-                    return "Teste mínimo realizado com sucesso", 200
+                    AQUI RTIRADO TEMPORARIAMENTE
+                    salvar_entrada_corrente_json(
+                        dados_imovel,
+                        fatores_usuario,
+                        lista_amostras, 
+                        id_execucao,
+                        fotos_imovel=fotos_imovel,
+                        fotos_adicionais=fotos_adicionais,
+                        fotos_proprietario=fotos_proprietario,
+                        fotos_planta=fotos_planta
+                    )
+                   
                     return redirect(url_for('visualizar_resultados', uuid=id_execucao))
 
 
