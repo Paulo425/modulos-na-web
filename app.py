@@ -1044,7 +1044,7 @@ def gerar_avaliacao():
                         })
 
 
-                    AQUI RTIRADO TEMPORARIAMENTE
+                    
                     salvar_entrada_corrente_json(
                         dados_imovel,
                         fatores_usuario,
