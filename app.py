@@ -1044,7 +1044,7 @@ def gerar_avaliacao():
                         })
 
 
-                    AQUI RTIRADO TEMPORARIAMENTE
+                    
                     salvar_entrada_corrente_json(
                         dados_imovel,
                         fatores_usuario,
@@ -1116,11 +1116,14 @@ def gerar_avaliacao():
                 with open("/home/admin/domains/phoenixappraisal.com.br/public_html/memoriais/erro_critico.log", "a") as f:
                     f.write(erro_execucao + "\n")
 
-        return render_template("formulario_avaliacao.html",
-                               resultado=resultado,
-                               erro=erro_execucao,
-                               zip_download=zip_download,
-                               log_path=log_path_relativo if os.path.exists(log_path) else None)
+        return render_template(
+            "formulario_avaliacao.html",
+            resultado=resultado,
+            erro=erro_execucao,
+            zip_download=zip_download,
+            log_path=log_path_relativo if 'log_path_relativo' in locals() and log_path_relativo and os.path.exists(log_path_relativo) else None
+        )
+
     except Exception as e:
         logger.exception(f"🚨 Erro ao iniciar processamento: {e}")
         return f"Erro interno ao iniciar processamento: {str(e)}", 500
