@@ -713,7 +713,15 @@ def create_memorial_descritivo(
     """
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
     """
- 
+    # Carregar confrontantes diretamente da planilha Excel recebida
+    confrontantes_df = pd.read_excel(excel_file_path)
+
+    if confrontantes_df.empty:
+        logger.error("❌ Planilha de confrontantes está vazia.")
+        return None
+
+    # ✅ Correção aqui:
+    confrontantes = confrontantes_df['Confrontante'].dropna().tolist()
     if not lines:
         print("Nenhuma linha disponível para criar o memorial descritivo.")
         return None
