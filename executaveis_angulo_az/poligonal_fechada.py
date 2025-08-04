@@ -1129,7 +1129,7 @@ def create_memorial_document(
 
         p.add_run("O ponto ")
         p.add_run("Az").bold = True
-        p.add_run(f", ponto de amarração, está localizado na {desc_ponto_amarracao} nas coordenadas E(X) {ponto_az_1} e N(Y) {ponto_az_2}.")
+        p.add_run(f", ponto de amarração, está localizado na {desc_ponto_Az} nas coordenadas E(X) {ponto_az_1} e N(Y) {ponto_az_2}.")
 
         p.paragraph_format.space_after = Pt(12)  # ⬅️ Força um espaçamento abaixo do parágrafo
 
@@ -1386,7 +1386,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # CORRETO (como deve ser ajustado)
     excel_file_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
 
-
+    #MODIFICADO O DIRETORIO PARA CONCLUIDO
 
     
     # ✅ Geração do Excel e atualização do DXF
