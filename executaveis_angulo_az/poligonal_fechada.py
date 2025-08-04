@@ -1121,7 +1121,7 @@ def create_memorial_document(
 
 
         azimute_dms = convert_to_dms(azimuth)
-        distancia_str = f"{distancia_amarracao_v1:.2f}".replace(".", ",")
+        distancia_str = f"{distance:.2f}".replace(".", ",")
 
         # Linha: ponto de amarração
         p = doc_word.add_paragraph(style='Normal')
@@ -1383,7 +1383,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     
     
-    excel_file_path = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+    # CORRETO (como deve ser ajustado)
+    excel_file_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
+
 
 
     
