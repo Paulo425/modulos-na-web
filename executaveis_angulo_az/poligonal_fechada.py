@@ -773,7 +773,7 @@ def calculate_angular_turn(p1, p2, p3):
 
 
 def create_memorial_descritivo(
-    uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar,
+    uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar, excel_confrontantes,
     excel_file_path, ponto_az, distancia_az_v1, azimute_az_v1, tipo, giro_angular_v1_dms, dxf_file_path,
     diretorio_concluido=None, encoding='ISO-8859-1'
 ):
@@ -783,7 +783,7 @@ def create_memorial_descritivo(
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
     """
     # Carregar confrontantes diretamente da planilha Excel recebida
-    confrontantes_df = pd.read_excel(excel_file_path)
+    confrontantes_df = pd.read_excel(excel_confrontantes)
 
     if confrontantes_df.empty:
         logger.error("❌ Planilha de confrontantes está vazia.")
@@ -866,13 +866,16 @@ def create_memorial_descritivo(
             if distance > 0.01:
                 add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
 
-        # ➕ Salvar Excel
-        df = pd.DataFrame(data)
-        df.to_excel(excel_file_path, index=False)
+        # # ➕ Salvar Excel
+        # df = pd.DataFrame(data)
+        # df.to_excel(excel_resultado, index=False)
 
-        # 📊 Formatação do Excel
-        wb = openpyxl.load_workbook(excel_file_path)
-        ws = wb.active
+        # # 📊 Formatação do Excel
+        # wb = openpyxl.load_workbook(excel_resultado)
+        # ws = wb.active
+       
+
+        
 
         # Cabeçalho
         for cell in ws[1]:
@@ -893,6 +896,11 @@ def create_memorial_descritivo(
             for cell in row:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
+        #SALVANDO EM EXCEL_RESULTADO
+
+        df.to_excel(excel_file_path, index=False)
+        wb = openpyxl.load_workbook(excel_file_path)
+        # faça as formatações
         wb.save(excel_file_path)
         print(f"📊 Planilha Excel salva e formatada: {excel_file_path}")
 
@@ -1384,8 +1392,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     
     
     # CORRETO (como deve ser ajustado)
-    excel_file_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
-
+    excel_resultado_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
+    
     #MODIFICADO O DIRETORIO PARA CONCLUIDO
 
     
@@ -1398,7 +1406,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         proprietario=proprietario,
         matricula=matricula,
         caminho_salvar=caminho_salvar,
-        excel_file_path=excel_confrontantes,
+        excel_confrontantes=excel_confrontantes, # 👈 EXISTENTE (PREPARADO)
+        excel_file_path=excel_resultado_path,         # 👈 SERÁ CRIADO (CONCLUIDO)
         ponto_az=ponto_az,
         distancia_az_v1=distancia_az_v1,
         azimute_az_v1=azimute,
