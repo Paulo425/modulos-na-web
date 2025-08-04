@@ -1275,9 +1275,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     logger.info(f"📌 Azimute Az→V1: {azimute_az_v1:.4f}°, Distância: {distance_az_v1:.2f} m")
 
     
-    excel_file_path = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
-
-
+    excel_file_path=os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+    
     # ✅ Geração do Excel e atualização do DXF
     excel_resultado = create_memorial_descritivo(
         uuid_str=uuid_str,
@@ -1296,18 +1295,10 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         
         
     )
-    # Após create_memorial_descritivo
-    if excel_resultado:
-        logger.info(f"✅ [DEPOIS create_memorial_descritivo] Arquivo Excel salvo em: {excel_resultado}")
-    else:
-        logger.error("❌ [DEPOIS create_memorial_descritivo] Excel_resultado retornou None.")
-
-
+    
     # ✅ Geração do DOCX
     if excel_resultado:
-        output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
-        logger.info(f"✅ [ANTES create_memorial_document] DOCX será salvo em: {output_path_docx}")
-
+        output_docx_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
 
         create_memorial_document(
             uuid_str=uuid_str,
