@@ -1344,7 +1344,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             desc_ponto_Az=desc_ponto_Az,
             Coorde_E_ponto_Az=ponto_az[0],
             Coorde_N_ponto_Az=ponto_az[1],
-            azimutH=azimute,
+            azimuth=azimute,
             distance=distancia_az_v1,
             giro_angular_v1_dms=giro_angular_v1_dms,  # 👈 importante
             uso_solo=uso_solo,
