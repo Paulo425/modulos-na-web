@@ -705,7 +705,7 @@ def calculate_angular_turn(p1, p2, p3):
 
 def create_memorial_descritivo(
     uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar,
-    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo,dxf_file_path,
+    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo, giro_angular_v1_dms, dxf_file_path,
     diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
@@ -1291,10 +1291,15 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     except Exception as e:
         logger.error(f"❌ Erro ao abrir o DXF com ezdxf: {e}")
         return
-    v1 = lines[0][0]
-    distance_az_v1 = calculate_distance(ponto_az, v1)
-    azimute_az_v1 = calculate_azimuth(ponto_az, v1)
+    if doc and lines:
+        print(f"📐 Área da poligonal: {area_dxf:.6f} m²")
 
+        v1 = lines[0][0]
+        v2 = lines[1][0]
+        azimute = calculate_azimuth(ponto_az, v1)
+        distancia_az_v1 = calculate_distance(ponto_az, v1)
+        giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
+        giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
     
     logger.info(f"📌 Azimute Az→V1: {azimute_az_v1:.4f}°, Distância: {distance_az_v1:.2f} m")
 
@@ -1315,6 +1320,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         distance_az_v1=distance_az_v1,
         azimute_az_v1=azimute_az_v1,
         tipo=tipo,
+        giro_angular_v1_dms=giro_angular_v1_dms,
         diretorio_concluido=caminho_salvar,
         dxf_file_path=dxf_file_path
         
