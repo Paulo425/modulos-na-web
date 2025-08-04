@@ -1005,7 +1005,7 @@ def create_memorial_document(
 
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Matrícula Número: ").bold = True
-        p.add_run(f"{matricula} - {ri}")
+        p.add_run(f"{matricula} - {RI}")
 
         area_total_formatada = str(area_total).replace(".", ",")
         p = doc_word.add_paragraph(style='Normal')

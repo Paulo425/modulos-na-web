@@ -706,6 +706,14 @@ def calculate_angular_turn(p1, p2, p3):
     angular_turn_degrees = math.degrees(angular_turn)
 
     return angular_turn_degrees
+def calcular_area_poligonal(points):
+    area = 0.0
+    n = len(points)
+    for i in range(n):
+        x1, y1 = points[i]
+        x2, y2 = points[(i + 1) % n]
+        area += (x1 * y2 - x2 * y1)
+    return area / 2.0
 
 
 
@@ -741,6 +749,17 @@ def create_memorial_descritivo(
         ordered_points.append(lines[-1][1])
 
     ordered_points = ensure_counterclockwise(ordered_points)
+
+    # Calcular área para verificar necessidade de inversão
+    area = calcular_area_poligonal(ordered_points)
+
+    # Agora inverter o sentido corretamente
+    if area > 0:  # Troque < por > aqui para mudar o sentido desejado
+        ordered_points.reverse()
+        area = abs(area)
+        logger.info(f"Área da poligonal invertida: {area:.4f} m²")
+    else:
+        logger.info(f"Área da poligonal sem inversão: {abs(area):.4f} m²")
 
     # Corrigir fechamento duplicado
     tolerancia = 0.001
