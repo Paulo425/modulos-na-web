@@ -709,15 +709,7 @@ def create_memorial_descritivo(
     diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
-    logger.info("🚩 [DEBUG] Entrando em create_memorial_descritivo")
-    logger.info(f"🚩 [DEBUG] parâmetros recebidos:")
-    logger.info(f"uuid_str: {uuid_str}")
-    logger.info(f"matricula: {matricula}")
-    logger.info(f"tipo: {tipo}")
-    logger.info(f"excel_file_path: {excel_file_path}")
-    logger.info(f"diretorio_concluido: {diretorio_concluido}")
-
-
+    
     """
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
     """
@@ -798,15 +790,13 @@ def create_memorial_descritivo(
                 "Azimute Az_V1": azimute_az_v1_str,
                 "Giro Angular Az_V1_V2": giro_v1_str
             })
-            logger.info("🚩 [DEBUG] Adicionando labels ao DXF")
-            if distance > 0.01:
-                add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
-            logger.info(f"✅ [DEBUG] Label e distância adicionada corretamente no DXF: V{i+1}")
-
+           
+           
+            add_label_and_distance(doc, msp, start_point, end_point, f"V{i + 1}", distance)
+            
         # ➕ Salvar Excel
-        logger.info("🚩 [DEBUG] Preparando para salvar DataFrame no Excel")
+        excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
         df = pd.DataFrame(data)
-        excel_output_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
         df.to_excel(excel_output_path, index=False)
         logger.info(f"🚩 [DEBUG] Excel salvo em: {excel_file_path}")
 
@@ -841,10 +831,45 @@ def create_memorial_descritivo(
         angulos_excel = [item["Angulo Interno"] for item in data]
         add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
 
+        # Adicionar arco de Azimute ao DXF
+    try:
+        msp = doc.modelspace()
+        v1 = ordered_points[0]
+        azimuth = calculate_azimuth(ponto_az, v1)
+        add_azimuth_arc(doc, msp, ponto_az, v1, azimuth)
+        logger.info("✅ Arco de azimute adicionado ao DXF.")
+    except Exception as e:
+        logger.error(f"❌ Erro ao adicionar arco de azimute: {e}")
+    
+    # Adicionar linha entre ponto Az e V1 (parte faltante adicionada aqui)
+    try:
+        msp = doc.modelspace()
+        msp.add_line(start=ponto_az, end=v1, dxfattribs={'layer': 'LAYOUT_AZIMUTES'})
+        logger.info("✅ Linha Az→V1 adicionada ao DXF.")
+    except Exception as e:
+        logger.error(f"❌ Erro ao adicionar linha Az→V1: {e}")
+
+
+    # Adicionar distância entre Az e V1 no DXF
+    try:
+        msp = doc.modelspace()
+        add_label_and_distance(doc, msp, ponto_az, v1, "Az-V1", distance_az_v1)
+        logger.info(f"✅ Distância Az-V1 ({distance_az_v1:.2f} m) adicionada ao DXF.")
+    except Exception as e:
+        logger.error(f"❌ Erro ao adicionar distância Az-V1: {e}")
+
+    # Adicionar linha apontando para o Norte no ponto Az
+    try:
+        msp = doc.modelspace()  # É importante garantir o msp atualizado aqui também
+        add_north_arrow(msp, ponto_az)
+        logger.info("✅ Linha Norte adicionada ao DXF.")
+    except Exception as e:
+        logger.error(f"❌ Erro ao adicionar linha Norte: {e}")
+
         # Código adicional para Giro Angular, Camada e rótulo, Azimute, distância Az-V1...
 
         # ✅ Salvar DXF corretamente
-        dxf_output_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
+        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
         logger.info("🚩 [DEBUG] Preparando para salvar DXF final")
         doc.saveas(dxf_output_path)
         logger.info(f"✅ DXF atualizado salvo: {dxf_output_path}")
