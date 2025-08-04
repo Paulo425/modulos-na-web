@@ -900,8 +900,11 @@ def create_memorial_descritivo(
 
         df.to_excel(excel_file_path, index=False)
         wb = openpyxl.load_workbook(excel_file_path)
+        # 🚩 IMPORTANTE! Essa linha é obrigatória:
+        ws = wb.active  
         # faça as formatações
         wb.save(excel_file_path)
+
         print(f"📊 Planilha Excel salva e formatada: {excel_file_path}")
 
         # ➕ Ângulos internos a partir do Excel
