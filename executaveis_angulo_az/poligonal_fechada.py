@@ -1309,7 +1309,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         excel_file_path=arquivos_encontrados[0],
         ponto_az=ponto_az,
         distance_az_v1=distance_az_v1,
-        azimute_az_v1=azimute,
+        azimute_az_v1=azimute_az_v1,
         tipo=tipo,
         diretorio_concluido=caminho_salvar
         
