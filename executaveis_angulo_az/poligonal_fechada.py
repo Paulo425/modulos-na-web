@@ -1292,7 +1292,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     except Exception as e:
         logger.error(f"❌ Erro ao abrir o DXF com ezdxf: {e}")
         return
-
+    logger.info(f"🚩 Conteúdo de doc: {doc}")
+    logger.info(f"🚩 Conteúdo de lines: {lines}")
+    logger.info(f"🚩 Tamanho de lines: {len(lines) if lines else 'Nenhuma linha'}")
     if doc and lines:
         logger.error("❌ Erro ao extrair geometria ou linhas do DXF.")
         return
