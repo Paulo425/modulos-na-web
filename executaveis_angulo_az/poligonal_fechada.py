@@ -709,7 +709,7 @@ def create_memorial_descritivo(
     diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
-    
+
     """
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
     """
@@ -1211,11 +1211,13 @@ def sanitize_filename(filename):
         
 def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
 
-    logger.info(f"🚩 [INÍCIO] main_poligonal_fechada com UUID: {uuid_str}")
-
-    # 🔹 Leitura dos dados do Excel
+     # 🔹 Leitura dos dados do Excel
     df_excel = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None, engine='openpyxl')
     dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
+
+    logger.info(f"🚩 [INÍCIO] main_poligonal_fechada com UUID: {uuid_str}")
+
+   
 
     # adicione um logger para ver se está lendo corretamente os dados iniciais
     
@@ -1311,7 +1313,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         proprietario=proprietario,
         matricula=matricula,
         caminho_salvar=caminho_salvar,
-        excel_file_path=arquivos_encontrados[0],
+        excel_file_path=excel_confrontantes,
         ponto_az=ponto_az,
         distance_az_v1=distance_az_v1,
         azimute_az_v1=azimute_az_v1,
