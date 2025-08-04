@@ -1291,8 +1291,10 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     except Exception as e:
         logger.error(f"❌ Erro ao abrir o DXF com ezdxf: {e}")
         return
+
     if doc and lines:
-        print(f"📐 Área da poligonal: {area_dxf:.6f} m²")
+        logger.error("❌ Erro ao extrair geometria ou linhas do DXF.")
+        return
 
         v1 = lines[0][0]
         v2 = lines[1][0]
@@ -1344,7 +1346,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             desc_ponto_Az=desc_ponto_Az,
             Coorde_E_ponto_Az=ponto_az[0],
             Coorde_N_ponto_Az=ponto_az[1],
-            azimuth=azimute_az_v1,
+            azimuth=azimute,
             distance=distancia_az_v1,
             giro_angular_v1_dms=giro_angular_v1_dms,  # 👈 importante
             uso_solo=uso_solo,
