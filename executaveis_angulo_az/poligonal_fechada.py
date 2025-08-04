@@ -1355,7 +1355,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     
 
-f
+
     if not doc or not ponto_az:
         logger.error("❌ Erro ao extrair geometria ou encontrar o ponto Az.")
         return
