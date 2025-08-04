@@ -727,8 +727,9 @@ def create_memorial_descritivo(
         return None
 
     dxf_output_path = os.path.join(
-        caminho_salvar, f"FECHADA_{tipo}_POLIGONAL_COM_AZ_{matricula}.dxf"
+        caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf"
     )
+
 
     try:
         doc_dxf = ezdxf.readfile(dxf_file_path)
