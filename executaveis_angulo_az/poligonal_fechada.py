@@ -1286,109 +1286,97 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     except Exception as e:
         logger.error(f"❌ Erro ao abrir o DXF com ezdxf: {e}")
         return
+    v1 = lines[0][0]
+    distance_az_v1 = calculate_distance(ponto_az, v1)
+    azimute_az_v1 = calculate_azimuth(ponto_az, v1)
 
-    if doc and lines:
-        logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
+    
+    logger.info(f"📌 Azimute Az→V1: {azimute_az_v1:.4f}°, Distância: {distance_az_v1:.2f} m")
 
-        v1 = lines[0][0]
-        v2 = lines[1][0]
-        azimute = calculate_azimuth(ponto_az, v1)
-        distancia_az_v1 = calculate_distance(ponto_az, v1)
-        giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
-        giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
+    
+    excel_file_path = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
 
-        # DEPOIS (PADRÃO AZIMUTE_AZ, recomendado):
-        logger.info("🚩🚩🚩 [DEBUG] Imediatamente antes da chamada de create_memorial_descritivo.")
 
+    # ✅ Geração do Excel e atualização do DXF
+    excel_resultado = create_memorial_descritivo(
+        uuid_str=uuid_str,
+        doc=doc,
+        msp=msp,
+        lines=lines,
+        proprietario=proprietario,
+        matricula=matricula,
+        caminho_salvar=caminho_salvar,
+        excel_file_path=arquivos_encontrados[0],
+        ponto_az=ponto_az,
+        distance_az_v1=distancia_az_v1,
+        azimute_az_v1=azimute,
+        tipo=tipo,
+        diretorio_concluido=caminho_salvar
         
-        excel_file_path = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+        
+    )
+    # Após create_memorial_descritivo
+    if excel_resultado:
+        logger.info(f"✅ [DEPOIS create_memorial_descritivo] Arquivo Excel salvo em: {excel_resultado}")
+    else:
+        logger.error("❌ [DEPOIS create_memorial_descritivo] Excel_resultado retornou None.")
 
 
-        logger.info(f"🚩🚩🚩 [DEBUG] excel_file_path definido como: {excel_file_path}")
-        # Antes de chamar create_memorial_descritivo
-        logger.info(f"✅ [ANTES create_memorial_descritivo] caminho_salvar = {caminho_salvar}")
-        logger.info(f"✅ [ANTES create_memorial_descritivo] excel_file_path (entrada) = {excel_file_path}")
+    # ✅ Geração do DOCX
+    if excel_resultado:
+        output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
+        logger.info(f"✅ [ANTES create_memorial_document] DOCX será salvo em: {output_path_docx}")
 
-        # ✅ Geração do Excel e atualização do DXF
-        excel_resultado = create_memorial_descritivo(
+
+        create_memorial_document(
             uuid_str=uuid_str,
-            doc=doc,
-            msp=msp,
-            lines=lines,
             proprietario=proprietario,
             matricula=matricula,
+            descricao=descricao,
+            excel_file_path=excel_resultado,
+            template_path=caminho_template,
+            output_path=output_path_docx,
+            perimeter_dxf=perimeter_dxf,
+            area_dxf=area_dxf,
+            desc_ponto_Az=desc_ponto_Az,
+            Coorde_E_ponto_Az=ponto_az[0],
+            Coorde_N_ponto_Az=ponto_az[1],
+            azimuth=azimute,
+            distance=distancia_az_v1,
+            giro_angular_v1_dms=giro_angular_v1_dms,  # 👈 importante
+            uso_solo=uso_solo,
+            area_imovel=area_imovel,
+            cidade=cidade,
+            rua=rua,
+            comarca=comarca,
+            RI=RI,
             caminho_salvar=caminho_salvar,
-            excel_file_path=arquivos_encontrados[0],
-            ponto_az=ponto_az,
-            distance_az_v1=distancia_az_v1,
-            azimute_az_v1=azimute,
-            tipo=tipo,
-            diretorio_concluido=caminho_salvar
-            
-            
+            tipo=tipo
         )
-        # Após create_memorial_descritivo
-        if excel_resultado:
-            logger.info(f"✅ [DEPOIS create_memorial_descritivo] Arquivo Excel salvo em: {excel_resultado}")
+
+
+
+
+
+        # ✅ Geração do PDF
+        # time.sleep(2)
+        # if os.path.exists(output_path_docx):
+        #     pdf_file_path = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.pdf")
+        #     convert_docx_to_pdf(output_path_docx, pdf_file_path)
+        #     logger.info(f"✅ PDF salvo em: {pdf_file_path}")
+        # else:
+        #     logger.info("❌ Arquivo DOCX não gerado para conversão.")
+        # Após create_memorial_document
+        if os.path.exists(output_path_docx):
+            logger.info(f"✅ [DEPOIS create_memorial_document] DOCX confirmado salvo em: {output_path_docx}")
         else:
-            logger.error("❌ [DEPOIS create_memorial_descritivo] Excel_resultado retornou None.")
-
-
-        # ✅ Geração do DOCX
-        if excel_resultado:
-            output_path_docx = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_Memorial_{matricula}.docx")
-            logger.info(f"✅ [ANTES create_memorial_document] DOCX será salvo em: {output_path_docx}")
-
-
-            create_memorial_document(
-                uuid_str=uuid_str,
-                proprietario=proprietario,
-                matricula=matricula,
-                descricao=descricao,
-                excel_file_path=excel_resultado,
-                template_path=caminho_template,
-                output_path=output_path_docx,
-                perimeter_dxf=perimeter_dxf,
-                area_dxf=area_dxf,
-                desc_ponto_Az=desc_ponto_Az,
-                Coorde_E_ponto_Az=ponto_az[0],
-                Coorde_N_ponto_Az=ponto_az[1],
-                azimuth=azimute,
-                distance=distancia_az_v1,
-                giro_angular_v1_dms=giro_angular_v1_dms,  # 👈 importante
-                uso_solo=uso_solo,
-                area_imovel=area_imovel,
-                cidade=cidade,
-                rua=rua,
-                comarca=comarca,
-                RI=RI,
-                caminho_salvar=caminho_salvar,
-                tipo=tipo
-            )
-
-
-
-
-
-            # ✅ Geração do PDF
-            # time.sleep(2)
-            # if os.path.exists(output_path_docx):
-            #     pdf_file_path = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.pdf")
-            #     convert_docx_to_pdf(output_path_docx, pdf_file_path)
-            #     logger.info(f"✅ PDF salvo em: {pdf_file_path}")
-            # else:
-            #     logger.info("❌ Arquivo DOCX não gerado para conversão.")
-            # Após create_memorial_document
-            if os.path.exists(output_path_docx):
-                logger.info(f"✅ [DEPOIS create_memorial_document] DOCX confirmado salvo em: {output_path_docx}")
-            else:
-                logger.error("❌ [DEPOIS create_memorial_document] DOCX NÃO ENCONTRADO após salvar.")
-
-        else:
-            logger.error("❌ Planilha Excel não gerada.")
+            logger.error("❌ [DEPOIS create_memorial_document] DOCX NÃO ENCONTRADO após salvar.")
 
     else:
-        logger.error("❌ Não foi possível processar a geometria.")
+        logger.error("❌ Planilha Excel não gerada.")
+
+else:
+    logger.error("❌ Não foi possível processar a geometria.")
 
 
 
