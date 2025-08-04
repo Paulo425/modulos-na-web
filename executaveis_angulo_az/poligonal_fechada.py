@@ -714,17 +714,19 @@ def create_memorial_descritivo(
     Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
     """
  
-    # Carregar confrontantes diretamente da planilha Excel recebida
-    confrontantes_df = pd.read_excel(excel_file_path)
-    confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
-    
-    if confrontantes_df.empty:
-        logger.error("❌ Planilha de confrontantes está vazia.")
-        return None
-
-    
     if not lines:
         print("Nenhuma linha disponível para criar o memorial descritivo.")
+        return None
+
+    dxf_output_path = os.path.join(
+        caminho_salvar, f"FECHADA_{tipo}_POLIGONAL_COM_AZ_{matricula}.dxf"
+    )
+
+    try:
+        doc_dxf = ezdxf.readfile(dxf_file_path)
+        msp = doc_dxf.modelspace()
+    except Exception as e:
+        print(f"Erro ao abrir o arquivo DXF para edição: {e}")
         return None
 
     # Ordena os pontos da poligonal
@@ -743,143 +745,130 @@ def create_memorial_descritivo(
     if math.isclose(ordered_points[0][0], ordered_points[-1][0], abs_tol=tolerancia) and \
        math.isclose(ordered_points[0][1], ordered_points[-1][1], abs_tol=tolerancia):
         ordered_points.pop()
+    try:
+        data = []
+        total_pontos = len(ordered_points)
 
-    
-    data = []
-    total_pontos = len(ordered_points)
+        for i in range(total_pontos):
+            p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
+            p2 = ordered_points[i]
+            p3 = ordered_points[(i + 1) % total_pontos]
 
-    logger.info(f"🚩 [DEBUG] Iniciando cálculo dos ângulos internos")
-    for i in range(total_pontos):
-        logger.info(f"🚩 [DEBUG] Vértice atual (V{i+1}): {ordered_points[i]}")
-        p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
-        p2 = ordered_points[i]
-        p3 = ordered_points[(i + 1) % total_pontos]
+            internal_angle = calculate_internal_angle(p1, p2, p3)
+            internal_angle_dms = convert_to_dms(internal_angle)
 
+            description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
+            dx = p3[0] - p2[0]
+            dy = p3[1] - p2[1]
+            distance = math.hypot(dx, dy)
+            confrontante = confrontantes[i % len(confrontantes)]
 
+            ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
+            ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
+            distancia_az_v1_str = f"{distance_az_v1:.2f}".replace(".", ",") if i == 0 else ""
+            azimute_az_v1_str = convert_to_dms(azimute) if i == 0 else ""
+            giro_v1_str = giro_angular_v1_dms if i == 0 else ""
 
+            data.append({
+                "V": f"V{i + 1}",
+                "E": f"{p2[0]:,.3f}".replace(",", "").replace(".", ","),
+                "N": f"{p2[1]:,.3f}".replace(",", "").replace(".", ","),
+                "Z": "0,000",
+                "Divisa": description,
+                "Angulo Interno": internal_angle_dms,
+                "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
+                "Confrontante": confrontante,
+                "ponto_AZ_E": ponto_az_e,
+                "ponto_AZ_N": ponto_az_n,
+                "distancia_Az_V1": distancia_az_v1_str,
+                "Azimute Az_V1": azimute_az_v1_str,
+                "Giro Angular Az_V1_V2": giro_v1_str
+            })
 
-        internal_angle = 360 - calculate_internal_angle(p1, p2, p3)
-        internal_angle_dms = convert_to_dms(internal_angle)
-        logger.info(f"🚩 [DEBUG] Ângulo interno calculado V{i+1}: {internal_angle_dms}")
+            if distance > 0.01:
+                add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
 
-        description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
-        dx = p3[0] - p2[0]
-        dy = p3[1] - p2[1]
-        distance = math.hypot(dx, dy)
-        confrontante = confrontantes[i % len(confrontantes)]
+        # ➕ Salvar Excel
+        df = pd.DataFrame(data)
+        df.to_excel(excel_file_path, index=False)
 
-        ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
-        ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
-        distancia_az_v1_str = f"{distance_az_v1:.2f}".replace(".", ",") if i == 0 else ""
-        azimute_az_v1_str = convert_to_dms(azimute_az_v1) if i == 0 else ""
-        giro_v1_str = giro_angular_v1_dms if i == 0 else ""
+        # 📊 Formatação do Excel
+        wb = openpyxl.load_workbook(excel_file_path)
+        ws = wb.active
 
-        logger.info(f"🚩 [DEBUG] Adicionando linha ao DataFrame (V{i+1})")
-        data.append({
-            "V": f"V{i + 1}",
-            "E": f"{p2[0]:,.3f}".replace(",", "").replace(".", ","),
-            "N": f"{p2[1]:,.3f}".replace(",", "").replace(".", ","),
-            "Z": "0,000",
-            "Divisa": description,
-            "Angulo Interno": internal_angle_dms,
-            "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
-            "Confrontante": confrontante,
-            "ponto_AZ_E": ponto_az_e,
-            "ponto_AZ_N": ponto_az_n,
-            "distancia_Az_V1": distancia_az_v1_str,
-            "Azimute Az_V1": azimute_az_v1_str,
-            "Giro Angular Az_V1_V2": giro_v1_str
-        })
-        
-        
-        add_label_and_distance(doc, msp, start_point, end_point, f"V{i + 1}", distance)
-        
-    # ➕ Salvar Excel
-    excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
-    df = pd.DataFrame(data)
-    df.to_excel(excel_output_path, index=False)
-    logger.info(f"🚩 [DEBUG] Excel salvo em: {excel_file_path}")
-
-    # 📊 Formatação do Excel
-    logger.info("🚩 [DEBUG] Preparando formatação do Excel")
-    wb = openpyxl.load_workbook(excel_output_path)
-    ws = wb.active
-    logger.info("🚩 [DEBUG] Excel formatado e salvo com sucesso.")
-
-    # Cabeçalho e corpo do Excel
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    col_widths = {
-        "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
-        "F": 15, "G": 15, "H": 50, "I": 15,
-        "J": 15, "K": 15, "L": 20, "M": 20
-    }
-
-    for col, width in col_widths.items():
-        ws.column_dimensions[col].width = width
-
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-        for cell in row:
+        # Cabeçalho
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    wb.save(excel_output_path)
-    logger.info(f"📊 Planilha Excel salva e formatada: {excel_output_path}")
+        col_widths = {
+            "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
+            "F": 15, "G": 15, "H": 50, "I": 15,
+            "J": 15, "K": 15, "L": 20, "M": 20
+        }
 
-    # ➕ Ângulos internos a partir do Excel
-    angulos_excel = [item["Angulo Interno"] for item in data]
-    add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
+        for col, width in col_widths.items():
+            ws.column_dimensions[col].width = width
 
-        # Adicionar arco de Azimute ao DXF
-    try:
-        msp = doc.modelspace()
-        v1 = ordered_points[0]
-        azimuth = calculate_azimuth(ponto_az, v1)
-        add_azimuth_arc(doc, msp, ponto_az, v1, azimuth)
-        logger.info("✅ Arco de azimute adicionado ao DXF.")
+        # Corpo
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for cell in row:
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        wb.save(excel_file_path)
+        print(f"📊 Planilha Excel salva e formatada: {excel_file_path}")
+
+        # ➕ Ângulos internos a partir do Excel
+        angulos_excel = [item["Angulo Interno"] for item in data]
+        add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
+
+        # ➕ Giro Angular
+        try:
+            v1 = ordered_points[0]
+            v2 = ordered_points[1]
+            add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_az, v2)
+            print("Giro horário Az-V1-V2 adicionado com sucesso.")
+        except Exception as e:
+            print(f"Erro ao adicionar giro angular: {e}")
+
+        # ➕ Camada e rótulo de vértices
+        if "Vertices" not in msp.doc.layers:
+            msp.doc.layers.add("Vertices", dxfattribs={"color": 1})
+
+        for i, vertex in enumerate(ordered_points):
+            msp.add_circle(center=vertex, radius=0.5, dxfattribs={"layer": "Vertices"})
+            label_pos = (vertex[0] + 0.3, vertex[1] + 0.3)
+            msp.add_text(f"V{i + 1}", dxfattribs={
+                "height": 0.3,
+                "layer": "Vertices",
+                "insert": label_pos
+            })
+
+        # ➕ Adicionar arco e rótulo do Azimute
+        try:
+            azimute = calculate_azimuth(ponto_az, v1)
+            add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute)
+            print("Arco do Azimute Az-V1 adicionado com sucesso.")
+        except Exception as e:
+            print(f"Erro ao adicionar arco do azimute: {e}")
+
+        # ➕ Adicionar distância Az–V1
+        try:
+            distancia_az_v1 = calculate_distance(ponto_az, v1)
+            add_label_and_distance(msp, ponto_az, v1, "", distancia_az_v1)
+            print(f"Distância Az-V1 ({distancia_az_v1:.2f} m) adicionada com sucesso.")
+        except Exception as e:
+            print(f"Erro ao adicionar distância entre Az e V1: {e}")
+
+        # ➕ Salvar DXF
+        doc_dxf.saveas(dxf_output_path)
+        print(f"📁 Arquivo DXF final salvo em: {dxf_output_path}")
+
     except Exception as e:
-        logger.error(f"❌ Erro ao adicionar arco de azimute: {e}")
-    
-    # Adicionar linha entre ponto Az e V1 (parte faltante adicionada aqui)
-    try:
-        msp = doc.modelspace()
-        msp.add_line(start=ponto_az, end=v1, dxfattribs={'layer': 'LAYOUT_AZIMUTES'})
-        logger.info("✅ Linha Az→V1 adicionada ao DXF.")
-    except Exception as e:
-        logger.error(f"❌ Erro ao adicionar linha Az→V1: {e}")
-
-
-    # Adicionar distância entre Az e V1 no DXF
-    try:
-        msp = doc.modelspace()
-        add_label_and_distance(doc, msp, ponto_az, v1, "Az-V1", distance_az_v1)
-        logger.info(f"✅ Distância Az-V1 ({distance_az_v1:.2f} m) adicionada ao DXF.")
-    except Exception as e:
-        logger.error(f"❌ Erro ao adicionar distância Az-V1: {e}")
-
-    # Adicionar linha apontando para o Norte no ponto Az
-    try:
-        msp = doc.modelspace()  # É importante garantir o msp atualizado aqui também
-        add_north_arrow(msp, ponto_az)
-        logger.info("✅ Linha Norte adicionada ao DXF.")
-    except Exception as e:
-        logger.error(f"❌ Erro ao adicionar linha Norte: {e}")
-
-        # Código adicional para Giro Angular, Camada e rótulo, Azimute, distância Az-V1...
-
-        # ✅ Salvar DXF corretamente
-        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
-        logger.info("🚩 [DEBUG] Preparando para salvar DXF final")
-        doc.saveas(dxf_output_path)
-        logger.info(f"✅ DXF atualizado salvo: {dxf_output_path}")
-
-        # ✅ Agora retorna o caminho correto para compactação:
-        return excel_output_path
-
-    except Exception as e:  # ⚠️ Faltava este bloco EXCEPT aqui!
-        logger.error(f"❌ [DEBUG] Erro geral em create_memorial_descritivo: {e}", exc_info=True)
+        print(f"❌ Erro ao gerar o memorial descritivo: {e}")
         return None
+
+    return excel_file_path
 
 
 
