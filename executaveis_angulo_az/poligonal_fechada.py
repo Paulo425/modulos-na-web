@@ -1120,7 +1120,7 @@ def create_memorial_document(
         ponto_az_2 = f"{Coorde_N_ponto_Az:.2f}".replace(".", ",")
 
 
-        azimute_dms = convert_to_dms(azimute)
+        azimute_dms = convert_to_dms(azimuth)
         distancia_str = f"{distancia_amarracao_v1:.2f}".replace(".", ",")
 
         # Linha: ponto de amarração
