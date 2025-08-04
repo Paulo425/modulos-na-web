@@ -1217,7 +1217,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     os.makedirs(caminho_salvar, exist_ok=True)
 
     # 🔍 Determina tipo do memorial a partir do nome do arquivo DXF
-    # 🔍 Determina tipo do memorial a partir do nome do arquivo DXF
+    
     dxf_filename = os.path.basename(dxf_path).upper()
     if "ETE" in dxf_filename:
         tipo = "ETE"
@@ -1235,18 +1235,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.error("❌ Tipo de memorial (ETE, REM, SER ou ACE) não identificado no nome do DXF.")
         return
 
-    # # 🔍 Busca automática de confrontantes (padrão AZIMUTE_AZ)
-    # padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
-    # arquivos_encontrados = glob.glob(padrao_busca)
-    # if not arquivos_encontrados:
-    #     logger.error(f"❌ Nenhum arquivo de confrontantes encontrado com o padrão: {padrao_busca}")
-    #     return None
-
-    #excel_confrontantes = arquivos_encontrados[0]
-
-    # Agora carrega exatamente a aba correta (conforme o tipo)
-    # 🔹 Busca planilha FECHADA correta com uuid_str (versão AZIMUTE_AZ, mais robusta)
-
+   
     logger.info(f"🚩 Antes da busca dos confrontantes: {os.path.join(diretorio_preparado, f'{uuid_str}_FECHADA_{tipo}.xlsx')}")
 
     padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
@@ -1258,15 +1247,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     excel_confrontantes = arquivos_encontrados[0]
 
-    # # Ler o arquivo Excel encontrado
-    # confrontantes_df = pd.read_excel(excel_confrontantes)
-
-    # if confrontantes_df.empty:
-    #     logger.error("❌ Planilha de confrontantes está vazia.")
-    #     return None
-
-
-    
+      
     # 🔹 Limpa DXF
     dxf_limpo_path = os.path.join(caminho_salvar, f"{uuid_str}_DXF_LIMPO_{matricula}.dxf")
     dxf_file_path = limpar_dxf(dxf_path, dxf_limpo_path)
@@ -1341,8 +1322,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             desc_ponto_Az=desc_ponto_Az,
             Coorde_E_ponto_Az=ponto_az[0],
             Coorde_N_ponto_Az=ponto_az[1],
-            azimuth=azimute,
-            distance=distancia_az_v1,
+            azimutH=azimute_az_v1,
+            distance=distance_az_v1,
             giro_angular_v1_dms=giro_angular_v1_dms,  # 👈 importante
             uso_solo=uso_solo,
             area_imovel=area_imovel,
