@@ -1301,7 +1301,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
         giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
     
-    logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distance_az_v1:.2f} m")
+    logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
 
     
     excel_file_path=os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
