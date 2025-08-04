@@ -976,7 +976,7 @@ def create_memorial_document(
         y = df['N'].values
         area = abs(sum(x[i] * y[(i + 1) % len(x)] - x[(i + 1) % len(x)] * y[i] for i in range(len(x))) / 2)
 
-        doc_word = Document(caminho_template)
+        doc_word = Document(template_path)
 
         # 🔴 Remover linhas vazias ou parágrafos indesejados no topo
         while doc_word.paragraphs and not doc_word.paragraphs[0].text.strip():
