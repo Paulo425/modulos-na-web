@@ -866,16 +866,14 @@ def create_memorial_descritivo(
             if distance > 0.01:
                 add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
 
-        # # ➕ Salvar Excel
-        # df = pd.DataFrame(data)
-        # df.to_excel(excel_resultado, index=False)
+        #SALVANDO EM excel_file_path
 
-        # # 📊 Formatação do Excel
-        # wb = openpyxl.load_workbook(excel_resultado)
-        # ws = wb.active
-       
-
+        df.to_excel(excel_file_path, index=False)
+        wb = openpyxl.load_workbook(excel_file_path)
+        # 🚩 IMPORTANTE! Essa linha é obrigatória:
+        ws = wb.active  
         
+           
 
         # Cabeçalho
         for cell in ws[1]:
@@ -896,13 +894,6 @@ def create_memorial_descritivo(
             for cell in row:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
-        #SALVANDO EM EXCEL_RESULTADO
-
-        df.to_excel(excel_file_path, index=False)
-        wb = openpyxl.load_workbook(excel_file_path)
-        # 🚩 IMPORTANTE! Essa linha é obrigatória:
-        ws = wb.active  
-        # faça as formatações
         wb.save(excel_file_path)
 
         print(f"📊 Planilha Excel salva e formatada: {excel_file_path}")
