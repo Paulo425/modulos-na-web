@@ -867,7 +867,7 @@ def create_memorial_descritivo(
                 add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
 
         #SALVANDO EM excel_file_path
-
+        df = pd.DataFrame(data)  # 👈 Você precisa desta linha
         df.to_excel(excel_file_path, index=False)
         wb = openpyxl.load_workbook(excel_file_path)
         # 🚩 IMPORTANTE! Essa linha é obrigatória:
