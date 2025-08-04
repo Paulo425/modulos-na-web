@@ -744,92 +744,92 @@ def create_memorial_descritivo(
        math.isclose(ordered_points[0][1], ordered_points[-1][1], abs_tol=tolerancia):
         ordered_points.pop()
 
-    try:
-        data = []
-        total_pontos = len(ordered_points)
+    
+    data = []
+    total_pontos = len(ordered_points)
 
-        logger.info(f"🚩 [DEBUG] Iniciando cálculo dos ângulos internos")
-        for i in range(total_pontos):
-            logger.info(f"🚩 [DEBUG] Vértice atual (V{i+1}): {ordered_points[i]}")
-            p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
-            p2 = ordered_points[i]
-            p3 = ordered_points[(i + 1) % total_pontos]
-
-
+    logger.info(f"🚩 [DEBUG] Iniciando cálculo dos ângulos internos")
+    for i in range(total_pontos):
+        logger.info(f"🚩 [DEBUG] Vértice atual (V{i+1}): {ordered_points[i]}")
+        p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
+        p2 = ordered_points[i]
+        p3 = ordered_points[(i + 1) % total_pontos]
 
 
-            internal_angle = 360 - calculate_internal_angle(p1, p2, p3)
-            internal_angle_dms = convert_to_dms(internal_angle)
-            logger.info(f"🚩 [DEBUG] Ângulo interno calculado V{i+1}: {internal_angle_dms}")
 
-            description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
-            dx = p3[0] - p2[0]
-            dy = p3[1] - p2[1]
-            distance = math.hypot(dx, dy)
-            confrontante = confrontantes[i % len(confrontantes)]
 
-            ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
-            ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
-            distancia_az_v1_str = f"{distance_az_v1:.2f}".replace(".", ",") if i == 0 else ""
-            azimute_az_v1_str = convert_to_dms(azimute_az_v1) if i == 0 else ""
-            giro_v1_str = giro_angular_v1_dms if i == 0 else ""
+        internal_angle = 360 - calculate_internal_angle(p1, p2, p3)
+        internal_angle_dms = convert_to_dms(internal_angle)
+        logger.info(f"🚩 [DEBUG] Ângulo interno calculado V{i+1}: {internal_angle_dms}")
 
-            logger.info(f"🚩 [DEBUG] Adicionando linha ao DataFrame (V{i+1})")
-            data.append({
-                "V": f"V{i + 1}",
-                "E": f"{p2[0]:,.3f}".replace(",", "").replace(".", ","),
-                "N": f"{p2[1]:,.3f}".replace(",", "").replace(".", ","),
-                "Z": "0,000",
-                "Divisa": description,
-                "Angulo Interno": internal_angle_dms,
-                "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
-                "Confrontante": confrontante,
-                "ponto_AZ_E": ponto_az_e,
-                "ponto_AZ_N": ponto_az_n,
-                "distancia_Az_V1": distancia_az_v1_str,
-                "Azimute Az_V1": azimute_az_v1_str,
-                "Giro Angular Az_V1_V2": giro_v1_str
-            })
-           
-           
-            add_label_and_distance(doc, msp, start_point, end_point, f"V{i + 1}", distance)
-            
-        # ➕ Salvar Excel
-        excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
-        df = pd.DataFrame(data)
-        df.to_excel(excel_output_path, index=False)
-        logger.info(f"🚩 [DEBUG] Excel salvo em: {excel_file_path}")
+        description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
+        dx = p3[0] - p2[0]
+        dy = p3[1] - p2[1]
+        distance = math.hypot(dx, dy)
+        confrontante = confrontantes[i % len(confrontantes)]
 
-        # 📊 Formatação do Excel
-        logger.info("🚩 [DEBUG] Preparando formatação do Excel")
-        wb = openpyxl.load_workbook(excel_output_path)
-        ws = wb.active
-        logger.info("🚩 [DEBUG] Excel formatado e salvo com sucesso.")
+        ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
+        ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
+        distancia_az_v1_str = f"{distance_az_v1:.2f}".replace(".", ",") if i == 0 else ""
+        azimute_az_v1_str = convert_to_dms(azimute_az_v1) if i == 0 else ""
+        giro_v1_str = giro_angular_v1_dms if i == 0 else ""
 
-        # Cabeçalho e corpo do Excel
-        for cell in ws[1]:
-            cell.font = Font(bold=True)
+        logger.info(f"🚩 [DEBUG] Adicionando linha ao DataFrame (V{i+1})")
+        data.append({
+            "V": f"V{i + 1}",
+            "E": f"{p2[0]:,.3f}".replace(",", "").replace(".", ","),
+            "N": f"{p2[1]:,.3f}".replace(",", "").replace(".", ","),
+            "Z": "0,000",
+            "Divisa": description,
+            "Angulo Interno": internal_angle_dms,
+            "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
+            "Confrontante": confrontante,
+            "ponto_AZ_E": ponto_az_e,
+            "ponto_AZ_N": ponto_az_n,
+            "distancia_Az_V1": distancia_az_v1_str,
+            "Azimute Az_V1": azimute_az_v1_str,
+            "Giro Angular Az_V1_V2": giro_v1_str
+        })
+        
+        
+        add_label_and_distance(doc, msp, start_point, end_point, f"V{i + 1}", distance)
+        
+    # ➕ Salvar Excel
+    excel_output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
+    df = pd.DataFrame(data)
+    df.to_excel(excel_output_path, index=False)
+    logger.info(f"🚩 [DEBUG] Excel salvo em: {excel_file_path}")
+
+    # 📊 Formatação do Excel
+    logger.info("🚩 [DEBUG] Preparando formatação do Excel")
+    wb = openpyxl.load_workbook(excel_output_path)
+    ws = wb.active
+    logger.info("🚩 [DEBUG] Excel formatado e salvo com sucesso.")
+
+    # Cabeçalho e corpo do Excel
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    col_widths = {
+        "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
+        "F": 15, "G": 15, "H": 50, "I": 15,
+        "J": 15, "K": 15, "L": 20, "M": 20
+    }
+
+    for col, width in col_widths.items():
+        ws.column_dimensions[col].width = width
+
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for cell in row:
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
-        col_widths = {
-            "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
-            "F": 15, "G": 15, "H": 50, "I": 15,
-            "J": 15, "K": 15, "L": 20, "M": 20
-        }
+    wb.save(excel_output_path)
+    logger.info(f"📊 Planilha Excel salva e formatada: {excel_output_path}")
 
-        for col, width in col_widths.items():
-            ws.column_dimensions[col].width = width
-
-        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-            for cell in row:
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-
-        wb.save(excel_output_path)
-        logger.info(f"📊 Planilha Excel salva e formatada: {excel_output_path}")
-
-        # ➕ Ângulos internos a partir do Excel
-        angulos_excel = [item["Angulo Interno"] for item in data]
-        add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
+    # ➕ Ângulos internos a partir do Excel
+    angulos_excel = [item["Angulo Interno"] for item in data]
+    add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
 
         # Adicionar arco de Azimute ao DXF
     try:
