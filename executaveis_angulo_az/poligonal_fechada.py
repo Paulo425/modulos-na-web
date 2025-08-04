@@ -1046,8 +1046,8 @@ def create_memorial_document(
         doc_word.add_paragraph()
 
         # Coordenadas do ponto Az
-        ponto_az_1 = f"{ponto_amarracao[0]:.2f}".replace(".", ",")
-        ponto_az_2 = f"{ponto_amarracao[1]:.2f}".replace(".", ",")
+        ponto_az_1 = f"{Coorde_E_ponto_Az:.2f}".replace(".", ",")
+        ponto_az_2 = f"{Coorde_N_ponto_Az:.2f}".replace(".", ",")
 
 
         azimute_dms = convert_to_dms(azimute)
