@@ -1353,30 +1353,14 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             caminho_salvar=caminho_salvar,
             tipo=tipo
         )
-
-
-
-
-
-        # ✅ Geração do PDF
-        # time.sleep(2)
-        # if os.path.exists(output_path_docx):
-        #     pdf_file_path = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.pdf")
-        #     convert_docx_to_pdf(output_path_docx, pdf_file_path)
-        #     logger.info(f"✅ PDF salvo em: {pdf_file_path}")
-        # else:
-        #     logger.info("❌ Arquivo DOCX não gerado para conversão.")
-        # Após create_memorial_document
-        if os.path.exists(output_path_docx):
-            logger.info(f"✅ [DEPOIS create_memorial_document] DOCX confirmado salvo em: {output_path_docx}")
-        else:
-            logger.error("❌ [DEPOIS create_memorial_document] DOCX NÃO ENCONTRADO após salvar.")
+        logger.info("🔵 [main_poligonal_fechada] Processamento concluído com sucesso.")
+        print("Processamento concluído com sucesso.")
 
     else:
-        logger.error("❌ Planilha Excel não gerada.")
+        logger.error("❌ Falha ao gerar memorial descritivo.")
+        print("Erro ao processar o arquivo DXF.")
 
-else:
-    logger.error("❌ Não foi possível processar a geometria.")
+
 
 
 
