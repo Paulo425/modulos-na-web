@@ -833,8 +833,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         return
 
     # 🔹 Criar memorial descritivo (planilha Excel final)
-    excel_file_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}.xlsx")
-
+    excel_file_path=os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx"), # ← Corrigido
    
     excel_resultado = create_memorial_descritivo(
         uuid_str=uuid_str,
@@ -844,7 +843,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         proprietario=proprietario,
         matricula=matricula,
         caminho_salvar=caminho_salvar,
-        excel_file_path=excel_file_path,
+        excel_file_path=excel_confrontantes,
         ponto_az=ponto_az,
         distance_az_v1=distance_az_v1,
         azimute_az_v1=azimute_az_v1,
