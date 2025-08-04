@@ -1332,8 +1332,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
    
     logger.info(f"🚩 Antes da busca dos confrontantes: {os.path.join(diretorio_preparado, f'{uuid_str}_FECHADA_{tipo}.xlsx')}")
 
-    #padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
-    padrao_busca = os.path.join(diretorio_preparado, f"FECHADA_*_{tipo}.xlsx")
+       
+    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+
     arquivos_encontrados = glob.glob(padrao_busca)
 
     if not arquivos_encontrados:
