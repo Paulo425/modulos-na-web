@@ -774,7 +774,7 @@ def create_memorial_descritivo(
             ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
             ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
             distancia_az_v1_str = f"{distance_az_v1:.2f}".replace(".", ",") if i == 0 else ""
-            azimute_az_v1_str = convert_to_dms(azimute) if i == 0 else ""
+            azimute_az_v1_str = convert_to_dms(azimute_az_v1) if i == 0 else ""
             giro_v1_str = giro_angular_v1_dms if i == 0 else ""
 
             data.append({
