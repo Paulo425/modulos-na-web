@@ -23,6 +23,7 @@ import re
 import pandas as pd  # ← inclusão imediata dessa linha resolve definitivamente
 import sys
 import traceback
+import subprocess
 
 
 # 🔧 Configuração do logger DEFINITIVA (completa e segura)
