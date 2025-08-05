@@ -73,16 +73,22 @@
       </tbody>
     </table>
 
+    {# 
     <p style="margin-top: 20px; font-weight: bold;">
       Valor Unitário Médio (amostras ativas): <span style="color: darkblue;">R$ {{ media }}</span>
     </p>
+    #}
+
     <p style="font-weight: bold; color: #444;">
-      Amplitude do Intervalo de Confiança 80%: <span style="color: darkred;">{{ amplitude_ic80 }}%</span>
+      Amplitude do Intervalo de Confiança 80%: <span style="color: brown;">{{ amplitude_intervalo_confianca }}%</span>
     </p>
 
 
     <div style="margin-top: 25px; padding: 15px; background-color: #eef7ff; border-radius: 6px; border: 1px solid #bdd7ee;">
       <h3 style="color: #004085; margin-bottom: 10px;">Resultados Iterativos em Tempo Real</h3>
+
+        
+
 
       <p style="font-weight: bold;">Valor Unitário Mínimo: <span id="valor-minimo">-</span></p>
       <p style="font-weight: bold;">Valor Unitário Médio: <span id="valor-medio">-</span></p>
@@ -156,9 +162,15 @@ function atualizarValoresIterativos(uuid_execucao) {
         if (data.erro) {
             alert(data.erro);
         } else {
+
+            document.querySelector("#amplitude_intervalo").textContent = resposta.amplitude_intervalo_confianca + "%";
+            
             document.getElementById("valor-minimo").innerText = `R$ ${data.valor_minimo.toFixed(2)}`;
             document.getElementById("valor-medio").innerText = `R$ ${data.valor_medio.toFixed(2)}`;
             document.getElementById("valor-maximo").innerText = `R$ ${data.valor_maximo.toFixed(2)}`;
+
+           
+
 
             document.getElementById("total-amostras-iniciais").innerText = data.quantidade_amostras_iniciais;
 
