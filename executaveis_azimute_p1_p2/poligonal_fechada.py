@@ -724,6 +724,8 @@ def create_memorial_descritivo(
     giro_angular_v1_dms, sentido_poligonal='horario',
     diretorio_concluido=None
 ):
+    logger.info(f"Sentido poligonal em create_memorial_descritivo: {sentido_poligonal}")
+
     if diretorio_concluido is None:
         diretorio_concluido = caminho_salvar
 
@@ -1146,6 +1148,7 @@ def sanitize_filename(filename):
 
         
 def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template, sentido_poligonal='horario'):
+    logger.info(f"Sentido poligonal recebido em main_poligonal_fechada: {sentido_poligonal}")
 
     caminho_salvar = diretorio_concluido 
     template_path = caminho_template 

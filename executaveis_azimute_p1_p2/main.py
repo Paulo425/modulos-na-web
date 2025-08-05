@@ -64,6 +64,7 @@ def main():
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
     sentido_poligonal = sys.argv[4] if len(sys.argv) == 5 else 'horario'
+    logger.info(f"Sentido poligonal recebido no main.py: {sentido_poligonal}")
 
     caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
 

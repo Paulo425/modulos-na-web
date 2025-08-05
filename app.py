@@ -728,6 +728,8 @@ def gerar_memorial_azimute_p1_p2():
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
         sentido_poligonal = 'anti_horario' if 'sentidoPoligonal' in request.form else 'horario'
+        logger.info(f"Valor recebido do checkbox (sentidoPoligonal): {request.form.get('sentidoPoligonal')}")
+        logger.info(f"Sentido poligonal interpretado no Flask: {sentido_poligonal}")
 
         id_execucao = str(uuid.uuid4())[:8]
         diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
@@ -747,12 +749,24 @@ def gerar_memorial_azimute_p1_p2():
        
 
         try:
+            comando = [
+                sys.executable,
+                os.path.join(BASE_DIR, "executaveis_azimute_p1_p2", "main.py"),
+                cidade, caminho_excel, caminho_dxf, sentido_poligonal
+            ]
+
+            logger.info(f"Comando enviado ao subprocess: {comando}")
+
             processo = Popen(
-                [sys.executable, os.path.join(BASE_DIR, "executaveis_azimute_p1_p2", "main.py"),
-                cidade, caminho_excel, caminho_dxf, sentido_poligonal],
+                comando,
                 stdout=PIPE, stderr=STDOUT, text=True
             )
 
+        except Exception as e:
+            logger.error(f"Erro ao executar subprocess: {e}")
+
+            
+            
             log_lines = []
             with open(log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
