@@ -163,7 +163,8 @@ function atualizarValoresIterativos(uuid_execucao) {
             alert(data.erro);
         } else {
 
-            document.querySelector("#amplitude_intervalo").textContent = resposta.amplitude_intervalo_confianca + "%";
+            document.querySelector("#amplitude_intervalo").textContent = data.amplitude_intervalo_confianca + "%";
+
             
             document.getElementById("valor-minimo").innerText = `R$ ${data.valor_minimo.toFixed(2)}`;
             document.getElementById("valor-medio").innerText = `R$ ${data.valor_medio.toFixed(2)}`;
