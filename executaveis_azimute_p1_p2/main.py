@@ -54,7 +54,7 @@ except Exception:
     pass  # Em alguns ambientes, reconfigure não está disponível
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) < 4:
         print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf>")
         sys.exit(1)
 
