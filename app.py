@@ -716,7 +716,7 @@ def gerar_memorial_angulo_p1_p2():
                            log_path=log_relativo)
 
 #ROTA AZIMUTE_P1_P2
-
+from subprocess import Popen, PIPE, STDOUT, CalledProcessError, TimeoutExpired
 @app.route('/memorial_azimute_p1_p2', methods=['GET', 'POST'])
 def gerar_memorial_azimute_p1_p2():
     if 'usuario' not in session:
@@ -762,8 +762,16 @@ def gerar_memorial_azimute_p1_p2():
                 stdout=PIPE, stderr=STDOUT, text=True
             )
 
+            try:
+                saida, _ = processo.communicate(timeout=300)
+                logger.info(f"Saída do subprocess:\n{saida}")
+            except TimeoutExpired:
+                processo.kill()
+                saida, _ = processo.communicate()
+                logger.error(f"Subprocess atingiu timeout. Saída parcial:\n{saida}")
+
         except Exception as e:
-            logger.error(f"Erro ao executar subprocess: {e}")
+            logger.error(f"Erro fatal ao executar subprocess: {e}")
 
             
             
