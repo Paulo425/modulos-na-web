@@ -721,7 +721,7 @@ def calcular_area_poligonal(points):
 def create_memorial_descritivo(
     uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
     dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-    giro_angular_v1_dms,
+    giro_angular_v1_dms, sentido_poligonal='horario',
     diretorio_concluido=None
 ):
     if diretorio_concluido is None:
@@ -754,12 +754,41 @@ def create_memorial_descritivo(
     area = calcular_area_poligonal(ordered_points)
 
     # Agora inverter o sentido corretamente
-    if area > 0:  # Troque < por > aqui para mudar o sentido desejado
-        ordered_points.reverse()
-        area = abs(area)
-        logger.info(f"Área da poligonal invertida: {area:.4f} m²")
-    else:
-        logger.info(f"Área da poligonal sem inversão: {abs(area):.4f} m²")
+    # if area > 0:  # Troque < por > aqui para mudar o sentido desejado
+    #     ordered_points.reverse()
+    #     area = abs(area)
+    #     logger.info(f"Área da poligonal invertida: {area:.4f} m²")
+    # else:
+    #     logger.info(f"Área da poligonal sem inversão: {abs(area):.4f} m²")
+
+
+
+    # Agora inverter o sentido corretamente, incluindo tratamento dos arcos (bulge)
+    if sentido_poligonal == 'horario':
+        if area > 0:
+            ordered_points.reverse()
+            area = abs(area)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido horário com ajuste dos arcos: {area:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido horário: {abs(area):.4f} m²")
+
+    else:  # sentido_poligonal == 'anti_horario'
+        if area < 0:
+            ordered_points.reverse()
+            area = abs(area)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido anti-horário com ajuste dos arcos: {area:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido anti-horário: {abs(area):.4f} m²")
+
+
 
     # Corrigir fechamento duplicado
     tolerancia = 0.001
@@ -1116,7 +1145,7 @@ def sanitize_filename(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
         
-def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
+def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template, sentido_poligonal='horario'):
 
     caminho_salvar = diretorio_concluido 
     template_path = caminho_template 
@@ -1238,7 +1267,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         # Criar memorial e Excel
         create_memorial_descritivo(
             uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
-            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo, giro_angular_v1_dms
+            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo, giro_angular_v1_dms, sentido_poligonal=sentido_poligonal
         )
 
         # Gerar DOCX

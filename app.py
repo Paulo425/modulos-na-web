@@ -727,6 +727,8 @@ def gerar_memorial_azimute_p1_p2():
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
+        sentido_poligonal = 'anti_horario' if 'sentidoPoligonal' in request.form else 'horario'
+
         id_execucao = str(uuid.uuid4())[:8]
         diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
         os.makedirs(diretorio_tmp, exist_ok=True)
@@ -747,7 +749,7 @@ def gerar_memorial_azimute_p1_p2():
         try:
             processo = Popen(
                 [sys.executable, os.path.join(BASE_DIR, "executaveis_azimute_p1_p2", "main.py"),
-                cidade, caminho_excel, caminho_dxf],
+                cidade, caminho_excel, caminho_dxf, sentido_poligonal],
                 stdout=PIPE, stderr=STDOUT, text=True
             )
 

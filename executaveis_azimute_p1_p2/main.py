@@ -63,6 +63,7 @@ def main():
     cidade_formatada = cidade.replace(" ", "_")
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
+    sentido_poligonal = sys.argv[4] if len(sys.argv) > 4 else 'horario'  # valor padrão
     caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
 
     if not os.path.exists(caminho_template):
@@ -88,6 +89,7 @@ def main():
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
+        sentido_poligonal,
         caminho_template
     )
 
