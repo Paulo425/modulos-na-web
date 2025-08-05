@@ -54,8 +54,8 @@ except Exception:
     pass  # Em alguns ambientes, reconfigure não está disponível
 
 def main():
-    if len(sys.argv) < 4:
-        print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf>")
+    if len(sys.argv) < 4 or len(sys.argv) > 5:
+        print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf> [sentido_poligonal]")
         sys.exit(1)
 
     cidade = sys.argv[1]
@@ -63,7 +63,8 @@ def main():
     cidade_formatada = cidade.replace(" ", "_")
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
-    sentido_poligonal = sys.argv[4] if len(sys.argv) > 4 else 'horario'  # valor padrão
+    sentido_poligonal = sys.argv[4] if len(sys.argv) == 5 else 'horario'
+
     caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
 
     if not os.path.exists(caminho_template):
@@ -89,8 +90,9 @@ def main():
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
-        sentido_poligonal,
-        caminho_template
+        caminho_template,
+        sentido_poligonal
+
     )
 
     # 🔸 Unir poligonais
