@@ -1405,14 +1405,15 @@ def calcular_valores_iterativos(uuid):
         array_homog = np.array(homog, dtype=float)
         if len(array_homog) > 1:
             limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
-            # Adicione isto após o cálculo dos limites do intervalo de confiança
-            amplitude_intervalo_confianca = round(((valor_maximo - valor_minimo) / valor_medio) * 100, 2)
-
+               
             valor_minimo = round(limite_inf, 2)
             valor_maximo = round(limite_sup, 2)
             valor_medio = round(np.median(array_homog), 2)
+
+            amplitude_intervalo_confianca = round(((valor_maximo - valor_minimo) / valor_medio) * 100, 2)
         else:
             valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
+            amplitude_intervalo_confianca = 80  # ou outro valor padrão que desejar
 
         pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
         os.makedirs(pasta_saida, exist_ok=True)
