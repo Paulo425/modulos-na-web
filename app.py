@@ -781,6 +781,8 @@ def gerar_memorial_azimute_p1_p2():
         return redirect(url_for('login'))
 
     resultado = erro_execucao = log_relativo = None
+    amostras_homog = []
+
     zip_download = None
 
     if request.method == 'POST':

@@ -642,7 +642,7 @@ import math
 #     except Exception as e:
 #         print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
 
-def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais):
+def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentido_poligonal='horario'):
     try:
         total_points = len(ordered_points)
 
