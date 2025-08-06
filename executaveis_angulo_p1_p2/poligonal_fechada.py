@@ -545,6 +545,9 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentid
 
         total_points = len(ordered_points)
 
+        # Ajuste decisivo e correto aqui: inverter ordem dos pontos apenas para anti-horário
+        pontos = ordered_points if sentido_poligonal.lower() == "horario" else ordered_points[::-1]
+
         for i, p2 in enumerate(ordered_points):
             p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
             p3 = ordered_points[(i + 1) % total_points]
