@@ -797,100 +797,101 @@ def create_memorial_descritivo(
     if math.isclose(ordered_points[0][0], ordered_points[-1][0], abs_tol=tolerancia) and \
        math.isclose(ordered_points[0][1], ordered_points[-1][1], abs_tol=tolerancia):
         ordered_points.pop()
+    try:
+        data = []
+        total_pontos = len(ordered_points)
 
-    data = []
-    total_pontos = len(ordered_points)
+        for i in range(total_pontos):
+            p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
+            p2 = ordered_points[i]
+            p3 = ordered_points[(i + 1) % total_pontos]
 
-    for i in range(total_pontos):
-        p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
-        p2 = ordered_points[i]
-        p3 = ordered_points[(i + 1) % total_pontos]
+            internal_angle = 360 - calculate_internal_angle(p1, p2, p3)
+            internal_angle_dms = convert_to_dms(internal_angle)
 
-        internal_angle = 360 - calculate_internal_angle(p1, p2, p3)
-        internal_angle_dms = convert_to_dms(internal_angle)
+            description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
+            dx = p3[0] - p2[0]
+            dy = p3[1] - p2[1]
+            distance = math.hypot(dx, dy)
+            confrontante = confrontantes[i % len(confrontantes)]
 
-        description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
-        dx = p3[0] - p2[0]
-        dy = p3[1] - p2[1]
-        distance = math.hypot(dx, dy)
-        confrontante = confrontantes[i % len(confrontantes)]
+            data.append({
+                "V": f"V{i + 1}",
+                "E": f"{p2[0]:,.3f}".replace(",", "").replace(".", ","),
+                "N": f"{p2[1]:,.3f}".replace(",", "").replace(".", ","),
+                "Z": "0,000",
+                "Divisa": description,
+                "Azimute": convert_to_dms(calculate_azimuth(p2, p3)),
+                "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
+                "Confrontante": confrontante
+            })
 
-        data.append({
-            "V": f"V{i + 1}",
-            "E": f"{p2[0]:,.3f}".replace(",", "").replace(".", ","),
-            "N": f"{p2[1]:,.3f}".replace(",", "").replace(".", ","),
-            "Z": "0,000",
-            "Divisa": description,
-            "Azimute": convert_to_dms(calculate_azimuth(p2, p3)),
-            "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
-            "Confrontante": confrontante
-        })
+            if distance > 0.01:
+                add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
 
-        if distance > 0.01:
-            add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
+        df = pd.DataFrame(data)
+        df["GIRO_ANGULAR_V1_P2_V2"] = [""] * len(df)
+        df.at[0, "GIRO_ANGULAR_V1_P2_V2"] = giro_angular_v1_dms
 
-    df = pd.DataFrame(data)
-    df["GIRO_ANGULAR_V1_P2_V2"] = [""] * len(df)
-    df.at[0, "GIRO_ANGULAR_V1_P2_V2"] = giro_angular_v1_dms
+        df.to_excel(excel_file_path, index=False)
 
-    df.to_excel(excel_file_path, index=False)
+        # Formatar Excel
+        wb = openpyxl.load_workbook(excel_file_path)
+        ws = wb.active
 
-    # Formatar Excel
-    wb = openpyxl.load_workbook(excel_file_path)
-    ws = wb.active
-
-    # Formatação do cabeçalho (negrito e centralizado)
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    # Definir larguras específicas para cada coluna
-    column_widths = {
-        "A": 8,   # V
-        "B": 15,  # E
-        "C": 15,  # N
-        "D": 10,  # Z
-        "E": 20,  # Divisa
-        "F": 15,  # Azimute
-        "G": 15,  # Distancia(m)
-        "H": 40,  # Confrontante
-        "I": 20,  # Coord_E_ponto_Az
-        "J": 20,  # Coord_N_ponto_Az
-        "K": 18,  # Giro angular ou distância adicional
-        "L": 18,  # Outra coluna adicional
-    }
-
-    for col, width in column_widths.items():
-        ws.column_dimensions[col].width = width
-
-    # Centralizar conteúdo das células (linhas de dados)
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-        for cell in row:
+        # Formatação do cabeçalho (negrito e centralizado)
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
+        # Definir larguras específicas para cada coluna
+        column_widths = {
+            "A": 8,   # V
+            "B": 15,  # E
+            "C": 15,  # N
+            "D": 10,  # Z
+            "E": 20,  # Divisa
+            "F": 15,  # Azimute
+            "G": 15,  # Distancia(m)
+            "H": 40,  # Confrontante
+            "I": 20,  # Coord_E_ponto_Az
+            "J": 20,  # Coord_N_ponto_Az
+            "K": 18,  # Giro angular ou distância adicional
+            "L": 18,  # Outra coluna adicional
+        }
 
-    wb.save(excel_file_path)
-    logger.info(f"📄 Excel salvo e formatado: {excel_file_path}")
+        for col, width in column_widths.items():
+            ws.column_dimensions[col].width = width
 
-    try:
-        v2 = ordered_points[1]
-        add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_amarracao, v2)
-    except Exception as e:
-        logger.warning(f"⚠️ Falha ao adicionar giro angular: {e}")
+        # Centralizar conteúdo das células (linhas de dados)
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for cell in row:
+                cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # Vértices no DXF
-    if "Vertices" not in msp.doc.layers:
-        msp.doc.layers.add("Vertices", dxfattribs={"color": 1})
 
-    for i, vertex in enumerate(ordered_points):
-        msp.add_circle(center=vertex, radius=0.5, dxfattribs={"layer": "Vertices"})
-        label_position = (vertex[0] + 0.3, vertex[1] + 0.3)
-        msp.add_text(f"V{i + 1}", dxfattribs={"height": 0.3, "layer": "Vertices", "insert": label_position})
+        wb.save(excel_file_path)
+        logger.info(f"📄 Excel salvo e formatado: {excel_file_path}")
 
-    # Salvar o DXF
-    try:
+        try:
+            v2 = ordered_points[1]
+            add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_amarracao, v2)
+        except Exception as e:
+            logger.warning(f"⚠️ Falha ao adicionar giro angular: {e}")
+
+        # Vértices no DXF
+        if "Vertices" not in msp.doc.layers:
+            msp.doc.layers.add("Vertices", dxfattribs={"color": 1})
+
+        for i, vertex in enumerate(ordered_points):
+            msp.add_circle(center=vertex, radius=0.5, dxfattribs={"layer": "Vertices"})
+            label_position = (vertex[0] + 0.3, vertex[1] + 0.3)
+            msp.add_text(f"V{i + 1}", dxfattribs={"height": 0.3, "layer": "Vertices", "insert": label_position})
+
+        # Salvar o DXF
+        
         doc_dxf.saveas(dxf_output_path)
         logger.info(f"✅ DXF atualizado salvo em: {dxf_output_path}")
+
     except Exception as e:
         logger.error(f"❌ Erro ao salvar o DXF: {e}")
 
