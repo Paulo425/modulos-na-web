@@ -834,8 +834,8 @@ def create_memorial_descritivo(
         add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
 
 
-        # ✅ Desenhar o GIRO ANGULAR com base no ponto real
-         try:
+        # ➕ Giro Angular
+        try:
             v1 = ordered_points[0]
             v2 = ordered_points[1]
             add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_az, v2)
@@ -843,7 +843,7 @@ def create_memorial_descritivo(
         except Exception as e:
             print(f"Erro ao adicionar giro angular: {e}")
 
-       # ➕ Camada e rótulo de vértices
+        # ➕ Camada e rótulo de vértices
         if "Vertices" not in msp.doc.layers:
             msp.doc.layers.add("Vertices", dxfattribs={"color": 1})
 
@@ -855,7 +855,6 @@ def create_memorial_descritivo(
                 "layer": "Vertices",
                 "insert": label_pos
             })
-        logger.info("Vértices adicionados ao DXF.")
 
         # ➕ Adicionar arco e rótulo do Azimute
         try:
@@ -878,7 +877,7 @@ def create_memorial_descritivo(
         print(f"📁 Arquivo DXF final salvo em: {dxf_output_path}")
 
     except Exception as e:
-        logger.error(f"Erro ao gerar o memorial descritivo: {e}")
+        print(f"❌ Erro ao gerar o memorial descritivo: {e}")
         return None
 
     return excel_file_path
