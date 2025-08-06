@@ -797,7 +797,7 @@ def create_memorial_descritivo(
             p2 = ordered_points[i]
             p3 = ordered_points[(i + 1) % total_pontos]
 
-            internal_angle = calculate_internal_angle(p1, p2, p3)
+            internal_angle =360 - calculate_internal_angle(p1, p2, p3)
             internal_angle_dms = convert_to_dms(internal_angle)
 
             description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
