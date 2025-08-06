@@ -512,7 +512,7 @@ def sanitize_filename(filename):
 # Função para criar memorial descritivo
 def create_memorial_descritivo(
     uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar,
-    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo, diretorio_concluido=None, encoding='ISO-8859-1'
+    excel_file_path, ponto_az, distance_az_v1, azimute_az_v1, tipo, sentido_poligonal='horario',diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
     # Carregar confrontantes da planilha FECHADA
@@ -531,9 +531,36 @@ def create_memorial_descritivo(
 
     area = calculate_polygon_area(ordered_points)
 
-    if area < 0:
-        ordered_points.reverse()
-        logger.info("Pontos reorganizados para sentido horário.")
+    # if area < 0:
+    #     ordered_points.reverse()
+    #     logger.info("Pontos reorganizados para sentido horário.")
+
+
+    # Agora inverter o sentido corretamente, incluindo tratamento dos arcos (bulge)
+    if sentido_poligonal == 'horario':
+        if area > 0:
+            ordered_points.reverse()
+            area = abs(area)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido horário com ajuste dos arcos: {area:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido horário: {abs(area):.4f} m²")
+
+    else:  # sentido_poligonal == 'anti_horario'
+        if area < 0:
+            ordered_points.reverse()
+            area = abs(area)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido anti-horário com ajuste dos arcos: {area:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido anti-horário: {abs(area):.4f} m²")
+
 
     data = []
     total_vertices = len(ordered_points) - 1
@@ -762,7 +789,7 @@ def create_memorial_document(
 
         
 # Função principal
-def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
+def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template, sentido_poligonal='horario'):
 
     caminho_salvar = diretorio_concluido 
     os.makedirs(caminho_salvar, exist_ok=True)
@@ -848,7 +875,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         distance_az_v1=distance_az_v1,
         azimute_az_v1=azimute_az_v1,
         tipo=tipo,
-        diretorio_concluido=caminho_salvar
+        diretorio_concluido=caminho_salvar,
+        sentido_poligonal=sentido_poligonal
     )
 
     if excel_resultado:

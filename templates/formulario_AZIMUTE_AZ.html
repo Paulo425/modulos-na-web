@@ -17,6 +17,23 @@
 
     <form method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('spinner').style.display='block'">
         <div class="mb-3">
+
+            <div class="form-check form-switch mb-4">
+                <input class="form-check-input" type="checkbox" id="sentidoPoligonal" name="sentidoPoligonal" value="anti_horario">
+                <label class="form-check-label text-primary" for="sentidoPoligonal">
+                    🔄 Sentido da Poligonal: <strong id="labelSentido">Horário (direita)</strong>
+                </label>
+            </div>
+
+            <script>
+            document.getElementById('sentidoPoligonal').addEventListener('change', function() {
+                document.getElementById('labelSentido').innerHTML = this.checked ? "Anti-horário (esquerda)" : "Horário (direita)";
+            });
+            </script>
+
+
+
+
             <label for="cidade" class="form-label">Cidade:</label>
             <input type="text" class="form-control" id="cidade" name="cidade" required>
         </div>

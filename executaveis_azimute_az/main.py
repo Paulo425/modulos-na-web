@@ -40,15 +40,17 @@ except Exception:
     pass
 
 def main():
-    if len(sys.argv) != 4:
-        logger.error("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf>")
+    if len(sys.argv) < 4 or len(sys.argv) > 5:
+        print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf> [sentido_poligonal]")
         sys.exit(1)
+
 
     cidade = sys.argv[1]
     cidade_formatada = cidade.replace(" ", "_")
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
     uuid_str = str(uuid.uuid4())[:8]
+    sentido_poligonal = sys.argv[4] if len(sys.argv) == 5 else 'horario'
     caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
     
 
@@ -73,7 +75,8 @@ def main():
         variaveis["arquivo_dxf_recebido"],
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
-        caminho_template
+        caminho_template,
+        sentido_poligonal
     )
 
 
