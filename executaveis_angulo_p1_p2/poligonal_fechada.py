@@ -564,10 +564,10 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
             if end_angle < start_angle:
                 end_angle += 360
 
-            internal_angle_dms = 360 - angulos_excel[i]
+            #internal_angle_dms = angulos_excel[i]
 
-            # internal_angle_decimal = (angulos_excel[i])
-            # internal_angle_suplementar = 360 - internal_angle_decimal
+            internal_angle_decimal = (angulos_excel[i])
+            internal_angle_suplementar = 360 - internal_angle_decimal
             # internal_angle_dms = convert_to_dms(internal_angle_suplementar)
 
             msp.add_arc(
