@@ -599,17 +599,26 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
 
 def calculate_internal_angle(p1, p2, p3):
     try:
+        # Vetores a partir do ponto central (p2)
         dx1, dy1 = p1[0] - p2[0], p1[1] - p2[1]
         dx2, dy2 = p3[0] - p2[0], p3[1] - p2[1]
 
+        # Ângulos dos vetores em relação ao eixo X
         angle1 = math.atan2(dy1, dx1)
         angle2 = math.atan2(dy2, dx2)
 
-        internal_angle = math.degrees(angle2 - angle1) % 360
-        return internal_angle
+        # Ângulo formado entre os vetores
+        internal_angle = (angle2 - angle1) % (2 * math.pi)
+
+        # Se o ângulo for maior que 180°, use o suplementar
+        if internal_angle > math.pi:
+            internal_angle = (2 * math.pi) - internal_angle
+
+        # Retornar o ângulo em graus
+        return math.degrees(internal_angle)
 
     except Exception as e:
-        logger.info(f"Erro inesperado ao calcular o ângulo interno: {e}")
+        print(f"Erro inesperado ao calcular o ângulo interno: {e}")
         return 0
 
 
@@ -797,7 +806,7 @@ def create_memorial_descritivo(
             p2 = ordered_points[i]
             p3 = ordered_points[(i + 1) % total_pontos]
 
-            internal_angle =360 - calculate_internal_angle(p1, p2, p3)
+            internal_angle = calculate_internal_angle(p1, p2, p3)
             internal_angle_dms = convert_to_dms(internal_angle)
 
             description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
