@@ -123,29 +123,25 @@ def get_document_info_from_dxf(dxf_file_path):
         perimeter_dxf = 0
         area_dxf = 0
         ponto_az = None
-        area_poligonal = None
 
         for entity in msp.query('LWPOLYLINE'):
             if entity.closed:
-                points = entity.get_points('xy')  
+                points = entity.get_points('xy')
+                
+                # Remove vértice repetido no final, se houver
+                if points[0] == points[-1]:
+                    points.pop()
+                
                 num_points = len(points)
 
-                for i in range(num_points - 1):
+                for i in range(num_points):
                     start_point = (points[i][0], points[i][1])
-                    end_point = (points[i + 1][0], points[i + 1][1])
+                    end_point = (points[(i + 1) % num_points][0], points[(i + 1) % num_points][1])
                     lines.append((start_point, end_point))
 
                     segment_length = ((end_point[0] - start_point[0]) ** 2 + 
                                       (end_point[1] - start_point[1]) ** 2) ** 0.5
                     perimeter_dxf += segment_length
-
-                start_point = (points[-1][0], points[-1][1])
-                end_point = (points[0][0], points[0][1])
-                lines.append((start_point, end_point))
-
-                segment_length = ((end_point[0] - start_point[0]) ** 2 + 
-                                  (end_point[1] - start_point[1]) ** 2) ** 0.5
-                perimeter_dxf += segment_length
 
                 x = [point[0] for point in points]
                 y = [point[1] for point in points]
@@ -154,37 +150,39 @@ def get_document_info_from_dxf(dxf_file_path):
                 break  
 
         if not lines:
-            logger.info("Nenhuma polilinha encontrada no arquivo DXF.")
+            print("Nenhuma polilinha encontrada no arquivo DXF.")
             return None, [], 0, 0, None, None
 
         for entity in msp.query('TEXT'):
             if "Az" in entity.dxf.text:
                 ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
-                logger.info(f"Ponto Az encontrado em texto: {ponto_az}")
-        
+                print(f"Ponto Az encontrado em texto: {ponto_az}")
+
         for entity in msp.query('INSERT'):
             if "Az" in entity.dxf.name:
                 ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
-                logger.info(f"Ponto Az encontrado no bloco: {ponto_az}")
-        
+                print(f"Ponto Az encontrado no bloco: {ponto_az}")
+
         for entity in msp.query('POINT'):
             ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
-            logger.info(f"Ponto Az encontrado como ponto: {ponto_az}")
-        
+            print(f"Ponto Az encontrado como ponto: {ponto_az}")
+            
+        if not ponto_az:
+            print("Ponto Az não encontrado no arquivo DXF.")
+            return None, lines, 0, 0, None, None
 
-        # if not ponto_az:
-        #     logger.info("Ponto Az não encontrado no arquivo DXF.")
-        #     return None, lines, 0, 0, None, None
+        print(f"Linhas processadas: {len(lines)}")
+        print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
+        print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
 
-        logger.info(f"Linhas processadas: {len(lines)}")
-        logger.info(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
-        logger.info(f"Área do DXF: {area_dxf:.2f} metros quadrados")
-
-        return doc, lines, perimeter_dxf, area_dxf, ponto_az, area_poligonal
+        # 👇 Retornando agora msp (correto):
+        return doc, lines, perimeter_dxf, area_dxf, ponto_az, msp  
 
     except Exception as e:
-        logger.error(f"Erro ao obter informações do documento: {e}")
+        print(f"Erro ao obter informações do documento: {e}")
         return None, [], 0, 0, None, None
+
+
     
 def obter_ponto_amarracao_anterior_v1(planilha_aberta_path):
     """
@@ -711,14 +709,15 @@ def calculate_angular_turn(p1, p2, p3):
 
 
 def create_memorial_descritivo(
-        uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
+        uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
         dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-        giro_angular_v1_dms, sentido_poligonal='horario',
+        giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario',
         diretorio_concluido=None
     ):
     """
     Cria o memorial descritivo e atualiza o DXF com base no ponto de amarração real (anterior ao V1).
     """
+    azimute_az_v1=azimute
 
     if diretorio_concluido is None:
         diretorio_concluido = caminho_salvar
@@ -1354,7 +1353,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         return
 
     # 🔍 Extrair geometria do DXF
-    doc, lines, perimeter_dxf, area_dxf, _, area_poligonal = get_document_info_from_dxf(dxf_file_path)
+    doc, lines, perimeter_dxf, area_dxf, ponto_az, msp = get_document_info_from_dxf(dxf_file_path)
     if not doc or not ponto_amarracao:
         logger.info("Erro ao processar o arquivo DXF.")
         return
@@ -1367,18 +1366,15 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         return
 
     if doc and lines:
-        logger.info(f"Área da poligonal obtida (do DXF): {area_dxf:.6f} m²")
-        logger.info(f"Perímetro da poligonal (do DXF): {perimeter_dxf:.6f} metros")
-
-        # Cálculo com base no ponto real
+        logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
         v1 = lines[0][0]
-        azimute = calculate_azimuth(ponto_amarracao, v1)
-        # Cálculo do giro angular no vértice V1 (do ponto externo para dentro da poligonal)
-        v2 = lines[1][0]  # V2 é o segundo ponto da poligonal
-        giro_angular_v1 = calculate_angular_turn(ponto_amarracao, v1, v2)
+        v2 = lines[1][0]
+        azimute = calculate_azimuth(ponto_az, v1)
+        distancia_az_v1 = calculate_distance(ponto_az, v1)
+        giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
         giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
-
-        distancia_az_v1 = calculate_distance(ponto_amarracao, v1)
+    
+    logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
 
         # Caminho do Excel de saída
         excel_file_path = os.path.join(
@@ -1390,8 +1386,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
         # 🛠 Criar memorial e Excel
         create_memorial_descritivo(
-            uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
-            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms, sentido_poligonal=sentido_poligonal
+            uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
+            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms, distancia_az_v1, sentido_poligonal=sentido_poligonal
         )
 
         # 📄 Gerar DOCX
