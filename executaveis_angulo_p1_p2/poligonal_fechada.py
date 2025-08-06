@@ -722,6 +722,8 @@ def create_memorial_descritivo(
     """
     azimute_az_v1=azimute
     ponto_amarracao=ponto_az
+    distance_az_v1=distancia_az_v1
+
 
     if diretorio_concluido is None:
         diretorio_concluido = caminho_salvar
@@ -778,7 +780,7 @@ def create_memorial_descritivo(
 
 #teste
     # Cálculo de distância V1–Ponto de Amarração
-    distance_amarracao_v1 = calculate_distance(ponto_amarracao, ordered_points[0])
+    #distance_amarracao_v1 = calculate_distance(ponto_amarracao, ordered_points[0])
 
     # Corrigir fechamento duplicado
     tolerancia = 0.001
