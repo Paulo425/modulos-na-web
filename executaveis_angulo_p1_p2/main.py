@@ -54,8 +54,8 @@ except Exception:
     pass  # Em alguns ambientes, reconfigure não está disponível
 
 def main():
-    if len(sys.argv) != 4:
-        print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf>")
+    if len(sys.argv) not in [4, 5]:
+        print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf> [sentido_poligonal]")
         sys.exit(1)
 
     cidade = sys.argv[1]
@@ -90,7 +90,7 @@ def main():
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
         caminho_template,
-        sentido_poligona
+        sentido_poligonal
     )
 
     # 🔸 Unir poligonais
