@@ -539,24 +539,14 @@ def insert_and_rotate_arrow(msp, center, radius, angle, rotation_adjustment, blo
     )
 import math
 
-
-
-
-
-def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentido_poligonal="horario"):
+def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel, sentido_poligonal="horario"):
     try:
-
-        # Ajusta automaticamente a ordem dos pontos pelo sentido escolhido
-        if sentido_poligonal.lower() == "anti-horario":
-            ordered_points = list(reversed(ordered_points))
-
         total_points = len(ordered_points)
 
         for i, p2 in enumerate(ordered_points):
             p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
             p3 = ordered_points[(i + 1) % total_points]
 
-            # Calcula os vetores
             vec1 = (p1[0] - p2[0], p1[1] - p2[1])
             vec2 = (p3[0] - p2[0], p3[1] - p2[1])
 
@@ -569,78 +559,169 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentid
             vec2_norm = normalize(vec2)
 
             # Angulo entre os dois vetores
-            angle_between_vectors = math.acos(max(-1, min(1, vec1_norm[0]*vec2_norm[0] + vec1_norm[1]*vec2_norm[1])))
+            angle_between_vectors = math.acos(
+                max(-1, min(1, vec1_norm[0] * vec2_norm[0] + vec1_norm[1] * vec2_norm[1]))
+            )
 
             # Determinar orientação do ângulo (sentido horário ou anti-horário)
-            cross_product_z = vec1_norm[0]*vec2_norm[1] - vec1_norm[1]*vec2_norm[0]
-            
-            # Verifica se ângulo é côncavo (interno < 180°) ou convexo (interno > 180°)
-            is_convex = cross_product_z < 0
+            cross_product_z = vec1_norm[0] * vec2_norm[1] - vec1_norm[1] * vec2_norm[0]
+
+            # 🟢 SOLUÇÃO FINAL: ajuste baseado no sentido_poligonal
+            if sentido_poligonal.lower() == "horario":
+                is_convex = cross_product_z < 0
+            else:  # sentido_poligonal é "anti-horario"
+                is_convex = cross_product_z > 0  # inverte o sinal aqui!
 
             # Define raio do arco (5% do menor lado, limite mínimo)
-            lado_antes = math.hypot(p2[0]-p1[0], p2[1]-p1[1])
-            lado_depois = math.hypot(p3[0]-p2[0], p3[1]-p2[1])
-            radius = min(lado_antes, lado_depois) * 0.1
+            lado_antes = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+            lado_depois = math.hypot(p3[0] - p2[0], p3[1] - p2[1])
 
-            # Posição inicial e final do arco
-            def displace_point(pt, vec, dist):
-                return (pt[0] + vec[0]*dist, pt[1] + vec[1]*dist)
+            raio_arco = max(0.05 * min(lado_antes, lado_depois), 0.50)
 
-            start_vec = normalize(vec1)
-            end_vec = normalize(vec2)
+            # Ângulo inicial e final para desenho do arco
+            start_angle = math.atan2(vec1_norm[1], vec1_norm[0])
+            end_angle = math.atan2(vec2_norm[1], vec2_norm[0])
 
-            ponto_inicial = displace_point(p2, start_vec, radius)
-            ponto_final = displace_point(p2, end_vec, radius)
+            # Corrige ângulos negativos
+            if start_angle < 0:
+                start_angle += 2 * math.pi
+            if end_angle < 0:
+                end_angle += 2 * math.pi
 
-            # Calcular ângulos iniciais e finais
-            start_angle = math.degrees(math.atan2(ponto_inicial[1]-p2[1], ponto_inicial[0]-p2[0]))
-            end_angle = math.degrees(math.atan2(ponto_final[1]-p2[1], ponto_final[0]-p2[0]))
-
-            # Ajusta ângulo corretamente para arcos internos
-            if is_convex:
-                # Angulo convexo (maior que 180 graus)
+            # Ajusta o sentido do desenho do arco baseado no sentido_poligonal
+            if sentido_poligonal.lower() == "horario":
                 if end_angle > start_angle:
-                    start_angle += 360
-            else:
-                # Angulo concavo (menor que 180 graus)
+                    end_angle -= 2 * math.pi
+            else:  # anti-horario
                 if start_angle > end_angle:
-                    end_angle += 360
+                    start_angle -= 2 * math.pi
 
-            # Inserir arco corretamente no DXF
+            # Garante que o arco seja interno (menor que 180 graus) ou externo
+            if not is_convex:
+                start_angle, end_angle = end_angle, start_angle
+
+            # Adiciona o arco
             msp.add_arc(
                 center=p2,
-                radius=radius,
-                start_angle=start_angle,
-                end_angle=end_angle,
-                dxfattribs={'layer': 'Internal_Arcs'}
+                radius=raio_arco,
+                start_angle=math.degrees(start_angle),
+                end_angle=math.degrees(end_angle),
+                dxfattribs={"color": 1}
             )
 
-            # Posição correta do texto (ângulo interno)
-            mid_angle = (start_angle + end_angle) / 2
-            label_distance = radius + 0.7  # ajustar a distância do rótulo do arco
-            label_position = (
-                p2[0] + label_distance * math.cos(math.radians(mid_angle)),
-                p2[1] + label_distance * math.sin(math.radians(mid_angle))
+            # Posiciona o texto do ângulo próximo ao arco desenhado
+            bissetriz_angle = (start_angle + end_angle) / 2
+            pos_texto = (
+                p2[0] + (raio_arco + 0.25) * math.cos(bissetriz_angle),
+                p2[1] + (raio_arco + 0.25) * math.sin(bissetriz_angle),
             )
 
-            internal_angle_decimal = angulos_decimais[i]
-            internal_angle_dms = convert_to_dms(internal_angle_decimal)
-
-            # Inserir texto com ângulo no DXF
+            valor_angulo = angulos_excel[i]
             msp.add_text(
-                internal_angle_dms,
-                dxfattribs={
-                    'height': 0.7,
-                    'layer': 'Labels',
-                    'insert': label_position,
-                    'rotation': mid_angle if mid_angle <= 180 else mid_angle - 180
-                }
-            )
-
-            print(f"Vértice V{i+1}: Ângulo interno {internal_angle_dms}, {'Convexo' if is_convex else 'Côncavo'}")
+                f"{valor_angulo:.2f}°",
+                dxfattribs={"height": 0.5, "color": 1}
+            ).set_pos(pos_texto, align="CENTER")
 
     except Exception as e:
-        print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
+        print(f"Erro ao desenhar ângulos no DWG: {e}")
+
+
+
+
+# def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentido_poligonal="horario"):
+#     try:
+
+#         total_points = len(ordered_points)
+
+#         for i, p2 in enumerate(ordered_points):
+#             p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
+#             p3 = ordered_points[(i + 1) % total_points]
+
+#             # Calcula os vetores
+#             vec1 = (p1[0] - p2[0], p1[1] - p2[1])
+#             vec2 = (p3[0] - p2[0], p3[1] - p2[1])
+
+#             # Função para normalizar vetor
+#             def normalize(vec):
+#                 norm = math.hypot(vec[0], vec[1])
+#                 return (vec[0] / norm, vec[1] / norm)
+
+#             vec1_norm = normalize(vec1)
+#             vec2_norm = normalize(vec2)
+
+#             # Angulo entre os dois vetores
+#             angle_between_vectors = math.acos(max(-1, min(1, vec1_norm[0]*vec2_norm[0] + vec1_norm[1]*vec2_norm[1])))
+
+#             # Determinar orientação do ângulo (sentido horário ou anti-horário)
+#             cross_product_z = vec1_norm[0]*vec2_norm[1] - vec1_norm[1]*vec2_norm[0]
+            
+#             # Verifica se ângulo é côncavo (interno < 180°) ou convexo (interno > 180°)
+#             is_convex = cross_product_z < 0
+
+#             # Define raio do arco (5% do menor lado, limite mínimo)
+#             lado_antes = math.hypot(p2[0]-p1[0], p2[1]-p1[1])
+#             lado_depois = math.hypot(p3[0]-p2[0], p3[1]-p2[1])
+#             radius = min(lado_antes, lado_depois) * 0.1
+
+#             # Posição inicial e final do arco
+#             def displace_point(pt, vec, dist):
+#                 return (pt[0] + vec[0]*dist, pt[1] + vec[1]*dist)
+
+#             start_vec = normalize(vec1)
+#             end_vec = normalize(vec2)
+
+#             ponto_inicial = displace_point(p2, start_vec, radius)
+#             ponto_final = displace_point(p2, end_vec, radius)
+
+#             # Calcular ângulos iniciais e finais
+#             start_angle = math.degrees(math.atan2(ponto_inicial[1]-p2[1], ponto_inicial[0]-p2[0]))
+#             end_angle = math.degrees(math.atan2(ponto_final[1]-p2[1], ponto_final[0]-p2[0]))
+
+#             # Ajusta ângulo corretamente para arcos internos
+#             if is_convex:
+#                 # Angulo convexo (maior que 180 graus)
+#                 if end_angle > start_angle:
+#                     start_angle += 360
+#             else:
+#                 # Angulo concavo (menor que 180 graus)
+#                 if start_angle > end_angle:
+#                     end_angle += 360
+
+#             # Inserir arco corretamente no DXF
+#             msp.add_arc(
+#                 center=p2,
+#                 radius=radius,
+#                 start_angle=start_angle,
+#                 end_angle=end_angle,
+#                 dxfattribs={'layer': 'Internal_Arcs'}
+#             )
+
+#             # Posição correta do texto (ângulo interno)
+#             mid_angle = (start_angle + end_angle) / 2
+#             label_distance = radius + 0.7  # ajustar a distância do rótulo do arco
+#             label_position = (
+#                 p2[0] + label_distance * math.cos(math.radians(mid_angle)),
+#                 p2[1] + label_distance * math.sin(math.radians(mid_angle))
+#             )
+
+#             internal_angle_decimal = angulos_decimais[i]
+#             internal_angle_dms = convert_to_dms(internal_angle_decimal)
+
+#             # Inserir texto com ângulo no DXF
+#             msp.add_text(
+#                 internal_angle_dms,
+#                 dxfattribs={
+#                     'height': 0.7,
+#                     'layer': 'Labels',
+#                     'insert': label_position,
+#                     'rotation': mid_angle if mid_angle <= 180 else mid_angle - 180
+#                 }
+#             )
+
+#             print(f"Vértice V{i+1}: Ângulo interno {internal_angle_dms}, {'Convexo' if is_convex else 'Côncavo'}")
+
+#     except Exception as e:
+#         print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
 
 
 
