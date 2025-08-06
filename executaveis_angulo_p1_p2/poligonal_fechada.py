@@ -503,15 +503,12 @@ import math
 
 
 def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
-    """
-    Adiciona ângulos internos no espaço de modelo do DXF usando diretamente os ângulos calculados do Excel.
-    """
     try:
         total_points = len(ordered_points)
         
         for i, p2 in enumerate(ordered_points):
             if i == 0:
-                logger.info("⏩ Ignorando arco e rótulo para V1")
+                print("⏩ Ignorando arco e rótulo para V1")
                 continue
             p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
             p3 = ordered_points[(i + 1) % total_points]
@@ -525,21 +522,11 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
                     base_point[1] + (dy / magnitude) * distance,
                 )
 
-            # 🔁 Raio adaptativo com base na distância entre vértices adjacentes
-            dist_lado = math.hypot(p3[0] - p2[0], p3[1] - p2[1])
-            # 🔁 Raio adaptativo com base na distância entre vértices adjacentes
-            dist_lado = math.hypot(p3[0] - p2[0], p3[1] - p2[1])
-
-            # 🔁 Raio adaptativo com base na menor distância entre os dois lados que chegam ao vértice
             lado_antes = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
             lado_depois = math.hypot(p3[0] - p2[0], p3[1] - p2[1])
             lado_menor = min(lado_antes, lado_depois)
 
-            if lado_menor <= 0.5:
-                radius = lado_menor * 0.8  # proporcional ao menor lado
-            else:
-                radius = 1.0
-
+            radius = lado_menor * 0.8 if lado_menor <= 0.5 else 1.0
 
             ponto_inicial = calculate_displacement(p2, p3, radius)
             ponto_final = calculate_displacement(p2, p1, radius)
@@ -547,49 +534,38 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
             start_angle = math.degrees(math.atan2(ponto_inicial[1] - p2[1], ponto_inicial[0] - p2[0]))
             end_angle = math.degrees(math.atan2(ponto_final[1] - p2[1], ponto_final[0] - p2[0]))
 
-            # Garantir que o arco desenhe no sentido correto
             if end_angle < start_angle:
                 end_angle += 360
-            logger.info(f"--- V{i+1} ---")
-            logger.info(f"Ângulo Excel: {repr(angulos_excel[i])}")
-            logger.info(f"Raio: {radius:.2f}")
-            logger.info(f"Start angle: {start_angle:.2f}°, End angle: {end_angle:.2f}°")
 
-            try:
-                # Adicionar o arco interno ao desenho
-                msp.add_arc(
-                    center=p2,
-                    radius=radius,
-                    start_angle=start_angle,
-                    end_angle=end_angle,
-                    dxfattribs={'layer': 'Internal_Arcs'}
-                )
+            internal_angle_dms = angulos_excel[i]
 
-                # Agora, usa diretamente o ângulo do Excel (sem recalcular!)
-                internal_angle_dms = angulos_excel[i]
+            msp.add_arc(
+                center=p2,
+                radius=radius,
+                start_angle=start_angle,
+                end_angle=end_angle,
+                dxfattribs={'layer': 'Internal_Arcs'}
+            )
 
-                # Adicionar rótulo do ângulo interno
-                label_offset = 1
-                label_position = (
-                    p2[0] + label_offset * math.cos(math.radians((start_angle + end_angle) / 2)),
-                    p2[1] + label_offset * math.sin(math.radians((start_angle + end_angle) / 2))
-                )
+            label_offset = 1
+            label_position = (
+                p2[0] + label_offset * math.cos(math.radians((start_angle + end_angle) / 2)),
+                p2[1] + label_offset * math.sin(math.radians((start_angle + end_angle) / 2))
+            )
 
-                msp.add_text(
-                    internal_angle_dms,
-                    dxfattribs={
-                        'height': 0.3,
-                        'layer': 'Labels',
-                        'insert': label_position
-                    }
-                )
-            except Exception as e:
-                logger.error(f"Erro ao adicionar arco ou rótulo no vértice V{i+1}: {e}")
+            msp.add_text(
+                internal_angle_dms,
+                dxfattribs={
+                    'height': 0.3,
+                    'layer': 'Labels',
+                    'insert': label_position
+                }
+            )
 
-            logger.info(f"Vértice V{i+1}: Ângulo interno {internal_angle_dms}")
+            print(f"Vértice V{i+1}: Ângulo interno {internal_angle_dms}")
 
     except Exception as e:
-        logger.error(f"Erro ao adicionar ângulos internos ao DXF: {e}")
+        print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
 
 
 
