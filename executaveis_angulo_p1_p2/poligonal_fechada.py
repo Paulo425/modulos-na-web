@@ -543,8 +543,13 @@ import math
 
 
 
-def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais):
+def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentido_poligonal="horario"):
     try:
+
+        # Ajusta automaticamente a ordem dos pontos pelo sentido escolhido
+        if sentido_poligonal.lower() == "anti-horario":
+            ordered_points = list(reversed(ordered_points))
+
         total_points = len(ordered_points)
 
         for i, p2 in enumerate(ordered_points):
@@ -920,7 +925,7 @@ def create_memorial_descritivo(
         angulos_excel_decimal = [convert_dms_to_decimal(a) for a in angulos_excel_dms]
 
         # Agora desenha os arcos no DXF com esses ângulos
-        add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel_decimal)
+        add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel_decimal, sentido_poligonal=sentido_poligonal)
 
 
         logger.info(f"Arquivo Excel salvo em: {excel_file_path}")

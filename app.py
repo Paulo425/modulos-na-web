@@ -1076,8 +1076,14 @@ def gerar_avaliacao():
                 logger.info(f"df_filtrado.head():\n{df_filtrado.head()}")
                 logger.info(f"Média: {media}, Mediana: {mediana}")
                 #AQUI RETIRADO TEMPORARIAMENTE
-                homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
+                #homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
+                amostras_homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
 
+                # Separando listas após homogeneização (novo)
+                lista_valores_unitarios = [a["valor_unitario"] for a in amostras_homog]
+                lista_valores_estimados = [a["valor_estimado"] for a in amostras_homog]
+                lista_residuos_relativos = [a["residuo_rel"] for a in amostras_homog]
+                lista_residuos_dp = [a["residuo_dp"] for a in amostras_homog]
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
                 gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
@@ -1155,7 +1161,7 @@ def gerar_avaliacao():
                     maior_valor=maior,
                     mediana_valor=mediana,
                     valores_originais_iniciais = df_filtrado.get("VALOR TOTAL", pd.Series()).tolist(),
-                    valores_homogeneizados_validos=homog,
+                    valores_homogeneizados_validos=lista_valores_unitarios,
                     caminho_imagem_aderencia=img1,
                     caminho_imagem_dispersao=img2,
                     uuid_atual=id_execucao,
@@ -1204,8 +1210,10 @@ def gerar_avaliacao():
             resultado=resultado,
             erro=erro_execucao,
             zip_download=zip_download,
-            log_path=log_path_relativo if 'log_path_relativo' in locals() and log_path_relativo and os.path.exists(log_path_relativo) else None
+            log_path=log_path_relativo if 'log_path_relativo' in locals() and log_path_relativo and os.path.exists(log_path_relativo) else None,
+            amostras=amostras_homog
         )
+
 
     except Exception as e:
         logger.exception(f"🚨 Erro ao iniciar processamento: {e}")

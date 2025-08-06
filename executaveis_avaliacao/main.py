@@ -6110,6 +6110,10 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 
     lista_valores_unitarios = []
 
+    lista_residuos_relativos = []
+    lista_valores_estimados = []
+
+
     for _, linha in dataframe_amostras_validas.iterrows():
         valor_total_amostra = linha["VALOR TOTAL"]
         area_da_amostra = float(linha.get("AREA TOTAL", 0))
@@ -6192,13 +6196,43 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             fator_acess_calc
         )
 
-        # Converte o valor total homogeneizado em valor unitário (R$/m²)
+         # Converte o valor total homogeneizado em valor unitário (R$/m²)
         if area_da_amostra > 0:
             valor_unitario = valor_homog / area_da_amostra
         else:
             valor_unitario = 0.0
 
         lista_valores_unitarios.append(valor_unitario)
+        # Resíduo relativo percentual:
+        valor_unitario_avaliando = dados_avaliando.get("valor_unitario_medio", 0)
+        if valor_unitario_avaliando:
+            residuo_rel = 100 * (valor_unitario - valor_unitario_avaliando) / valor_unitario_avaliando
+        else:
+            residuo_rel = 0.0
+        lista_residuos_relativos.append(residuo_rel)
 
-    return lista_valores_unitarios
+        import numpy as np
+
+        desvio_padrao_residuos = np.std(lista_residuos_relativos) if lista_residuos_relativos else 1
+
+        lista_residuos_dp = [
+            (residuo / desvio_padrao_residuos) if desvio_padrao_residuos > 0 else 0.0
+            for residuo in lista_residuos_relativos
+        ]
+
+        # Estrutura final com todos os valores solicitados:
+        amostras_resultantes = []
+        for i, (_, linha) in enumerate(dataframe_amostras_validas.iterrows()):
+            amostras_resultantes.append({
+                "identificador": linha.get("IDENTIFICADOR", f"Amostra {i+1}"),
+                "valor_total": linha["VALOR TOTAL"],
+                "area": linha["AREA TOTAL"],
+                "valor_unitario": lista_valores_unitarios[i],
+                "valor_estimado": lista_valores_estimados[i],
+                "residuo_rel": lista_residuos_relativos[i],
+                "residuo_dp": lista_residuos_dp[i]
+            })
+
+        return amostras_resultantes
+
 

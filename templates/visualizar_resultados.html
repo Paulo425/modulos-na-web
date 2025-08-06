@@ -39,35 +39,22 @@
           <th>Valor Total</th>
           <th>Área</th>
           <th>Valor Unitário (R$/m²)</th>
+          <th>Valor Estimado (R$/m²)</th> <!-- Nova coluna -->
           <th>Resíduo Rel. (%)</th>
+          <th>Resíduo/DP (%)</th> <!-- Nova coluna -->
         </tr>
       </thead>
       <tbody>
-        {% for a in amostras %}
+        {% for amostra in amostras %}
         <tr>
-          <td>
-          <input type="checkbox" class="amostra-checkbox" data-idx="{{ a.idx }}" name="ativo_{{ a.idx }}" checked>
-          </td>
-
-          <td>{{ a.idx }}</td>
-          <td>R$ {{ '%.2f'|format(a.valor_total | float) }}</td>
-          <td>{{ '%.2f'|format(a.area | float) }} m²</td>
-          <td>
-            {% if a.area > 0 %}
-              R$ {{ '%.2f'|format((a.valor_total | float) / (a.area | float)) }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
-          <td>
-            {% if a.area > 0 and media > 0 %}
-              <span style="color: {% if ((a.valor_total / a.area - media) / media)*100 > 20 %}red{% else %}black{% endif %}">
-                {{ '%.1f'|format((((a.valor_total | float) / (a.area | float) - media) / media) * 100) }}%
-              </span>
-            {% else %}
-              -
-            {% endif %}
-          </td>
+          <td><input type="checkbox" name="amostra_{{ loop.index }}" checked></td>
+          <td>{{ amostra.identificador }}</td>
+          <td>{{ "%.2f"|format(amostra.valor_total) }}</td>
+          <td>{{ "%.2f"|format(amostra.area) }}</td>
+          <td>{{ "%.2f"|format(amostra.valor_unitario) }}</td>
+          <td>{{ "%.2f"|format(amostra.valor_estimado) }}</td> <!-- Novo -->
+          <td>{{ "%.2f"|format(amostra.residuo_rel) }}</td>
+          <td>{{ "%.2f"|format(amostra.residuo_dp) }}</td> <!-- Novo -->
         </tr>
         {% endfor %}
       </tbody>
