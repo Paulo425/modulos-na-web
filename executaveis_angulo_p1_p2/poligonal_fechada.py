@@ -529,17 +529,15 @@ import math
 
 
 
-def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
+def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais):
     try:
         total_points = len(ordered_points)
-        
+
         for i, p2 in enumerate(ordered_points):
-            # if i == 0:
-            #     print("⏩ Ignorando arco e rótulo para V1")
-            #     continue
             p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
             p3 = ordered_points[(i + 1) % total_points]
 
+            # função auxiliar para deslocar pontos
             def calculate_displacement(base_point, direction_point, distance):
                 dx = direction_point[0] - base_point[0]
                 dy = direction_point[1] - base_point[1]
@@ -549,27 +547,27 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
                     base_point[1] + (dy / magnitude) * distance,
                 )
 
+            # calcular o tamanho adequado do arco
             lado_antes = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
             lado_depois = math.hypot(p3[0] - p2[0], p3[1] - p2[1])
             lado_menor = min(lado_antes, lado_depois)
-
             radius = lado_menor * 0.8 if lado_menor <= 0.5 else 1.0
 
             ponto_inicial = calculate_displacement(p2, p3, radius)
             ponto_final = calculate_displacement(p2, p1, radius)
 
+            # definir os ângulos inicial e final do arco
             start_angle = math.degrees(math.atan2(ponto_inicial[1] - p2[1], ponto_inicial[0] - p2[0]))
             end_angle = math.degrees(math.atan2(ponto_final[1] - p2[1], ponto_final[0] - p2[0]))
 
             if end_angle < start_angle:
                 end_angle += 360
 
-            #internal_angle_dms = angulos_excel[i]
+            # ângulo interno diretamente do Excel (já decimal)
+            internal_angle_decimal = angulos_decimais[i]
+            internal_angle_dms = convert_to_dms(internal_angle_decimal)
 
-            internal_angle_decimal = (angulos_excel[i])
-            internal_angle_suplementar = 360 - internal_angle_decimal
-            # internal_angle_dms = convert_to_dms(internal_angle_suplementar)
-
+            # desenhar o arco
             msp.add_arc(
                 center=p2,
                 radius=radius,
@@ -578,12 +576,14 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
                 dxfattribs={'layer': 'Internal_Arcs'}
             )
 
+            # posicionar o texto do ângulo
             label_offset = 1
             label_position = (
                 p2[0] + label_offset * math.cos(math.radians((start_angle + end_angle) / 2)),
                 p2[1] + label_offset * math.sin(math.radians((start_angle + end_angle) / 2))
             )
 
+            # inserir texto no DXF
             msp.add_text(
                 internal_angle_dms,
                 dxfattribs={
@@ -597,6 +597,7 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
 
     except Exception as e:
         print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
+
 
 
 
@@ -869,6 +870,17 @@ def create_memorial_descritivo(
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
         wb.save(excel_file_path)
+
+        # Ler de volta o Excel recém-gerado para pegar ângulos internos exatos
+        df_angulos = pd.read_excel(excel_file_path)
+        angulos_excel_dms = df_angulos["Angulo Interno"].tolist()
+
+        # Converter DMS para decimal (necessário para o desenho no DXF)
+        angulos_excel_decimal = [convert_dms_to_decimal(a) for a in angulos_excel_dms]
+
+        # Agora desenha os arcos no DXF com esses ângulos
+        add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel_decimal)
+
 
         logger.info(f"Arquivo Excel salvo em: {excel_file_path}")
 
