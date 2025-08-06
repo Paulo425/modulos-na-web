@@ -721,6 +721,7 @@ def create_memorial_descritivo(
     Cria o memorial descritivo e atualiza o DXF com base no ponto de amarração real (anterior ao V1).
     """
     azimute_az_v1=azimute
+    ponto_amarracao=ponto_az
 
     if diretorio_concluido is None:
         diretorio_concluido = caminho_salvar
