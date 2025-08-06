@@ -42,9 +42,18 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Garanta que está em DEBUG
 
 
+import re
+
 def convert_dms_to_decimal(dms_str):
-    graus, minutos, segundos = [float(x) for x in dms_str.replace("°", "").replace("'", "").replace('"', '').split()]
+    matches = re.findall(r"(\d+)[°\s]+(\d+)'[\s]*(\d+(?:,\d+|\.\d+)?)", dms_str)
+    if not matches:
+        raise ValueError(f"Formato de ângulo inválido: {dms_str}")
+    graus, minutos, segundos = matches[0]
+    graus = float(graus)
+    minutos = float(minutos)
+    segundos = float(segundos.replace(',', '.'))
     return graus + minutos / 60 + segundos / 3600
+
 
 def is_clockwise(points):
     """
