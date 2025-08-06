@@ -41,6 +41,11 @@ MESES_PT_BR = {
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Garanta que está em DEBUG
 
+
+def convert_dms_to_decimal(dms_str):
+    graus, minutos, segundos = [float(x) for x in dms_str.replace("°", "").replace("'", "").replace('"', '').split()]
+    return graus + minutos / 60 + segundos / 3600
+
 def is_clockwise(points):
     """
     Verifica se a poligonal está no sentido horário.
@@ -1038,7 +1043,8 @@ def create_memorial_document(
     try:
         # Ler a planilha gerada
         df = pd.read_excel(excel_file_path, engine='openpyxl', dtype=str)
-        logger.info("AREA_TOTAL_DENTRO_DOCUMENT:", area_total)
+        logger.info("AREA_TOTAL_DENTRO_DOCUMENT: %s", area_total)
+
 
         # Corrigir vírgulas em valores numéricos
         df['Distancia(m)'] = df['Distancia(m)'].str.replace(',', '.').astype(float)
