@@ -748,7 +748,7 @@ def create_memorial_descritivo(
         else:
             logger.info(f"Área da poligonal já no sentido anti-horário: {abs(area):.4f} m²")
 
-
+#teste
     # Cálculo de distância V1–Ponto de Amarração
     distance_amarracao_v1 = calculate_distance(ponto_amarracao, ordered_points[0])
 
