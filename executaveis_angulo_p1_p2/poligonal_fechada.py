@@ -507,9 +507,9 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
         total_points = len(ordered_points)
         
         for i, p2 in enumerate(ordered_points):
-            if i == 0:
-                print("⏩ Ignorando arco e rótulo para V1")
-                continue
+            # if i == 0:
+            #     print("⏩ Ignorando arco e rótulo para V1")
+            #     continue
             p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
             p3 = ordered_points[(i + 1) % total_points]
 
