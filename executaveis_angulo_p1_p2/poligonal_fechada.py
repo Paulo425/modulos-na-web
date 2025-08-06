@@ -713,7 +713,7 @@ def calculate_angular_turn(p1, p2, p3):
 def create_memorial_descritivo(
         uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
         dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-        giro_angular_v1_dms,
+        giro_angular_v1_dms, sentido_poligonal='horario',
         diretorio_concluido=None
     ):
     """
@@ -747,6 +747,32 @@ def create_memorial_descritivo(
         ordered_points.append(lines[-1][1])
 
     ordered_points = ensure_counterclockwise(ordered_points)
+    area = calcular_area_poligonal(ordered_points)
+    # Agora inverter o sentido corretamente, incluindo tratamento dos arcos (bulge)
+    if sentido_poligonal == 'horario':
+        if area > 0:
+            ordered_points.reverse()
+            area = abs(area)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido horário com ajuste dos arcos: {area:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido horário: {abs(area):.4f} m²")
+
+    else:  # sentido_poligonal == 'anti_horario'
+        if area < 0:
+            ordered_points.reverse()
+            area = abs(area)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido anti-horário com ajuste dos arcos: {area:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido anti-horário: {abs(area):.4f} m²")
+
 
     # Cálculo de distância V1–Ponto de Amarração
     distance_amarracao_v1 = calculate_distance(ponto_amarracao, ordered_points[0])
@@ -1225,7 +1251,7 @@ def sanitize_filename(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
         
-def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
+def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template, sentido_poligonal='horario'):
 
     caminho_salvar = diretorio_concluido 
     template_path = caminho_template 
@@ -1350,7 +1376,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         # 🛠 Criar memorial e Excel
         create_memorial_descritivo(
             uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_amarracao,
-            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms
+            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms, sentido_poligonal=sentido_poligonal
         )
 
         # 📄 Gerar DOCX
