@@ -792,7 +792,7 @@ def create_memorial_descritivo(
             p2 = ordered_points[i]
             p3 = ordered_points[(i + 1) % total_pontos]
 
-            internal_angle = 360 - calculate_internal_angle(p1, p2, p3)
+            internal_angle = calculate_internal_angle(p1, p2, p3)
             internal_angle_dms = convert_to_dms(internal_angle)
 
             description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
@@ -800,6 +800,12 @@ def create_memorial_descritivo(
             dy = p3[1] - p2[1]
             distance = math.hypot(dx, dy)
             confrontante = confrontantes[i % len(confrontantes)]
+
+            ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
+            ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
+            distancia_az_v1_str = f"{distance_az_v1:.2f}".replace(".", ",") if i == 0 else ""
+            azimute_az_v1_str = convert_to_dms(azimute_az_v1) if i == 0 else ""
+            giro_v1_str = giro_angular_v1_dms if i == 0 else ""
 
             data.append({
                 "V": f"V{i + 1}",
@@ -809,83 +815,92 @@ def create_memorial_descritivo(
                 "Divisa": description,
                 "Angulo Interno": internal_angle_dms,
                 "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
-                "Confrontante": confrontante
+                "Confrontante": confrontante,
+                "ponto_AZ_E": ponto_az_e,
+                "ponto_AZ_N": ponto_az_n,
+                "distancia_Az_V1": distancia_az_v1_str,
+                "Azimute Az_V1": azimute_az_v1_str,
+                "Giro Angular Az_V1_V2": giro_v1_str
             })
 
             if distance > 0.01:
                 add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
 
         df = pd.DataFrame(data)
-        # Criar nova coluna 'GIRO_ANGULAR_V1_P2_V2' e preencher apenas para V1
-        giro_coluna = []
-        for i, row in df.iterrows():
-            if str(row["V"]).strip().upper() == "V1":
-                giro_coluna.append(giro_angular_v1_dms)
-            else:
-                giro_coluna.append("")
-
-        df["GIRO_ANGULAR_V1_P2_V2"] = giro_coluna
-
         df.to_excel(excel_file_path, index=False)
-
         # Formatar Excel
         wb = openpyxl.load_workbook(excel_file_path)
         ws = wb.active
+
         for cell in ws[1]:
             cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
         col_widths = {
             "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
-            "F": 15, "G": 15, "H": 55,"I": 30
+            "F": 15, "G": 15, "H": 50, "I": 15,
+            "J": 15, "K": 15, "L": 20, "M": 20
         }
+
         for col, width in col_widths.items():
             ws.column_dimensions[col].width = width
 
+        # Corpo
         for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
             for cell in row:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
+
         wb.save(excel_file_path)
+
         logger.info(f"Arquivo Excel salvo em: {excel_file_path}")
 
-        # ✅ Desenhar o GIRO ANGULAR com base no ponto real
-        try:
-            v2 = ordered_points[1]
-            add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_amarracao, v2)
-            logger.info("Giro angular adicionado ao DXF com base no ponto de amarração.")
-        except Exception as e:
-            logger.error(f"Erro ao adicionar giro angular: {e}")
+         # ➕ Ângulos internos a partir do Excel
+        angulos_excel = [item["Angulo Interno"] for item in data]
+        add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
 
-        # 🔴 Adicionar vértices no DXF
+
+        # ✅ Desenhar o GIRO ANGULAR com base no ponto real
+         try:
+            v1 = ordered_points[0]
+            v2 = ordered_points[1]
+            add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_az, v2)
+            print("Giro horário Az-V1-V2 adicionado com sucesso.")
+        except Exception as e:
+            print(f"Erro ao adicionar giro angular: {e}")
+
+       # ➕ Camada e rótulo de vértices
         if "Vertices" not in msp.doc.layers:
             msp.doc.layers.add("Vertices", dxfattribs={"color": 1})
 
         for i, vertex in enumerate(ordered_points):
             msp.add_circle(center=vertex, radius=0.5, dxfattribs={"layer": "Vertices"})
-            label_offset = 0.3
-            label_position = (vertex[0] + label_offset, vertex[1] + label_offset)
-            msp.add_text(
-                f"V{i + 1}",
-                dxfattribs={"height": 0.3, "layer": "Vertices", "insert": label_position}
-            )
+            label_pos = (vertex[0] + 0.3, vertex[1] + 0.3)
+            msp.add_text(f"V{i + 1}", dxfattribs={
+                "height": 0.3,
+                "layer": "Vertices",
+                "insert": label_pos
+            })
         logger.info("Vértices adicionados ao DXF.")
 
-        # ➕ Adicionar ângulos internos ao DXF
+        # ➕ Adicionar arco e rótulo do Azimute
         try:
-            angulos_excel = [item["Angulo Interno"] for item in data]
-
-            if "Labels" not in msp.doc.layers:
-                msp.doc.layers.add("Labels", dxfattribs={"color": 5})
-
-            add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
-            logger.info("Ângulos internos adicionados ao DXF com sucesso.")
+            azimute = calculate_azimuth(ponto_az, v1)
+            add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute)
+            print("Arco do Azimute Az-V1 adicionado com sucesso.")
         except Exception as e:
-            logger.info(f"Erro ao adicionar ângulos internos ao DXF: {e}")
+            print(f"Erro ao adicionar arco do azimute: {e}")
 
-        
-        # 💾 Salvar DXF final
+        # ➕ Adicionar distância Az–V1
+        try:
+            distancia_az_v1 = calculate_distance(ponto_az, v1)
+            add_label_and_distance(msp, ponto_az, v1, "", distancia_az_v1)
+            print(f"Distância Az-V1 ({distancia_az_v1:.2f} m) adicionada com sucesso.")
+        except Exception as e:
+            print(f"Erro ao adicionar distância entre Az e V1: {e}")
+
+        # ➕ Salvar DXF
         doc_dxf.saveas(dxf_output_path)
-        logger.info(f"Arquivo DXF atualizado salvo em: {dxf_output_path}")
+        print(f"📁 Arquivo DXF final salvo em: {dxf_output_path}")
 
     except Exception as e:
         logger.error(f"Erro ao gerar o memorial descritivo: {e}")
