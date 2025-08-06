@@ -167,10 +167,13 @@ def get_document_info_from_dxf(dxf_file_path):
             ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
             print(f"Ponto Az encontrado como ponto: {ponto_az}")
             
-        if not ponto_az:
-            print("Ponto Az não encontrado no arquivo DXF.")
-            return None, lines, 0, 0, None, None
-
+        # if not ponto_az:
+        #     print("Ponto Az não encontrado no arquivo DXF.")
+        #     return None, lines, 0, 0, None, None
+        if ponto_az is None:
+            logger.warning("⚠️ Ponto Az não encontrado no arquivo DXF. Utilizando fallback.")
+            ponto_az = ordered_points[0]  # ponto padrão (fallback)
+            
         print(f"Linhas processadas: {len(lines)}")
         print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
         print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
