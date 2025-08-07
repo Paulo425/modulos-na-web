@@ -1056,10 +1056,13 @@ def gerar_avaliacao():
                 # Supondo que você ainda não rodou homogeneização, então calcule manualmente:
                 valores_unitarios = [
                     row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
-                    for _, row in df_amostras.iterrows()
+                    for _, row in df_ativas.iterrows()
                 ]
-                valor_unitario_medio = sum(valores_unitarios) / len([v for v in valores_unitarios if v > 0]) if valores_unitarios else 0
+                valores_unitarios = [v for v in valores_unitarios if v > 0]  # filtra apenas valores realmente válidos
+
+                valor_unitario_medio = sum(valores_unitarios) / len(valores_unitarios) if valores_unitarios else 0
                 dados_imovel["valor_unitario_medio"] = valor_unitario_medio
+
                 # ▲▲▲ FIM DO BLOCO DE CÁLCULO ▲▲▲
 
                 # NOVA LINHA: Pegue a área digitada pelo usuário no input
@@ -1542,7 +1545,9 @@ def calcular_valores_iterativos(uuid):
         logger.info("📌 Aplicando Chauvenet e filtro nas amostras ativas")
         df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
         logger.info(f"✅ Chauvenet concluído: {len(df_filtrado)} amostras restaram")
-
+        if df_filtrado.empty:
+            logger.warning("Nenhuma amostra restou após os filtros. Abortando resposta iterativa.")
+            return jsonify({"erro": "Nenhuma amostra restou após os filtros. Ative pelo menos uma amostra ou ajuste os filtros."}), 400
         amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
 
         logger.info("📌 Iniciando homogeneização das amostras")
@@ -1560,7 +1565,11 @@ def calcular_valores_iterativos(uuid):
         )
         logger.info("✅ Homogeneização concluída com sucesso")
         
-        valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
+        #valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
+
+        ativos_set = set(ativos_frontend)
+        valores_unit_ativos = [a["valor_unitario"] for a in amostras_homog if a.get("idx") in ativos_set]
+
         array_homog = np.array([a["valor_unitario"] for a in amostras_homog], dtype=float)
         if len(array_homog) > 1:
             limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
