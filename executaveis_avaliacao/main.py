@@ -6105,14 +6105,22 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     lista_valores_unitarios = []
     lista_residuos_relativos = []
     lista_valores_estimados = []
+    lista_valores_originais = []
 
     for _, linha in dataframe_amostras_validas.iterrows():
         valor_total_amostra = linha["VALOR TOTAL"]
         area_da_amostra = float(linha.get("AREA TOTAL", 0))
         valor_unitario_original = linha.get("VALOR UNITARIO")
-        # Se não existir a coluna 'VALOR UNITARIO', calcule manualmente:
+
+        
         if valor_unitario_original is None:
             valor_unitario_original = valor_total_amostra / area_da_amostra if area_da_amostra > 0 else 0.0
+        # Se for string, converter:
+        try:
+            valor_unitario_original = float(str(valor_unitario_original).replace("R$", "").replace(".", "").replace(",", "."))
+        except Exception:
+            valor_unitario_original = 0.0
+
 
         fator_area = calcular_fator_area(area_do_avaliando, area_da_amostra, fatores_do_usuario["area"])
         fator_oferta = calcular_fator_oferta(True, fatores_do_usuario["oferta"])
@@ -6196,6 +6204,9 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
         else:
             residuo_rel = 0.0
         lista_residuos_relativos.append(residuo_rel)
+        lista_valores_unitarios.append(valor_unitario)
+        lista_valores_estimados.append(valor_unitario)
+        lista_valores_originais.append(valor_unitario_original)
 
     # FIM DO LOOP PRINCIPAL
 
@@ -6216,7 +6227,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             "identificador": linha.get("IDENTIFICADOR", f"Amostra {i+1}"),
             "valor_total": linha["VALOR TOTAL"],
             "area": linha["AREA TOTAL"],
-            "valor_unitario_original": valor_unitario_original,
+            "valor_unitario_original": lista_valores_originais[i],
             "valor_unitario": lista_valores_unitarios[i],         # valor unitário homogeneizado
             "valor_estimado": lista_valores_estimados[i],         # também homogeneizado (pode manter para consistência)
             "residuo_rel": lista_residuos_relativos[i],
