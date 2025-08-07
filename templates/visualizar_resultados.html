@@ -48,7 +48,7 @@
         {% for amostra in amostras %}
         <tr>
           <td>
-            <input type="checkbox" class="amostra-checkbox" data-idx="{{ amostra.idx }}" name="amostra_{{ loop.index }}" checked>
+            <input type="checkbox" class="amostra-checkbox" data-idx="{{ amostra.idx }}" name="amostra_{{ amostra.index }}" checked>
           </td>
           <td>{{ amostra.identificador }}</td>
           <td style="text-align:center;">{{ "%.2f"|format(amostra.valor_total) }}</td>
