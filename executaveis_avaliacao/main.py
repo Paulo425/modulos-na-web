@@ -6207,13 +6207,16 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
 
     amostras_resultantes = []
     for i, (_, linha) in enumerate(dataframe_amostras_validas.iterrows()):
+        # Valor unitário original: tenta pegar da coluna, senão calcula
+        valor_unitario_original = linha.get("VALOR UNITARIO")
+        if valor_unitario_original is None:
+            valor_unitario_original = linha["VALOR TOTAL"] / linha["AREA TOTAL"] if linha["AREA TOTAL"] > 0 else 0.0
+
         amostras_resultantes.append({
             "identificador": linha.get("IDENTIFICADOR", f"Amostra {i+1}"),
             "valor_total": linha["VALOR TOTAL"],
             "area": linha["AREA TOTAL"],
-            "valor_unitario_original": linha.get("VALOR UNITARIO",  # preferencialmente o do Excel
-                linha["VALOR TOTAL"] / linha["AREA TOTAL"] if linha["AREA TOTAL"] > 0 else 0.0
-            ),
+            "valor_unitario_original": valor_unitario_original,
             "valor_unitario": lista_valores_unitarios[i],         # valor unitário homogeneizado
             "valor_estimado": lista_valores_estimados[i],         # também homogeneizado (pode manter para consistência)
             "residuo_rel": lista_residuos_relativos[i],
