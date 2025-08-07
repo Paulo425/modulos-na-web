@@ -6090,17 +6090,11 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
 # HOMOGENEIZAR AMOSTRAS (DATAFRAME FILTRADO)
 ###############################################################################
 def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_do_usuario, finalidade_do_laudo):
-    """
-    Aplica os fatores de homogeneização às amostras e retorna uma lista com o valor unitário homogeneizado
-    de cada amostra (em R$/m²). 
-    """
     import math
+    import numpy as np
 
-    # Área do imóvel avaliado
     area_do_avaliando = float(dados_avaliando.get("AREA_PARCIAL_AFETADA", dados_avaliando.get("AREA TOTAL", 0)))
 
-
-    # Fatores do imóvel avaliado
     f_avaliado_aprov = fator_aproveitamento(dados_avaliando.get("APROVEITAMENTO", "URBANO"))
     f_avaliado_topog = fator_topografia(dados_avaliando.get("BOA TOPOGRAFIA?", "NÃO"))
     f_avaliado_pedol = fator_pedologia(dados_avaliando.get("PEDOLOGIA ALAGÁVEL? ", "NÃO"))
@@ -6109,21 +6103,16 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     f_avaliado_acess = fator_acessibilidade(dados_avaliando.get("ACESSIBILIDADE?", "NÃO"))
 
     lista_valores_unitarios = []
-
     lista_residuos_relativos = []
     lista_valores_estimados = []
-
 
     for _, linha in dataframe_amostras_validas.iterrows():
         valor_total_amostra = linha["VALOR TOTAL"]
         area_da_amostra = float(linha.get("AREA TOTAL", 0))
 
-        # Cálculo dos fatores conforme a lógica original:
         fator_area = calcular_fator_area(area_do_avaliando, area_da_amostra, fatores_do_usuario["area"])
         fator_oferta = calcular_fator_oferta(True, fatores_do_usuario["oferta"])
 
-        # Fator localização se "localizacao_mesma_regiao" for falso,
-        # faz a comparação, senão = 1.0
         if fatores_do_usuario.get("localizacao_mesma_regiao", False):
             fator_localiz_calc = 1.0
         else:
@@ -6140,49 +6129,42 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
                 fator_localiz_calc = 1.0
             fator_localiz_calc = limitar_fator(fator_localiz_calc)
 
-        # Fator aproveitamento (f_avaliado / f_amostra)
         f_sample_aprov = fator_aproveitamento(linha.get("APROVEITAMENTO", "URBANO"))
         if fatores_do_usuario["aproveitamento"] and f_sample_aprov != 0:
             fator_aprov_calc = limitar_fator(f_avaliado_aprov / f_sample_aprov)
         else:
             fator_aprov_calc = 1.0
 
-        # Fator topografia
         f_sample_topog = fator_topografia(linha.get("BOA TOPOGRAFIA?", "NÃO"))
         if fatores_do_usuario["topografia"] and f_sample_topog != 0:
             fator_topog_calc = limitar_fator(f_avaliado_topog / f_sample_topog)
         else:
             fator_topog_calc = 1.0
 
-        # Fator pedologia
         f_sample_pedol = fator_pedologia(linha.get("PEDOLOGIA ALAGÁVEL? ", "NÃO"))
         if fatores_do_usuario["pedologia"] and f_sample_pedol != 0:
             fator_pedol_calc = limitar_fator(f_avaliado_pedol / f_sample_pedol)
         else:
             fator_pedol_calc = 1.0
 
-        # Fator pavimentação
         f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
         if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
             fator_pavim_calc = limitar_fator(f_avaliado_pavim / f_sample_pavim)
         else:
             fator_pavim_calc = 1.0
 
-        # Fator esquina
         f_sample_esq = fator_esquina(linha.get(" ESQUINA?", "NÃO"))
         if fatores_do_usuario["esquina"] and f_sample_esq != 0:
             fator_esq_calc = limitar_fator(f_avaliado_esq / f_sample_esq)
         else:
             fator_esq_calc = 1.0
 
-        # Fator acessibilidade
         f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
         if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
             fator_acess_calc = limitar_fator(f_avaliado_acess / f_sample_acess)
         else:
             fator_acess_calc = 1.0
 
-        # Valor homogeneizado
         valor_homog = (
             valor_total_amostra *
             fator_area *
@@ -6196,14 +6178,14 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             fator_acess_calc
         )
 
-         # Converte o valor total homogeneizado em valor unitário (R$/m²)
         if area_da_amostra > 0:
             valor_unitario = valor_homog / area_da_amostra
         else:
             valor_unitario = 0.0
 
         lista_valores_unitarios.append(valor_unitario)
-        # Resíduo relativo percentual:
+        lista_valores_estimados.append(valor_unitario)
+
         valor_unitario_avaliando = dados_avaliando.get("valor_unitario_medio", 0)
         if valor_unitario_avaliando:
             residuo_rel = 100 * (valor_unitario - valor_unitario_avaliando) / valor_unitario_avaliando
@@ -6211,28 +6193,27 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             residuo_rel = 0.0
         lista_residuos_relativos.append(residuo_rel)
 
-        import numpy as np
+    # FIM DO LOOP PRINCIPAL
 
-        desvio_padrao_residuos = np.std(lista_residuos_relativos) if lista_residuos_relativos else 1
+    desvio_padrao_residuos = np.std(lista_residuos_relativos) if lista_residuos_relativos else 1
+    lista_residuos_dp = [
+        (residuo / desvio_padrao_residuos) if desvio_padrao_residuos > 0 else 0.0
+        for residuo in lista_residuos_relativos
+    ]
 
-        lista_residuos_dp = [
-            (residuo / desvio_padrao_residuos) if desvio_padrao_residuos > 0 else 0.0
-            for residuo in lista_residuos_relativos
-        ]
+    amostras_resultantes = []
+    for i, (_, linha) in enumerate(dataframe_amostras_validas.iterrows()):
+        amostras_resultantes.append({
+            "identificador": linha.get("IDENTIFICADOR", f"Amostra {i+1}"),
+            "valor_total": linha["VALOR TOTAL"],
+            "area": linha["AREA TOTAL"],
+            "valor_unitario": lista_valores_unitarios[i],
+            "valor_estimado": lista_valores_estimados[i],
+            "residuo_rel": lista_residuos_relativos[i],
+            "residuo_dp": lista_residuos_dp[i]
+        })
 
-        # Estrutura final com todos os valores solicitados:
-        amostras_resultantes = []
-        for i, (_, linha) in enumerate(dataframe_amostras_validas.iterrows()):
-            amostras_resultantes.append({
-                "identificador": linha.get("IDENTIFICADOR", f"Amostra {i+1}"),
-                "valor_total": linha["VALOR TOTAL"],
-                "area": linha["AREA TOTAL"],
-                "valor_unitario": lista_valores_unitarios[i],
-                "valor_estimado": lista_valores_estimados[i],
-                "residuo_rel": lista_residuos_relativos[i],
-                "residuo_dp": lista_residuos_dp[i]
-            })
+    return amostras_resultantes
 
-        return amostras_resultantes
 
 

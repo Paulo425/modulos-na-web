@@ -1083,8 +1083,6 @@ def gerar_avaliacao():
 
                 # Separando listas após homogeneização (novo)
                 lista_valores_unitarios = [a["valor_unitario"] for a in amostras_homog]
-                "valor_estimado": lista_valores_estimados[i] if i < len(lista_valores_estimados) else None,
-
                 lista_residuos_relativos = [a["residuo_rel"] for a in amostras_homog]
                 lista_residuos_dp = [a["residuo_dp"] for a in amostras_homog]
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
