@@ -24,6 +24,9 @@ import pandas as pd  # ← inclusão imediata dessa linha resolve definitivament
 import sys
 import traceback
 import subprocess
+import pandas as pd
+from executaveis_avaliacao.main import homogeneizar_amostras
+
 
 
 # 🔧 Configuração do logger DEFINITIVA (completa e segura)
@@ -1230,7 +1233,7 @@ def gerar_avaliacao():
 
 @app.route("/visualizar_resultados/<uuid>")
 def visualizar_resultados(uuid):
-    import json
+    
     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
 
     logger.info(f"✅ Iniciando visualizar_resultados() para UUID: {uuid}")
@@ -1250,12 +1253,26 @@ def visualizar_resultados(uuid):
         fatores = dados.get("fatores_do_usuario", {})
         dados_avaliando = dados.get("dados_avaliando", {})
 
-        logger.info(f"📌 {len(amostras)} amostras carregadas.")
-        valores_ativos = [
-            a["valor_total"] / a["area"]
-            for a in amostras if a.get("ativo") and a.get("area", 0) > 0
-        ]
+        # Passo elegante: só passe amostras prontas para o template!
+        
 
+        amostras_ativas = [a for a in amostras if a.get("ativo") and a.get("area", 0) > 0]
+        df_ativas = pd.DataFrame(amostras_ativas)
+        df_ativas.rename(columns={
+            "valor_total": "VALOR TOTAL",
+            "area": "AREA TOTAL",
+            "distancia_centro": "DISTANCIA CENTRO"
+        }, inplace=True)
+
+        amostras_prontas = homogeneizar_amostras(
+            df_ativas, 
+            dados_avaliando, 
+            fatores, 
+            finalidade_do_laudo="mercado"
+        )
+
+        # Calcula os valores ativos e a média
+        valores_ativos = [a["valor_unitario"] for a in amostras_prontas if a.get("area", 0) > 0]
         if valores_ativos:
             media = round(sum(valores_ativos) / len(valores_ativos), 2)
             logger.info(f"📊 Média calculada: {media}")
@@ -1279,7 +1296,8 @@ def visualizar_resultados(uuid):
 
     except Exception as erro:
         logger.exception(f"🚨 Exceção capturada em visualizar_resultados: {erro}")
-        import traceback
+
+        
         erro_completo = traceback.format_exc()
         erro_arquivo = os.path.join(BASE_DIR, "erro_avaliacao.txt")
         with open(erro_arquivo, "w", encoding="utf-8") as arquivo_erro:
@@ -1288,15 +1306,18 @@ def visualizar_resultados(uuid):
         return redirect(url_for("gerar_avaliacao"))
 
     logger.info("🚩 Renderizando template visualizar_resultados.html")
+
+    # Sempre passar amostras homogeneizadas para o template — garante todos os campos derivados e evita erros de atributo.
     return render_template(
         "visualizar_resultados.html",
         uuid=uuid,
-        amostras=amostras,
+        amostras=amostras_prontas,
         media=media,
         amplitude_ic80=amplitude_ic80,
         dados_avaliando=dados_avaliando,
         fatores=fatores
     )
+
 
 
 @app.route("/gerar_laudo_final/<uuid>", methods=["POST"])
