@@ -1098,6 +1098,7 @@ def gerar_avaliacao():
                 #AQUI RETIRADO TEMPORARIAMENTE
                 #homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
                 amostras_homog = homogeneizar_amostras(df_filtrado, dados_imovel, fatores_usuario, "mercado")
+                
 
                 # Separando listas após homogeneização (novo)
                 lista_valores_unitarios = [a["valor_unitario"] for a in amostras_homog]
@@ -1105,6 +1106,8 @@ def gerar_avaliacao():
                 lista_residuos_dp = [a["residuo_dp"] for a in amostras_homog]
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
+                assert len(df_filtrado) == len(amostras_homog), "Mismatch entre DataFrame e amostras_homog"
+
                 gerar_grafico_aderencia_totais(df_filtrado, [a["valor_unitario"] for a in amostras_homog], img1)
 
                 # solução imediata e recomendada para gerar_avaliacao
@@ -1294,7 +1297,7 @@ def visualizar_resultados(uuid):
             fatores, 
             finalidade_do_laudo="mercado"
         )
-
+        assert len(df_filtrado) == len(amostras_homog), "Mismatch entre DataFrame e amostras_homog"
         # Calcula os valores ativos e a média
         valores_ativos = [a["valor_unitario"] for a in amostras_prontas if a.get("area", 0) > 0]
         if valores_ativos:
@@ -1416,6 +1419,7 @@ def gerar_laudo_final(uuid):
     # Aplicar Chauvenet e homogeneização
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
     amostras_homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
+    assert len(df_filtrado) == len(amostras_homog), "Mismatch entre DataFrame e amostras_homog"
 
     amostras_chauvenet_retirou = [idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()]
     # ativos_frontend é a lista de índices das amostras marcadas (ex: [0,2,5])
@@ -1566,7 +1570,7 @@ def calcular_valores_iterativos(uuid):
             ),
         )
         logger.info("✅ Homogeneização concluída com sucesso")
-        
+        assert len(df_filtrado) == len(amostras_homog), "Mismatch entre DataFrame e amostras_homog"
         #valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
 
         ativos_set = set(ativos_frontend)
@@ -1613,6 +1617,7 @@ def calcular_valores_iterativos(uuid):
         )
 
         logger.info("✅ Gráfico dispersão gerado com sucesso")
+        assert len(df_filtrado) == len(amostras_homog), "Mismatch entre DataFrame e amostras_homog"
 
         logger.info("📌 Gerando gráfico de aderência iterativo")
         gerar_grafico_aderencia_totais(df_filtrado, [a["valor_unitario"] for a in amostras_homog], img1)
