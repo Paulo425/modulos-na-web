@@ -6207,6 +6207,25 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
         lista_valores_originais.append(valor_unitario_original)
         lista_residuos_relativos.append(residuo_rel)
 
+        print(f"""
+        Amostra: {linha.get('IDENTIFICADOR', f'Amostra {i+1}')}
+        VALOR TOTAL: {valor_total_amostra}
+        AREA: {area_da_amostra}
+        FA: {fator_area}
+        FO: {fator_oferta}
+        FAP: {fator_aprov_calc}
+        FT: {fator_topog_calc}
+        FP: {fator_pedol_calc}
+        FPA: {fator_pavim_calc}
+        FE: {fator_esq_calc}
+        FAC: {fator_acess_calc}
+        FL: {fator_localiz_calc}
+        VALOR_HOMOG (Numerador): {valor_homog}
+        VUH CALCULADO: {valor_unitario}
+        VUH ESPERADO (planilha): [coloque o valor manual aqui para comparação]
+        """)
+
+
     # FIM DO LOOP PRINCIPAL
 
     desvio_padrao_residuos = np.std(lista_residuos_relativos) if lista_residuos_relativos else 1
