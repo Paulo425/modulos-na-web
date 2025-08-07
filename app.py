@@ -1087,12 +1087,12 @@ def gerar_avaliacao():
                 lista_residuos_dp = [a["residuo_dp"] for a in amostras_homog]
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
-                gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+                gerar_grafico_aderencia_totais(df_filtrado, amostras_homog, img1)
                 # solução imediata e recomendada para gerar_avaliacao
                 idx_todas_amostras = df_amostras["idx"].tolist()
                 gerar_grafico_dispersao_mediana(
                     df_filtrado,
-                    homog,
+                    amostras_homog,
                     img2,
                     idx_todas_amostras,  # amostras iniciais (usuário ainda não retirou nenhuma)
                     [],                  # nenhuma retirada manual
@@ -1100,7 +1100,7 @@ def gerar_avaliacao():
                 )
 
                 logger.info(f"Enviando para relatório (valores originais): {df_filtrado['VALOR TOTAL'].tolist()}")
-                logger.info(f"Homogeneizados válidos: {homog}")
+                logger.info(f"Homogeneizados válidos: {amostras_homog}")
 
                 finalidade_bruta = f.get("finalidade_lido", "").lower()
                 if "desapropria" in finalidade_bruta:
@@ -1359,7 +1359,7 @@ def gerar_laudo_final(uuid):
 
     # Aplicar Chauvenet e homogeneização
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
-    homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
+    amostras_homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
 
     amostras_chauvenet_retirou = [idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()]
 
@@ -1372,7 +1372,7 @@ def gerar_laudo_final(uuid):
 
     gerar_grafico_dispersao_mediana(
         df_filtrado,
-        homog,
+        amostras_homog,
         img2,
         ativos_frontend,
         amostras_usuario_retirou,
@@ -1402,7 +1402,7 @@ def gerar_laudo_final(uuid):
         maior_valor=maior,
         mediana_valor=mediana,
         valores_originais_iniciais=df_filtrado["VALOR TOTAL"].tolist(),
-        valores_homogeneizados_validos=homog,
+        valores_homogeneizados_validos=amostras_homog,
         caminho_imagem_aderencia=img1,
         caminho_imagem_dispersao=img2,
         uuid_atual=uuid,
@@ -1485,7 +1485,7 @@ def calcular_valores_iterativos(uuid):
         amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
 
         logger.info("📌 Iniciando homogeneização das amostras")
-        homog = homogeneizar_amostras(
+        amostras_homog = homogeneizar_amostras(
             df_filtrado,
             dados["dados_avaliando"],
             dados["fatores_do_usuario"],
@@ -1499,7 +1499,7 @@ def calcular_valores_iterativos(uuid):
         )
         logger.info("✅ Homogeneização concluída com sucesso")
 
-        array_homog = np.array(homog, dtype=float)
+        array_homog = np.array(amostras_homog, dtype=float)
         if len(array_homog) > 1:
             limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
                
@@ -1525,7 +1525,7 @@ def calcular_valores_iterativos(uuid):
         logger.info("📌 Gerando gráfico de dispersão iterativo")
         gerar_grafico_dispersao_mediana(
             df_filtrado,
-            homog,
+            amostras_homog,
             img2,
             ativos_frontend,
             amostras_usuario_retirou,
@@ -1534,7 +1534,7 @@ def calcular_valores_iterativos(uuid):
         logger.info("✅ Gráfico dispersão gerado com sucesso")
 
         logger.info("📌 Gerando gráfico de aderência iterativo")
-        gerar_grafico_aderencia_totais(df_filtrado, homog, img1)
+        gerar_grafico_aderencia_totais(df_filtrado, amostras_homog, img1)
         logger.info("✅ Gráfico aderência gerado com sucesso")
 
         resposta = {
