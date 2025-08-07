@@ -6107,7 +6107,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     lista_valores_estimados = []
     lista_valores_originais = []
 
-    for _, linha in dataframe_amostras_validas.iterrows():
+    for i, (_, linha) in enumerate(dataframe_amostras_validas.iterrows()):
         valor_total_amostra = linha["VALOR TOTAL"]
         area_da_amostra = float(linha.get("AREA TOTAL", 0))
         valor_unitario_original = linha.get("VALOR UNITARIO")
