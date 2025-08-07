@@ -33,7 +33,17 @@ def salvar_entrada_corrente_json(
     for a in amostras:
         valor_total = float(a.get("valor_total", 0))
         area = float(a.get("area", 0))
-        valor_unitario = round(valor_total / area, 2) if area > 0 else None
+        valor_unitario = a.get("valor_unitario")
+        if valor_unitario is not None:
+            if isinstance(valor_unitario, str):
+                valor_unitario = valor_unitario.replace("R$", "").replace(".", "").replace(",", ".").strip()
+            try:
+                valor_unitario = float(valor_unitario)
+            except Exception:
+                valor_unitario = valor_total / area if area > 0 else 0
+        else:
+            valor_unitario = valor_total / area if area > 0 else 0
+
 
         estrutura["amostras"].append({
             "idx": a.get("idx"),

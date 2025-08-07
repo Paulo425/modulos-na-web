@@ -6115,11 +6115,12 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
         
         if valor_unitario_original is None:
             valor_unitario_original = valor_total_amostra / area_da_amostra if area_da_amostra > 0 else 0.0
-        # Se for string, converter:
-        try:
-            valor_unitario_original = float(str(valor_unitario_original).replace("R$", "").replace(".", "").replace(",", "."))
-        except Exception:
-            valor_unitario_original = 0.0
+        else:
+            # Garante conversão correta mesmo se vier string:
+            try:
+                valor_unitario_original = float(str(valor_unitario_original).replace("R$", "").replace(".", "").replace(",", "."))
+            except Exception:
+                valor_unitario_original = valor_total_amostra / area_da_amostra if area_da_amostra > 0 else 0.0
 
 
         fator_area = calcular_fator_area(area_do_avaliando, area_da_amostra, fatores_do_usuario["area"])
@@ -6195,18 +6196,16 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
         else:
             valor_unitario = 0.0
 
-        lista_valores_unitarios.append(valor_unitario)
-        lista_valores_estimados.append(valor_unitario)
-
         valor_unitario_avaliando = dados_avaliando.get("valor_unitario_medio", 0)
         if valor_unitario_avaliando:
             residuo_rel = 100 * (valor_unitario - valor_unitario_avaliando) / valor_unitario_avaliando
         else:
             residuo_rel = 0.0
-        lista_residuos_relativos.append(residuo_rel)
+        
         lista_valores_unitarios.append(valor_unitario)
         lista_valores_estimados.append(valor_unitario)
         lista_valores_originais.append(valor_unitario_original)
+        lista_residuos_relativos.append(residuo_rel)
 
     # FIM DO LOOP PRINCIPAL
 
@@ -6219,17 +6218,17 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     amostras_resultantes = []
     for i, (_, linha) in enumerate(dataframe_amostras_validas.iterrows()):
         # Valor unitário original: tenta pegar da coluna, senão calcula
-        valor_unitario_original = linha.get("VALOR UNITARIO")
-        if valor_unitario_original is None:
-            valor_unitario_original = linha["VALOR TOTAL"] / linha["AREA TOTAL"] if linha["AREA TOTAL"] > 0 else 0.0
+        # valor_unitario_original = linha.get("VALOR UNITARIO")
+        # if valor_unitario_original is None:
+        #     valor_unitario_original = linha["VALOR TOTAL"] / linha["AREA TOTAL"] if linha["AREA TOTAL"] > 0 else 0.0
 
         amostras_resultantes.append({
             "identificador": linha.get("IDENTIFICADOR", f"Amostra {i+1}"),
             "valor_total": linha["VALOR TOTAL"],
             "area": linha["AREA TOTAL"],
             "valor_unitario_original": lista_valores_originais[i],
-            "valor_unitario": lista_valores_unitarios[i],         # valor unitário homogeneizado
-            "valor_estimado": lista_valores_estimados[i],         # também homogeneizado (pode manter para consistência)
+            "valor_unitario": lista_valores_unitarios[i],
+            "valor_estimado": lista_valores_estimados[i],
             "residuo_rel": lista_residuos_relativos[i],
             "residuo_dp": lista_residuos_dp[i]
         })
