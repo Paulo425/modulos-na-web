@@ -1058,7 +1058,7 @@ def gerar_avaliacao():
                 # Supondo que você ainda não rodou homogeneização, então calcule manualmente:
                 valores_unitarios = [
                     row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
-                    for _, row in df_ativas.iterrows()
+                    for _, row in df_amostras.iterrows()
                 ]
                 valores_unitarios = [v for v in valores_unitarios if v > 0]  # filtra apenas valores realmente válidos
 
