@@ -1087,14 +1087,15 @@ def gerar_avaliacao():
                 lista_residuos_dp = [a["residuo_dp"] for a in amostras_homog]
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
                 img2 = os.path.join(pasta_temp, "grafico_dispersao.png")
-                gerar_grafico_aderencia_totais(df_filtrado, amostras_homog, img1)
+                gerar_grafico_aderencia_totais(df_filtrado, [a["valor_unitario"] for a in amostras_homog], img1)
+
                 # solução imediata e recomendada para gerar_avaliacao
                 idx_todas_amostras = df_amostras["idx"].tolist()
                 gerar_grafico_dispersao_mediana(
                     df_filtrado,
-                    amostras_homog,
+                    [a["valor_unitario"] for a in amostras_homog],
                     img2,
-                    idx_todas_amostras,  # amostras iniciais (usuário ainda não retirou nenhuma)
+                    idx_todas_amostras,  # amostras iniciais
                     [],                  # nenhuma retirada manual
                     []                   # nenhuma retirada Chauvenet
                 )
@@ -1362,7 +1363,8 @@ def gerar_laudo_final(uuid):
     amostras_homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
 
     amostras_chauvenet_retirou = [idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()]
-
+    # ativos_frontend é a lista de índices das amostras marcadas (ex: [0,2,5])
+    valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
     pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
     os.makedirs(pasta_saida, exist_ok=True)
 
@@ -1372,7 +1374,7 @@ def gerar_laudo_final(uuid):
 
     gerar_grafico_dispersao_mediana(
         df_filtrado,
-        amostras_homog,
+        valores_unit_ativos,
         img2,
         ativos_frontend,
         amostras_usuario_retirou,
@@ -1511,7 +1513,7 @@ def calcular_valores_iterativos(uuid):
         else:
             valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
             amplitude_intervalo_confianca = 80  # ou outro valor padrão que desejar
-
+        valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
         pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
         os.makedirs(pasta_saida, exist_ok=True)
 
@@ -1525,7 +1527,7 @@ def calcular_valores_iterativos(uuid):
         logger.info("📌 Gerando gráfico de dispersão iterativo")
         gerar_grafico_dispersao_mediana(
             df_filtrado,
-            amostras_homog,
+            valores_unit_ativos,          # Só as ativas!
             img2,
             ativos_frontend,
             amostras_usuario_retirou,
@@ -1534,7 +1536,8 @@ def calcular_valores_iterativos(uuid):
         logger.info("✅ Gráfico dispersão gerado com sucesso")
 
         logger.info("📌 Gerando gráfico de aderência iterativo")
-        gerar_grafico_aderencia_totais(df_filtrado, amostras_homog, img1)
+        gerar_grafico_aderencia_totais(df_filtrado, [a["valor_unitario"] for a in amostras_homog], img1)
+
         logger.info("✅ Gráfico aderência gerado com sucesso")
 
         resposta = {
