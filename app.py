@@ -1213,7 +1213,7 @@ def gerar_avaliacao():
             erro=erro_execucao,
             zip_download=zip_download,
             log_path=log_path_relativo if 'log_path_relativo' in locals() and log_path_relativo and os.path.exists(log_path_relativo) else None,
-            amostras=amostras_homog
+            amostras=amostras_homog if request.method == "POST" else []  # ← Correção definitiva aqui
         )
 
 
