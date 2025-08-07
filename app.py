@@ -1083,7 +1083,8 @@ def gerar_avaliacao():
 
                 # Separando listas após homogeneização (novo)
                 lista_valores_unitarios = [a["valor_unitario"] for a in amostras_homog]
-                lista_valores_estimados = [a["valor_estimado"] for a in amostras_homog]
+                "valor_estimado": lista_valores_estimados[i] if i < len(lista_valores_estimados) else None,
+
                 lista_residuos_relativos = [a["residuo_rel"] for a in amostras_homog]
                 lista_residuos_dp = [a["residuo_dp"] for a in amostras_homog]
                 img1 = os.path.join(pasta_temp, "grafico_aderencia.png")
@@ -1204,8 +1205,14 @@ def gerar_avaliacao():
                 erro_execucao = f"❌ Erro durante o processamento: {type(e).__name__} - {e}<br><pre>{traceback.format_exc()}</pre>"
                 logger.error(erro_execucao)
                 # NOVO BLOCO CRÍTICO: logar em arquivo adicional
-                with open("/home/admin/domains/phoenixappraisal.com.br/public_html/memoriais/erro_critico.log", "a") as f:
+                from pathlib import Path
+
+                LOG_DIR = Path(__file__).parent / "static" / "logs"
+                LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+                with open(LOG_DIR / "erro_critico.log", "a") as f:
                     f.write(erro_execucao + "\n")
+
 
         return render_template(
             "formulario_avaliacao.html",

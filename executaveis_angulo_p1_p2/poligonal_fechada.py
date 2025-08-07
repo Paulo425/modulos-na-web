@@ -650,53 +650,46 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais):
             p1 = ordered_points[i - 1]
             p3 = ordered_points[(i + 1) % total_points]
 
-            # Vetores a partir do vértice atual
+            # Vetores adjacentes ao vértice atual
             vec_p2_p1 = (p1[0] - p2[0], p1[1] - p2[1])
             vec_p2_p3 = (p3[0] - p2[0], p3[1] - p2[1])
 
-            # Função auxiliar para ângulo entre dois vetores
-            def angle_between_vectors(v1, v2):
-                ang1 = math.atan2(v1[1], v1[0])
-                ang2 = math.atan2(v2[1], v2[0])
-                ang = math.degrees(ang2 - ang1)
-                return ang + 360 if ang < 0 else ang
-
+            # Ângulo interno exato (excel)
             internal_angle = angulos_decimais[i]
 
-            # calcular o ângulo entre vetores
-            angulo_calculado = angle_between_vectors(vec_p2_p1, vec_p2_p3)
-
-            # Confirmar o ângulo interno correto (menor que 180°)
-            if angulo_calculado > 180:
-                angulo_calculado = 360 - angulo_calculado
-
-            # garantir que seja exatamente igual ao Excel
-            angulo_calculado = internal_angle
-
-            # raio pequeno proporcional ao menor lado adjacente
-            lado1 = math.hypot(vec_p2_p1[0], vec_p2_p1[1])
-            lado2 = math.hypot(vec_p2_p3[0], vec_p2_p3[1])
+            # Tamanho adequado do arco (proporcional ao menor lado adjacente)
+            lado1 = math.hypot(*vec_p2_p1)
+            lado2 = math.hypot(*vec_p2_p3)
             raio = min(lado1, lado2) * 0.1
 
-            # ponto inicial do arco (sobre segmento p2->p1)
-            angulo_inicial = math.degrees(math.atan2(vec_p2_p1[1], vec_p2_p1[0]))
+            # Função auxiliar para calcular ângulo polar em graus
+            def polar_angle(v):
+                return math.degrees(math.atan2(v[1], v[0])) % 360
 
-            # ponto final do arco, calculado sempre para o lado interno
-            angulo_final = (angulo_inicial + angulo_calculado) % 360
+            angle1 = polar_angle(vec_p2_p1)
+            angle2 = polar_angle(vec_p2_p3)
 
-            # desenhar o arco internamente (sempre no menor ângulo)
+            # Produto vetorial para determinar lado interno
+            cross = vec_p2_p1[0] * vec_p2_p3[1] - vec_p2_p1[1] * vec_p2_p3[0]
+
+            if cross < 0:  # Arco interno no sentido horário
+                start_angle = angle1
+                end_angle = (start_angle - internal_angle) % 360
+            else:          # Arco interno no sentido anti-horário
+                start_angle = angle1
+                end_angle = (start_angle + internal_angle) % 360
+
+            # desenhar arco corretamente no lado interno
             msp.add_arc(
                 center=p2,
                 radius=raio,
-                start_angle=angulo_inicial,
-                end_angle=angulo_final,
+                start_angle=start_angle,
+                end_angle=end_angle,
                 dxfattribs={'layer': 'Internal_Arcs'}
             )
 
-            # posição do rótulo (meio do arco)
-            angulo_meio = (angulo_inicial + angulo_final) / 2
-            angulo_meio %= 360
-
+            # posição ideal do rótulo
+            angulo_meio = (start_angle + end_angle) / 2 % 360
             distancia_label = raio + 1.0
             posicao_label = (
                 p2[0] + distancia_label * math.cos(math.radians(angulo_meio)),
@@ -705,7 +698,7 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais):
 
             internal_angle_dms = convert_to_dms(internal_angle)
 
-            # adicionar texto no DXF
+            # texto com rotação correta
             msp.add_text(
                 internal_angle_dms,
                 dxfattribs={
@@ -720,6 +713,7 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais):
 
     except Exception as e:
         print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
+
 
 
 
