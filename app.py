@@ -886,6 +886,8 @@ from executaveis_avaliacao.main import gerar_relatorio_avaliacao_com_template
 
 @app.route("/avaliacoes", methods=["GET", "POST"])
 def gerar_avaliacao():
+
+    amostras_homog = []
     
     #logger = logging.getlogger(__name__)  # ← ajuste definitivo aqui!
     logger.debug("🚀 Iniciando rota gerar_avaliacao()")
