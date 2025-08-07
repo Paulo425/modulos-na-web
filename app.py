@@ -1596,14 +1596,22 @@ def calcular_valores_iterativos(uuid):
         ]
 
         logger.info("📌 Gerando gráfico de dispersão iterativo")
+
+       # Monte os arrays sincronizados (depois da homogeneização)
+        ativos_set = set(ativos_frontend)
+        amostras_plot = [a for a in amostras_homog if a.get("idx") in ativos_set]
+        ativos_validos_idx = [a["idx"] for a in amostras_plot]
+        ativos_validos_valores = [a["valor_unitario"] for a in amostras_plot]
+
         gerar_grafico_dispersao_mediana(
             df_filtrado,
-            valores_unit_ativos,          # Só as ativas!
+            ativos_validos_valores,
             img2,
-            ativos_frontend,
+            ativos_validos_idx,
             amostras_usuario_retirou,
             amostras_chauvenet_retirou,
         )
+
         logger.info("✅ Gráfico dispersão gerado com sucesso")
 
         logger.info("📌 Gerando gráfico de aderência iterativo")
