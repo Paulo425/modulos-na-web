@@ -47,14 +47,16 @@
       <tbody>
         {% for amostra in amostras %}
         <tr>
-          <input type="checkbox" class="amostra-checkbox" data-idx="{{ amostra.idx }}" name="amostra_{{ loop.index }}" checked>
+          <td>
+            <input type="checkbox" class="amostra-checkbox" data-idx="{{ amostra.idx }}" name="amostra_{{ loop.index }}" checked>
+          </td>
           <td>{{ amostra.identificador }}</td>
-          <td>{{ "%.2f"|format(amostra.valor_total) }}</td>
-          <td>{{ "%.2f"|format(amostra.area) }}</td>
-          <td>{{ "%.2f"|format(amostra.valor_unitario_original) }}</td>
-          <td>{{ "%.2f"|format(amostra.valor_estimado) }}</td>
-          <td>{{ "%.2f"|format(amostra.residuo_rel) }}</td>
-          <td>{{ "%.2f"|format(amostra.residuo_dp) }}</td> <!-- Novo -->
+          <td style="text-align:center;">{{ "%.2f"|format(amostra.valor_total) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(amostra.area) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(amostra.valor_unitario_original) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(amostra.valor_estimado) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(amostra.residuo_rel) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(amostra.residuo_dp) }}</td>
         </tr>
         {% endfor %}
       </tbody>
