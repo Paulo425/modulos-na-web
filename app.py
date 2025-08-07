@@ -1500,8 +1500,9 @@ def calcular_valores_iterativos(uuid):
             ),
         )
         logger.info("✅ Homogeneização concluída com sucesso")
-
-        array_homog = np.array(amostras_homog, dtype=float)
+        
+        valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
+        array_homog = np.array([a["valor_unitario"] for a in amostras_homog], dtype=float)
         if len(array_homog) > 1:
             limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
                
