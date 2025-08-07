@@ -6093,7 +6093,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     import math
     import numpy as np
 
-    area_do_avaliando = float(dados_avaliando.get("AREA_PARCIAL_AFETADA", dados_avaliando.get("AREA TOTAL", 0)))
+    area_do_avaliando = float(dados_avaliando.get("AREA TOTAL", 0))
 
     f_avaliado_aprov = fator_aproveitamento(dados_avaliando.get("APROVEITAMENTO", "URBANO"))
     f_avaliado_topog = fator_topografia(dados_avaliando.get("BOA TOPOGRAFIA?", "NÃO"))
@@ -6249,7 +6249,8 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             "valor_unitario": lista_valores_unitarios[i],
             "valor_estimado": lista_valores_estimados[i],
             "residuo_rel": lista_residuos_relativos[i],
-            "residuo_dp": lista_residuos_dp[i]
+            "residuo_dp": lista_residuos_dp[i],
+            "idx": linha.get("idx") or linha.get("AM"),  # ← ESSENCIAL!
         })
 
     return amostras_resultantes
