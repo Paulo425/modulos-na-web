@@ -1052,6 +1052,16 @@ def gerar_avaliacao():
                 # Adicione imediatamente após essa linha:
                 df_amostras["idx"] = df_amostras["AM"].astype(int)
 
+                # ▼▼▼ CÁLCULO DO VALOR UNITÁRIO MÉDIO ▼▼▼
+                # Supondo que você ainda não rodou homogeneização, então calcule manualmente:
+                valores_unitarios = [
+                    row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
+                    for _, row in df_amostras.iterrows()
+                ]
+                valor_unitario_medio = sum(valores_unitarios) / len([v for v in valores_unitarios if v > 0]) if valores_unitarios else 0
+                dados_imovel["valor_unitario_medio"] = valor_unitario_medio
+                # ▲▲▲ FIM DO BLOCO DE CÁLCULO ▲▲▲
+
                 # NOVA LINHA: Pegue a área digitada pelo usuário no input
 
                 area_parcial_afetada = float(request.form.get("area_parcial_afetada", "0").replace(".", "").replace(",", "."))
@@ -1264,6 +1274,15 @@ def visualizar_resultados(uuid):
             "distancia_centro": "DISTANCIA CENTRO"
         }, inplace=True)
 
+        # >>> INSIRA ESTE BLOCO AQUI <<<
+        valores_unitarios = [
+            row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
+            for _, row in df_ativas.iterrows()
+        ]
+        valor_unitario_medio = sum(valores_unitarios) / len([v for v in valores_unitarios if v > 0]) if valores_unitarios else 0
+        dados_avaliando["valor_unitario_medio"] = valor_unitario_medio
+
+
         amostras_prontas = homogeneizar_amostras(
             df_ativas, 
             dados_avaliando, 
@@ -1378,6 +1397,16 @@ def gerar_laudo_final(uuid):
         "area": "AREA TOTAL",
         "distancia_centro": "DISTANCIA CENTRO"
     }, inplace=True)
+
+
+    # ▼▼▼ Calcule o valor_unitario_medio e adicione ao dicionário ▼▼▼
+    valores_unitarios = [
+        row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
+        for _, row in df_ativas.iterrows()
+    ]
+    valor_unitario_medio = sum(valores_unitarios) / len([v for v in valores_unitarios if v > 0]) if valores_unitarios else 0
+    dados["dados_avaliando"]["valor_unitario_medio"] = valor_unitario_medio
+    # ▲▲▲ FIM DO BLOCO ▲▲▲
 
     # Aplicar Chauvenet e homogeneização
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
@@ -1500,6 +1529,15 @@ def calcular_valores_iterativos(uuid):
 
         df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
         df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+
+        # ▼▼▼ Calcule o valor_unitario_medio e adicione ao dicionário ▼▼▼
+        valores_unitarios = [
+            row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
+            for _, row in df_ativas.iterrows()
+        ]
+        valor_unitario_medio = sum(valores_unitarios) / len([v for v in valores_unitarios if v > 0]) if valores_unitarios else 0
+        dados["dados_avaliando"]["valor_unitario_medio"] = valor_unitario_medio
+        # ▲▲▲ FIM DO BLOCO ▲▲▲
 
         logger.info("📌 Aplicando Chauvenet e filtro nas amostras ativas")
         df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
