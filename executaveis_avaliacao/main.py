@@ -6109,6 +6109,10 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     for _, linha in dataframe_amostras_validas.iterrows():
         valor_total_amostra = linha["VALOR TOTAL"]
         area_da_amostra = float(linha.get("AREA TOTAL", 0))
+        valor_unitario_original = linha.get("VALOR UNITARIO")
+        # Se não existir a coluna 'VALOR UNITARIO', calcule manualmente:
+        if valor_unitario_original is None:
+            valor_unitario_original = valor_total_amostra / area_da_amostra if area_da_amostra > 0 else 0.0
 
         fator_area = calcular_fator_area(area_do_avaliando, area_da_amostra, fatores_do_usuario["area"])
         fator_oferta = calcular_fator_oferta(True, fatores_do_usuario["oferta"])
@@ -6207,8 +6211,11 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             "identificador": linha.get("IDENTIFICADOR", f"Amostra {i+1}"),
             "valor_total": linha["VALOR TOTAL"],
             "area": linha["AREA TOTAL"],
-            "valor_unitario": lista_valores_unitarios[i],
-            "valor_estimado": lista_valores_estimados[i],
+            "valor_unitario_original": linha.get("VALOR UNITARIO",  # preferencialmente o do Excel
+                linha["VALOR TOTAL"] / linha["AREA TOTAL"] if linha["AREA TOTAL"] > 0 else 0.0
+            ),
+            "valor_unitario": lista_valores_unitarios[i],         # valor unitário homogeneizado
+            "valor_estimado": lista_valores_estimados[i],         # também homogeneizado (pode manter para consistência)
             "residuo_rel": lista_residuos_relativos[i],
             "residuo_dp": lista_residuos_dp[i]
         })
