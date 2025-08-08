@@ -130,21 +130,9 @@
         Novo Cenário ↺
       </button>
 
-      <!-- Formulário separado só para o envio das amostras ativas e geração do laudo -->
-      <form method="post" action="{{ url_for('gerar_laudo_final', uuid=uuid) }}" style="display:inline;">
-        <input type="hidden" name="acao" value="gerar_laudo">
-
-        {# Garante que TODAS as amostras ativas sejam enviadas como hidden inputs #}
-        {% for a in amostras %}
-          {% if a.ativo %}
-            <input type="hidden" name="ativo_{{ a.idx }}" value="1">
-          {% endif %}
-        {% endfor %}
-
-        <button type="submit" class="btn btn-success">
-          Gerar Laudo Final
-        </button>
-      </form>
+      <button type="submit" name="acao" value="gerar_laudo" class="btn btn-success">
+        Gerar Laudo Final
+      </button>
     </div>
   </form>
 </div>

@@ -1249,9 +1249,111 @@ def gerar_avaliacao():
         return f"Erro interno ao iniciar processamento: {str(e)}", 500
 
 
-@app.route("/visualizar_resultados/<uuid>")
+# @app.route("/visualizar_resultados/<uuid>")
+# def visualizar_resultados(uuid):
+
+#     if request.method == "POST" and request.form.get("acao") == "gerar_laudo":
+#         return gerar_laudo_final(uuid)
+
+#     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+#     logger.info(f"✅ Iniciando visualizar_resultados() para UUID: {uuid}")
+#     logger.info(f"📂 Caminho JSON: {caminho_json}")
+
+#     if not os.path.exists(caminho_json):
+#         logger.error("❌ Arquivo JSON não encontrado.")
+#         flash("Arquivo JSON de entrada não encontrado.", "danger")
+#         return redirect(url_for("gerar_avaliacao"))
+
+#     try:
+#         with open(caminho_json, "r", encoding="utf-8") as f:
+#             dados = json.load(f)
+#         logger.info("📌 JSON carregado com sucesso.")
+
+#         amostras = dados.get("amostras", [])
+#         fatores = dados.get("fatores_do_usuario", {})
+#         dados_avaliando = dados.get("dados_avaliando", {})
+
+#         # Passo elegante: só passe amostras prontas para o template!
+        
+
+#         amostras_ativas = [a for a in amostras if a.get("ativo") and a.get("area", 0) > 0]
+#         df_ativas = pd.DataFrame(amostras_ativas)
+#         df_ativas.rename(columns={
+#             "valor_total": "VALOR TOTAL",
+#             "area": "AREA TOTAL",
+#             "distancia_centro": "DISTANCIA CENTRO"
+#         }, inplace=True)
+
+#         # >>> INSIRA ESTE BLOCO AQUI <<<
+#         valores_unitarios = [
+#             row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
+#             for _, row in df_ativas.iterrows()
+#         ]
+#         valor_unitario_medio = sum(valores_unitarios) / len([v for v in valores_unitarios if v > 0]) if valores_unitarios else 0
+#         dados_avaliando["valor_unitario_medio"] = valor_unitario_medio
+
+
+#         amostras_prontas = homogeneizar_amostras(
+#             df_ativas, 
+#             dados_avaliando, 
+#             fatores, 
+#             finalidade_do_laudo="mercado"
+#         )
+       
+#         # Calcula os valores ativos e a média
+#         valores_ativos = [a["valor_unitario"] for a in amostras_prontas if a.get("area", 0) > 0]
+#         if valores_ativos:
+#             media = round(sum(valores_ativos) / len(valores_ativos), 2)
+#             logger.info(f"📊 Média calculada: {media}")
+#         else:
+#             media = 0.0
+#             logger.warning("⚠️ Nenhum valor ativo encontrado para média.")
+
+#         from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
+#         amplitude_ic80 = 0.0
+#         if len(valores_ativos) > 1:
+#             logger.info("📌 Iniciando cálculo do intervalo de confiança bootstrap.")
+#             li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
+#             logger.info(f"📌 IC 80% calculado: LI={li}, LS={ls}")
+#             if li > 0:
+#                 amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
+#                 logger.info(f"📊 Amplitude IC 80%: {amplitude_ic80}%")
+#             else:
+#                 logger.warning("⚠️ LI do intervalo é menor ou igual a zero.")
+#         else:
+#             logger.warning("⚠️ Não há valores suficientes para calcular IC 80%.")
+
+#     except Exception as erro:
+#         logger.exception(f"🚨 Exceção capturada em visualizar_resultados: {erro}")
+
+        
+#         erro_completo = traceback.format_exc()
+#         erro_arquivo = os.path.join(BASE_DIR, "erro_avaliacao.txt")
+#         with open(erro_arquivo, "w", encoding="utf-8") as arquivo_erro:
+#             arquivo_erro.write(erro_completo)
+#         flash(f"Erro detalhado capturado: {erro}", "danger")
+#         return redirect(url_for("gerar_avaliacao"))
+
+#     logger.info("🚩 Renderizando template visualizar_resultados.html")
+
+#     # Sempre passar amostras homogeneizadas para o template — garante todos os campos derivados e evita erros de atributo.
+#     return render_template(
+#         "visualizar_resultados.html",
+#         uuid=uuid,
+#         amostras=amostras_prontas,
+#         media=media,
+#         amplitude_ic80=amplitude_ic80,
+#         dados_avaliando=dados_avaliando,
+#         fatores=fatores
+#     )
+
+@app.route("/visualizar_resultados/<uuid>", methods=["GET", "POST"])
 def visualizar_resultados(uuid):
-    
+    # 🔁 Se veio submit do botão "Gerar Laudo Final", delega direto
+    if request.method == "POST" and request.form.get("acao") == "gerar_laudo":
+        return gerar_laudo_final(uuid)
+
     caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
 
     logger.info(f"✅ Iniciando visualizar_resultados() para UUID: {uuid}")
@@ -1263,68 +1365,82 @@ def visualizar_resultados(uuid):
         return redirect(url_for("gerar_avaliacao"))
 
     try:
+        # OPTIM: leitura JSON é ok; mantenha simples
         with open(caminho_json, "r", encoding="utf-8") as f:
             dados = json.load(f)
         logger.info("📌 JSON carregado com sucesso.")
 
-        amostras = dados.get("amostras", [])
-        fatores = dados.get("fatores_do_usuario", {})
-        dados_avaliando = dados.get("dados_avaliando", {})
+        amostras = dados.get("amostras", []) or []
+        fatores = dados.get("fatores_do_usuario", {}) or {}
+        dados_avaliando = dados.get("dados_avaliando", {}) or {}
 
-        # Passo elegante: só passe amostras prontas para o template!
-        
+        # Filtra só as ativas e válidas
+        amostras_ativas = [a for a in amostras if a.get("ativo") and (a.get("area") or 0) > 0]
 
-        amostras_ativas = [a for a in amostras if a.get("ativo") and a.get("area", 0) > 0]
-        df_ativas = pd.DataFrame(amostras_ativas)
-        df_ativas.rename(columns={
-            "valor_total": "VALOR TOTAL",
-            "area": "AREA TOTAL",
-            "distancia_centro": "DISTANCIA CENTRO"
-        }, inplace=True)
+        # OPTIM: se não há ativas, evita custos e devolve rápido
+        if not amostras_ativas:
+            logger.warning("⚠️ Nenhuma amostra ativa encontrada para a tela iterativa.")
+            return render_template(
+                "visualizar_resultados.html",
+                uuid=uuid,
+                amostras=[],
+                media=0.0,
+                amplitude_ic80=0.0,
+                dados_avaliando=dados_avaliando,
+                fatores=fatores,
+            )
 
-        # >>> INSIRA ESTE BLOCO AQUI <<<
-        valores_unitarios = [
-            row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
-            for _, row in df_ativas.iterrows()
-        ]
-        valor_unitario_medio = sum(valores_unitarios) / len([v for v in valores_unitarios if v > 0]) if valores_unitarios else 0
-        dados_avaliando["valor_unitario_medio"] = valor_unitario_medio
+        # OPTIM: monta apenas as colunas necessárias sem DataFrame pesado
+        # Garante chaves com defaults
+        valores_totais = [float(a.get("valor_total", 0) or 0) for a in amostras_ativas]
+        areas          = [float(a.get("area", 0) or 0)         for a in amostras_ativas]
+        idxs           = [int(a.get("idx", 0) or 0)            for a in amostras_ativas]
+        dist_centro    = [float(a.get("distancia_centro", 0) or 0) for a in amostras_ativas]
 
+        # Valor unitário médio (evita iterrows)
+        vu_list = [(vt / ar) if ar > 0 else 0.0 for vt, ar in zip(valores_totais, areas)]
+        vu_validos = [v for v in vu_list if v > 0]
+        dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
 
-        amostras_prontas = homogeneizar_amostras(
-            df_ativas, 
-            dados_avaliando, 
-            fatores, 
-            finalidade_do_laudo="mercado"
-        )
-       
-        # Calcula os valores ativos e a média
-        valores_ativos = [a["valor_unitario"] for a in amostras_prontas if a.get("area", 0) > 0]
+        # Reconstrói um "mini-DF" só com as colunas esperadas pela homogeneização
+        # (Se sua função aceita dict/lista, melhor ainda; se exige DataFrame, montamos leve)
+        import pandas as pd
+        df_ativas = pd.DataFrame({
+            "VALOR TOTAL": valores_totais,
+            "AREA TOTAL": areas,
+            "DISTANCIA CENTRO": dist_centro,
+            "idx": idxs,
+        })
+
+        # OPTIM: chama homogeneizar_amostras apenas se houver linhas
+        if len(df_ativas) == 0:
+            amostras_prontas = []
+        else:
+            amostras_prontas = homogeneizar_amostras(
+                df_ativas,
+                dados_avaliando,
+                fatores,
+                finalidade_do_laudo="mercado",
+            )
+
+        # Média dos valores ativos (pós-homog.)
+        valores_ativos = [float(a.get("valor_unitario", 0) or 0) for a in amostras_prontas if (a.get("area", 0) or 0) > 0]
         if valores_ativos:
             media = round(sum(valores_ativos) / len(valores_ativos), 2)
-            logger.info(f"📊 Média calculada: {media}")
         else:
             media = 0.0
-            logger.warning("⚠️ Nenhum valor ativo encontrado para média.")
 
-        from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
+        # OPTIM: Bootstrap é caro; use 400 em vez de 1000
         amplitude_ic80 = 0.0
         if len(valores_ativos) > 1:
-            logger.info("📌 Iniciando cálculo do intervalo de confiança bootstrap.")
-            li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 1000, 0.80)
-            logger.info(f"📌 IC 80% calculado: LI={li}, LS={ls}")
+            from executaveis_avaliacao.main import intervalo_confianca_bootstrap_mediana
+            li, ls = intervalo_confianca_bootstrap_mediana(valores_ativos, 400, 0.80)
             if li > 0:
-                amplitude_ic80 = round(((ls - li) / ((li + ls)/2)) * 100, 1)
-                logger.info(f"📊 Amplitude IC 80%: {amplitude_ic80}%")
-            else:
-                logger.warning("⚠️ LI do intervalo é menor ou igual a zero.")
-        else:
-            logger.warning("⚠️ Não há valores suficientes para calcular IC 80%.")
+                amplitude_ic80 = round(((ls - li) / ((li + ls) / 2)) * 100, 1)
 
     except Exception as erro:
         logger.exception(f"🚨 Exceção capturada em visualizar_resultados: {erro}")
-
-        
+        import traceback
         erro_completo = traceback.format_exc()
         erro_arquivo = os.path.join(BASE_DIR, "erro_avaliacao.txt")
         with open(erro_arquivo, "w", encoding="utf-8") as arquivo_erro:
@@ -1334,7 +1450,6 @@ def visualizar_resultados(uuid):
 
     logger.info("🚩 Renderizando template visualizar_resultados.html")
 
-    # Sempre passar amostras homogeneizadas para o template — garante todos os campos derivados e evita erros de atributo.
     return render_template(
         "visualizar_resultados.html",
         uuid=uuid,
@@ -1342,7 +1457,7 @@ def visualizar_resultados(uuid):
         media=media,
         amplitude_ic80=amplitude_ic80,
         dados_avaliando=dados_avaliando,
-        fatores=fatores
+        fatores=fatores,
     )
 
 
