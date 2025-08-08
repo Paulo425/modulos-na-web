@@ -3466,24 +3466,70 @@ def fator_acessibilidade(texto_acessibilidade):
     return 1.00
 
 
+# ###############################################################################
+# # INTERVALO DE CONFIANÇA (IC) VIA BOOTSTRAP DA MEDIANA - 80%
+# ###############################################################################
+# def intervalo_confianca_bootstrap_mediana(valores_numericos, numero_amostras=1000, nivel_confianca=0.80):
+#     """
+#     Calcula o intervalo de confiança (IC) para a mediana via bootstrap.
+#     Retorna (limite_inferior, limite_superior).
+#     """
+#     array_valores = numpy.array(valores_numericos)
+#     quantidade = len(array_valores)
+#     lista_medianas = []
+#     for _ in range(numero_amostras):
+#         amostra_sorteada = numpy.random.choice(array_valores, size=quantidade, replace=True)
+#         lista_medianas.append(numpy.median(amostra_sorteada))
+#     array_medianas = numpy.array(lista_medianas)
+#     limite_inferior = numpy.percentile(array_medianas, (1 - nivel_confianca) / 2 * 100)
+#     limite_superior = numpy.percentile(array_medianas, (1 + nivel_confianca) / 2 * 100)
+#     return limite_inferior, limite_superior
+
 ###############################################################################
-# INTERVALO DE CONFIANÇA (IC) VIA BOOTSTRAP DA MEDIANA - 80%
+# INTERVALO DE CONFIANÇA (IC) VIA BOOTSTRAP DA MEDIANA - 80% (robusto)
 ###############################################################################
 def intervalo_confianca_bootstrap_mediana(valores_numericos, numero_amostras=1000, nivel_confianca=0.80):
     """
-    Calcula o intervalo de confiança (IC) para a mediana via bootstrap.
-    Retorna (limite_inferior, limite_superior).
+    Aceita lista de floats ou lista de dicts (usa 'valor_unitario' como padrão,
+    fallback para 'valor_estimado'/'VUH'/'vuh'). Retorna (LI, LS).
     """
-    array_valores = numpy.array(valores_numericos)
-    quantidade = len(array_valores)
-    lista_medianas = []
-    for _ in range(numero_amostras):
-        amostra_sorteada = numpy.random.choice(array_valores, size=quantidade, replace=True)
-        lista_medianas.append(numpy.median(amostra_sorteada))
-    array_medianas = numpy.array(lista_medianas)
-    limite_inferior = numpy.percentile(array_medianas, (1 - nivel_confianca) / 2 * 100)
-    limite_superior = numpy.percentile(array_medianas, (1 + nivel_confianca) / 2 * 100)
-    return limite_inferior, limite_superior
+    # 1) Normaliza entrada -> lista de floats finitos
+    def _to_floats(seq):
+        out = []
+        for v in seq or []:
+            if isinstance(v, dict):
+                v = v.get("valor_unitario", v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
+            try:
+                x = float(v)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(x):
+                out.append(x)
+        return out
+
+    vals = _to_floats(valores_numericos)
+    if not vals:
+        return (0.0, 0.0)
+
+    arr = numpy.asarray(vals, dtype=float)
+    n = arr.size
+
+    # Casos triviais
+    if n == 1:
+        m = float(arr[0])
+        return (m, m)
+
+    # 2) Bootstrap usando gerador moderno (mais rápido)
+    rng = numpy.random.default_rng()
+    # shape: (numero_amostras, n)
+    samples = rng.choice(arr, size=(numero_amostras, n), replace=True)
+    meds = numpy.median(samples, axis=1)
+
+    alpha = 1.0 - float(nivel_confianca)
+    li = float(numpy.percentile(meds, (alpha/2)*100))
+    ls = float(numpy.percentile(meds, (1 - alpha/2)*100))
+    return (li, ls)
+
 
 
 ###############################################################################
@@ -5924,13 +5970,39 @@ def gerar_relatorio_avaliacao_com_template(
 
     # Grau de precisão
     if len(valores_homogeneizados_validos) > 0:
-        mediana_hom = numpy.median(valores_homogeneizados_validos)
-        if mediana_hom > 0:
-            amplitude_ic80 = ((valor_maximo - valor_minimo)/mediana_hom)*100
+        # Converte lista (floats ou dicts) → lista de floats
+        def _extrair_valores_float(seq, chave_preferida="valor_unitario"):
+            import math
+            out = []
+            for v in seq or []:
+                if isinstance(v, dict):
+                    # <<< corrigido: sem aspas após a variável >>>
+                    val = v.get(chave_preferida, v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
+                else:
+                    val = v
+                try:
+                    val = float(val)
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(val):
+                    out.append(val)
+            return out
+
+        vals = _extrair_valores_float(valores_homogeneizados_validos, "valor_unitario")
+
+        if vals:
+            arr = numpy.array(vals, dtype=float)
+            mediana_hom = float(numpy.median(arr))
+            valor_minimo = float(numpy.min(arr))
+            valor_maximo = float(numpy.max(arr))
+            amplitude_ic80 = ((valor_maximo - valor_minimo) / mediana_hom) * 100 if mediana_hom > 0 else 0.0
         else:
+            mediana_hom = 0.0
             amplitude_ic80 = 0.0
     else:
+        mediana_hom = 0.0
         amplitude_ic80 = 0.0
+
     inserir_tabela_classificacao_de_precisao(documento, "[texto_grau_precisao]", amplitude_ic80)
 
     # Fundamentação e enquadramento
