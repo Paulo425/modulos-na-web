@@ -578,18 +578,19 @@ def gerar_mapa_amostras(
     # ------------------------------------------------------------------ #
     # COLETA DE PONTOS
     # ------------------------------------------------------------------ #
+    
     coords = []
     for _, r in dataframe_amostras.iterrows():
         lat, lon = _p(r.get("LATITUDE")), _p(r.get("LONGITUDE"))
-        if lat and lon:
-            coords.append(dict(lat=lat, lon=lon,
-                               label=f"AM{r.get('AM','–')}",
-                               tipo="amostra"))
+        if lat is not None and lon is not None:  # não use "if lat and lon"
+            # usa idx se existir; cai para AM (da planilha) como fallback
+            idx = int(r.get("idx", r.get("AM", 0)) or 0)
+            rotulo = f"AM {idx:02d}" if idx > 0 else "AM"
+            coords.append(dict(lat=lat, lon=lon, label=rotulo, tipo="amostra"))
 
     lat_av, lon_av = _p(dados_avaliando.get("LATITUDE")), _p(dados_avaliando.get("LONGITUDE"))
-    if lat_av and lon_av:
-        coords.append(dict(lat=lat_av, lon=lon_av,
-                           label="AVALIANDO", tipo="avaliando"))
+    if lat_av is not None and lon_av is not None:
+        coords.append(dict(lat=lat_av, lon=lon_av, label="AVALIANDO", tipo="avaliando"))
 
     # Centro da cidade (usa geopy se disponível + nome da cidade)
     try:
@@ -896,10 +897,7 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
                     fator_item_comparativo = 1 / math.pow(distancia_amostra, 1/10)
                     fator_bem_avaliando = 1 / math.pow(distancia_avaliando, 1/10)
                     fator_localizacao_calculado = fator_bem_avaliando / fator_item_comparativo
-                    if fator_localizacao_calculado > 1.40:
-                        fator_localizacao_calculado = 1.40
-                    elif fator_localizacao_calculado < 0.50:
-                        fator_localizacao_calculado = 0.50
+                    fator_localizacao_calculado = limitar_localizacao(fator_bem_avaliando / fator_item_comparativo).
                 else:
                     fator_localizacao_calculado = 1.0
             except:
@@ -1411,7 +1409,7 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
                 if distancia_amostra > 0 and distancia_avaliando > 0:
                     fator_item_comparativo = 1 / (distancia_amostra ** 0.1)
                     fator_bem_avaliando   = 1 / (distancia_avaliando ** 0.1)
-                    fator_localizacao_calculado = limitar_fator(fator_bem_avaliando / fator_item_comparativo)
+                    fator_localizacao_calculado = limitar_localizacao(fator_bem_avaliando / fator_item_comparativo)
                 else:
                     fator_localizacao_calculado = 1.0
             except:
@@ -3879,9 +3877,72 @@ def calcular_fator_oferta(oferta_aplicada, usar_fator_oferta):
 ###############################################################################
 # GRÁFICOS DE ADERÊNCIA E DISPERSÃO
 ###############################################################################
+# def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, nome_arquivo_imagem):
+#     """
+#     Gera um gráfico comparando os VALORES TOTAIS ORIGINAIS de cada amostra 
+#     com os VALORES TOTAIS ESTIMADOS, calculados a partir do valor unitário homogeneizado (R$/m²)
+#     multiplicado pela área de cada amostra.
+#     """
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     from scipy.stats import linregress
+#     import matplotlib.ticker as ticker
+
+#     # 1) Obter os valores totais originais
+#     valores_originais_totais = dataframe["VALOR TOTAL"].tolist()
+
+#     # 2) Calcular os valores estimados
+#     valores_estimados_totais = []
+#     for i, valor_unit in enumerate(valores_homogeneizados_unitarios):
+#         area = dataframe.iloc[i]["AREA TOTAL"]
+#         if area > 0:
+#             valor_total_estimado = valor_unit * area
+#         else:
+#             valor_total_estimado = 0.0
+#         valores_estimados_totais.append(valor_total_estimado)
+
+#     x = np.array(valores_originais_totais, dtype=float)
+#     y = np.array(valores_estimados_totais, dtype=float)
+
+#     fig, ax = plt.subplots(figsize=(8, 6))
+#     ax.scatter(x, y, color='blue', label='Amostras')
+
+#     if x.size > 0 and y.size > 0:
+#         limite_min = min(np.min(x), np.min(y))
+#         limite_max = max(np.max(x), np.max(y))
+#     else:
+#         limite_min, limite_max = 0, 1
+
+#     if len(x) >= 2 and len(y) >= 2:
+#         slope, intercept, r_value, p_value, std_err = linregress(x, y)
+#         x_fit = np.linspace(limite_min, limite_max, 100)
+#         y_fit = slope * x_fit + intercept
+#         ax.plot(x_fit, y_fit, 'r-', label=f'Reta Ajustada (R² = {r_value**2:.2f})')
+#     else:
+#         ax.text(0.5, 0.5, "Dados insuficientes para regressão", 
+#                 horizontalalignment='center', verticalalignment='center', 
+#                 transform=ax.transAxes, fontsize=12, color='red')
+
+#     ax.set_title("Gráfico de Aderência - Valores Totais")
+#     ax.set_xlabel("Valor Total Original (R$)")
+#     ax.set_ylabel("Valor Total Estimado (R$)")
+#     ax.legend()
+#     ax.grid(True)
+#     ax.tick_params(axis='x', rotation=45)
+   
+#     def formatar_valor_em_reais(valor, pos):
+#         return formatar_moeda_brasil(valor)
+
+#     formatador = ticker.FuncFormatter(formatar_valor_em_reais)
+#     ax.xaxis.set_major_formatter(formatador)
+#     ax.yaxis.set_major_formatter(formatador)
+
+#     fig.tight_layout()
+#     fig.savefig(nome_arquivo_imagem, bbox_inches='tight')
+#     plt.close(fig)
 def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, nome_arquivo_imagem):
     """
-    Gera um gráfico comparando os VALORES TOTAIS ORIGINAIS de cada amostra 
+    Gera um gráfico comparando os VALORES TOTAIS ORIGINAIS de cada amostra
     com os VALORES TOTAIS ESTIMADOS, calculados a partir do valor unitário homogeneizado (R$/m²)
     multiplicado pela área de cada amostra.
     """
@@ -3893,45 +3954,69 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
     # 1) Obter os valores totais originais
     valores_originais_totais = dataframe["VALOR TOTAL"].tolist()
 
-    # 2) Calcular os valores estimados
+    # 2) Calcular os valores estimados a partir do VUH e da área
     valores_estimados_totais = []
     for i, valor_unit in enumerate(valores_homogeneizados_unitarios):
-        area = dataframe.iloc[i]["AREA TOTAL"]
-        if area > 0:
-            valor_total_estimado = valor_unit * area
-        else:
-            valor_total_estimado = 0.0
+        area = float(dataframe.iloc[i]["AREA TOTAL"])
+        valor_total_estimado = (float(valor_unit) * area) if area > 0 else 0.0
         valores_estimados_totais.append(valor_total_estimado)
 
-    x = np.array(valores_originais_totais, dtype=float)
-    y = np.array(valores_estimados_totais, dtype=float)
+    x = np.asarray(valores_originais_totais, dtype=float)
+    y = np.asarray(valores_estimados_totais, dtype=float)
+
+    # --- Deriva os identificadores para rotular os pontos (1, 2, 3...) ---
+    if "idx" in dataframe.columns:
+        try:
+            idxs = dataframe["idx"].astype(int).tolist()
+        except Exception:
+            idxs = list(range(1, len(x) + 1))
+    elif "AM" in dataframe.columns:
+        try:
+            idxs = dataframe["AM"].astype(int).tolist()
+        except Exception:
+            idxs = list(range(1, len(x) + 1))
+    else:
+        idxs = list(range(1, len(x) + 1))
+
+    # Garante mesmo comprimento (evita "x and y must be the same size")
+    n = min(len(x), len(y), len(idxs))
+    x, y, idxs = x[:n], y[:n], idxs[:n]
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.scatter(x, y, color='blue', label='Amostras')
+    ax.scatter(x, y, label="Amostras")
 
+    # --- Anota cada ponto com o número da amostra ---
+    for xi, yi, i_amostra in zip(x, y, idxs):
+        ax.annotate(
+            f"{int(i_amostra)}", (float(xi), float(yi)),
+            xytext=(3, 3), textcoords="offset points",
+            fontsize=8, color="black",
+            bbox=dict(boxstyle="round,pad=0.1", fc="white", alpha=0.7)
+        )
+
+    # Limites e regressão
     if x.size > 0 and y.size > 0:
         limite_min = min(np.min(x), np.min(y))
         limite_max = max(np.max(x), np.max(y))
     else:
-        limite_min, limite_max = 0, 1
+        limite_min, limite_max = 0.0, 1.0
 
-    if len(x) >= 2 and len(y) >= 2:
+    if n >= 2:
         slope, intercept, r_value, p_value, std_err = linregress(x, y)
         x_fit = np.linspace(limite_min, limite_max, 100)
         y_fit = slope * x_fit + intercept
-        ax.plot(x_fit, y_fit, 'r-', label=f'Reta Ajustada (R² = {r_value**2:.2f})')
+        ax.plot(x_fit, y_fit, "r-", label=f"Reta Ajustada (R² = {r_value**2:.2f})")
     else:
-        ax.text(0.5, 0.5, "Dados insuficientes para regressão", 
-                horizontalalignment='center', verticalalignment='center', 
-                transform=ax.transAxes, fontsize=12, color='red')
+        ax.text(0.5, 0.5, "Dados insuficientes para regressão",
+                ha="center", va="center", transform=ax.transAxes, fontsize=12, color="red")
 
     ax.set_title("Gráfico de Aderência - Valores Totais")
     ax.set_xlabel("Valor Total Original (R$)")
     ax.set_ylabel("Valor Total Estimado (R$)")
     ax.legend()
     ax.grid(True)
-    ax.tick_params(axis='x', rotation=45)
-   
+    ax.tick_params(axis="x", rotation=45)
+
     def formatar_valor_em_reais(valor, pos):
         return formatar_moeda_brasil(valor)
 
@@ -3940,8 +4025,9 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
     ax.yaxis.set_major_formatter(formatador)
 
     fig.tight_layout()
-    fig.savefig(nome_arquivo_imagem, bbox_inches='tight')
+    fig.savefig(nome_arquivo_imagem, bbox_inches="tight")
     plt.close(fig)
+
 
 ### essa é a original do PAULO
 # def gerar_grafico_dispersao_mediana(valores_homogeneizados, nome_arquivo):
@@ -4111,43 +4197,129 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
 #     plt.savefig(caminho_saida)
 #     plt.close()
 
+# def gerar_grafico_dispersao_mediana(
+#     df_filtrado,
+#     homog,
+#     caminho_saida,
+#     ativos_frontend,
+#     amostras_usuario_retirou,
+#     amostras_chauvenet_retirou  # ← adicione explicitamente este argumento faltante
+# ):
+#     import matplotlib.pyplot as plt
+#     import numpy as np
+
+#     plt.figure(figsize=(8, 6))
+
+#     mapa_homog = dict(zip(df_filtrado["idx"], homog))
+
+#     ativos_validos_idx = [
+#         idx for idx in ativos_frontend if idx not in amostras_chauvenet_retirou
+#     ]
+
+#     ativos_validos_valores = [mapa_homog[idx] for idx in ativos_validos_idx if idx in mapa_homog]
+
+#     plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
+
+#     # Amostras excluídas explicitamente pelo usuário
+#     usuario_retirou_valores = [mapa_homog[idx] for idx in amostras_usuario_retirou if idx in mapa_homog]
+#     if amostras_usuario_retirou and usuario_retirou_valores:
+#         plt.scatter(amostras_usuario_retirou, usuario_retirou_valores, color='gray', label='Retiradas pelo Usuário')
+
+#     # Amostras excluídas por Chauvenet
+#     chauvenet_valores = [mapa_homog[idx] for idx in amostras_chauvenet_retirou if idx in mapa_homog]
+#     if amostras_chauvenet_retirou and chauvenet_valores:
+#         plt.scatter(amostras_chauvenet_retirou, chauvenet_valores, color='red', label='Retiradas Chauvenet')
+
+#     # Linha da mediana
+#     if ativos_validos_valores:
+#         plt.axhline(np.median(ativos_validos_valores), color='green', linestyle='--',
+#                     label=f'Mediana: {np.median(ativos_validos_valores):.2f}')
+
+#     plt.xlabel('Índice da Amostra')
+#     plt.ylabel('Valor Unitário Homogeneizado (R$/m²)')
+#     plt.title('Gráfico de Dispersão das Amostras Selecionadas')
+#     plt.legend()
+#     plt.grid(True)
+#     plt.tight_layout()
+
+#     plt.savefig(caminho_saida)
+#     plt.close()
+
 def gerar_grafico_dispersao_mediana(
     df_filtrado,
     homog,
     caminho_saida,
     ativos_frontend,
     amostras_usuario_retirou,
-    amostras_chauvenet_retirou  # ← adicione explicitamente este argumento faltante
+    amostras_chauvenet_retirou  # ← permanece explícito
 ):
     import matplotlib.pyplot as plt
     import numpy as np
 
+    # --- helper: extrai float de item que pode ser dict ou número ---
+    def _to_float(v):
+        if isinstance(v, dict):
+            v = v.get("valor_unitario", v.get("valor_estimado", v.get("VUH", v.get("vuh", 0.0))))
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    # Mapa idx -> valor (já em float), respeitando a ordem de df_filtrado
+    idxs = df_filtrado["idx"].tolist()
+    valores = [ _to_float(h) for h in homog ]
+    mapa_homog = {i: v for i, v in zip(idxs, valores) if v is not None}
+
+    # Separações com consistência (só o que existe no mapa)
+    ativos_validos_idx = [
+        i for i in ativos_frontend
+        if (i in mapa_homog) and (i not in set(amostras_chauvenet_retirou))
+    ]
+    ativos_validos_valores = [ mapa_homog[i] for i in ativos_validos_idx ]
+
+    user_out_idx = [ i for i in amostras_usuario_retirou if i in mapa_homog ]
+    user_out_vals = [ mapa_homog[i] for i in user_out_idx ]
+
+    chauv_out_idx = [ i for i in amostras_chauvenet_retirou if i in mapa_homog ]
+    chauv_out_vals = [ mapa_homog[i] for i in chauv_out_idx ]
+
     plt.figure(figsize=(8, 6))
 
-    mapa_homog = dict(zip(df_filtrado["idx"], homog))
+    # Plot: ativas
+    if ativos_validos_idx and ativos_validos_valores:
+        plt.scatter(ativos_validos_idx, ativos_validos_valores, label='Amostras Ativas')
+        # rótulos numéricos ao lado dos pontos ativos
+        for x, y in zip(ativos_validos_idx, ativos_validos_valores):
+            plt.annotate(
+                f"{int(x)}", (x, y),
+                xytext=(3, 3), textcoords="offset points",
+                fontsize=8
+            )
 
-    ativos_validos_idx = [
-        idx for idx in ativos_frontend if idx not in amostras_chauvenet_retirou
-    ]
+    # Plot: retiradas pelo usuário
+    if user_out_idx and user_out_vals:
+        plt.scatter(user_out_idx, user_out_vals, label='Retiradas pelo Usuário')
+        for x, y in zip(user_out_idx, user_out_vals):
+            plt.annotate(
+                f"{int(x)}", (x, y),
+                xytext=(3, 3), textcoords="offset points",
+                fontsize=8
+            )
 
-    ativos_validos_valores = [mapa_homog[idx] for idx in ativos_validos_idx if idx in mapa_homog]
+    # Plot: retiradas por Chauvenet
+    if chauv_out_idx and chauv_out_vals:
+        plt.scatter(chauv_out_idx, chauv_out_vals, label='Retiradas Chauvenet')
+        for x, y in zip(chauv_out_idx, chauv_out_vals):
+            plt.annotate(
+                f"{int(x)}", (x, y),
+                xytext=(3, 3), textcoords="offset points",
+                fontsize=8
+            )
 
-    plt.scatter(ativos_validos_idx, ativos_validos_valores, color='blue', label='Amostras Ativas')
-
-    # Amostras excluídas explicitamente pelo usuário
-    usuario_retirou_valores = [mapa_homog[idx] for idx in amostras_usuario_retirou if idx in mapa_homog]
-    if amostras_usuario_retirou and usuario_retirou_valores:
-        plt.scatter(amostras_usuario_retirou, usuario_retirou_valores, color='gray', label='Retiradas pelo Usuário')
-
-    # Amostras excluídas por Chauvenet
-    chauvenet_valores = [mapa_homog[idx] for idx in amostras_chauvenet_retirou if idx in mapa_homog]
-    if amostras_chauvenet_retirou and chauvenet_valores:
-        plt.scatter(amostras_chauvenet_retirou, chauvenet_valores, color='red', label='Retiradas Chauvenet')
-
-    # Linha da mediana
+    # Linha da mediana (apenas das ativas válidas)
     if ativos_validos_valores:
-        plt.axhline(np.median(ativos_validos_valores), color='green', linestyle='--',
-                    label=f'Mediana: {np.median(ativos_validos_valores):.2f}')
+        med = float(np.median(ativos_validos_valores))
+        plt.axhline(med, linestyle='--', label=f'Mediana: {med:.2f}')
 
     plt.xlabel('Índice da Amostra')
     plt.ylabel('Valor Unitário Homogeneizado (R$/m²)')
@@ -4155,10 +4327,8 @@ def gerar_grafico_dispersao_mediana(
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-
     plt.savefig(caminho_saida)
     plt.close()
-
 
 
 
@@ -4219,7 +4389,9 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
 
         f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
         if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
-            fator_pavimentacao_calculado = f_avaliado_pavim / f_sample_pavim
+            base = f_sample_pavim / (f_avaliado_pavim or 1.0)   # << antes era f_avaliado_pavim / f_sample_pavim
+            # clamp específico de pavimentação 0.90..1.00
+            fator_pavimentacao_calculado = min(1.0, max(0.90, base))
         else:
             fator_pavimentacao_calculado = 1.0
 
@@ -4229,9 +4401,12 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
         else:
             fator_esquina_calculado = 1.0
 
+        # Fator Acessibilidade  (trocar a ordem)
         f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
         if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
-            fator_acessibilidade_calculado = f_avaliado_acess / f_sample_acess
+            base = f_sample_acess / (f_avaliado_acess or 1.0)   # << antes era f_avaliado_acess / f_sample_acess
+            # clamp específico de acessibilidade 0.90..1.00
+            fator_acessibilidade_calculado = min(1.0, max(0.90, base))
         else:
             fator_acessibilidade_calculado = 1.0
 
@@ -4387,16 +4562,38 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=Non
             for i, dic_amostra in enumerate(lista_detalhes, start=1):
                 for col_idx, nome_col in enumerate(nomes_colunas):
                     cell_data = tabela.rows[i].cells[col_idx]
-                    # Se a coluna representa um fator, converte, limita e formata
+
+                    
+                    
+                    # Se a coluna representa um fator, converte, aplica *clamp específico* e formata
                     if nome_col in colunas_fator:
                         try:
-                            valor_num = float(dic_amostra.get(nome_col, 0))
-                            # Aplica a limitação ao intervalo [0.50, 2.0]
-                            valor_cel = f"{limitar_fator(valor_num):.2f}"
+                            raw = dic_amostra.get(nome_col, 0)
+                            s = str(raw).strip()
+                            # caso venha "0,95" ou "1,00"
+                            if "," in s:
+                                s = s.replace(".", "").replace(",", ".")
+                            valor_num = float(s)
                         except Exception:
-                            valor_cel = str(dic_amostra.get(nome_col, ""))
+                            valor_num = 0.0
+
+                        # Clamps específicos por regra de negócio:
+                        if nome_col in ("FPA", "FAC"):
+                            # Pavimentação e Acessibilidade: 0.90..1.00
+                            valor_num = min(1.0, max(0.90, valor_num))
+                        elif nome_col == "FL":
+                            # Localização: 0.50..1.40
+                            valor_num = max(0.50, min(1.40, valor_num))
+                        else:
+                            # Demais fatores (se aplicável): 0.50..2.00
+                            valor_num = max(0.50, min(2.00, valor_num))
+
+                        valor_cel = f"{valor_num:.2f}"
                     else:
                         valor_cel = str(dic_amostra.get(nome_col, ""))
+
+
+
                     cell_data.text = valor_cel
 
                     for run in cell_data.paragraphs[0].runs:
@@ -4744,7 +4941,8 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         # Fator Pavimentação
         f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
         if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
-            fator_pavimentacao_calculado = limitar_fator(f_sample_pavim/f_avaliado_pavim)
+            base = f_sample_pavim / (f_avaliado_pavim or 1.0)
+            fator_pavimentacao_calculado = min(1.0, max(0.90, base))
         else:
             fator_pavimentacao_calculado = 1.0
 
@@ -4758,7 +4956,9 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         # Fator Acessibilidade
         f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
         if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
-            fator_acessibilidade_calculado = limitar_fator( f_sample_acess/f_avaliado_acess)
+            base = f_sample_acess / (f_avaliado_acess or 1.0)   # << antes era f_avaliado_acess / f_sample_acess
+            # clamp específico de acessibilidade 0.90..1.00
+            fator_acessibilidade_calculado = min(1.0, max(0.90, base))
         else:
             fator_acessibilidade_calculado = 1.0      
               
