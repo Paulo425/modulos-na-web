@@ -1546,10 +1546,21 @@ def gerar_laudo_final(uuid):
     amostras_homog = homogeneizar_amostras(df_filtrado, dados["dados_avaliando"], dados["fatores_do_usuario"], "mercado")
     
 
-    amostras_chauvenet_retirou = [idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()]
-    # ativos_frontend é a lista de índices das amostras marcadas (ex: [0,2,5])
-    valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
+    # Alinhar tudo pelos índices reais (idx), não por posições do enumerate
+    idx_filtrados = df_filtrado["idx"].astype(int).tolist()
+    ativos_frontend_set = set(int(i) for i in ativos_frontend)
+
+    amostras_chauvenet_retirou = [i for i in ativos_frontend_set if i not in idx_filtrados]
+
+    # Mapa idx → valor_unitario vindo da homogeneização
+    map_vu_por_idx = {int(a["idx"]): float(a["valor_unitario"]) for a in amostras_homog}
+
+    # Y do scatter deve ter MESMA ordem/quantidade que o X que a função calcula (df_filtrado ∩ ativos_frontend)
+    indices_ativos_alinhados = [i for i in idx_filtrados if i in ativos_frontend_set and i in map_vu_por_idx]
+    valores_unit_ativos = [map_vu_por_idx[i] for i in indices_ativos_alinhados]
+
     pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
+
     os.makedirs(pasta_saida, exist_ok=True)
 
     img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
