@@ -5765,7 +5765,26 @@ def gerar_relatorio_avaliacao_com_template(
     )
 
     # IC 80% e valores
-    array_validados = numpy.array(valores_homogeneizados_validos, dtype=float)
+    # Normaliza a entrada: aceita lista de floats ou lista de dicts com 'valor_unitario'/'valor_estimado'
+    def _extrair_valores_float(seq):
+        import math
+        out = []
+        for v in seq or []:
+            if isinstance(v, dict):
+                val = v.get("valor_unitario", v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
+            else:
+                val = v
+            try:
+                val = float(val)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(val) and val > 0:
+                out.append(val)
+        return out
+
+    valores_h_num = _extrair_valores_float(valores_homogeneizados_validos)
+    array_validados = numpy.array(valores_h_num, dtype=float)
+
     if len(array_validados) > 0:
         limite_inferior_ic, limite_superior_ic = intervalo_confianca_bootstrap_mediana(array_validados, 1000, 0.80)
         valor_minimo = limite_inferior_ic
