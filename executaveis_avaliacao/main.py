@@ -324,51 +324,51 @@ def classificar_grau_de_precisao(amplitude_ic80):
         return "NÃO CLASSIFICADO"
 
 
-###############################################################################
-# GRÁFICO DE DENSIDADE (KDE)
-###############################################################################
-def gerar_grafico_densidade_kernel(valores_homogeneizados, nome_arquivo):
-    """
-    Gera o gráfico de densidade (KDE) e salva em 'nome_arquivo'.
-    Se o conjunto de dados tiver menos de 2 elementos, salva um gráfico com uma mensagem de aviso.
-    """
-    from scipy.stats import gaussian_kde
-    import numpy as np
-    import matplotlib.pyplot as plt
+# ###############################################################################
+# # GRÁFICO DE DENSIDADE (KDE)
+# ###############################################################################
+# def gerar_grafico_densidade_kernel(valores_homogeneizados, nome_arquivo):
+#     """
+#     Gera o gráfico de densidade (KDE) e salva em 'nome_arquivo'.
+#     Se o conjunto de dados tiver menos de 2 elementos, salva um gráfico com uma mensagem de aviso.
+#     """
+#     from scipy.stats import gaussian_kde
+#     import numpy as np
+#     import matplotlib.pyplot as plt
 
-    array_valores = np.array(valores_homogeneizados, dtype=float)
-    if array_valores.size < 2:
-        # Dados insuficientes para calcular o KDE.
-        plt.figure(figsize=(8, 6))
-        plt.text(0.5, 0.5, "Dados insuficientes para calcular KDE", 
-                 horizontalalignment='center', verticalalignment='center', 
-                 transform=plt.gca().transAxes, fontsize=12)
-        plt.title("Histograma de Densidade de Kernel (KDE)")
-        plt.xlabel("Valores Homogeneizados")
-        plt.ylabel("Densidade")
-        plt.tight_layout()
-        plt.savefig(nome_arquivo, bbox_inches='tight')
-        plt.close()
-        return
+#     array_valores = np.array(valores_homogeneizados, dtype=float)
+#     if array_valores.size < 2:
+#         # Dados insuficientes para calcular o KDE.
+#         plt.figure(figsize=(8, 6))
+#         plt.text(0.5, 0.5, "Dados insuficientes para calcular KDE", 
+#                  horizontalalignment='center', verticalalignment='center', 
+#                  transform=plt.gca().transAxes, fontsize=12)
+#         plt.title("Histograma de Densidade de Kernel (KDE)")
+#         plt.xlabel("Valores Homogeneizados")
+#         plt.ylabel("Densidade")
+#         plt.tight_layout()
+#         plt.savefig(nome_arquivo, bbox_inches='tight')
+#         plt.close()
+#         return
 
-    media_valores = np.mean(array_valores)
-    mediana_valores = np.median(array_valores)
+#     media_valores = np.mean(array_valores)
+#     mediana_valores = np.median(array_valores)
 
-    eixo_x = np.linspace(array_valores.min(), array_valores.max(), 300)
-    funcao_densidade = gaussian_kde(array_valores)
-    valores_densidade = funcao_densidade(eixo_x)
+#     eixo_x = np.linspace(array_valores.min(), array_valores.max(), 300)
+#     funcao_densidade = gaussian_kde(array_valores)
+#     valores_densidade = funcao_densidade(eixo_x)
 
-    plt.figure(figsize=(8, 6))
-    plt.fill_between(eixo_x, valores_densidade, alpha=0.6)
-    plt.title("Histograma de Densidade de Kernel (KDE)")
-    plt.xlabel("Valores Homogeneizados")
-    plt.ylabel("Densidade")
-    plt.axvline(x=media_valores, color='red', linestyle='--', label=f"Média: {media_valores:,.2f}")
-    plt.axvline(x=mediana_valores, color='green', linestyle='-', label=f"Mediana: {mediana_valores:,.2f}")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(nome_arquivo, bbox_inches='tight')
-    plt.close()
+#     plt.figure(figsize=(8, 6))
+#     plt.fill_between(eixo_x, valores_densidade, alpha=0.6)
+#     plt.title("Histograma de Densidade de Kernel (KDE)")
+#     plt.xlabel("Valores Homogeneizados")
+#     plt.ylabel("Densidade")
+#     plt.axvline(x=media_valores, color='red', linestyle='--', label=f"Média: {media_valores:,.2f}")
+#     plt.axvline(x=mediana_valores, color='green', linestyle='-', label=f"Mediana: {mediana_valores:,.2f}")
+#     plt.legend()
+#     plt.tight_layout()
+#     plt.savefig(nome_arquivo, bbox_inches='tight')
+#     plt.close()
 
 
 ###############################################################################
@@ -3504,52 +3504,131 @@ def classificar_grau_de_precisao(amplitude_ic80):
         return "NÃO CLASSIFICADO"
 
 
+# ###############################################################################
+# # GRÁFICO DE DENSIDADE (KDE)
+# ###############################################################################
+# def gerar_grafico_densidade_kernel(valores_homogeneizados, nome_arquivo):
+#     """
+#     Gera o gráfico de densidade (KDE) e salva em 'nome_arquivo'.
+#     Se o conjunto de dados tiver menos de 2 elementos, salva um gráfico com uma mensagem de aviso.
+#     """
+#     from scipy.stats import gaussian_kde
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+
+#     array_valores = np.array(valores_homogeneizados, dtype=float)
+#     if array_valores.size < 2:
+#         # Dados insuficientes para calcular o KDE.
+#         plt.figure(figsize=(8, 6))
+#         plt.text(0.5, 0.5, "Dados insuficientes para calcular KDE", 
+#                  horizontalalignment='center', verticalalignment='center', 
+#                  transform=plt.gca().transAxes, fontsize=12)
+#         plt.title("Histograma de Densidade de Kernel (KDE)")
+#         plt.xlabel("Valores Homogeneizados")
+#         plt.ylabel("Densidade")
+#         plt.tight_layout()
+#         plt.savefig(nome_arquivo, bbox_inches='tight')
+#         plt.close()
+#         return
+
+#     media_valores = np.mean(array_valores)
+#     mediana_valores = np.median(array_valores)
+
+#     eixo_x = np.linspace(array_valores.min(), array_valores.max(), 300)
+#     funcao_densidade = gaussian_kde(array_valores)
+#     valores_densidade = funcao_densidade(eixo_x)
+
+#     plt.figure(figsize=(8, 6))
+#     plt.fill_between(eixo_x, valores_densidade, alpha=0.6)
+#     plt.title("Histograma de Densidade de Kernel (KDE)")
+#     plt.xlabel("Valores Homogeneizados")
+#     plt.ylabel("Densidade")
+#     plt.axvline(x=media_valores, color='red', linestyle='--', label=f"Média: {media_valores:,.2f}")
+#     plt.axvline(x=mediana_valores, color='green', linestyle='-', label=f"Mediana: {mediana_valores:,.2f}")
+#     plt.legend()
+#     plt.tight_layout()
+#     plt.savefig(nome_arquivo, bbox_inches='tight')
+#     plt.close()
+
 ###############################################################################
-# GRÁFICO DE DENSIDADE (KDE)
+# GRÁFICO DE DENSIDADE (KDE) — robusto a lista de dicts ou floats
 ###############################################################################
 def gerar_grafico_densidade_kernel(valores_homogeneizados, nome_arquivo):
     """
-    Gera o gráfico de densidade (KDE) e salva em 'nome_arquivo'.
-    Se o conjunto de dados tiver menos de 2 elementos, salva um gráfico com uma mensagem de aviso.
+    Aceita:
+      - lista de floats (valores unitários), ou
+      - lista de dicts com 'valor_unitario' ou 'valor_estimado'.
+    Gera a curva de densidade (KDE) e salva em nome_arquivo.
     """
-    from scipy.stats import gaussian_kde
     import numpy as np
     import matplotlib.pyplot as plt
+    from scipy.stats import gaussian_kde
 
-    array_valores = np.array(valores_homogeneizados, dtype=float)
-    if array_valores.size < 2:
-        # Dados insuficientes para calcular o KDE.
+    # 1) Normaliza entrada → lista de floats
+    if not valores_homogeneizados:
         plt.figure(figsize=(8, 6))
-        plt.text(0.5, 0.5, "Dados insuficientes para calcular KDE", 
-                 horizontalalignment='center', verticalalignment='center', 
-                 transform=plt.gca().transAxes, fontsize=12)
-        plt.title("Histograma de Densidade de Kernel (KDE)")
-        plt.xlabel("Valores Homogeneizados")
+        plt.text(0.5, 0.5, "Sem dados para KDE",
+                 ha='center', va='center', transform=plt.gca().transAxes, fontsize=12)
+        plt.title("Densidade (KDE)")
+        plt.xlabel("Valor unitário (homogeneizado)")
         plt.ylabel("Densidade")
         plt.tight_layout()
-        plt.savefig(nome_arquivo, bbox_inches='tight')
+        plt.savefig(nome_arquivo, bbox_inches='tight', dpi=150)
         plt.close()
         return
 
-    media_valores = np.mean(array_valores)
-    mediana_valores = np.median(array_valores)
+    first = valores_homogeneizados[0]
+    if isinstance(first, dict):
+        vals = [
+            float(d.get("valor_unitario", d.get("valor_estimado", 0)) or 0)
+            for d in valores_homogeneizados
+        ]
+    else:
+        vals = [float(v) for v in valores_homogeneizados]
 
-    eixo_x = np.linspace(array_valores.min(), array_valores.max(), 300)
-    funcao_densidade = gaussian_kde(array_valores)
-    valores_densidade = funcao_densidade(eixo_x)
+    # 2) Limpeza: remove NaN/inf e valores <= 0 (KDE pode ficar ruim)
+    vals = [v for v in vals if np.isfinite(v) and v > 0]
+
+    # 3) Casos de borda
+    if len(vals) < 2:
+        plt.figure(figsize=(8, 6))
+        if len(vals) == 1:
+            v = vals[0]
+            plt.axvline(v)
+            plt.title("Densidade (KDE) — dado único")
+            plt.xlabel("Valor unitário (homogeneizado)")
+            plt.ylabel("Densidade")
+            plt.tight_layout()
+        else:
+            plt.text(0.5, 0.5, "Dados insuficientes para calcular KDE",
+                     ha='center', va='center', transform=plt.gca().transAxes, fontsize=12)
+            plt.title("Densidade (KDE)")
+            plt.xlabel("Valor unitário (homogeneizado)")
+            plt.ylabel("Densidade")
+            plt.tight_layout()
+        plt.savefig(nome_arquivo, bbox_inches='tight', dpi=150)
+        plt.close()
+        return
+
+    arr = np.array(vals, dtype=float)
+    media = float(np.mean(arr))
+    mediana = float(np.median(arr))
+
+    xs = np.linspace(arr.min(), arr.max(), 300)
+    kde = gaussian_kde(arr)
+    ys = kde(xs)
 
     plt.figure(figsize=(8, 6))
-    plt.fill_between(eixo_x, valores_densidade, alpha=0.6)
-    plt.title("Histograma de Densidade de Kernel (KDE)")
-    plt.xlabel("Valores Homogeneizados")
+    plt.fill_between(xs, ys, alpha=0.6)
+    plt.title("Densidade (KDE)")
+    plt.xlabel("Valor unitário (homogeneizado)")
     plt.ylabel("Densidade")
-    plt.axvline(x=media_valores, color='red', linestyle='--', label=f"Média: {media_valores:,.2f}")
-    plt.axvline(x=mediana_valores, color='green', linestyle='-', label=f"Mediana: {mediana_valores:,.2f}")
+    plt.axvline(x=media, linestyle='--', label=f"Média: {media:,.2f}")
+    plt.axvline(x=mediana, linestyle='-', label=f"Mediana: {mediana:,.2f}")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(nome_arquivo, bbox_inches='tight')
+    plt.savefig(nome_arquivo, bbox_inches='tight', dpi=150)
     plt.close()
-
 
 ###############################################################################
 # APLICAÇÃO DO CRITÉRIO DE CHAUVENET (NOVO MÉTODO DE SANEAMENTO)
@@ -3795,7 +3874,7 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
     ax.legend()
     ax.grid(True)
     ax.tick_params(axis='x', rotation=45)
-
+gerar_grafico_densidade_kernel
     def formatar_valor_em_reais(valor, pos):
         return formatar_moeda_brasil(valor)
 
