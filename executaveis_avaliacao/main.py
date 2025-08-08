@@ -3874,7 +3874,7 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
     ax.legend()
     ax.grid(True)
     ax.tick_params(axis='x', rotation=45)
-gerar_grafico_densidade_kernel
+   
     def formatar_valor_em_reais(valor, pos):
         return formatar_moeda_brasil(valor)
 
