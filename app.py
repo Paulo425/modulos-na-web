@@ -1369,10 +1369,20 @@ def gerar_laudo_final(uuid):
         fotos_planta = dados.get("fotos_planta", [])
         area_parcial_afetada = float(dados["dados_avaliando"].get("AREA_PARCIAL_AFETADA", 0))
 
-    # Atualiza estado das amostras
-    for amostra in dados["amostras"]:
-        campo = f"ativo_{amostra['idx']}"
-        amostra["ativo"] = campo in request.form
+    
+    # Atualiza estado das amostras (apenas se o front realmente enviar as chaves)
+    chaves_postadas = {k for k in request.form.keys() if k.startswith("ativo_")}
+    logger.info(f"🔎 Campos recebidos no POST: {sorted(request.form.keys())}")
+
+    if chaves_postadas:
+        # Só sobrescreve se o POST trouxe os "ativo_*"
+        for amostra in dados["amostras"]:
+            campo = f"ativo_{amostra['idx']}"
+            amostra["ativo"] = campo in request.form
+            # Obs.: checkbox não enviado = False
+    else:
+        logger.warning("⚠️ Nenhuma chave 'ativo_*' recebida. Mantendo estados 'ativo' do JSON.")
+
 
     # Salva JSON atualizado
     with open(caminho_json, "w", encoding="utf-8") as f:
