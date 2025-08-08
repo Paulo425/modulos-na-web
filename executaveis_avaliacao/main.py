@@ -4744,7 +4744,7 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         # Fator Pavimentação
         f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
         if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
-            fator_pavimentacao_calculado = limitar_fator(f_avaliado_pavim / f_sample_pavim)
+            fator_pavimentacao_calculado = limitar_fator(f_sample_pavim/f_avaliado_pavim)
         else:
             fator_pavimentacao_calculado = 1.0
 
@@ -4758,7 +4758,7 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         # Fator Acessibilidade
         f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
         if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
-            fator_acessibilidade_calculado = limitar_fator(f_avaliado_acess / f_sample_acess)
+            fator_acessibilidade_calculado = limitar_fator( f_sample_acess/f_avaliado_acess)
         else:
             fator_acessibilidade_calculado = 1.0      
               
