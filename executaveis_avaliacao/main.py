@@ -3490,13 +3490,25 @@ def fator_acessibilidade(texto_acessibilidade):
 ###############################################################################
 def intervalo_confianca_bootstrap_mediana(valores_numericos, numero_amostras=1000, nivel_confianca=0.80):
     """
-    Aceita lista de floats ou lista de dicts (usa 'valor_unitario' como padrão,
-    fallback para 'valor_estimado'/'VUH'/'vuh'). Retorna (LI, LS).
+    Aceita lista/iterável de floats, numpy.ndarray, ou lista de dicts
+    (usa 'valor_unitario' como padrão; fallback: 'valor_estimado'/'VUH'/'vuh').
+    Retorna (LI, LS).
     """
+    import math
+    import numpy
+
     # 1) Normaliza entrada -> lista de floats finitos
     def _to_floats(seq):
+        # Nunca use "seq or []" com numpy arrays
+        if seq is None:
+            iterable = []
+        elif isinstance(seq, numpy.ndarray):
+            iterable = seq.ravel().tolist()
+        else:
+            iterable = list(seq)
+
         out = []
-        for v in seq or []:
+        for v in iterable:
             if isinstance(v, dict):
                 v = v.get("valor_unitario", v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
             try:
@@ -3519,9 +3531,8 @@ def intervalo_confianca_bootstrap_mediana(valores_numericos, numero_amostras=100
         m = float(arr[0])
         return (m, m)
 
-    # 2) Bootstrap usando gerador moderno (mais rápido)
+    # 2) Bootstrap vetorizado
     rng = numpy.random.default_rng()
-    # shape: (numero_amostras, n)
     samples = rng.choice(arr, size=(numero_amostras, n), replace=True)
     meds = numpy.median(samples, axis=1)
 
