@@ -60,7 +60,7 @@ import os
 import numpy
 
 
-from docx.oxml.shared import OxmlElement
+
 from lxml import etree
 
 from docx.oxml.ns import nsdecls, qn
@@ -90,7 +90,16 @@ from docx.oxml.ns import qn
 import numpy as np
 import sys
 
-from lxml import etree 
+
+
+from docx.oxml.text.paragraph import CT_P
+from docx.text.paragraph import Paragraph
+from docx.shared import Pt
+from docx.table import Table
+
+
+from docx.table import _Cell, Table
+from docx.oxml import OxmlElement
 
 
 
@@ -1811,47 +1820,79 @@ def inserir_texto_saneamento_no_placeholder(documento, marcador_placeholder, tex
 #                 paragrafo_atual = novo_paragrafo
 #             break
 
+
+
 def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder, lista_memorias):
     """
-    Insere blocos de memória de cálculo no lugar de um placeholder.
-    - Mantém Arial e tamanhos conforme seu padrão
-    - Insere QUEBRA DE PÁGINA entre amostras (uma amostra por página)
+    Insere a memória de cálculo logo APÓS o bloco raiz que contém o placeholder:
+      - Se o placeholder estiver em uma tabela, o conteúdo é inserido APÓS a TABELA,
+        garantindo que page breaks funcionem.
+      - Entre amostras, é inserida uma QUEBRA DE PÁGINA.
     """
-    for paragrafo in documento.paragraphs:
-        if marcador_placeholder in paragrafo.text:
-            # limpa só o token, preserva estilo do parágrafo
-            paragrafo.text = paragrafo.text.replace(marcador_placeholder, "")
-            paragrafo_atual = paragrafo
+    alvo_par = None
+    alvo_cell = None
+    alvo_table = None
 
-            total = len(lista_memorias or [])
-            for indice_bloco, bloco in enumerate(lista_memorias or []):
-                # bloco em novo parágrafo (mantém estilo base)
-                novo_paragrafo = inserir_paragrafo_apos(paragrafo_atual, "")
-                linhas_texto = str(bloco).split("\n")
-
-                for indice_linha, conteudo_linha in enumerate(linhas_texto):
-                    execucao_texto = novo_paragrafo.add_run(conteudo_linha + "\n")
-                    execucao_texto.font.name = "Arial"
-
-                    if conteudo_linha.strip().startswith("=> VUH"):
-                        execucao_texto.font.size = Pt(13)
-                        execucao_texto.font.bold = True
-                    elif indice_linha == 0 and conteudo_linha.strip().startswith("AM "):
-                        execucao_texto.font.size = Pt(13)
-                        execucao_texto.font.bold = True
-                    else:
-                        execucao_texto.font.size = Pt(10)
-                        execucao_texto.font.bold = False
-
-                novo_paragrafo.paragraph_format.line_spacing = 1.15
-                paragrafo_atual = novo_paragrafo
-
-                # >>> quebra de página ENTRE amostras <<<
-                if indice_bloco < total - 1:
-                    br = paragrafo_atual.add_run()
-                    br.add_break(WD_BREAK.PAGE)
-
+    # 1) localizar o parágrafo contendo o marcador (corpo / tabelas)
+    for p in documento.paragraphs:
+        if marcador_placeholder in p.text:
+            alvo_par = p
             break
+    if alvo_par is None:
+        for t in documento.tables:
+            for row in t.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if marcador_placeholder in p.text:
+                            alvo_par = p
+                            alvo_cell = cell
+                            alvo_table = t
+                            break
+                    if alvo_par: break
+                if alvo_par: break
+            if alvo_par: break
+
+    if alvo_par is None:
+        return  # não achou, sai silenciosamente
+
+    # 2) limpa o marcador no parágrafo original
+    alvo_par.text = alvo_par.text.replace(marcador_placeholder, "")
+
+    # 3) se estiver dentro de tabela, habilita quebra de linha na tabela
+    if isinstance(alvo_table, Table):
+        _enable_row_split_for_table(alvo_table)
+
+    # 4) obtém o bloco raiz (<w:p> ou <w:tbl>) e insere APÓS ele
+    bloco_raiz = _top_block_item(alvo_par)
+    insert_anchor = bloco_raiz  # insere depois desse bloco
+
+    total = len(lista_memorias or [])
+    for i, bloco in enumerate(lista_memorias or []):
+        # parágrafo para o bloco
+        p_out = inserir_paragrafo_apos_bloco(documento, insert_anchor, "")
+        # estilização básica
+        p_out.paragraph_format.keep_together = False
+        p_out.paragraph_format.keep_with_next = False
+        p_out.paragraph_format.widow_control = True
+
+        # escreve linhas
+        if isinstance(bloco, str):
+            linhas = bloco.split("\n")
+        else:
+            linhas = [str(bloco)]
+        for ln in linhas:
+            run = p_out.add_run(ln + "\n")
+            run.font.name = "Arial"
+            run.font.size = Pt(10)
+
+        # quebra de página entre amostras
+        if i < total - 1:
+            br = p_out.add_run()
+            br.add_break(WD_BREAK.PAGE)
+
+        # próxima inserção deve ocorrer depois do último parágrafo criado
+        insert_anchor = p_out._p
+
 
 
 
@@ -1859,28 +1900,84 @@ def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder
 ###############################################################################
 # SUBSTITUIR PLACEHOLDER POR TEXTO OU IMAGEM
 ###############################################################################
+# def substituir_placeholder_por_texto_formatado(documento, marcador, texto, tamanho_fonte=Pt(12), negrito=False):
+#     """
+#     Substitui o placeholder por texto com fonte e tamanho definidos.
+#     """
+#     for paragrafo in documento.paragraphs:
+#         if marcador in paragrafo.text:
+#             paragrafo.text = paragrafo.text.replace(marcador, "")
+#             execucao = paragrafo.add_run(texto)
+#             execucao.font.name = "Arial"
+#             execucao.font.size = tamanho_fonte
+#             execucao.bold = negrito
+
+#     for tabela in documento.tables:
+#         for linha in tabela.rows:
+#             for celula in linha.cells:
+#                 for parag in celula.paragraphs:
+#                     if marcador in parag.text:
+#                         parag.text = parag.text.replace(marcador, "")
+#                         execucao = parag.add_run(texto)
+#                         execucao.font.name = "Arial"
+#                         execucao.font.size = tamanho_fonte
+#                         execucao.bold = negrito
+
+
+
+def _paragraphs_in_table(table):
+    for row in table.rows:
+        for cell in row.cells:
+            for p in cell.paragraphs:
+                yield p
+            for t2 in cell.tables:
+                for p in _paragraphs_in_table(t2):
+                    yield p
+
+def _iter_all_paragraphs(documento):
+    # corpo
+    for p in documento.paragraphs:
+        yield p
+    # tabelas no corpo
+    for t in documento.tables:
+        for p in _paragraphs_in_table(t):
+            yield p
+    # cabeçalhos/rodapés de todas as seções
+    for sec in documento.sections:
+        for p in sec.header.paragraphs:
+            yield p
+        for t in sec.header.tables:
+            for p in _paragraphs_in_table(t):
+                yield p
+        for p in sec.footer.paragraphs:
+            yield p
+        for t in sec.footer.tables:
+            for p in _paragraphs_in_table(t):
+                yield p
+
 def substituir_placeholder_por_texto_formatado(documento, marcador, texto, tamanho_fonte=Pt(12), negrito=False):
     """
-    Substitui o placeholder por texto com fonte e tamanho definidos.
+    Substitui 'marcador' por 'texto' em QUALQUER lugar (corpo, tabelas, header/footer),
+    mesmo que o marcador esteja dividido em múltiplos runs.
     """
-    for paragrafo in documento.paragraphs:
-        if marcador in paragrafo.text:
-            paragrafo.text = paragrafo.text.replace(marcador, "")
-            execucao = paragrafo.add_run(texto)
-            execucao.font.name = "Arial"
-            execucao.font.size = tamanho_fonte
-            execucao.bold = negrito
+    for par in _iter_all_paragraphs(documento):
+        full = "".join(run.text for run in par.runs) if par.runs else par.text
+        if marcador in full:
+            novo = full.replace(marcador, texto)
+            # limpa runs e reconstroi
+            for _ in range(len(par.runs)):
+                par.runs[0].clear()
+                par.runs[0].text = ""
+                del par.runs[0]
+            par.text = ""  # zera
+            r = par.add_run(novo)
+            r.font.name = "Arial"
+            r.font.size = tamanho_fonte
+            r.bold = bool(negrito)
 
-    for tabela in documento.tables:
-        for linha in tabela.rows:
-            for celula in linha.cells:
-                for parag in celula.paragraphs:
-                    if marcador in parag.text:
-                        parag.text = parag.text.replace(marcador, "")
-                        execucao = parag.add_run(texto)
-                        execucao.font.name = "Arial"
-                        execucao.font.size = tamanho_fonte
-                        execucao.bold = negrito
+
+
+
 
 def substituir_placeholder_por_imagem(documento, marcador, caminho_imagem, largura=Inches(5)):
     """
@@ -5614,41 +5711,148 @@ def _flatten_grupos_imagens(grupos):
     return acum
 
 
+# def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder, lista_memorias):
+#     for paragrafo in documento.paragraphs:
+#         if marcador_placeholder in paragrafo.text:
+#             paragrafo.text = paragrafo.text.replace(marcador_placeholder, "")
+#             paragrafo_atual = paragrafo
+#             for indice_bloco, bloco in enumerate(lista_memorias):
+#                 if indice_bloco >= 1:
+#                     paragrafo_branco = inserir_paragrafo_apos(paragrafo_atual, "")
+#                     execucao_branco = paragrafo_branco.add_run("\n")
+#                     execucao_branco.font.size = Pt(10)
+#                     execucao_branco.font.name = "Arial"
+#                     paragrafo_atual = paragrafo_branco
+
+#                 novo_paragrafo = inserir_paragrafo_apos(paragrafo_atual, "")
+#                 linhas_texto = bloco.split("\n")
+
+#                 for indice_linha, conteudo_linha in enumerate(linhas_texto):
+#                     execucao_texto = novo_paragrafo.add_run(conteudo_linha + "\n")
+#                     execucao_texto.font.name = "Arial"
+
+#                     if conteudo_linha.strip().startswith("=> VUH"):
+#                         execucao_texto.font.size = Pt(13)
+#                         execucao_texto.font.bold = True
+                   
+                   
+#                     elif indice_linha == 0 and conteudo_linha.strip().startswith("AM "):
+#                         execucao_texto.font.size = Pt(13)
+#                         execucao_texto.font.bold = True
+#                     else:
+#                         execucao_texto.font.size = Pt(10)
+#                         execucao_texto.font.bold = False
+
+#                 novo_paragrafo.paragraph_format.line_spacing = 1.15
+#                 paragrafo_atual = novo_paragrafo
+#             break
+
+
+
+def _top_block_item(element):
+    """
+    Sobe na árvore até o nível do corpo (w:body) e retorna o bloco raiz:
+    <w:p> ou <w:tbl> que contém 'element'.
+    """
+    e = element._p if isinstance(element, Paragraph) else element._tc if isinstance(element, _Cell) else element
+    node = e._p if hasattr(e, "_p") else e
+    while node.getparent() is not None and node.getparent().tag != qn("w:body"):
+        node = node.getparent()
+    # se ainda estiver dentro de célula, suba até a tabela
+    cur = node
+    while cur is not None and cur.tag not in {qn("w:p"), qn("w:tbl")}:
+        cur = cur.getparent()
+    return cur
+
+def inserir_paragrafo_apos_bloco(documento, bloco_oxml, texto=""):
+    """
+    Insere um novo <w:p> logo APÓS 'bloco_oxml' (que pode ser <w:p> ou <w:tbl>)
+    e retorna o Paragraph python-docx correspondente.
+    """
+    new_p = OxmlElement("w:p")
+    bloco_oxml.addnext(new_p)
+    return Paragraph(new_p, documento)
+
+def _enable_row_split_for_table(table: Table):
+    """Remove <w:cantSplit/> das linhas da tabela (permite quebra de página)."""
+    for tr in table._tbl.tr_lst:
+        trPr = tr.trPr
+        if trPr is None:
+            continue
+        for cs in trPr.xpath("./w:cantSplit"):
+            trPr.remove(cs)
+
+
 def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder, lista_memorias):
-    for paragrafo in documento.paragraphs:
-        if marcador_placeholder in paragrafo.text:
-            paragrafo.text = paragrafo.text.replace(marcador_placeholder, "")
-            paragrafo_atual = paragrafo
-            for indice_bloco, bloco in enumerate(lista_memorias):
-                if indice_bloco >= 1:
-                    paragrafo_branco = inserir_paragrafo_apos(paragrafo_atual, "")
-                    execucao_branco = paragrafo_branco.add_run("\n")
-                    execucao_branco.font.size = Pt(10)
-                    execucao_branco.font.name = "Arial"
-                    paragrafo_atual = paragrafo_branco
+    """
+    Insere a memória de cálculo logo APÓS o bloco raiz que contém o placeholder:
+      - Se o placeholder estiver em uma tabela, o conteúdo é inserido APÓS a TABELA,
+        garantindo que page breaks funcionem.
+      - Entre amostras, é inserida uma QUEBRA DE PÁGINA.
+    """
+    alvo_par = None
+    alvo_cell = None
+    alvo_table = None
 
-                novo_paragrafo = inserir_paragrafo_apos(paragrafo_atual, "")
-                linhas_texto = bloco.split("\n")
-
-                for indice_linha, conteudo_linha in enumerate(linhas_texto):
-                    execucao_texto = novo_paragrafo.add_run(conteudo_linha + "\n")
-                    execucao_texto.font.name = "Arial"
-
-                    if conteudo_linha.strip().startswith("=> VUH"):
-                        execucao_texto.font.size = Pt(13)
-                        execucao_texto.font.bold = True
-                   
-                   
-                    elif indice_linha == 0 and conteudo_linha.strip().startswith("AM "):
-                        execucao_texto.font.size = Pt(13)
-                        execucao_texto.font.bold = True
-                    else:
-                        execucao_texto.font.size = Pt(10)
-                        execucao_texto.font.bold = False
-
-                novo_paragrafo.paragraph_format.line_spacing = 1.15
-                paragrafo_atual = novo_paragrafo
+    # 1) localizar o parágrafo contendo o marcador (corpo / tabelas)
+    for p in documento.paragraphs:
+        if marcador_placeholder in p.text:
+            alvo_par = p
             break
+    if alvo_par is None:
+        for t in documento.tables:
+            for row in t.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if marcador_placeholder in p.text:
+                            alvo_par = p
+                            alvo_cell = cell
+                            alvo_table = t
+                            break
+                    if alvo_par: break
+                if alvo_par: break
+            if alvo_par: break
+
+    if alvo_par is None:
+        return  # não achou, sai silenciosamente
+
+    # 2) limpa o marcador no parágrafo original
+    alvo_par.text = alvo_par.text.replace(marcador_placeholder, "")
+
+    # 3) se estiver dentro de tabela, habilita quebra de linha na tabela
+    if isinstance(alvo_table, Table):
+        _enable_row_split_for_table(alvo_table)
+
+    # 4) obtém o bloco raiz (<w:p> ou <w:tbl>) e insere APÓS ele
+    bloco_raiz = _top_block_item(alvo_par)
+    insert_anchor = bloco_raiz  # insere depois desse bloco
+
+    total = len(lista_memorias or [])
+    for i, bloco in enumerate(lista_memorias or []):
+        # parágrafo para o bloco
+        p_out = inserir_paragrafo_apos_bloco(documento, insert_anchor, "")
+        # estilização básica
+        p_out.paragraph_format.keep_together = False
+        p_out.paragraph_format.keep_with_next = False
+        p_out.paragraph_format.widow_control = True
+
+        # escreve linhas
+        if isinstance(bloco, str):
+            linhas = bloco.split("\n")
+        else:
+            linhas = [str(bloco)]
+        for ln in linhas:
+            run = p_out.add_run(ln + "\n")
+            run.font.name = "Arial"
+            run.font.size = Pt(10)
+
+        # quebra de página entre amostras
+        if i < total - 1:
+            br = p_out.add_run()
+            br.add_break(WD_BREAK.PAGE)
+
+        # próxima inserção deve ocorrer depois do último parágrafo criado
+        insert_anchor = p_out._p
 
 
 ###############################################################################
