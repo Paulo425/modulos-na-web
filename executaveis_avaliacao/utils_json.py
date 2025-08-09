@@ -154,55 +154,87 @@ def _normalize_um(a: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ───────────────────── funções públicas v2 ──────────────────────
-def salvar_entrada_corrente_json(
-    uuid_execucao: str,
-    dados_avaliando: Dict[str, Any],
-    fatores_do_usuario: Dict[str, Any],
-    dataframe_amostras: Union[pd.DataFrame, List[Dict[str, Any]]],
-    *,
-    variavel_dependente: str,
-    variaveis_independentes: List[str],
-    transformacoes_por_variavel: Dict[str, Any],
-    restricoes_de_sinal: Dict[str, Any],
-    amostras_desabilitadas: List[int],
-    parametros_modelo: Dict[str, Any],
-    arquivos: Optional[Dict[str, Any]] = None,
-    app_version: str = "AVALIACAO-2025.08",
-    random_seed: Optional[int] = None,
-) -> str:
-    """
-    Salva o snapshot COMPLETO (schema v2). As amostras passam por normalização
-    e já saem com TODOS os fatores garantidos.
-    """
-    amostras_norm = _normalize_amostras(dataframe_amostras)
+# executaveis_avaliacao/utils_json.py
+from pathlib import Path
+import json
 
-    payload: Dict[str, Any] = {
-        "meta": {
-            "schema_ver": 2,
-            "uuid_execucao": uuid_execucao,
-            "app_version": app_version,
-        },
-        "dados_avaliando": dict(dados_avaliando or {}),
+def salvar_entrada_corrente_json(
+    uuid_execucao,
+    dados_avaliando,
+    fatores_do_usuario,
+    amostras,
+    fotos_imovel=None,
+    fotos_adicionais=None,
+    fotos_proprietario=None,
+    fotos_planta=None,
+    base_dir=None,
+    **kwargs,  # ← garante compatibilidade se novos argumentos forem adicionados no caller
+):
+    """
+    Gera e salva o JSON de entrada corrente em static/tmp/{uuid}_entrada_corrente.json.
+
+    Parâmetros:
+      - uuid_execucao: str (obrigatório)
+      - dados_avaliando: dict (obrigatório)
+      - fatores_do_usuario: dict (obrigatório)
+      - amostras: lista de dicts com chaves:
+          idx, valor_total, area, valor_unitario (opcional, calculado se faltar),
+          cidade, fonte, LATITUDE, LONGITUDE, ativo (bool)
+      - fotos_*: listas de paths/nomes de arquivos (opcionais)
+      - base_dir: str ou Path base do projeto (opcional). Se None, usa cwd.
+      - **kwargs: ignorado; usado para compatibilidade futura
+    """
+    # Resolve diretório de saída
+    root = Path(base_dir) if base_dir else Path.cwd()
+    out_dir = root / "static" / "tmp"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{uuid_execucao}_entrada_corrente.json"
+
+    # Normaliza listas de fotos (pode vir None, string única ou lista)
+    def _as_list(x):
+        if x is None:
+            return []
+        if isinstance(x, (list, tuple)):
+            return list(x)
+        return [x]
+
+    fotos_imovel = _as_list(fotos_imovel)
+    fotos_adicionais = _as_list(fotos_adicionais)
+    fotos_proprietario = _as_list(fotos_proprietario)
+    fotos_planta = _as_list(fotos_planta)
+
+    # Garante campos mínimos em cada amostra e calcula valor_unitario se necessário
+    amostras_norm = []
+    for a in (amostras or []):
+        a = dict(a)  # cópia
+        if "valor_unitario" not in a or a.get("valor_unitario") in (None, "", 0):
+            try:
+                vt = float(a.get("valor_total", 0))
+                ar = float(a.get("area", 0))
+                a["valor_unitario"] = round(vt / ar, 6) if ar else None
+            except Exception:
+                a["valor_unitario"] = None
+        # padroniza flags e chaves esperadas
+        a["ativo"] = bool(a.get("ativo", True))
+        # mantém LATITUDE/LONGITUDE se existirem
+        amostras_norm.append(a)
+
+    payload = {
+        "uuid_execucao": uuid_execucao,
+        "dados_avaliando": dados_avaliando or {},
+        "fatores_do_usuario": fatores_do_usuario or {},
         "amostras": amostras_norm,
-        "fatores_do_usuario": dict(fatores_do_usuario or {}),
-        "config_modelo": {
-            "variavel_dependente": variavel_dependente,
-            "variaveis_independentes": list(variaveis_independentes or []),
-            "transformacoes_por_variavel": dict(transformacoes_por_variavel or {}),
-            "restricoes_de_sinal": dict(restricoes_de_sinal or {}),
-            "amostras_desabilitadas": list(amostras_desabilitadas or []),
-            "parametros": dict(parametros_modelo or {}),
-            "random_seed": random_seed,
-        },
-        "arquivos": dict(arquivos or {}),
-        "resultados_parciais": {},
+        "fotos_imovel": fotos_imovel,
+        "fotos_adicionais": fotos_adicionais,
+        "fotos_proprietario": fotos_proprietario,
+        "fotos_planta": fotos_planta,
     }
 
-    caminho_arquivo = TMP_DIR / f"{uuid_execucao}_entrada_corrente.json"
-    with open(caminho_arquivo, "w", encoding="utf-8") as f:
+    with out_path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-    return str(caminho_arquivo)
+    return str(out_path)
+
 
 
 def carregar_entrada_corrente_json(uuid_execucao: str) -> Dict[str, Any]:

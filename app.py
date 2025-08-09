@@ -1158,14 +1158,15 @@ def gerar_avaliacao():
 
                     
                     salvar_entrada_corrente_json(
-                        dados_imovel,
-                        fatores_usuario,
-                        lista_amostras, 
-                        id_execucao,
+                        uuid_execucao=id_execucao,
+                        dados_avaliando=dados_imovel,
+                        fatores_do_usuario=fatores_usuario,
+                        amostras=lista_amostras,
                         fotos_imovel=fotos_imovel,
                         fotos_adicionais=fotos_adicionais,
                         fotos_proprietario=fotos_proprietario,
-                        fotos_planta=fotos_planta
+                        fotos_planta=fotos_planta,
+                        base_dir=BASE_DIR,  # opcional, mas bom para garantir o caminho correto
                     )
                    
                     return redirect(url_for('visualizar_resultados', uuid=id_execucao))
