@@ -101,8 +101,6 @@ from docx.table import Table
 from docx.table import _Cell, Table
 
 
-
-
 logger = logging.getLogger("meu_app_logger")
 # Para garantir que o logger esteja configurado se o main.py executar separadamente:
 if not logger.handlers:
@@ -2026,55 +2024,106 @@ def substituir_placeholder_por_imagem_em_todo_documento(documento, marcador, img
                     run = par.add_run()
                     run.add_picture(img_path, width=largura)
 
-def substituir_placeholder_por_varias_imagens(
-    documento, marcador, caminhos_imagens, largura=Inches(5), quebra_pagina_entre=True
-):
+
+
+def _paragraphs_in_table(table):
+    for row in table.rows:
+        for cell in row.cells:
+            for p in cell.paragraphs:
+                yield p
+            for t2 in cell.tables:
+                for p in _paragraphs_in_table(t2):
+                    yield p
+
+def _iter_all_paragraphs(documento):
+    # corpo
+    for p in documento.paragraphs:
+        yield p
+    # tabelas no corpo
+    for t in documento.tables:
+        for p in _paragraphs_in_table(t):
+            yield p
+    # cabeçalhos/rodapés
+    for sec in documento.sections:
+        for p in sec.header.paragraphs: yield p
+        for t in sec.header.tables:
+            for p in _paragraphs_in_table(t): yield p
+        for p in sec.footer.paragraphs: yield p
+        for t in sec.footer.tables:
+            for p in _paragraphs_in_table(t): yield p
+
+def _top_block_item(element):
+    """Sobe até o bloco raiz (w:p ou w:tbl) que contém o parágrafo."""
+    e = element._p
+    node = e
+    # sobe até body
+    while node.getparent() is not None and node.getparent().tag != qn("w:body"):
+        node = node.getparent()
+    # garante que seja p ou tbl
+    while node is not None and node.tag not in {qn("w:p"), qn("w:tbl")}:
+        node = node.getparent()
+    return node
+
+def _insert_paragraph_after(documento, bloco_oxml):
+    new_p = OxmlElement("w:p")
+    bloco_oxml.addnext(new_p)
+    return Paragraph(new_p, documento)
+
+def substituir_placeholder_por_varias_imagens(documento, marcador, caminhos, largura=Inches(6), quebra_pagina_entre=False):
     """
-    Substitui um placeholder por N imagens.
-    - caminhos_imagens: lista de strings (caminhos absolutos/relativos)
-    - quebra_pagina_entre=True: insere page break entre cada imagem
-    - preserva o estilo do parágrafo/célula que contém o marcador
+    Insere imagens no lugar do marcador.
+    - Se o marcador estiver em tabela, insere AS IMAGENS APÓS A TABELA (fora dela).
+    - Suporta marcador quebrado em múltiplos runs.
     """
-    import os
+    # 1) localizar parágrafo com marcador (em qualquer lugar)
+    alvo_par = None
+    alvo_table = None
 
-    imgs = [p for p in (caminhos_imagens or []) if p and os.path.exists(p)]
-    if not imgs:
-        return False
+    for p in _iter_all_paragraphs(documento):
+        full = "".join(run.text for run in p.runs) if p.runs else p.text
+        if marcador in full:
+            alvo_par = p
+            break
 
-    def _aplicar_em_paragrafo(paragrafo):
-        if marcador in paragrafo.text:
-            # remove só o marcador, preservando o parágrafo/estilo
-            paragrafo.text = paragrafo.text.replace(marcador, "")
-            first = True
-            for i, caminho in enumerate(imgs):
-                if not first:
-                    # nova linha para não “colar” na imagem anterior
-                    paragrafo = documento.add_paragraph()
-                runn = paragrafo.add_run()
-                runn.add_picture(caminho, width=largura)
-                paragrafo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                runn.font.name = "Arial"
-                runn.font.size = Pt(12)
-                if quebra_pagina_entre and i < len(imgs) - 1:
-                    runn.add_break(WD_BREAK.PAGE)
-                    paragrafo = documento.add_paragraph()
-                first = False
-            return True
-        return False
+    if alvo_par is None:
+        # nada a fazer se não encontrou
+        return
 
-    # procura em parágrafos normais
-    for paragrafo in documento.paragraphs:
-        if _aplicar_em_paragrafo(paragrafo):
-            return True
+    # 2) descobrir se está dentro de tabela
+    # (sobe a árvore até achar uma tabela)
+    parent = alvo_par._p
+    while parent is not None and parent.tag not in {qn("w:tbl"), qn("w:body")}:
+        parent = parent.getparent()
+    if parent is not None and parent.tag == qn("w:tbl"):
+        alvo_table = Table(parent, alvo_par._parent)
 
-    # procura dentro de tabelas
-    for tabela in documento.tables:
-        for linha in tabela.rows:
-            for celula in linha.cells:
-                for parag in celula.paragraphs:
-                    if _aplicar_em_paragrafo(parag):
-                        return True
-    return False
+    # 3) remover marcador do parágrafo (junta runs → replace → reconstrói)
+    full = "".join(run.text for run in alvo_par.runs) if alvo_par.runs else alvo_par.text
+    full = full.replace(marcador, "")
+    for _ in range(len(alvo_par.runs)):
+        alvo_par.runs[0].clear(); alvo_par.runs[0].text = ""
+        del alvo_par.runs[0]
+    alvo_par.text = full
+
+    # 4) âncora de inserção: parágrafo ou tabela
+    bloco_raiz = _top_block_item(alvo_par)
+    anchor = bloco_raiz
+
+    # 5) inserir imagens após o bloco raiz (fora de tabela se for o caso)
+    for i, caminho in enumerate(caminhos or []):
+        p = _insert_paragraph_after(documento, anchor)
+        try:
+            run = p.add_run()
+            run.add_picture(caminho, width=largura)
+        except Exception as e:
+            # Se uma imagem falhar, segue com as demais
+            run = p.add_run(f"[Falha ao inserir imagem: {caminho} ({e})]")
+        # quebra entre imagens
+        if quebra_pagina_entre and i < len(caminhos) - 1:
+            br = p.add_run()
+            br.add_break(WD_BREAK.PAGE)
+        # atualiza âncora
+        anchor = p._p
 
 
 ###############################################################################
@@ -5839,7 +5888,7 @@ def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder
         for ln in linhas:
             run = p_out.add_run(ln + "\n")
             run.font.name = "Arial"
-            run.font.size = Pt(10)
+            run.font.size = Pt(12)
 
         # Quebra de página entre amostras
         if i < total_blocos - 1:
