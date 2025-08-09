@@ -90,6 +90,8 @@ from docx.oxml.ns import qn
 import numpy as np
 import sys
 
+from lxml import etree 
+
 
 logger = logging.getLogger("meu_app_logger")
 # Para garantir que o logger esteja configurado se o main.py executar separadamente:
@@ -108,6 +110,24 @@ if not logger.handlers:
     logger.addHandler(console_handler)
 
 logger.info("✅ Logger MAIN.py inicializado corretamente!")
+
+def _norm_flag(v: str) -> str:
+    return str(v).strip().upper()
+
+def fator_binario_sim_nao(valor: str, sim=1.0, nao=0.9) -> float:
+    v = _norm_flag(valor)
+    if v in ("SIM", "S", "TRUE", "1"):
+        return sim
+    if v in ("NÃO", "NAO", "N", "FALSE", "0"):
+        return nao
+    # fallback seguro
+    return sim  # ou 1.0
+
+def fator_pavimentacao(v):    # use isso em todos os lugares
+    return fator_binario_sim_nao(v, sim=1.0, nao=0.9)
+
+def fator_acessibilidade(v):  # idem
+    return fator_binario_sim_nao(v, sim=1.0, nao=0.9)
 
 def normaliza_sim_nao(valor):
     try:
@@ -911,23 +931,46 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
         else:
             fator_pedologia_calculado = 1.0
 
-        f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
-        if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
-            fator_pavimentacao_calculado = f_avaliado_pavim / f_sample_pavim
+        # -------- PAVIMENTAÇÃO --------
+        amostra_pav = _norm_sn(get_multi(linha, "PAVIMENTACAO?","PAVIMENTAÇÃO?","PAVIMENTACAO ?"))
+        aval_pav    = _norm_sn(get_multi(dados_avaliando, "PAVIMENTACAO?","PAVIMENTAÇÃO?"))
+
+        f_sample_pavim   = fator_pavimentacao(amostra_pav)   # SIM->1.0, NAO->0.9
+        f_avaliado_pavim = fator_pavimentacao(aval_pav)
+        if amostra_pav is None:
+            f_sample_pavim = f_avaliado_pavim
+
+        if fatores_do_usuario.get("pavimentacao", False) and f_sample_pavim > 0:
+            fator_pavimentacao_calculado = limitar_fator(f_avaliado_pavim / f_sample_pavim)
         else:
             fator_pavimentacao_calculado = 1.0
-
+        
+       
         f_sample_esq = fator_esquina(linha.get(" ESQUINA?", "NÃO"))
         if fatores_do_usuario["esquina"] and f_sample_esq != 0:
             fator_esquina_calculado = f_avaliado_esq / f_sample_esq
         else:
             fator_esquina_calculado = 1.0
 
-        f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
-        if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
-            fator_acessibilidade_calculado = f_avaliado_acess / f_sample_acess
+        # -------- ACESSIBILIDADE --------
+        amostra_acess = _norm_sn(get_multi(linha, "ACESSIBILIDADE?","ACESSIBILIDADE ?"," ACESSIBILIDADE?"))
+        aval_acess    = _norm_sn(get_multi(dados_avaliando, "ACESSIBILIDADE?","ACESSIBILIDADE ?"," ACESSIBILIDADE?"))
+
+        f_sample_acess   = fator_acessibilidade(amostra_acess)
+        f_avaliado_acess = fator_acessibilidade(aval_acess)
+        if amostra_acess is None:
+            f_sample_acess = f_avaliado_acess
+
+        if fatores_do_usuario.get("acessibilidade", False) and f_sample_acess > 0:
+            fator_acessibilidade_calculado = limitar_fator(f_avaliado_acess / f_sample_acess)
         else:
             fator_acessibilidade_calculado = 1.0
+
+        logger.info(
+            f"[DEBUG FATORES] AM {identificador_amostra} | "
+            f"amostra_pav={amostra_pav} aval_pav={aval_pav} FPA={fator_pavimentacao_calculado:.2f} | "
+            f"amostra_acess={amostra_acess} aval_acess={aval_acess} FAC={fator_acessibilidade_calculado:.2f}"
+        )
 
         # Fator localização
         if fatores_do_usuario.get("localizacao_mesma_regiao", False):
@@ -989,122 +1032,122 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
 
     return lista_detalhes
     
-##############################################################################################################
-#MONTAGEM DA TABELA DE AMOSTRAS HOMOGENEIZADAS
-##############################################################################################################
-# --------------------------------------------------------------
-# >>>  inserir_tabela_amostras_calculadas
-# --------------------------------------------------------------
-def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=None):
-    """
-    Insere, após o marcador [tabelaSimilares], a tabela de amostras
-    homogeneizadas com:
-    • Cabeçalhos: fundo azul‑claro
-    • Coluna VUH inteira: fundo verde‑claro
-    • Fatores limitados ao intervalo [0.50, 2.00] com 2 casas decimais
-    """
-    from docx.shared      import Pt, Inches
-    from docx.oxml        import parse_xml
-    from docx.oxml.ns     import nsdecls
-    from docx.enum.text   import WD_ALIGN_PARAGRAPH
-    from docx.enum.table  import WD_TABLE_ALIGNMENT
+# ##############################################################################################################
+# #MONTAGEM DA TABELA DE AMOSTRAS HOMOGENEIZADAS
+# ##############################################################################################################
+# # --------------------------------------------------------------
+# # >>>  inserir_tabela_amostras_calculadas
+# # --------------------------------------------------------------
+# def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=None):
+#     """
+#     Insere, após o marcador [tabelaSimilares], a tabela de amostras
+#     homogeneizadas com:
+#     • Cabeçalhos: fundo azul‑claro
+#     • Coluna VUH inteira: fundo verde‑claro
+#     • Fatores limitados ao intervalo [0.50, 2.00] com 2 casas decimais
+#     """
+#     from docx.shared      import Pt, Inches
+#     from docx.oxml        import parse_xml
+#     from docx.oxml.ns     import nsdecls
+#     from docx.enum.text   import WD_ALIGN_PARAGRAPH
+#     from docx.enum.table  import WD_TABLE_ALIGNMENT
 
-    if not lista_detalhes:
-        return
+#     if not lista_detalhes:
+#         return
 
-    # ---- Larguras padrão (pol) -------------------------------------------
-    if col_widths is None:
-        col_widths = [0.6, 1.2, 1.5] + [0.6]*9 + [1.5]
+#     # ---- Larguras padrão (pol) -------------------------------------------
+#     if col_widths is None:
+#         col_widths = [0.6, 1.2, 1.5] + [0.6]*9 + [1.5]
 
-    nomes    = [
-        "AM","AREA","VU",
-        "FA","FO","FAP","FT","FP","FPA",
-        "FE","FAC","FL","VUH"
-    ]
-    fatores  = {"FA","FO","FAP","FT","FP","FPA","FE","FAC","FL"}
+#     nomes    = [
+#         "AM","AREA","VU",
+#         "FA","FO","FAP","FT","FP","FPA",
+#         "FE","FAC","FL","VUH"
+#     ]
+#     fatores  = {"FA","FO","FAP","FT","FP","FPA","FE","FAC","FL"}
 
-    # ---- Sombras ----------------------------------------------------------
-    def _shading(fill_hex):   # cria um <w:shd ... w:fill="XXXXXX"/>
-        return etree.fromstring(
-            r'<w:shd {} w:val="clear" w:fill="{}"/>'.format(nsdecls('w'), fill_hex)
-        )
-    azul  = "BDD7EE"   # cabeçalhos
-    verde = "C6E0B4"   # VUH
+#     # ---- Sombras ----------------------------------------------------------
+#     def _shading(fill_hex):   # cria um <w:shd ... w:fill="XXXXXX"/>
+#         return etree.fromstring(
+#             r'<w:shd {} w:val="clear" w:fill="{}"/>'.format(nsdecls('w'), fill_hex)
+#         )
+#     azul  = "BDD7EE"   # cabeçalhos
+#     verde = "C6E0B4"   # VUH
 
-    # ---- Procura o marcador ----------------------------------------------
-    for par in documento.paragraphs:
-        if "[tabelaSimilares]" not in par.text:
-            continue
+#     # ---- Procura o marcador ----------------------------------------------
+#     for par in documento.paragraphs:
+#         if "[tabelaSimilares]" not in par.text:
+#             continue
 
-        par.text = par.text.replace("[tabelaSimilares]", "")
+#         par.text = par.text.replace("[tabelaSimilares]", "")
 
-        rows = len(lista_detalhes) + 1
-        tbl  = documento.add_table(rows=rows, cols=len(nomes))
-        tbl.style, tbl.alignment, tbl.allow_autofit = "Table Grid", WD_TABLE_ALIGNMENT.CENTER, False
+#         rows = len(lista_detalhes) + 1
+#         tbl  = documento.add_table(rows=rows, cols=len(nomes))
+#         tbl.style, tbl.alignment, tbl.allow_autofit = "Table Grid", WD_TABLE_ALIGNMENT.CENTER, False
 
-        # Larguras
-        for ci, w in enumerate(col_widths):
-            for r in tbl.rows:
-                r.cells[ci].width = Inches(w)
+#         # Larguras
+#         for ci, w in enumerate(col_widths):
+#             for r in tbl.rows:
+#                 r.cells[ci].width = Inches(w)
 
-        # Cabeçalho
-        hdr = tbl.rows[0]
-        for ci, rotulo in enumerate(nomes):
-            c = hdr.cells[ci]
-            c.text = rotulo
-            c._tc.get_or_add_tcPr().append(_shading(azul))
-            p = c.paragraphs[0]
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            for run in p.runs:
-                run.font.name, run.font.size, run.font.bold = "Arial", Pt(9), True
+#         # Cabeçalho
+#         hdr = tbl.rows[0]
+#         for ci, rotulo in enumerate(nomes):
+#             c = hdr.cells[ci]
+#             c.text = rotulo
+#             c._tc.get_or_add_tcPr().append(_shading(azul))
+#             p = c.paragraphs[0]
+#             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#             for run in p.runs:
+#                 run.font.name, run.font.size, run.font.bold = "Arial", Pt(9), True
 
-        # Dados
-        for li, am in enumerate(lista_detalhes, start=1):
-            for ci, campo in enumerate(nomes):
-                val = am.get(campo, "")
-                if campo in fatores:
-                    try:
-                        val = f"{limitar_fator(float(val)):.2f}"
-                    except Exception:
-                        val = str(val)
-                cell = tbl.rows[li].cells[ci]
-                cell.text = str(val)
+#         # Dados
+#         for li, am in enumerate(lista_detalhes, start=1):
+#             for ci, campo in enumerate(nomes):
+#                 val = am.get(campo, "")
+#                 if campo in fatores:
+#                     try:
+#                         val = f"{limitar_fator(float(val)):.2f}"
+#                     except Exception:
+#                         val = str(val)
+#                 cell = tbl.rows[li].cells[ci]
+#                 cell.text = str(val)
 
-                # pinta a coluna VUH de verde
-                if campo == "VUH":
-                    cell._tc.get_or_add_tcPr().append(_shading(verde))
+#                 # pinta a coluna VUH de verde
+#                 if campo == "VUH":
+#                     cell._tc.get_or_add_tcPr().append(_shading(verde))
 
-                p = cell.paragraphs[0]
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                for run in p.runs:
-                    run.font.name  = "Arial"
-                    run.font.size  = Pt(8 if campo in {"VU","VUH"} else 9)
+#                 p = cell.paragraphs[0]
+#                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                 for run in p.runs:
+#                     run.font.name  = "Arial"
+#                     run.font.size  = Pt(8 if campo in {"VU","VUH"} else 9)
 
-        # Reposiciona a tabela logo após o parágrafo do marcador
-        par._p.addnext(tbl._element)
+#         # Reposiciona a tabela logo após o parágrafo do marcador
+#         par._p.addnext(tbl._element)
 
-        # Legenda
-        leg1 = inserir_paragrafo_apos(par, "")
-        leg2 = inserir_paragrafo_apos(
-            leg1,
-            "Legendas:\n"
-            "- AM = Amostra\n"
-            "- AREA = Área do Imóvel (m²)\n"
-            "- VU = Valor Unitário Ofertado\n"
-            "- FA = Fator Área\n"
-            "- FO = Fator Oferta\n"
-            "- FAP = Fator Aproveitamento\n"
-            "- FT = Fator Topografia\n"
-            "- FP = Fator Pedologia\n"
-            "- FPA = Fator Pavimentação\n"
-            "- FE = Fator Esquina\n"
-            "- FAC = Fator Acessibilidade\n"
-            "- FL = Fator Localização\n"
-            "- VUH = Valor Unitário Homogeneizado\n"
-        )
-        for run in leg2.runs:
-            run.font.name, run.font.size = "Arial", Pt(9)
-        break
+#         # Legenda
+#         leg1 = inserir_paragrafo_apos(par, "")
+#         leg2 = inserir_paragrafo_apos(
+#             leg1,
+#             "Legendas:\n"
+#             "- AM = Amostra\n"
+#             "- AREA = Área do Imóvel (m²)\n"
+#             "- VU = Valor Unitário Ofertado\n"
+#             "- FA = Fator Área\n"
+#             "- FO = Fator Oferta\n"
+#             "- FAP = Fator Aproveitamento\n"
+#             "- FT = Fator Topografia\n"
+#             "- FP = Fator Pedologia\n"
+#             "- FPA = Fator Pavimentação\n"
+#             "- FE = Fator Esquina\n"
+#             "- FAC = Fator Acessibilidade\n"
+#             "- FL = Fator Localização\n"
+#             "- VUH = Valor Unitário Homogeneizado\n"
+#         )
+#         for run in leg2.runs:
+#             run.font.name, run.font.size = "Arial", Pt(9)
+#         break
 # --------------------------------------------------------------
 # <<<  inserir_tabela_amostras_calculadas
 # --------------------------------------------------------------
@@ -1373,187 +1416,222 @@ def inserir_texto_saneamento_no_placeholder(documento, marcador_placeholder, tex
             break
 
 
-###############################################################################
-# MEMÓRIA DE CÁLCULO DETALHADA
-###############################################################################
-def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_usuario, finalidade_do_laudo):
-    import math
+# ###############################################################################
+# # MEMÓRIA DE CÁLCULO DETALHADA
+# ###############################################################################
+# def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_usuario, finalidade_do_laudo):
+#     import math
     
-    lista_memoria_completa = []
-    area_do_avaliando = float(dados_avaliando.get("AREA TOTAL", 0))
+#     lista_memoria_completa = []
+#     area_do_avaliando = float(dados_avaliando.get("AREA TOTAL", 0))
 
-    # Fatores do Avaliado (utilizando as funções auxiliares já definidas)
-    f_avaliado_aprov = fator_aproveitamento(dados_avaliando.get("APROVEITAMENTO", "URBANO"))
-    f_avaliado_topog = fator_topografia(dados_avaliando.get("BOA TOPOGRAFIA?", "NÃO"))
-    f_avaliado_pedol = fator_pedologia(dados_avaliando.get("PEDOLOGIA ALAGÁVEL? ", "NÃO"))
-    f_avaliado_pavim = fator_pavimentacao(dados_avaliando.get("PAVIMENTACAO?", "NÃO"))
-    f_avaliado_esq   = fator_esquina(dados_avaliando.get(" ESQUINA?", "NÃO"))
-    f_avaliado_acess = fator_acessibilidade(dados_avaliando.get("ACESSIBILIDADE?", "NÃO"))
+#     # Fatores do Avaliado (utilizando as funções auxiliares já definidas)
+#     f_avaliado_aprov = fator_aproveitamento(dados_avaliando.get("APROVEITAMENTO", "URBANO"))
+#     f_avaliado_topog = fator_topografia(dados_avaliando.get("BOA TOPOGRAFIA?", "NÃO"))
+#     f_avaliado_pedol = fator_pedologia(dados_avaliando.get("PEDOLOGIA ALAGÁVEL? ", "NÃO"))
+#     f_avaliado_pavim = fator_pavimentacao(dados_avaliando.get("PAVIMENTACAO?", "NÃO"))
+#     f_avaliado_esq   = fator_esquina(dados_avaliando.get(" ESQUINA?", "NÃO"))
+#     f_avaliado_acess = fator_acessibilidade(dados_avaliando.get("ACESSIBILIDADE?", "NÃO"))
 
-    for indice, linha in dataframe_amostras.iterrows():
-        identificador_amostra = str(linha.get("AM", indice+1))
-        valor_total = linha["VALOR TOTAL"]
-        area_da_amostra = float(linha.get("AREA TOTAL", 0))
+#     for indice, linha in dataframe_amostras.iterrows():
+#         identificador_amostra = str(linha.get("AM", indice+1))
+#         valor_total = linha["VALOR TOTAL"]
+#         area_da_amostra = float(linha.get("AREA TOTAL", 0))
 
-        # 1) Cálculo dos fatores básicos
-        fator_area = calcular_fator_area(area_do_avaliando, area_da_amostra, fatores_do_usuario["area"])
-        fator_oferta = calcular_fator_oferta(True, fatores_do_usuario["oferta"])
+#         # 1) Cálculo dos fatores básicos
+#         fator_area = calcular_fator_area(area_do_avaliando, area_da_amostra, fatores_do_usuario["area"])
+#         fator_oferta = calcular_fator_oferta(True, fatores_do_usuario["oferta"])
         
-        # Fator Aproveitamento
-        f_sample_aprov = fator_aproveitamento(linha.get("APROVEITAMENTO", "URBANO"))
-        if fatores_do_usuario["aproveitamento"] and f_sample_aprov != 0:
-            fator_aproveitamento_calculado = limitar_fator(f_avaliado_aprov / f_sample_aprov)
-        else:
-            fator_aproveitamento_calculado = 1.0
+#         # Fator Aproveitamento
+#         f_sample_aprov = fator_aproveitamento(linha.get("APROVEITAMENTO", "URBANO"))
+#         if fatores_do_usuario["aproveitamento"] and f_sample_aprov != 0:
+#             fator_aproveitamento_calculado = limitar_fator(f_avaliado_aprov / f_sample_aprov)
+#         else:
+#             fator_aproveitamento_calculado = 1.0
 
-        # Fator Topografia
-        f_sample_topog = fator_topografia(linha.get("BOA TOPOGRAFIA?", "NÃO"))
-        if fatores_do_usuario["topografia"] and f_sample_topog != 0:
-            fator_topografia_calculado = limitar_fator(f_avaliado_topog / f_sample_topog)
-        else:
-            fator_topografia_calculado = 1.0
+#         # Fator Topografia
+#         f_sample_topog = fator_topografia(linha.get("BOA TOPOGRAFIA?", "NÃO"))
+#         if fatores_do_usuario["topografia"] and f_sample_topog != 0:
+#             fator_topografia_calculado = limitar_fator(f_avaliado_topog / f_sample_topog)
+#         else:
+#             fator_topografia_calculado = 1.0
 
-        # Fator Pedologia
-        f_sample_pedol = fator_pedologia(linha.get("PEDOLOGIA ALAGÁVEL? ", "NÃO"))
-        if fatores_do_usuario["pedologia"] and f_sample_pedol != 0:
-            fator_pedologia_calculado = limitar_fator(f_avaliado_pedol / f_sample_pedol)
-        else:
-            fator_pedologia_calculado = 1.0
+#         # Fator Pedologia
+#         f_sample_pedol = fator_pedologia(linha.get("PEDOLOGIA ALAGÁVEL? ", "NÃO"))
+#         if fatores_do_usuario["pedologia"] and f_sample_pedol != 0:
+#             fator_pedologia_calculado = limitar_fator(f_avaliado_pedol / f_sample_pedol)
+#         else:
+#             fator_pedologia_calculado = 1.0
 
-        # -------- Fator Pavimentação --------
-        amostra_pav = get_multi(linha, "PAVIMENTACAO?", "PAVIMENTAÇÃO?", "PAVIMENTACAO ?")
-        aval_pav    = get_multi(dados_avaliando, "PAVIMENTACAO?", "PAVIMENTAÇÃO?")
-        f_sample_pavim   = fator_pavimentacao(amostra_pav)
-        f_avaliado_pavim = fator_pavimentacao(aval_pav)
+#         # -------- Fator Pavimentação --------
+#         amostra_pav = get_multi(linha, "PAVIMENTACAO?", "PAVIMENTAÇÃO?", "PAVIMENTACAO ?")
+#         aval_pav    = get_multi(dados_avaliando, "PAVIMENTACAO?", "PAVIMENTAÇÃO?")
 
-        # Se amostra vier vazia/None ⇒ usa o mesmo do avaliado (garante 1.00 em SIM/SIM e NÃO/NÃO)
-        if amostra_pav is None:
-            f_sample_pavim = f_avaliado_pavim
+#         def _norm_sn(v):
+#             if v is None:
+#                 return None
+#             s = str(v).strip().upper()
+#             if s in ("SIM", "S"):
+#                 return "SIM"
+#             if s in ("NAO", "NÃO", "NAO ", "N"):
+#                 return "NAO"
+#             return None  # qualquer outra coisa tratamos como ausente
 
-        if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
-            fator_pavimentacao_calculado = limitar_fator(f_avaliado_pavim / f_sample_pavim)
-        else:
-            fator_pavimentacao_calculado = 1.0
+#         amostra_pav = _norm_sn(amostra_pav)
+#         aval_pav    = _norm_sn(aval_pav)
 
-        # Fator Esquina
-        f_sample_esq = fator_esquina(linha.get(" ESQUINA?", "NÃO"))
-        if fatores_do_usuario["esquina"] and f_sample_esq != 0:
-            fator_esquina_calculado = limitar_fator(f_avaliado_esq / f_sample_esq)
-        else:
-            fator_esquina_calculado = 1.0
+#         f_sample_pavim   = fator_pavimentacao(amostra_pav)    # SIM->1.0, NAO->0.9
+#         f_avaliado_pavim = fator_pavimentacao(aval_pav)
 
-        logger.info(f"[FPA] AM={identificador_amostra} | Avaliado={aval_pav} ({f_avaliado_pavim}) "
-            f"| Amostra={amostra_pav} ({f_sample_pavim}) => FPA={fator_pavimentacao_calculado:.2f}")
+#         # se a amostra veio “vazia/indefinida”, igualamos ao avaliado -> razão = 1.0
+#         if amostra_pav is None:
+#             f_sample_pavim = f_avaliado_pavim
 
-        # -------- Fator Acessibilidade --------
-        amostra_ace = get_multi(linha, "ACESSIBILIDADE?", "ACESSIBILIDADE ?")
-        aval_ace    = get_multi(dados_avaliando, "ACESSIBILIDADE?")
-        f_sample_acess   = fator_acessibilidade(amostra_ace)
-        f_avaliado_acess = fator_acessibilidade(aval_ace)
+#         if fatores_do_usuario.get("pavimentacao", False) and f_sample_pavim > 0:
+#             fator_pavimentacao_calculado = limitar_fator(f_avaliado_pavim / f_sample_pavim)
+#         else:
+#             fator_pavimentacao_calculado = 1.0
 
-        if amostra_ace is None:
-            f_sample_acess = f_avaliado_acess
+#         # Fator Esquina
+#         f_sample_esq = fator_esquina(linha.get(" ESQUINA?", "NÃO"))
+#         if fatores_do_usuario["esquina"] and f_sample_esq != 0:
+#             fator_esquina_calculado = limitar_fator(f_avaliado_esq / f_sample_esq)
+#         else:
+#             fator_esquina_calculado = 1.0
 
-        if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
-            fator_acessibilidade_calculado = limitar_fator(f_avaliado_acess / f_sample_acess)
-        else:
-            fator_acessibilidade_calculado = 1.0 
-                
-        logger.info(f"[FAC] AM={identificador_amostra} | Avaliado={aval_ace} ({f_avaliado_acess}) "
-            f"| Amostra={amostra_ace} ({f_sample_acess}) => FAC={fator_acessibilidade_calculado:.2f}")     
+#         logger.info(f"[FPA] AM={identificador_amostra} | Avaliado={aval_pav} ({f_avaliado_pavim}) "
+#             f"| Amostra={amostra_pav} ({f_sample_pavim}) => FPA={fator_pavimentacao_calculado:.2f}")
+
+
+
+#         # -------- Fator Acessibilidade --------
+#         amostra_acess = get_multi(linha, "ACESSIBILIDADE?", "ACESSIBILIDADE ?", " ACESSIBILIDADE?")
+#         aval_acess    = get_multi(dados_avaliando, "ACESSIBILIDADE?", "ACESSIBILIDADE ?", " ACESSIBILIDADE?")
+
+#         def _norm_sn(v):
+#             if v is None:
+#                 return None
+#             s = str(v).strip().upper()
+#             if s in ("SIM", "S"):
+#                 return "SIM"
+#             if s in ("NAO", "NÃO", "NAO ", "N"):
+#                 return "NAO"
+#             return None  # qualquer outra coisa tratamos como ausente
+
+#         amostra_acess = _norm_sn(amostra_acess)
+#         aval_acess    = _norm_sn(aval_acess)
+
+#         f_sample_acess   = fator_acessibilidade(amostra_acess)   # SIM->1.0, NAO->0.9
+#         f_avaliado_acess = fator_acessibilidade(aval_acess)
+
+#         # se a amostra veio “vazia/indefinida”, igualamos ao avaliado -> razão = 1.0
+#         if amostra_acess is None:
+#             f_sample_acess = f_avaliado_acess
+
+#         if fatores_do_usuario.get("acessibilidade", False) and f_sample_acess > 0:
+#             fator_acessibilidade_calculado = limitar_fator(f_avaliado_acess / f_sample_acess)
+#         else:
+#             fator_acessibilidade_calculado = 1.0
+
+
+
+
+
+#         logger.info(f"[FAC] AM={identificador_amostra} | Avaliado={aval_ace} ({f_avaliado_acess}) "
+#             f"| Amostra={amostra_ace} ({f_sample_acess}) => FAC={fator_acessibilidade_calculado:.2f}")     
                   
-        # Fator Localização
-        if fatores_do_usuario.get("localizacao_mesma_regiao", False):
-            fator_localizacao_calculado = 1.0
-        else:
-            try:
-                distancia_amostra = float(linha.get("DISTANCIA CENTRO", 0))
-                distancia_avaliando = float(dados_avaliando.get("DISTANCIA CENTRO", 0))
-                if distancia_amostra > 0 and distancia_avaliando > 0:
-                    fator_item_comparativo = 1 / (distancia_amostra ** 0.1)
-                    fator_bem_avaliando   = 1 / (distancia_avaliando ** 0.1)
-                    fator_localizacao_calculado = limitar_localizacao(fator_bem_avaliando / fator_item_comparativo)
-                else:
-                    fator_localizacao_calculado = 1.0
-            except:
-                fator_localizacao_calculado = 1.0
+#         # Fator Localização
+#         if fatores_do_usuario.get("localizacao_mesma_regiao", False):
+#             fator_localizacao_calculado = 1.0
+#         else:
+#             try:
+#                 distancia_amostra = float(linha.get("DISTANCIA CENTRO", 0))
+#                 distancia_avaliando = float(dados_avaliando.get("DISTANCIA CENTRO", 0))
+#                 if distancia_amostra > 0 and distancia_avaliando > 0:
+#                     fator_item_comparativo = 1 / (distancia_amostra ** 0.1)
+#                     fator_bem_avaliando   = 1 / (distancia_avaliando ** 0.1)
+#                     fator_localizacao_calculado = limitar_localizacao(fator_bem_avaliando / fator_item_comparativo)
+#                 else:
+#                     fator_localizacao_calculado = 1.0
+#             except:
+#                 fator_localizacao_calculado = 1.0
 
-        # 2) Cálculo do Valor Total Homogeneizado
-        valor_total_homogeneizado = (
-            valor_total *
-            fator_area *
-            fator_oferta *
-            fator_localizacao_calculado *
-            fator_aproveitamento_calculado *
-            fator_topografia_calculado *
-            fator_pedologia_calculado *
-            fator_pavimentacao_calculado *
-            fator_esquina_calculado *
-            fator_acessibilidade_calculado
-        )
+#         # 2) Cálculo do Valor Total Homogeneizado
+#         valor_total_homogeneizado = (
+#             valor_total *
+#             fator_area *
+#             fator_oferta *
+#             fator_localizacao_calculado *
+#             fator_aproveitamento_calculado *
+#             fator_topografia_calculado *
+#             fator_pedologia_calculado *
+#             fator_pavimentacao_calculado *
+#             fator_esquina_calculado *
+#             fator_acessibilidade_calculado
+#         )
 
-        # 3) Monta o texto de memória de cálculo
-        bloco_texto = []
-        bloco_texto.append(f"AM {identificador_amostra}")
-        bloco_texto.append("")
-        # Mantém o texto original para o valor ofertado:
-        bloco_texto.append(f"- VALOR TOTAL OFERTADO: {formatar_moeda_brasil(valor_total)}")
-        bloco_texto.append(f"- ÁREA DA AMOSTRA (m²): {formatar_numero_brasileiro(area_da_amostra)}")
-        bloco_texto.append("")
+#         # 3) Monta o texto de memória de cálculo
+#         bloco_texto = []
+#         bloco_texto.append(f"AM {identificador_amostra}")
+#         bloco_texto.append("")
+#         # Mantém o texto original para o valor ofertado:
+#         bloco_texto.append(f"- VALOR TOTAL OFERTADO: {formatar_moeda_brasil(valor_total)}")
+#         bloco_texto.append(f"- ÁREA DA AMOSTRA (m²): {formatar_numero_brasileiro(area_da_amostra)}")
+#         bloco_texto.append("")
 
-        bloco_texto.append("- Fator Área:")
-        bloco_texto.append(f"   Avaliado: {formatar_numero_brasileiro(area_do_avaliando)}")
-        bloco_texto.append(f"   Amostra: {formatar_numero_brasileiro(area_da_amostra)} - Cálculo => {fator_area:.2f}\n")
+#         bloco_texto.append("- Fator Área:")
+#         bloco_texto.append(f"   Avaliado: {formatar_numero_brasileiro(area_do_avaliando)}")
+#         bloco_texto.append(f"   Amostra: {formatar_numero_brasileiro(area_da_amostra)} - Cálculo => {fator_area:.2f}\n")
 
-        bloco_texto.append("- Fator Oferta:")
-        bloco_texto.append(f"   (fixo 0.90 se habilitado) => {fator_oferta:.2f}\n")
+#         bloco_texto.append("- Fator Oferta:")
+#         bloco_texto.append(f"   (fixo 0.90 se habilitado) => {fator_oferta:.2f}\n")
 
-        bloco_texto.append("- Fator Aproveitamento (f_avaliado / f_amostra):")
-        bloco_texto.append(f"   Avaliado: {f_avaliado_aprov:.2f}")
-        bloco_texto.append(f"   Amostra: {f_sample_aprov:.2f}")
-        bloco_texto.append(f"   => {fator_aproveitamento_calculado:.2f}\n")
+#         bloco_texto.append("- Fator Aproveitamento (f_avaliado / f_amostra):")
+#         bloco_texto.append(f"   Avaliado: {f_avaliado_aprov:.2f}")
+#         bloco_texto.append(f"   Amostra: {f_sample_aprov:.2f}")
+#         bloco_texto.append(f"   => {fator_aproveitamento_calculado:.2f}\n")
 
-        bloco_texto.append("- Fator Topografia (f_avaliado / f_amostra):")
-        bloco_texto.append(f"   Avaliado: {f_avaliado_topog:.2f}")
-        bloco_texto.append(f"   Amostra: {f_sample_topog:.2f}")
-        bloco_texto.append(f"   => {fator_topografia_calculado:.2f}\n")
+#         bloco_texto.append("- Fator Topografia (f_avaliado / f_amostra):")
+#         bloco_texto.append(f"   Avaliado: {f_avaliado_topog:.2f}")
+#         bloco_texto.append(f"   Amostra: {f_sample_topog:.2f}")
+#         bloco_texto.append(f"   => {fator_topografia_calculado:.2f}\n")
 
-        bloco_texto.append("- Fator Pedologia (f_avaliado / f_amostra):")
-        bloco_texto.append(f"   Avaliado: {f_avaliado_pedol:.2f}")
-        bloco_texto.append(f"   Amostra: {f_sample_pedol:.2f}")
-        bloco_texto.append(f"   => {fator_pedologia_calculado:.2f}\n")
+#         bloco_texto.append("- Fator Pedologia (f_avaliado / f_amostra):")
+#         bloco_texto.append(f"   Avaliado: {f_avaliado_pedol:.2f}")
+#         bloco_texto.append(f"   Amostra: {f_sample_pedol:.2f}")
+#         bloco_texto.append(f"   => {fator_pedologia_calculado:.2f}\n")
 
-        bloco_texto.append("- Fator Pavimentação (f_avaliado / f_amostra):")
-        bloco_texto.append(f"   Avaliado: {f_avaliado_pavim:.2f}")
-        bloco_texto.append(f"   Amostra: {f_sample_pavim:.2f}")
-        bloco_texto.append(f"   => {fator_pavimentacao_calculado:.2f}\n")
+#         bloco_texto.append("- Fator Pavimentação (f_avaliado / f_amostra):")
+#         bloco_texto.append(f"   Avaliado: {f_avaliado_pavim:.2f}")
+#         bloco_texto.append(f"   Amostra: {f_sample_pavim:.2f}")
+#         bloco_texto.append(f"   => {fator_pavimentacao_calculado:.2f}\n")
 
-        bloco_texto.append("- Fator Esquina (f_avaliado / f_amostra):")
-        bloco_texto.append(f"   Avaliado: {f_avaliado_esq:.2f}")
-        bloco_texto.append(f"   Amostra: {f_sample_esq:.2f}")
-        bloco_texto.append(f"   => {fator_esquina_calculado:.2f}\n")
+#         bloco_texto.append("- Fator Esquina (f_avaliado / f_amostra):")
+#         bloco_texto.append(f"   Avaliado: {f_avaliado_esq:.2f}")
+#         bloco_texto.append(f"   Amostra: {f_sample_esq:.2f}")
+#         bloco_texto.append(f"   => {fator_esquina_calculado:.2f}\n")
 
-        bloco_texto.append("- Fator Acessibilidade (f_avaliado / f_amostra):")
-        bloco_texto.append(f"   Avaliado: {f_avaliado_acess:.2f}")
-        bloco_texto.append(f"   Amostra: {f_sample_acess:.2f}")
-        bloco_texto.append(f"   => {fator_acessibilidade_calculado:.2f}\n")
+#         bloco_texto.append("- Fator Acessibilidade (f_avaliado / f_amostra):")
+#         bloco_texto.append(f"   Avaliado: {f_avaliado_acess:.2f}")
+#         bloco_texto.append(f"   Amostra: {f_sample_acess:.2f}")
+#         bloco_texto.append(f"   => {fator_acessibilidade_calculado:.2f}\n")
 
-        bloco_texto.append("- Fator Localização:")
-        bloco_texto.append(f"   => {fator_localizacao_calculado:.2f}\n")
+#         bloco_texto.append("- Fator Localização:")
+#         bloco_texto.append(f"   => {fator_localizacao_calculado:.2f}\n")
 
-        # 4) Em vez de exibir o Valor Total Homogeneizado, agora exibe o Valor Unitário Homogeneizado (VUH)
-        if area_da_amostra > 0:
-            valor_unit_homog = valor_total_homogeneizado / area_da_amostra
-        else:
-            valor_unit_homog = 0.0
+#         # 4) Em vez de exibir o Valor Total Homogeneizado, agora exibe o Valor Unitário Homogeneizado (VUH)
+#         if area_da_amostra > 0:
+#             valor_unit_homog = valor_total_homogeneizado / area_da_amostra
+#         else:
+#             valor_unit_homog = 0.0
 
-        bloco_texto.append(
-            f"=> VUH (Valor Unitário Homogeneizado): {formatar_moeda_brasil(valor_unit_homog)}"
-        )
+#         bloco_texto.append(
+#             f"=> VUH (Valor Unitário Homogeneizado): {formatar_moeda_brasil(valor_unit_homog)}"
+#         )
 
-        lista_memoria_completa.append("\n".join(bloco_texto))
+#         lista_memoria_completa.append("\n".join(bloco_texto))
 
-    return lista_memoria_completa
+#     return lista_memoria_completa
 
 
 
@@ -4980,9 +5058,31 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         else:
             fator_pedologia_calculado = 1.0
 
-        # Fator Pavimentação
-        f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
-        if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
+         # -------- Fator Pavimentação --------
+        amostra_pav = get_multi(linha, "PAVIMENTACAO?", "PAVIMENTAÇÃO?", "PAVIMENTACAO ?")
+        aval_pav    = get_multi(dados_avaliando, "PAVIMENTACAO?", "PAVIMENTAÇÃO?")
+
+        def _norm_sn(v):
+            if v is None:
+                return None
+            s = str(v).strip().upper()
+            if s in ("SIM", "S"):
+                return "SIM"
+            if s in ("NAO", "NÃO", "NAO ", "N"):
+                return "NAO"
+            return None  # qualquer outra coisa tratamos como ausente
+
+        amostra_pav = _norm_sn(amostra_pav)
+        aval_pav    = _norm_sn(aval_pav)
+
+        f_sample_pavim   = fator_pavimentacao(amostra_pav)    # SIM->1.0, NAO->0.9
+        f_avaliado_pavim = fator_pavimentacao(aval_pav)
+
+        # se a amostra veio “vazia/indefinida”, igualamos ao avaliado -> razão = 1.0
+        if amostra_pav is None:
+            f_sample_pavim = f_avaliado_pavim
+
+        if fatores_do_usuario.get("pavimentacao", False) and f_sample_pavim > 0:
             fator_pavimentacao_calculado = limitar_fator(f_avaliado_pavim / f_sample_pavim)
         else:
             fator_pavimentacao_calculado = 1.0
@@ -4994,12 +5094,34 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         else:
             fator_esquina_calculado = 1.0
 
-         # Fator Acessibilidade
-        f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
-        if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
+        # -------- Fator Acessibilidade --------
+        amostra_acess = get_multi(linha, "ACESSIBILIDADE?", "ACESSIBILIDADE ?", " ACESSIBILIDADE?")
+        aval_acess    = get_multi(dados_avaliando, "ACESSIBILIDADE?", "ACESSIBILIDADE ?", " ACESSIBILIDADE?")
+
+        def _norm_sn(v):
+            if v is None:
+                return None
+            s = str(v).strip().upper()
+            if s in ("SIM", "S"):
+                return "SIM"
+            if s in ("NAO", "NÃO", "NAO ", "N"):
+                return "NAO"
+            return None  # qualquer outra coisa tratamos como ausente
+
+        amostra_acess = _norm_sn(amostra_acess)
+        aval_acess    = _norm_sn(aval_acess)
+
+        f_sample_acess   = fator_acessibilidade(amostra_acess)   # SIM->1.0, NAO->0.9
+        f_avaliado_acess = fator_acessibilidade(aval_acess)
+
+        # se a amostra veio “vazia/indefinida”, igualamos ao avaliado -> razão = 1.0
+        if amostra_acess is None:
+            f_sample_acess = f_avaliado_acess
+
+        if fatores_do_usuario.get("acessibilidade", False) and f_sample_acess > 0:
             fator_acessibilidade_calculado = limitar_fator(f_avaliado_acess / f_sample_acess)
         else:
-            fator_acessibilidade_calculado = 1.0      
+            fator_acessibilidade_calculado = 1.0     
               
                   
         # Fator Localização
