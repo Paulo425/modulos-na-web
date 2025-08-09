@@ -1365,16 +1365,14 @@ def visualizar_resultados(uuid):
         return redirect(url_for("gerar_avaliacao"))
 
     try:
-        # OPTIM: leitura JSON é ok; mantenha simples
         with open(caminho_json, "r", encoding="utf-8") as f:
-            dados = json.load(f)
-        logger.info("📌 JSON carregado com sucesso.")
+        dados = json.load(f)
 
         amostras = dados.get("amostras", []) or []
         fatores = dados.get("fatores_do_usuario", {}) or {}
         dados_avaliando = dados.get("dados_avaliando", {}) or {}
 
-        # Filtra só as ativas e válidas
+        # Só ativas e com área
         amostras_ativas = [a for a in amostras if a.get("ativo") and (a.get("area") or 0) > 0]
 
         # OPTIM: se não há ativas, evita custos e devolve rápido
@@ -1391,13 +1389,17 @@ def visualizar_resultados(uuid):
             )
 
         # OPTIM: monta apenas as colunas necessárias sem DataFrame pesado
-        # Garante chaves com defaults
+        # ---------- extrai campos ----------
         valores_totais = [float(a.get("valor_total", 0) or 0) for a in amostras_ativas]
         areas          = [float(a.get("area", 0) or 0)         for a in amostras_ativas]
         idxs           = [int(a.get("idx", 0) or 0)            for a in amostras_ativas]
         dist_centro    = [float(a.get("distancia_centro", 0) or 0) for a in amostras_ativas]
 
-        # Valor unitário médio (evita iterrows)
+        # >>> NOVO: trazer PAV e ACESS das amostras (se vierem None, o cálculo usará o do avaliado)
+        pav_list   = [get_multi(a, "PAVIMENTACAO?", "PAVIMENTAÇÃO?", "PAVIMENTACAO ?") for a in amostras_ativas]
+        acess_list = [get_multi(a, "ACESSIBILIDADE?", "ACESSIBILIDADE ?")                for a in amostras_ativas]
+
+        # Valor unitário médio (como estava)
         vu_list = [(vt / ar) if ar > 0 else 0.0 for vt, ar in zip(valores_totais, areas)]
         vu_validos = [v for v in vu_list if v > 0]
         dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
@@ -1410,8 +1412,14 @@ def visualizar_resultados(uuid):
             "AREA TOTAL": areas,
             "DISTANCIA CENTRO": dist_centro,
             "idx": idxs,
+            # >>> NOVO: colunas de fatores que a homogeneização precisa ler
+            "PAVIMENTACAO?": pav_list,
+            "ACESSIBILIDADE?": acess_list,
         })
-
+        # (opcional) logs para verificar o que chegou
+        logger.info(f"RAW PAV (primeiras 5): {pav_list[:5]}")
+        logger.info(f"RAW ACESS (primeiras 5): {acess_list[:5]}")
+        logger.info(f"Avaliando PAV='{dados_avaliando.get('PAVIMENTACAO?')}', ACESS='{dados_avaliando.get('ACESSIBILIDADE?')}'")
         # OPTIM: chama homogeneizar_amostras apenas se houver linhas
         if len(df_ativas) == 0:
             amostras_prontas = []
@@ -1674,6 +1682,173 @@ def calcular_valores_iterativos(uuid):
 
         df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
         df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+        @app.route("/calcular_valores_iterativos/<uuid>", methods=["POST"])
+def calcular_valores_iterativos(uuid):
+    import json, os
+    import numpy as np
+    import pandas as pd
+    from flask import jsonify, request, url_for
+    from executaveis_avaliacao.main import (
+        aplicar_chauvenet_e_filtrar,
+        homogeneizar_amostras,
+        intervalo_confianca_bootstrap_mediana,
+        gerar_grafico_dispersao_mediana,
+        gerar_grafico_aderencia_totais,
+    )
+
+    try:
+        logger.info("🚀 Rota calcular_valores_iterativos iniciada")
+
+        caminho_json = os.path.join(BASE_DIR, "static", "tmp", f"{uuid}_entrada_corrente.json")
+
+        if not os.path.exists(caminho_json):
+            logger.error(f"❌ Arquivo não encontrado: {caminho_json}")
+            return jsonify({"erro": "Arquivo de entrada não encontrado."}), 400
+
+        with open(caminho_json, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+
+        ativos_frontend = request.json.get("ativos", [])
+        ativos_frontend = [int(idx) for idx in ativos_frontend]
+
+        amostras_usuario_retirou = [
+            int(a["idx"]) for a in dados["amostras"] if int(a["idx"]) not in ativos_frontend
+        ]
+
+        df_ativas = pd.DataFrame([a for a in dados["amostras"] if int(a["idx"]) in ativos_frontend])
+        df_ativas.rename(columns={"valor_total": "VALOR TOTAL", "area": "AREA TOTAL"}, inplace=True)
+        # === NOVO: garantir PAVIMENTACAO? e ACESSIBILIDADE? nas amostras ===
+        def get_multi(d, *keys):
+            for k in keys:
+                if k in d and d[k] not in (None, "", "NaN"):
+                    return d[k]
+            return None
+
+        pav_list = [get_multi(a, "PAVIMENTACAO?", "PAVIMENTAÇÃO?", "PAVIMENTACAO ?") for a in dados["amostras"] if int(a["idx"]) in ativos_frontend]
+        acess_list = [get_multi(a, "ACESSIBILIDADE?", "ACESSIBILIDADE ?") for a in dados["amostras"] if int(a["idx"]) in ativos_frontend]
+
+        # Se não existir na lista (porque o JSON não traz), entra None; a lógica de homogenização já trata:
+        df_ativas["PAVIMENTACAO?"]  = pav_list
+        df_ativas["ACESSIBILIDADE?"] = acess_list
+
+        # (opcional) logs de sanidade
+        logger.info(f"PAV (amostras ativas) head: {list(df_ativas['PAVIMENTACAO?'][:5])}")
+        logger.info(f"ACESS (amostras ativas) head: {list(df_ativas['ACESSIBILIDADE?'][:5])}")
+        logger.info(f"Avaliando PAV='{dados['dados_avaliando'].get('PAVIMENTACAO?')}', "
+                    f"ACESS='{dados['dados_avaliando'].get('ACESSIBILIDADE?')}'")
+
+        # ▼▼▼ Calcule o valor_unitario_medio e adicione ao dicionário ▼▼▼
+        valores_unitarios = [
+            row["VALOR TOTAL"] / row["AREA TOTAL"] if row["AREA TOTAL"] > 0 else 0
+            for _, row in df_ativas.iterrows()
+        ]
+        valor_unitario_medio = sum(valores_unitarios) / len([v for v in valores_unitarios if v > 0]) if valores_unitarios else 0
+        dados["dados_avaliando"]["valor_unitario_medio"] = valor_unitario_medio
+        # ▲▲▲ FIM DO BLOCO ▲▲▲
+
+        logger.info("📌 Aplicando Chauvenet e filtro nas amostras ativas")
+        df_filtrado, idx_excluidos, _, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+        logger.info(f"✅ Chauvenet concluído: {len(df_filtrado)} amostras restaram")
+        if df_filtrado.empty:
+            logger.warning("Nenhuma amostra restou após os filtros. Abortando resposta iterativa.")
+            return jsonify({"erro": "Nenhuma amostra restou após os filtros. Ative pelo menos uma amostra ou ajuste os filtros."}), 400
+        amostras_excluidas_chauvenet = [int(df_ativas.iloc[idx]["idx"]) for idx in idx_excluidos]
+
+        logger.info("📌 Iniciando homogeneização das amostras")
+        amostras_homog = homogeneizar_amostras(
+            df_filtrado,
+            dados["dados_avaliando"],
+            dados["fatores_do_usuario"],
+            finalidade_do_laudo=(
+                "desapropriacao"
+                if "desapropria" in dados["fatores_do_usuario"]["finalidade_descricao"].lower()
+                else "servidao"
+                if "servid" in dados["fatores_do_usuario"]["finalidade_descricao"].lower()
+                else "mercado"
+            ),
+        )
+        logger.info("✅ Homogeneização concluída com sucesso")
+       
+        #valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
+
+        ativos_set = set(ativos_frontend)
+        valores_unit_ativos = [a["valor_unitario"] for a in amostras_homog if a.get("idx") in ativos_set]
+
+        array_homog = np.array([a["valor_unitario"] for a in amostras_homog], dtype=float)
+        if len(array_homog) > 1:
+            limite_inf, limite_sup = intervalo_confianca_bootstrap_mediana(array_homog, 1000, 0.80)
+               
+            valor_minimo = round(limite_inf, 2)
+            valor_maximo = round(limite_sup, 2)
+            valor_medio = round(np.median(array_homog), 2)
+
+            amplitude_intervalo_confianca = round(((valor_maximo - valor_minimo) / valor_medio) * 100, 2)
+        else:
+            valor_minimo = valor_medio = valor_maximo = round(array_homog[0], 2)
+            amplitude_intervalo_confianca = 80  # ou outro valor padrão que desejar
+        valores_unit_ativos = [a["valor_unitario"] for i, a in enumerate(amostras_homog) if i in ativos_frontend]
+        pasta_saida = os.path.join(BASE_DIR, "static", "arquivos", f"avaliacao_{uuid}")
+        os.makedirs(pasta_saida, exist_ok=True)
+
+        img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+        img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+
+        amostras_chauvenet_retirou = [
+            idx for idx in ativos_frontend if idx not in df_filtrado["idx"].tolist()
+        ]
+
+        logger.info("📌 Gerando gráfico de dispersão iterativo")
+
+       # Monte os arrays sincronizados (depois da homogeneização)
+        ativos_set = set(ativos_frontend)
+        amostras_plot = [a for a in amostras_homog if a.get("idx") in ativos_set]
+        ativos_validos_idx = [a["idx"] for a in amostras_plot]
+        ativos_validos_valores = [a["valor_unitario"] for a in amostras_plot]
+
+        gerar_grafico_dispersao_mediana(
+            df_filtrado,
+            ativos_validos_valores,
+            img2,
+            ativos_validos_idx,
+            amostras_usuario_retirou,
+            amostras_chauvenet_retirou,
+        )
+
+        logger.info("✅ Gráfico dispersão gerado com sucesso")
+        
+
+        logger.info("📌 Gerando gráfico de aderência iterativo")
+        gerar_grafico_aderencia_totais(df_filtrado, [a["valor_unitario"] for a in amostras_homog], img1)
+
+        logger.info("✅ Gráfico aderência gerado com sucesso")
+
+        resposta = {
+            "valor_minimo": valor_minimo,
+            "valor_medio": valor_medio,
+            "valor_maximo": valor_maximo,
+            "amplitude_intervalo_confianca": amplitude_intervalo_confianca,
+            "quantidade_amostras_iniciais": len(dados["amostras"]),
+            "quantidade_amostras_usuario_retirou": len(amostras_usuario_retirou),
+            "amostras_usuario_retirou": amostras_usuario_retirou,
+            "quantidade_amostras_chauvenet_retirou": len(amostras_excluidas_chauvenet),
+            "amostras_chauvenet_retirou": amostras_excluidas_chauvenet,
+            "quantidade_amostras_restantes": len(df_filtrado),
+            "grafico_dispersao_url": url_for(
+                "static",
+                filename=f"arquivos/avaliacao_{uuid}/grafico_dispersao_iterativo.png",
+            ),
+            "grafico_aderencia_url": url_for(
+                "static",
+                filename=f"arquivos/avaliacao_{uuid}/grafico_aderencia_iterativo.png",
+            ),
+        }
+
+        logger.info("✅ Resposta JSON pronta para envio ao frontend")
+        return jsonify(resposta)
+
+    except Exception as e:
+        logger.exception(f"🚨 ERRO CRÍTICO NA ROTA calcular_valores_iterativos: {e}")
+        return jsonify({"erro": f"Erro crítico interno: {str(e)}"}), 500
 
         # ▼▼▼ Calcule o valor_unitario_medio e adicione ao dicionário ▼▼▼
         valores_unitarios = [
