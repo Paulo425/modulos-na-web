@@ -93,6 +93,7 @@ import sys
 from lxml import etree 
 
 
+
 logger = logging.getLogger("meu_app_logger")
 # Para garantir que o logger esteja configurado se o main.py executar separadamente:
 if not logger.handlers:
@@ -1774,21 +1775,59 @@ def inserir_texto_saneamento_no_placeholder(documento, marcador_placeholder, tex
 
 
 
+# def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder, lista_memorias):
+#     for paragrafo in documento.paragraphs:
+#         if marcador_placeholder in paragrafo.text:
+#             paragrafo.text = paragrafo.text.replace(marcador_placeholder, "")
+#             paragrafo_atual = paragrafo
+#             for indice_bloco, bloco in enumerate(lista_memorias):
+#                 if indice_bloco >= 1:
+#                     paragrafo_branco = inserir_paragrafo_apos(paragrafo_atual, "")
+#                     execucao_branco = paragrafo_branco.add_run("\n")
+#                     execucao_branco.font.size = Pt(10)
+#                     execucao_branco.font.name = "Arial"
+#                     paragrafo_atual = paragrafo_branco
+
+#                 novo_paragrafo = inserir_paragrafo_apos(paragrafo_atual, "")
+#                 linhas_texto = bloco.split("\n")
+
+#                 for indice_linha, conteudo_linha in enumerate(linhas_texto):
+#                     execucao_texto = novo_paragrafo.add_run(conteudo_linha + "\n")
+#                     execucao_texto.font.name = "Arial"
+
+#                     if conteudo_linha.strip().startswith("=> VUH"):
+#                         execucao_texto.font.size = Pt(13)
+#                         execucao_texto.font.bold = True
+                   
+                   
+#                     elif indice_linha == 0 and conteudo_linha.strip().startswith("AM "):
+#                         execucao_texto.font.size = Pt(13)
+#                         execucao_texto.font.bold = True
+#                     else:
+#                         execucao_texto.font.size = Pt(10)
+#                         execucao_texto.font.bold = False
+
+#                 novo_paragrafo.paragraph_format.line_spacing = 1.15
+#                 paragrafo_atual = novo_paragrafo
+#             break
+
 def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder, lista_memorias):
+    """
+    Insere blocos de memória de cálculo no lugar de um placeholder.
+    - Mantém Arial e tamanhos conforme seu padrão
+    - Insere QUEBRA DE PÁGINA entre amostras (uma amostra por página)
+    """
     for paragrafo in documento.paragraphs:
         if marcador_placeholder in paragrafo.text:
+            # limpa só o token, preserva estilo do parágrafo
             paragrafo.text = paragrafo.text.replace(marcador_placeholder, "")
             paragrafo_atual = paragrafo
-            for indice_bloco, bloco in enumerate(lista_memorias):
-                if indice_bloco >= 1:
-                    paragrafo_branco = inserir_paragrafo_apos(paragrafo_atual, "")
-                    execucao_branco = paragrafo_branco.add_run("\n")
-                    execucao_branco.font.size = Pt(10)
-                    execucao_branco.font.name = "Arial"
-                    paragrafo_atual = paragrafo_branco
 
+            total = len(lista_memorias or [])
+            for indice_bloco, bloco in enumerate(lista_memorias or []):
+                # bloco em novo parágrafo (mantém estilo base)
                 novo_paragrafo = inserir_paragrafo_apos(paragrafo_atual, "")
-                linhas_texto = bloco.split("\n")
+                linhas_texto = str(bloco).split("\n")
 
                 for indice_linha, conteudo_linha in enumerate(linhas_texto):
                     execucao_texto = novo_paragrafo.add_run(conteudo_linha + "\n")
@@ -1797,8 +1836,6 @@ def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder
                     if conteudo_linha.strip().startswith("=> VUH"):
                         execucao_texto.font.size = Pt(13)
                         execucao_texto.font.bold = True
-                   
-                   
                     elif indice_linha == 0 and conteudo_linha.strip().startswith("AM "):
                         execucao_texto.font.size = Pt(13)
                         execucao_texto.font.bold = True
@@ -1808,7 +1845,15 @@ def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder
 
                 novo_paragrafo.paragraph_format.line_spacing = 1.15
                 paragrafo_atual = novo_paragrafo
+
+                # >>> quebra de página ENTRE amostras <<<
+                if indice_bloco < total - 1:
+                    br = paragrafo_atual.add_run()
+                    br.add_break(WD_BREAK.PAGE)
+
             break
+
+
 
 
 ###############################################################################
@@ -1883,6 +1928,56 @@ def substituir_placeholder_por_imagem_em_todo_documento(documento, marcador, img
                     par.text = par.text.replace(marcador, "")
                     run = par.add_run()
                     run.add_picture(img_path, width=largura)
+
+def substituir_placeholder_por_varias_imagens(
+    documento, marcador, caminhos_imagens, largura=Inches(5), quebra_pagina_entre=True
+):
+    """
+    Substitui um placeholder por N imagens.
+    - caminhos_imagens: lista de strings (caminhos absolutos/relativos)
+    - quebra_pagina_entre=True: insere page break entre cada imagem
+    - preserva o estilo do parágrafo/célula que contém o marcador
+    """
+    import os
+
+    imgs = [p for p in (caminhos_imagens or []) if p and os.path.exists(p)]
+    if not imgs:
+        return False
+
+    def _aplicar_em_paragrafo(paragrafo):
+        if marcador in paragrafo.text:
+            # remove só o marcador, preservando o parágrafo/estilo
+            paragrafo.text = paragrafo.text.replace(marcador, "")
+            first = True
+            for i, caminho in enumerate(imgs):
+                if not first:
+                    # nova linha para não “colar” na imagem anterior
+                    paragrafo = documento.add_paragraph()
+                runn = paragrafo.add_run()
+                runn.add_picture(caminho, width=largura)
+                paragrafo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                runn.font.name = "Arial"
+                runn.font.size = Pt(12)
+                if quebra_pagina_entre and i < len(imgs) - 1:
+                    runn.add_break(WD_BREAK.PAGE)
+                    paragrafo = documento.add_paragraph()
+                first = False
+            return True
+        return False
+
+    # procura em parágrafos normais
+    for paragrafo in documento.paragraphs:
+        if _aplicar_em_paragrafo(paragrafo):
+            return True
+
+    # procura dentro de tabelas
+    for tabela in documento.tables:
+        for linha in tabela.rows:
+            for celula in linha.cells:
+                for parag in celula.paragraphs:
+                    if _aplicar_em_paragrafo(parag):
+                        return True
+    return False
 
 
 ###############################################################################
@@ -5499,6 +5594,24 @@ def gerar_lista_memoria_calculo(dataframe_ou_amostras, dados_avaliando, fatores_
 
     return lista_memoria
 
+def _flatten_grupos_imagens(grupos):
+    """
+    Recebe lista que pode conter strings ou listas (ex.: [[p1,p2],[p3], 'p4'])
+    e devolve lista plana só com caminhos existentes.
+    """
+    import os
+    if not grupos:
+        return []
+    acum = []
+    for g in grupos:
+        if not g:
+            continue
+        if isinstance(g, (list, tuple)):
+            acum.extend([p for p in g if p and os.path.exists(p)])
+        else:
+            if isinstance(g, str) and os.path.exists(g):
+                acum.append(g)
+    return acum
 
 
 def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder, lista_memorias):
@@ -6146,6 +6259,677 @@ def inserir_tabela_resumo_geral_completo(documento, placeholder, info_resumo_ger
             break
 
 
+# ###############################################################################
+# # >>>>>> RELATÓRIO PRINCIPAL - GERAÇÃO DO WORD <<<<<<
+# ###############################################################################
+# def gerar_relatorio_avaliacao_com_template(
+#     dados_avaliando,
+#     dataframe_amostras_inicial,
+#     dataframe_amostras_filtrado,
+#     indices_excluidos,
+#     amostras_excluidas,
+#     media,
+#     desvio_padrao,
+#     menor_valor,
+#     maior_valor,
+#     mediana_valor,
+#     valores_originais_iniciais,
+#     valores_homogeneizados_validos,
+#     caminho_imagem_aderencia,
+#     caminho_imagem_dispersao,
+#     uuid_atual,                          # obrigatório, sem valor padrão
+#     finalidade_do_laudo,                # agora obrigatório também
+#     area_parcial_afetada,              # idem — valor digitado deve ser usado sempre
+#     fatores_do_usuario=None,
+#     caminhos_fotos_avaliando=None,
+#     caminhos_fotos_adicionais=None,
+#     caminhos_fotos_proprietario=None,
+#     caminhos_fotos_planta=None,
+#     caminho_template="template.docx",
+#     nome_arquivo_word="relatorio.docx"
+# ):
+#     # DEFINIÇÃO DEFINITIVA DA ÁREA UTILIZADA (corrigido!)
+#     area_utilizada = area_parcial_afetada if finalidade_do_laudo in ["desapropriacao", "servidao"] else float(dados_avaliando.get("AREA TOTAL", 0))
+#     logger.info(f"✅ Área utilizada definitiva definida imediatamente após parâmetros: {area_utilizada}")
+#     # Insira logs aqui para depuração detalhada:
+#     logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
+#     logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
+#     logger.info(f"Área Parcial Afetada recebida: {area_parcial_afetada}")
+
+#     # ──────────────────────────────────────────────────────
+#     # Alias para compatibilizar o novo nome:
+#     # logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {area_parcial_afetada}")
+#     # area_utilizada = area_parcial_afetada
+#     # logger.info(f"🟢 Área utilizada atribuída no main.py: {area_utilizada}")
+
+#     # ──────────────────────────────────────────────────────
+#     """
+#     Gera o relatório Word completo, exibindo todos os itens e incluindo
+#     o tratamento de múltiplas restrições.
+#     """
+#     from docx import Document
+#     from datetime import datetime
+
+#     data_atual = datetime.now().strftime("%d/%m/%Y")
+
+#     # Carregar template
+#     documento = Document(caminho_template)
+
+#     cidade_nome = fatores_do_usuario.get("cidade", "CIDADE NÃO INFORMADA").strip().upper()
+#     data_formatada = datetime.now().strftime("%d-%m-%Y")
+
+#     substituir_placeholder_por_texto_formatado(
+#         documento,
+#         "[cidade]",
+#         f"{cidade_nome}, {data_formatada}",
+#         Pt(12),
+#         False
+#     )
+
+
+    
+#     # ------------------------------------------------------------------
+#     # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO
+#     # ------------------------------------------------------------------
+#     pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid_atual}")
+#     os.makedirs(pasta_saida, exist_ok=True)
+
+
+#     caminho_mapa = os.path.join(pasta_saida, "mapa_amostras.png")
+
+#     gerar_mapa_amostras(dataframe_amostras_filtrado, dados_avaliando, nome_png=caminho_mapa)
+#     # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
+#     if os.path.exists(caminho_mapa):
+#         logger.info(f"✅ MAPA AMOSTRAS encontrado: {caminho_mapa}")
+#     else:
+#         logger.warning(f"❌ MAPA AMOSTRAS NÃO encontrado: {caminho_mapa}")
+    
+#     if caminho_mapa and os.path.exists(caminho_mapa):  # <- ESSA É A LINHA CORRIGIDA
+#         substituir_placeholder_por_imagem(
+#             documento, "[MAPAAMOSTRAS]", caminho_mapa, largura=Inches(6)
+#         )
+#     else:
+#         substituir_placeholder_por_texto_formatado(
+#             documento, "[MAPAAMOSTRAS]",
+#             "Mapa de localização não disponível — coordenadas incompletas",
+#             Pt(12), False
+#         )
+    
+#     # Inserir a tabela de amostras originais
+#     logger.info("🔎 DataFrame que será enviado para inserir_tabela_amostras_originais:")
+#     logger.info(dataframe_amostras_inicial.head())
+#     logger.info(f"🔎 Colunas disponíveis: {list(dataframe_amostras_inicial.columns)}")
+#     inserir_tabela_amostras_originais(documento, dataframe_amostras_inicial)
+
+#     # Preencher alguns placeholders básicos
+#     def substituir_placeholder_por_titulo_e_valor(documento, marcador, titulo, valor, tamanho_fonte):
+#         for paragrafo in documento.paragraphs:
+#             if marcador in paragrafo.text:
+#                 paragrafo.text = paragrafo.text.replace(marcador, "")
+#                 run_titulo = paragrafo.add_run(titulo)
+#                 run_titulo.font.name = "Arial"
+#                 run_titulo.font.size = tamanho_fonte
+#                 run_titulo.bold = True
+#                 run_valor = paragrafo.add_run(valor)
+#                 run_valor.font.name = "Arial"
+#                 run_valor.font.size = tamanho_fonte
+#                 run_valor.bold = False
+#         for tabela in documento.tables:
+#             for linha in tabela.rows:
+#                 for celula in linha.cells:
+#                     for parag in celula.paragraphs:
+#                         if marcador in parag.text:
+#                             parag.text = parag.text.replace(marcador, "")
+#                             run_titulo = parag.add_run(titulo)
+#                             run_titulo.font.name = "Arial"
+#                             run_titulo.font.size = tamanho_fonte
+#                             run_titulo.bold = True
+#                             run_valor = parag.add_run(valor)
+#                             run_valor.font.name = "Arial"
+#                             run_valor.font.size = tamanho_fonte
+#                             run_valor.bold = False
+
+#     substituir_placeholder_por_texto_formatado(documento, "[created]", data_atual, Pt(13), False)
+#     substituir_placeholder_por_texto_formatado(documento, "[avaliadorNome]", fatores_do_usuario.get("avaliadorNome", ""), Pt(13), False)
+#     substituir_placeholder_por_texto_formatado(documento, "[avaliadorRegistro]", fatores_do_usuario.get("avaliadorRegistro", ""), Pt(13), False)
+
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[nomeSolicitante]",
+#         "• Solicitante: ",
+#         fatores_do_usuario.get("nomeSolicitante", ""),
+#         Pt(11)
+#     )
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[nome proprietário]",
+#         "• Nome do Proprietário: ",
+#         fatores_do_usuario.get("nomeProprietario", ""),
+#         Pt(11)
+#     )
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[telefone proprietario]",
+#         "• Contato do Proprietário: ",
+#         fatores_do_usuario.get("telefoneProprietario", ""),
+#         Pt(11)
+#     )
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[email]",
+#         "• E-mail do Proprietário: ",
+#         fatores_do_usuario.get("emailProprietario", ""),
+#         Pt(11)
+#     )
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[tipoImovel]",
+#         "• Tipo do Imóvel: ",
+#         fatores_do_usuario.get("tipoImovel", ""),
+#         Pt(11)
+#     )
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[enderecoCompleto]",
+#         "• Endereço do Imóvel: ",
+#         fatores_do_usuario.get("enderecoCompleto", ""),
+#         Pt(11)
+#     )
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[finalidade]",
+#         "",  # título vazio
+#         "",  # valor vazio
+#         Pt(11)
+#     )
+
+
+#     area_total_lida = float(dados_avaliando.get("AREA TOTAL", 0))
+#     area_total_str = f"{formatar_numero_brasileiro(area_total_lida)} m²"
+
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[areaTotal]",
+#         "• Área Total: ",
+#         area_total_str,
+#         Pt(11)
+#     )
+
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[documentacaoImovel]",
+#         "• Documentação do Imóvel: ",
+#         fatores_do_usuario.get("documentacaoImovel", ""),
+#         Pt(11)
+#     )
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[cartorio]",
+#         "• Cartório: ",
+#         fatores_do_usuario.get("nomeCartorio", ""),
+#         Pt(11)
+#     )
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[comarca]",
+#         "• Comarca: ",
+#         fatores_do_usuario.get("nomeComarca", ""),
+#         Pt(11)
+#     )
+
+#     texto_topo = str(dados_avaliando.get("BOA TOPOGRAFIA?", "")).strip().lower()
+#     topo_formatado = "Sim" if "sim" in remover_acentos(texto_topo) else "Não"
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[topografia]",
+#         "• Possui Boa Topografia? ",
+#         topo_formatado,
+#         Pt(11)
+#     )
+
+#     texto_pav = str(dados_avaliando.get("PAVIMENTACAO?", "")).strip().lower()
+#     pav_formatado = "Sim" if "sim" in remover_acentos(texto_pav) else "Não"
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[pavimentacao]",
+#         "• Imóvel Pavimentado? ",
+#         pav_formatado,
+#         Pt(11)
+#     )
+
+#     texto_esq = str(dados_avaliando.get(" ESQUINA?", "")).strip().lower()
+#     esq_formatado = "Sim" if "sim" in remover_acentos(texto_esq) else "Não"
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[terreno_de_esquina]",
+#         "• Imóvel de Esquina? ",
+#         esq_formatado,
+#         Pt(11)
+#     )
+
+#     valor_distancia = dados_avaliando.get("DISTANCIA CENTRO", 0)
+#     distancia_km = float(valor_distancia) if pd.notna(valor_distancia) else 0.0
+#     distancia_str = f"{distancia_km:.2f} km"
+#     substituir_placeholder_por_titulo_e_valor(
+#         documento,
+#         "[distanciaAvaliando]",
+#         "• Distância Avaliando ao Centro (Km): ",
+#         distancia_str,
+#         Pt(11)
+#     )
+
+#     # Gráfico KDE
+#     nome_arquivo_grafico_kernel = "grafico_kernel.png"
+#     gerar_grafico_densidade_kernel(valores_homogeneizados_validos, nome_arquivo_grafico_kernel)
+#     # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
+#     if os.path.exists(nome_arquivo_grafico_kernel):
+#         logger.info(f"✅ Gráfico Kernel encontrado: {nome_arquivo_grafico_kernel}")
+#     else:
+#         logger.warning(f"❌ Gráfico Kernel NÃO encontrado: {nome_arquivo_grafico_kernel}")
+#     substituir_placeholder_por_imagem(documento, "[graficoKernel]", nome_arquivo_grafico_kernel, largura=Inches(5))
+
+#     # Tabela de amostras homogeneizadas
+#     lista_detalhes_calc = calcular_detalhes_amostras(
+#         dataframe_amostras_filtrado,
+#         dados_avaliando,
+#         fatores_do_usuario,
+#         finalidade_do_laudo
+#     )
+#     inserir_tabela_amostras_calculadas(documento, lista_detalhes_calc)
+  
+    
+#     # ------------------------------------------------------------------
+#     # COLESTE TODOS OS FATORES DAS AMOSTRAS PARA O ENQUADRAMENTO
+#     # ------------------------------------------------------------------
+#     lista_todos_os_fatores = []
+#     for det in lista_detalhes_calc:
+#         for chave in ("FA", "FO", "FAP", "FT", "FP", "FPA", "FE", "FAC", "FL"):
+#             try:
+#                 lista_todos_os_fatores.append(float(det[chave]))
+#             except Exception:
+#                 pass  # ignora caso não converta
+
+    
+
+#     # Memória de cálculo
+#     lista_memoria_calculo = gerar_lista_memoria_calculo(
+#         dataframe_amostras_filtrado,
+#         dados_avaliando,
+#         fatores_do_usuario,
+#         finalidade_do_laudo
+#     )
+#     inserir_texto_memoria_calculo_no_placeholder(documento, "[texto_tabela_fatores]", lista_memoria_calculo)
+
+#     # Texto de saneamento (Chauvenet)
+#     texto_saneamento_chauvenet = gerar_texto_saneamento_chauvenet_extremamente_detalhado(
+#         dataframe_amostras_inicial, dataframe_amostras_filtrado,
+#         indices_excluidos, amostras_excluidas,
+#         media, desvio_padrao, menor_valor, maior_valor, mediana_valor
+#     )
+#     inserir_texto_saneamento_no_placeholder(documento, "[texto_relatorio_resumo_saneamento]", texto_saneamento_chauvenet)
+
+#     # Diagnóstico de mercado
+#     inserir_tabela_diagnostico_de_mercado(
+#         documento,
+#         "[DIAGNOSTICO]",
+#         fatores_do_usuario.get("estrutura_escolha", "BOA"),
+#         fatores_do_usuario.get("conduta_escolha", "ESTAGNADA"),
+#         fatores_do_usuario.get("desempenho_escolha", "ALTO")
+#     )
+
+#     # IC 80% e valores
+#     # Normaliza a entrada: aceita lista de floats ou lista de dicts com 'valor_unitario'/'valor_estimado'
+#     def _extrair_valores_float(seq):
+#         import math
+#         out = []
+#         for v in seq or []:
+#             if isinstance(v, dict):
+#                 val = v.get("valor_unitario", v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
+#             else:
+#                 val = v
+#             try:
+#                 val = float(val)
+#             except (TypeError, ValueError):
+#                 continue
+#             if math.isfinite(val) and val > 0:
+#                 out.append(val)
+#         return out
+
+#     valores_h_num = _extrair_valores_float(valores_homogeneizados_validos)
+#     array_validados = numpy.array(valores_h_num, dtype=float)
+
+#     if len(array_validados) > 0:
+#         limite_inferior_ic, limite_superior_ic = intervalo_confianca_bootstrap_mediana(array_validados, 1000, 0.80)
+#         valor_minimo = limite_inferior_ic
+#         valor_maximo = limite_superior_ic
+#         valor_mediano = numpy.median(array_validados)
+#     else:
+#         valor_minimo = 0.0
+#         valor_maximo = 0.0
+#         valor_mediano = 0.0
+
+#     # =========================================================================
+#     # DETERMINAÇÃO DA ÁREA DE CÁLCULO
+#     # =========================================================================
+#     # Para finalidades regulares: usa a área total da planilha
+#     # Para desapropriação/servidão: usa a área digitada pelo usuário no formulário
+#     # Esta área será utilizada para todos os cálculos de valor e restrições
+#     # =========================================================================
+#     # DEFINIÇÃO CRÍTICA: Qual área usar para cálculos
+#     # (desapropriação/servidão → área digitada // outros → área da planilha)
+#     if finalidade_do_laudo in ["desapropriacao", "servidao"]:
+#         area_utilizada = area_parcial_afetada
+#         logger.info(f"DEBUG: Usando área parcial afetada (usuário): {area_utilizada} m²")
+#     else:
+#         area_utilizada = area_total_lida
+#         logger.info(f"DEBUG: Usando área total da planilha: {area_utilizada} m²")
+
+  
+
+#     restricoes_usuario = fatores_do_usuario.get("restricoes", [])
+
+#     def calcular_valor_total_com_restricoes(valor_unit):
+#         soma_area_restricoes = 0.0
+#         valor_acumulado = 0.0
+#         lista_subtotais = []
+#         for r_ in restricoes_usuario:
+#             a_ = r_["area"]
+#             f_ = r_["fator"]
+#             if a_ > 0:
+#                 subtotal = valor_unit * a_ * f_
+#             else:
+#                 subtotal = 0.0
+#             lista_subtotais.append(subtotal)
+#             valor_acumulado += subtotal
+#             soma_area_restricoes += a_
+#         sobra = area_utilizada - soma_area_restricoes
+#         if sobra > 0:
+#             valor_acumulado += (valor_unit * sobra)
+#         return valor_acumulado, lista_subtotais, sobra
+
+#     valor_total_minimo, _, _ = calcular_valor_total_com_restricoes(valor_minimo)
+#     valor_total_mediano, subtotais_medianos, sobra_median = calcular_valor_total_com_restricoes(valor_mediano)
+#     valor_total_maximo, _, _ = calcular_valor_total_com_restricoes(valor_maximo)
+
+#     substituir_placeholder_por_texto_formatado(
+#         documento, "[avaliacaoValorTotalMinimo]",
+#         formatar_moeda_brasil(valor_total_minimo), Pt(18), False
+#     )
+#     substituir_placeholder_por_texto_formatado(
+#         documento, "[avaliacaoValorTotal]",
+#         formatar_moeda_brasil(valor_total_mediano), Pt(23), True
+#     )
+#     substituir_placeholder_por_texto_formatado(
+#         documento, "[avaliacaoValorTotalMaximo]",
+#         formatar_moeda_brasil(valor_total_maximo), Pt(18), False
+#     )
+
+#     substituir_placeholder_por_texto_formatado(
+#         documento, "[avaliacaoValorTotalMinimoUnitario]",
+#         f"{formatar_moeda_brasil(valor_minimo)}/m²", Pt(12), False
+#     )
+#     substituir_placeholder_por_texto_formatado(
+#         documento, "[avaliacaoValorTotalUnitario]",
+#         f"{formatar_moeda_brasil(valor_mediano)}/m²", Pt(12), True
+#     )
+#     substituir_placeholder_por_texto_formatado(
+#         documento, "[avaliacaoValorTotalMaximoUnitario]",
+#         f"{formatar_moeda_brasil(valor_maximo)}/m²", Pt(12), False
+#     )
+
+#     # Montar lista de restrições "oficiais" para exibir em [RESUMO VALORES]
+#     soma_atual = 0.0
+#     restricoes_detalhadas_final = []
+#     for i, r_ in enumerate(restricoes_usuario):
+#         a_ = r_["area"]
+#         f_ = r_["fator"]
+#         perc_dep = r_["percentualDepreciacao"]
+#         tipo_ = r_["tipo"]
+#         subt = valor_mediano * a_ * f_ if a_ > 0 else 0.0
+#         restricoes_detalhadas_final.append({
+#             "tipo": tipo_,
+#             "area": a_,
+#             "percentualDepreciacao": perc_dep,
+#             "fator": f_,
+#             "subtotal": formatar_moeda_brasil(subt)
+#         })
+#         soma_atual += a_
+#     sobra_of = area_utilizada - soma_atual
+#     if sobra_of > 0:
+#         valor_sobra = valor_mediano * sobra_of
+#         restricoes_detalhadas_final.append({
+#             "tipo": "Área Livre",
+#             "area": sobra_of,
+#             "percentualDepreciacao": 0.0,
+#             "fator": 1.0,
+#             "subtotal": formatar_moeda_brasil(valor_sobra)
+#         })
+
+#     if len(restricoes_usuario) == 0:
+#         texto_rest = "Não aplicada"
+#     elif len(restricoes_usuario) == 1:
+#         if abs(restricoes_usuario[0]["area"] - area_utilizada) < 1e-3:
+#             texto_rest = "Aplicada a toda a área"
+#         else:
+#             texto_rest = "Aplicada parcialmente"
+#     else:
+#         texto_rest = "Múltiplas restrições aplicadas"
+
+#     if finalidade_do_laudo in ["desapropriacao", "servidao"]:
+#         area_final = area_parcial_afetada
+#     else:
+#         area_final = float(dados_avaliando.get("AREA TOTAL", 0))
+
+#     info_resumo = {
+#         "valor_unitario": f"{formatar_moeda_brasil(valor_mediano)}/m²",
+#         "area_total_considerada": f"{formatar_numero_brasileiro(area_final)} m²",
+#         "texto_descritivo_restricoes": texto_rest,
+#         "restricoes": restricoes_detalhadas_final,
+#         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
+#         "valor_por_extenso": ""
+#     }
+
+#     inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo, area_utilizada)
+
+#     # Gráficos de aderência e dispersão
+#     substituir_placeholder_por_imagem(documento, "[graficoAderencia2]", caminho_imagem_aderencia, largura=Inches(5))
+#     substituir_placeholder_por_imagem(documento, "[graficoDispersao]", caminho_imagem_dispersao, largura=Inches(5))
+
+#     # Grau de precisão
+#     if len(valores_homogeneizados_validos) > 0:
+#         # Converte lista (floats ou dicts) → lista de floats
+#         def _extrair_valores_float(seq, chave_preferida="valor_unitario"):
+#             import math
+#             out = []
+#             for v in seq or []:
+#                 if isinstance(v, dict):
+#                     # <<< corrigido: sem aspas após a variável >>>
+#                     val = v.get(chave_preferida, v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
+#                 else:
+#                     val = v
+#                 try:
+#                     val = float(val)
+#                 except (TypeError, ValueError):
+#                     continue
+#                 if math.isfinite(val):
+#                     out.append(val)
+#             return out
+
+#         vals = _extrair_valores_float(valores_homogeneizados_validos, "valor_unitario")
+
+#         if vals:
+#             arr = numpy.array(vals, dtype=float)
+#             mediana_hom = float(numpy.median(arr))
+#             valor_minimo = float(numpy.min(arr))
+#             valor_maximo = float(numpy.max(arr))
+#             amplitude_ic80 = ((valor_maximo - valor_minimo) / mediana_hom) * 100 if mediana_hom > 0 else 0.0
+#         else:
+#             mediana_hom = 0.0
+#             amplitude_ic80 = 0.0
+#     else:
+#         mediana_hom = 0.0
+#         amplitude_ic80 = 0.0
+
+#     inserir_tabela_classificacao_de_precisao(documento, "[texto_grau_precisao]", amplitude_ic80)
+
+#     # Fundamentação e enquadramento
+#     quantidade_amostras_validadas = len(dataframe_amostras_filtrado)
+
+#     inserir_fundamentacao_e_enquadramento(
+#             documento,
+#             "[FUNDAMENTACAO]",
+#             "[enquadramento final]",
+#             fatores_do_usuario.get("tipoImovel", "Gleba Rural"),
+#             quantidade_amostras_validadas,
+#             lista_todos_os_fatores          # << novo argumento
+#     )  
+    
+#     # Fotos do avaliando (agora é uma lista de listas)
+#     for grupo in caminhos_fotos_avaliando:
+#         for caminho in grupo:
+#             if os.path.exists(caminho):
+#                 logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
+#             else:
+#                 logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
+
+#     # Documentos adicionais (matrícula)
+#     for grupo in caminhos_fotos_adicionais:
+#         for caminho in grupo:
+#             if os.path.exists(caminho):
+#                 logger.info(f"✅ Documento adicional (matrícula) encontrado: {caminho}")
+#             else:
+#                 logger.warning(f"❌ Documento adicional (matrícula) NÃO encontrado: {caminho}")
+
+#     # Documentos do proprietário
+#     for grupo in caminhos_fotos_proprietario:
+#         for caminho in grupo:
+#             if os.path.exists(caminho):
+#                 logger.info(f"✅ Documento do proprietário encontrado: {caminho}")
+#             else:
+#                 logger.warning(f"❌ Documento do proprietário NÃO encontrado: {caminho}")
+
+#     # Documentos da planta
+#     for grupo in caminhos_fotos_planta:
+#         for caminho in grupo:
+#             if os.path.exists(caminho):
+#                 logger.info(f"✅ Documento de planta encontrado: {caminho}")
+#             else:
+#                 logger.warning(f"❌ Documento de planta NÃO encontrado: {caminho}")
+
+
+#     # Verificar se o logo existe
+#     caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
+#     if caminho_logo:
+#         if os.path.exists(caminho_logo):
+#             logger.info(f"✅ Logo encontrado: {caminho_logo}")
+#         else:
+#             logger.warning(f"❌ Logo NÃO encontrado: {caminho_logo}")
+
+#     from itertools import chain
+
+#     # Inserir fotos do imóvel
+#     if caminhos_fotos_avaliando:
+#         todas_as_fotos = list(chain.from_iterable(caminhos_fotos_avaliando))
+#         inserir_fotos_no_placeholder(documento, "[FOTOS]", todas_as_fotos, largura_imagem=Inches(3.2), um_por_pagina=False)
+#     else:
+#         substituir_placeholder_por_texto_formatado(
+#             documento,
+#             "[FOTOS]",
+#             "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS",
+#             Pt(12),
+#             True
+#         )
+
+
+    
+#     # Inserir documentos adicionais (matrícula)
+#     if caminhos_fotos_adicionais:
+#         todas_matriculas = list(chain.from_iterable(caminhos_fotos_adicionais))
+#         inserir_fotos_no_placeholder(documento, "[MATRICULA]", todas_matriculas, largura_imagem=Inches(5), um_por_pagina=True)
+#     else:
+#         substituir_placeholder_por_texto_formatado(
+#             documento,
+#             "[MATRICULA]",
+#             "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA",
+#             Pt(12),
+#             True
+#         )
+
+
+    
+#     # Inserir documentação do proprietário
+#     if caminhos_fotos_proprietario:
+#         todos_proprietarios = list(chain.from_iterable(caminhos_fotos_proprietario))
+#         inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", todos_proprietarios, largura_imagem=Inches(5), um_por_pagina=True)
+#     else:
+#         substituir_placeholder_por_texto_formatado(
+#             documento,
+#             "[PROPRIETARIO]",
+#             "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA",
+#             Pt(12),
+#             True
+#         )
+
+#     # Inserir documentação da planta
+#     if caminhos_fotos_planta:
+#         todas_plantas = list(chain.from_iterable(caminhos_fotos_planta))
+#         inserir_fotos_no_placeholder(documento, "[PLANTA]", todas_plantas, largura_imagem=Inches(5), um_por_pagina=True)
+#     else:
+#         substituir_placeholder_por_texto_formatado(
+#             documento,
+#             "[PLANTA]",
+#             "PLANTA DO IMÓVEL NÃO FORNECIDA",
+#             Pt(12),
+#             True
+#         )
+  
+#     # Logo
+#     caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
+#     if caminho_logo and os.path.exists(caminho_logo):
+#         inserir_logo_no_placeholder(documento, "[logo]", caminho_logo)
+
+    
+
+
+#     # Fotos do imóvel: você provavelmente quer todas (inclusive adicionais) em [FOTOS]
+#     fotos_fotos = _flatten_grupos_imagens(caminhos_fotos_avaliando) + _flatten_grupos_imagens(caminhos_fotos_adicionais)
+
+#     # Matrícula/proprietário/planta: separe por seção
+#     fotos_matricula = _flatten_grupos_imagens(caminhos_fotos_adicionais)      # ajuste se tiver lista específica
+#     fotos_proprietario = _flatten_grupos_imagens(caminhos_fotos_proprietario)
+#     fotos_planta = _flatten_grupos_imagens(caminhos_fotos_planta)
+
+#     # Substituições — com quebra de página entre cada imagem
+#     substituir_placeholder_por_varias_imagens(documento, "[FOTOS]", fotos_fotos, largura=Inches(6), quebra_pagina_entre=True)
+#     substituir_placeholder_por_varias_imagens(documento, "[MATRICULA]", fotos_matricula, largura=Inches(6), quebra_pagina_entre=True)
+#     substituir_placeholder_por_varias_imagens(documento, "[PROPRIETARIO]", fotos_proprietario, largura=Inches(6), quebra_pagina_entre=True)
+#     substituir_placeholder_por_varias_imagens(documento, "[PLANTA]", fotos_planta, largura=Inches(6), quebra_pagina_entre=True)
+
+
+#     # Salvar
+#     documento.save(nome_arquivo_word)
+#     # Limpar arquivos PNG temporários gerados a partir de PDFs
+#     def limpar_arquivos_temp_png(lista_de_caminhos):
+#         for caminho in lista_de_caminhos:
+#             if isinstance(caminho, str) and caminho.endswith(".png") and os.path.exists(caminho):
+#                 try:
+#                     os.remove(caminho)
+#                     logger.info(f"🗑️ PNG temporário removido: {caminho}")
+#                 except Exception as e:
+#                     logger.warning(f"⚠️ Falha ao remover {caminho}: {e}")
+
+#     # Apagar apenas os arquivos gerados a partir de PDFs
+#     # Flatten antes de filtrar PNGs
+#     limpar_arquivos_temp_png([c for grupo in caminhos_fotos_adicionais for c in grupo if c.endswith(".png")])
+#     limpar_arquivos_temp_png([c for grupo in caminhos_fotos_proprietario for c in grupo if c.endswith(".png")])
+#     limpar_arquivos_temp_png([c for grupo in caminhos_fotos_planta for c in grupo if c.endswith(".png")])
+
+
+#     try:
+#         os.startfile(nome_arquivo_word)
+#     except:
+#         pass
+
 ###############################################################################
 # >>>>>> RELATÓRIO PRINCIPAL - GERAÇÃO DO WORD <<<<<<
 ###############################################################################
@@ -6164,9 +6948,9 @@ def gerar_relatorio_avaliacao_com_template(
     valores_homogeneizados_validos,
     caminho_imagem_aderencia,
     caminho_imagem_dispersao,
-    uuid_atual,                          # obrigatório, sem valor padrão
-    finalidade_do_laudo,                # agora obrigatório também
-    area_parcial_afetada,              # idem — valor digitado deve ser usado sempre
+    uuid_atual,                       # obrigatório
+    finalidade_do_laudo,              # obrigatório
+    area_parcial_afetada,             # obrigatório
     fatores_do_usuario=None,
     caminhos_fotos_avaliando=None,
     caminhos_fotos_adicionais=None,
@@ -6175,303 +6959,243 @@ def gerar_relatorio_avaliacao_com_template(
     caminho_template="template.docx",
     nome_arquivo_word="relatorio.docx"
 ):
-    # DEFINIÇÃO DEFINITIVA DA ÁREA UTILIZADA (corrigido!)
-    area_utilizada = area_parcial_afetada if finalidade_do_laudo in ["desapropriacao", "servidao"] else float(dados_avaliando.get("AREA TOTAL", 0))
-    logger.info(f"✅ Área utilizada definitiva definida imediatamente após parâmetros: {area_utilizada}")
-    # Insira logs aqui para depuração detalhada:
-    logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
-    logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
-    logger.info(f"Área Parcial Afetada recebida: {area_parcial_afetada}")
-
-    # ──────────────────────────────────────────────────────
-    # Alias para compatibilizar o novo nome:
-    # logger.info(f"🔴 Área Parcial Afetada recebida no main.py: {area_parcial_afetada}")
-    # area_utilizada = area_parcial_afetada
-    # logger.info(f"🟢 Área utilizada atribuída no main.py: {area_utilizada}")
-
-    # ──────────────────────────────────────────────────────
     """
-    Gera o relatório Word completo, exibindo todos os itens e incluindo
-    o tratamento de múltiplas restrições.
+    Gera o relatório Word completo usando placeholders do template.
+    Pressupõe que helpers como:
+      - substituir_placeholder_por_texto_formatado
+      - substituir_placeholder_por_imagem
+      - substituir_placeholder_por_varias_imagens
+      - inserir_tabela_amostras_originais
+      - calcular_detalhes_amostras
+      - inserir_tabela_amostras_calculadas
+      - gerar_lista_memoria_calculo
+      - inserir_texto_memoria_calculo_no_placeholder
+      - gerar_texto_saneamento_chauvenet_extremamente_detalhado
+      - inserir_texto_saneamento_no_placeholder
+      - inserir_tabela_diagnostico_de_mercado
+      - intervalo_confianca_bootstrap_mediana
+      - inserir_tabela_resumo_de_valores
+      - gerar_grafico_densidade_kernel
+      - inserir_tabela_classificacao_de_precisao
+      - inserir_fundamentacao_e_enquadramento
+      - inserir_logo_no_placeholder
+    estejam definidos no módulo.
     """
+    # [FIX-INIT] ──────────────────────────────────────────────────────────────
+    import math
     from docx import Document
     from datetime import datetime
 
+    # Normalizações defensivas para None
+    fatores_do_usuario = fatores_do_usuario or {}
+    caminhos_fotos_avaliando    = caminhos_fotos_avaliando    or []
+    caminhos_fotos_adicionais   = caminhos_fotos_adicionais   or []
+    caminhos_fotos_proprietario = caminhos_fotos_proprietario or []
+    caminhos_fotos_planta       = caminhos_fotos_planta       or []
+
+    def _flatten_grupos_imagens(grupos):
+        out = []
+        for g in grupos or []:
+            if isinstance(g, (list, tuple)):
+                out.extend([x for x in g if isinstance(x, str)])
+            elif isinstance(g, str):
+                out.append(g)
+        return out
+
+    def _to_float_safe(x, default=0.0):
+        try:
+            if x is None or (isinstance(x, float) and math.isnan(x)):
+                return default
+            return float(str(x).replace(",", "."))
+        except Exception:
+            return default
+
     data_atual = datetime.now().strftime("%d/%m/%Y")
+
+    # [FIX-PATHS] pasta de saída consolidada
+    pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid_atual}")
+    os.makedirs(pasta_saida, exist_ok=True)
 
     # Carregar template
     documento = Document(caminho_template)
 
-    cidade_nome = fatores_do_usuario.get("cidade", "CIDADE NÃO INFORMADA").strip().upper()
-    data_formatada = datetime.now().strftime("%d-%m-%Y")
+    # Logs úteis
+    logger.info(f"✅ Iniciando geração do relatório (UUID={uuid_atual})")
+    logger.info(f"Valores originais recebidos: {valores_originais_iniciais}")
+    logger.info(f"Valores homogeneizados válidos recebidos: {valores_homogeneizados_validos}")
+    logger.info(f"Área Parcial Afetada recebida: {area_parcial_afetada} (finalidade={finalidade_do_laudo})")
 
+    # [FIX-AREA] área utilizada — definição única e antecipada
+    finalidade_norm = (finalidade_do_laudo or "").strip().lower()
+    area_total_lida = _to_float_safe(dados_avaliando.get("AREA TOTAL", 0.0), 0.0)
+    area_parcial = _to_float_safe(area_parcial_afetada, 0.0)
+
+    if finalidade_norm in {"desapropriacao", "servidao"}:
+        area_utilizada = area_parcial
+        logger.info(f"Área utilizada = área parcial afetada: {area_utilizada} m²")
+    else:
+        area_utilizada = area_total_lida
+        logger.info(f"Área utilizada = área total da planilha: {area_utilizada} m²")
+
+    # Cidade + data
+    cidade_nome = (fatores_do_usuario.get("cidade", "CIDADE NÃO INFORMADA") or "").strip().upper()
+    data_formatada_cabec = datetime.now().strftime("%d-%m-%Y")
     substituir_placeholder_por_texto_formatado(
-        documento,
-        "[cidade]",
-        f"{cidade_nome}, {data_formatada}",
-        Pt(12),
-        False
+        documento, "[cidade]", f"{cidade_nome}, {data_formatada_cabec}", Pt(12), False
     )
 
-
-    
-    # ------------------------------------------------------------------
-    # MAPA DE AMOSTRAS - LOCALIZAÇÃO DOS DADOS DE MERCADO E AVALIANDO
-    # ------------------------------------------------------------------
-    pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid_atual}")
-    os.makedirs(pasta_saida, exist_ok=True)
-
-
-    caminho_mapa = os.path.join(pasta_saida, "mapa_amostras.png")
-
-    gerar_mapa_amostras(dataframe_amostras_filtrado, dados_avaliando, nome_png=caminho_mapa)
-    # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
-    if os.path.exists(caminho_mapa):
-        logger.info(f"✅ MAPA AMOSTRAS encontrado: {caminho_mapa}")
-    else:
-        logger.warning(f"❌ MAPA AMOSTRAS NÃO encontrado: {caminho_mapa}")
-    
-    if caminho_mapa and os.path.exists(caminho_mapa):  # <- ESSA É A LINHA CORRIGIDA
-        substituir_placeholder_por_imagem(
-            documento, "[MAPAAMOSTRAS]", caminho_mapa, largura=Inches(6)
-        )
-    else:
-        substituir_placeholder_por_texto_formatado(
-            documento, "[MAPAAMOSTRAS]",
-            "Mapa de localização não disponível — coordenadas incompletas",
-            Pt(12), False
-        )
-    
-    # Inserir a tabela de amostras originais
-    logger.info("🔎 DataFrame que será enviado para inserir_tabela_amostras_originais:")
-    logger.info(dataframe_amostras_inicial.head())
-    logger.info(f"🔎 Colunas disponíveis: {list(dataframe_amostras_inicial.columns)}")
-    inserir_tabela_amostras_originais(documento, dataframe_amostras_inicial)
-
-    # Preencher alguns placeholders básicos
-    def substituir_placeholder_por_titulo_e_valor(documento, marcador, titulo, valor, tamanho_fonte):
-        for paragrafo in documento.paragraphs:
-            if marcador in paragrafo.text:
-                paragrafo.text = paragrafo.text.replace(marcador, "")
-                run_titulo = paragrafo.add_run(titulo)
-                run_titulo.font.name = "Arial"
-                run_titulo.font.size = tamanho_fonte
-                run_titulo.bold = True
-                run_valor = paragrafo.add_run(valor)
-                run_valor.font.name = "Arial"
-                run_valor.font.size = tamanho_fonte
-                run_valor.bold = False
-        for tabela in documento.tables:
-            for linha in tabela.rows:
-                for celula in linha.cells:
-                    for parag in celula.paragraphs:
-                        if marcador in parag.text:
-                            parag.text = parag.text.replace(marcador, "")
-                            run_titulo = parag.add_run(titulo)
-                            run_titulo.font.name = "Arial"
-                            run_titulo.font.size = tamanho_fonte
-                            run_titulo.bold = True
-                            run_valor = parag.add_run(valor)
-                            run_valor.font.name = "Arial"
-                            run_valor.font.size = tamanho_fonte
-                            run_valor.bold = False
-
+    # [FIX-PLACEHOLDERS] Campos de topo
     substituir_placeholder_por_texto_formatado(documento, "[created]", data_atual, Pt(13), False)
-    substituir_placeholder_por_texto_formatado(documento, "[avaliadorNome]", fatores_do_usuario.get("avaliadorNome", ""), Pt(13), False)
+    substituir_placeholder_por_texto_formatado(documento, "[avaliadorNome]",     fatores_do_usuario.get("avaliadorNome", ""),     Pt(13), False)
     substituir_placeholder_por_texto_formatado(documento, "[avaliadorRegistro]", fatores_do_usuario.get("avaliadorRegistro", ""), Pt(13), False)
 
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[nomeSolicitante]",
-        "• Solicitante: ",
-        fatores_do_usuario.get("nomeSolicitante", ""),
-        Pt(11)
-    )
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[nome proprietário]",
-        "• Nome do Proprietário: ",
-        fatores_do_usuario.get("nomeProprietario", ""),
-        Pt(11)
-    )
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[telefone proprietario]",
-        "• Contato do Proprietário: ",
-        fatores_do_usuario.get("telefoneProprietario", ""),
-        Pt(11)
-    )
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[email]",
-        "• E-mail do Proprietário: ",
-        fatores_do_usuario.get("emailProprietario", ""),
-        Pt(11)
-    )
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[tipoImovel]",
-        "• Tipo do Imóvel: ",
-        fatores_do_usuario.get("tipoImovel", ""),
-        Pt(11)
-    )
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[enderecoCompleto]",
-        "• Endereço do Imóvel: ",
-        fatores_do_usuario.get("enderecoCompleto", ""),
-        Pt(11)
-    )
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[finalidade]",
-        "",  # título vazio
-        "",  # valor vazio
-        Pt(11)
-    )
+    def _ins_titulo_valor(marcador, titulo, valor, tam=Pt(11)):
+        for par in documento.paragraphs:
+            if marcador in par.text:
+                par.text = par.text.replace(marcador, "")
+                r1 = par.add_run(titulo); r1.font.name = "Arial"; r1.font.size = tam; r1.bold = True
+                r2 = par.add_run(valor);  r2.font.name = "Arial"; r2.font.size = tam; r2.bold = False
+        for tab in documento.tables:
+            for linha in tab.rows:
+                for cel in linha.cells:
+                    for pg in cel.paragraphs:
+                        if marcador in pg.text:
+                            pg.text = pg.text.replace(marcador, "")
+                            r1 = pg.add_run(titulo); r1.font.name = "Arial"; r1.font.size = tam; r1.bold = True
+                            r2 = pg.add_run(valor);  r2.font.name = "Arial"; r2.font.size = tam; r2.bold = False
 
+    _ins_titulo_valor("[nomeSolicitante]",         "• Solicitante: ",              fatores_do_usuario.get("nomeSolicitante", ""))
+    _ins_titulo_valor("[nome proprietário]",       "• Nome do Proprietário: ",     fatores_do_usuario.get("nomeProprietario", ""))
+    _ins_titulo_valor("[telefone proprietario]",   "• Contato do Proprietário: ",  fatores_do_usuario.get("telefoneProprietario", ""))
+    _ins_titulo_valor("[email]",                   "• E-mail do Proprietário: ",   fatores_do_usuario.get("emailProprietario", ""))
+    _ins_titulo_valor("[tipoImovel]",              "• Tipo do Imóvel: ",           fatores_do_usuario.get("tipoImovel", ""))
+    _ins_titulo_valor("[enderecoCompleto]",        "• Endereço do Imóvel: ",       fatores_do_usuario.get("enderecoCompleto", ""))
 
-    area_total_lida = float(dados_avaliando.get("AREA TOTAL", 0))
-    area_total_str = f"{formatar_numero_brasileiro(area_total_lida)} m²"
+    # Finalidade textual
+    _map_finalidade = {
+        "desapropriacao": "DESAPROPRIAÇÃO",
+        "servidao": "SERVIDÃO",
+        "avaliacao": "VALORAÇÃO DE MERCADO",
+    }
+    finalidade_txt = _map_finalidade.get(finalidade_norm, finalidade_do_laudo.upper())
+    _ins_titulo_valor("[finalidade]", "", f"{finalidade_txt}")
 
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[areaTotal]",
-        "• Área Total: ",
-        area_total_str,
-        Pt(11)
-    )
+    _ins_titulo_valor("[areaTotal]", "• Área Total: ", f"{formatar_numero_brasileiro(area_total_lida)} m²")
+    _ins_titulo_valor("[documentacaoImovel]", "• Documentação do Imóvel: ", fatores_do_usuario.get("documentacaoImovel", ""))
+    _ins_titulo_valor("[cartorio]",           "• Cartório: ",                fatores_do_usuario.get("nomeCartorio", ""))
+    _ins_titulo_valor("[comarca]",            "• Comarca: ",                 fatores_do_usuario.get("nomeComarca", ""))
 
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[documentacaoImovel]",
-        "• Documentação do Imóvel: ",
-        fatores_do_usuario.get("documentacaoImovel", ""),
-        Pt(11)
-    )
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[cartorio]",
-        "• Cartório: ",
-        fatores_do_usuario.get("nomeCartorio", ""),
-        Pt(11)
-    )
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[comarca]",
-        "• Comarca: ",
-        fatores_do_usuario.get("nomeComarca", ""),
-        Pt(11)
-    )
-
+    # Booleanos (topografia/pavimentação/esquina)
     texto_topo = str(dados_avaliando.get("BOA TOPOGRAFIA?", "")).strip().lower()
     topo_formatado = "Sim" if "sim" in remover_acentos(texto_topo) else "Não"
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[topografia]",
-        "• Possui Boa Topografia? ",
-        topo_formatado,
-        Pt(11)
-    )
+    _ins_titulo_valor("[topografia]", "• Possui Boa Topografia? ", topo_formatado)
 
     texto_pav = str(dados_avaliando.get("PAVIMENTACAO?", "")).strip().lower()
     pav_formatado = "Sim" if "sim" in remover_acentos(texto_pav) else "Não"
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[pavimentacao]",
-        "• Imóvel Pavimentado? ",
-        pav_formatado,
-        Pt(11)
-    )
+    _ins_titulo_valor("[pavimentacao]", "• Imóvel Pavimentado? ", pav_formatado)
 
-    texto_esq = str(dados_avaliando.get(" ESQUINA?", "")).strip().lower()
+    # Chave “ESQUINA?” com fallback para nome com espaço inicial
+    chave_esquina = "ESQUINA?" if "ESQUINA?" in dados_avaliando else " ESQUINA?"
+    texto_esq = str(dados_avaliando.get(chave_esquina, "")).strip().lower()
     esq_formatado = "Sim" if "sim" in remover_acentos(texto_esq) else "Não"
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[terreno_de_esquina]",
-        "• Imóvel de Esquina? ",
-        esq_formatado,
-        Pt(11)
-    )
+    _ins_titulo_valor("[terreno_de_esquina]", "• Imóvel de Esquina? ", esq_formatado)
 
-    valor_distancia = dados_avaliando.get("DISTANCIA CENTRO", 0)
-    distancia_km = float(valor_distancia) if pd.notna(valor_distancia) else 0.0
-    distancia_str = f"{distancia_km:.2f} km"
-    substituir_placeholder_por_titulo_e_valor(
-        documento,
-        "[distanciaAvaliando]",
-        "• Distância Avaliando ao Centro (Km): ",
-        distancia_str,
-        Pt(11)
-    )
+    # Distância ao centro
+    distancia_km = _to_float_safe(dados_avaliando.get("DISTANCIA CENTRO", 0.0), 0.0)
+    _ins_titulo_valor("[distanciaAvaliando]", "• Distância Avaliando ao Centro (Km): ", f"{distancia_km:.2f} km")
 
-    # Gráfico KDE
-    nome_arquivo_grafico_kernel = "grafico_kernel.png"
-    gerar_grafico_densidade_kernel(valores_homogeneizados_validos, nome_arquivo_grafico_kernel)
-    # INSIRA ESSA VERIFICAÇÃO LOG AQUI:
-    if os.path.exists(nome_arquivo_grafico_kernel):
-        logger.info(f"✅ Gráfico Kernel encontrado: {nome_arquivo_grafico_kernel}")
-    else:
-        logger.warning(f"❌ Gráfico Kernel NÃO encontrado: {nome_arquivo_grafico_kernel}")
-    substituir_placeholder_por_imagem(documento, "[graficoKernel]", nome_arquivo_grafico_kernel, largura=Inches(5))
-
-    # Tabela de amostras homogeneizadas
-    lista_detalhes_calc = calcular_detalhes_amostras(
-        dataframe_amostras_filtrado,
-        dados_avaliando,
-        fatores_do_usuario,
-        finalidade_do_laudo
-    )
-    inserir_tabela_amostras_calculadas(documento, lista_detalhes_calc)
-  
-    
     # ------------------------------------------------------------------
-    # COLESTE TODOS OS FATORES DAS AMOSTRAS PARA O ENQUADRAMENTO
+    # MAPA DE AMOSTRAS
     # ------------------------------------------------------------------
+    caminho_mapa = os.path.join(pasta_saida, "mapa_amostras.png")
+    try:
+        gerar_mapa_amostras(dataframe_amostras_filtrado, dados_avaliando, nome_png=caminho_mapa)
+        if os.path.exists(caminho_mapa):
+            logger.info(f"✅ MAPA AMOSTRAS: {caminho_mapa}")
+            substituir_placeholder_por_imagem(documento, "[MAPAAMOSTRAS]", caminho_mapa, largura=Inches(6))
+        else:
+            substituir_placeholder_por_texto_formatado(documento, "[MAPAAMOSTRAS]",
+                "Mapa de localização não disponível — coordenadas incompletas", Pt(12), False)
+    except Exception as e:
+        logger.warning(f"⚠️ Falha ao gerar mapa de amostras: {e}")
+        substituir_placeholder_por_texto_formatado(documento, "[MAPAAMOSTRAS]",
+            "Mapa de localização não disponível — erro de processamento", Pt(12), False)
+
+    # Tabela de amostras originais
+    try:
+        logger.info("🔎 Enviando DataFrame para inserir_tabela_amostras_originais")
+        logger.info(dataframe_amostras_inicial.head())
+        inserir_tabela_amostras_originais(documento, dataframe_amostras_inicial)
+    except Exception as e:
+        logger.warning(f"⚠️ Falha ao inserir tabela de amostras originais: {e}")
+
+    # Gráfico KDE (em pasta de saída)  [FIX-PATHS]
+    caminho_kernel = os.path.join(pasta_saida, "grafico_kernel.png")
+    try:
+        gerar_grafico_densidade_kernel(valores_homogeneizados_validos, caminho_kernel)
+        if os.path.exists(caminho_kernel):
+            substituir_placeholder_por_imagem(documento, "[graficoKernel]", caminho_kernel, largura=Inches(5))
+        else:
+            logger.warning("❌ Gráfico Kernel não encontrado após geração")
+    except Exception as e:
+        logger.warning(f"⚠️ Falha ao gerar/inserir gráfico kernel: {e}")
+
+    # Tabela de amostras homogeneizadas calculadas
+    try:
+        lista_detalhes_calc = calcular_detalhes_amostras(
+            dataframe_amostras_filtrado, dados_avaliando, fatores_do_usuario, finalidade_do_laudo
+        )
+        inserir_tabela_amostras_calculadas(documento, lista_detalhes_calc)
+    except Exception as e:
+        logger.warning(f"⚠️ Falha ao calcular/inserir amostras homogeneizadas: {e}")
+        lista_detalhes_calc = []
+
+    # Coletar fatores para enquadramento
     lista_todos_os_fatores = []
-    for det in lista_detalhes_calc:
+    for det in lista_detalhes_calc or []:
         for chave in ("FA", "FO", "FAP", "FT", "FP", "FPA", "FE", "FAC", "FL"):
             try:
                 lista_todos_os_fatores.append(float(det[chave]))
             except Exception:
-                pass  # ignora caso não converta
-
-    
+                pass
 
     # Memória de cálculo
-    lista_memoria_calculo = gerar_lista_memoria_calculo(
-        dataframe_amostras_filtrado,
-        dados_avaliando,
-        fatores_do_usuario,
-        finalidade_do_laudo
-    )
-    inserir_texto_memoria_calculo_no_placeholder(documento, "[texto_tabela_fatores]", lista_memoria_calculo)
+    try:
+        lista_memoria_calculo = gerar_lista_memoria_calculo(
+            dataframe_amostras_filtrado, dados_avaliando, fatores_do_usuario, finalidade_do_laudo
+        )
+        inserir_texto_memoria_calculo_no_placeholder(documento, "[texto_tabela_fatores]", lista_memoria_calculo)
+    except Exception as e:
+        logger.warning(f"⚠️ Falha na memória de cálculo: {e}")
 
     # Texto de saneamento (Chauvenet)
-    texto_saneamento_chauvenet = gerar_texto_saneamento_chauvenet_extremamente_detalhado(
-        dataframe_amostras_inicial, dataframe_amostras_filtrado,
-        indices_excluidos, amostras_excluidas,
-        media, desvio_padrao, menor_valor, maior_valor, mediana_valor
-    )
-    inserir_texto_saneamento_no_placeholder(documento, "[texto_relatorio_resumo_saneamento]", texto_saneamento_chauvenet)
+    try:
+        texto_saneamento_chauvenet = gerar_texto_saneamento_chauvenet_extremamente_detalhado(
+            dataframe_amostras_inicial, dataframe_amostras_filtrado,
+            indices_excluidos, amostras_excluidas,
+            media, desvio_padrao, menor_valor, maior_valor, mediana_valor
+        )
+        inserir_texto_saneamento_no_placeholder(documento, "[texto_relatorio_resumo_saneamento]", texto_saneamento_chauvenet)
+    except Exception as e:
+        logger.warning(f"⚠️ Falha no texto de saneamento: {e}")
 
     # Diagnóstico de mercado
-    inserir_tabela_diagnostico_de_mercado(
-        documento,
-        "[DIAGNOSTICO]",
-        fatores_do_usuario.get("estrutura_escolha", "BOA"),
-        fatores_do_usuario.get("conduta_escolha", "ESTAGNADA"),
-        fatores_do_usuario.get("desempenho_escolha", "ALTO")
-    )
+    try:
+        inserir_tabela_diagnostico_de_mercado(
+            documento, "[DIAGNOSTICO]",
+            fatores_do_usuario.get("estrutura_escolha", "BOA"),
+            fatores_do_usuario.get("conduta_escolha", "ESTAGNADA"),
+            fatores_do_usuario.get("desempenho_escolha", "ALTO")
+        )
+    except Exception as e:
+        logger.warning(f"⚠️ Falha no diagnóstico de mercado: {e}")
 
-    # IC 80% e valores
-    # Normaliza a entrada: aceita lista de floats ou lista de dicts com 'valor_unitario'/'valor_estimado'
-    def _extrair_valores_float(seq):
-        import math
+    # [FIX-IC80] IC 80% e valores (aceita lista de floats ou dicts)
+    def _extrair_valores_float(seq, chave_preferida="valor_unitario"):
         out = []
         for v in seq or []:
             if isinstance(v, dict):
-                val = v.get("valor_unitario", v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
+                val = v.get(chave_preferida, v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
             else:
                 val = v
             try:
@@ -6482,96 +7206,59 @@ def gerar_relatorio_avaliacao_com_template(
                 out.append(val)
         return out
 
-    valores_h_num = _extrair_valores_float(valores_homogeneizados_validos)
-    array_validados = numpy.array(valores_h_num, dtype=float)
+    valores_h_num = _extrair_valores_float(valores_homogeneizados_validos, "valor_unitario")
+    arr_vals = np.array(valores_h_num, dtype=float) if len(valores_h_num) else np.array([], dtype=float)
 
-    if len(array_validados) > 0:
-        limite_inferior_ic, limite_superior_ic = intervalo_confianca_bootstrap_mediana(array_validados, 1000, 0.80)
-        valor_minimo = limite_inferior_ic
-        valor_maximo = limite_superior_ic
-        valor_mediano = numpy.median(array_validados)
+    if arr_vals.size > 0:
+        valor_minimo, valor_maximo = intervalo_confianca_bootstrap_mediana(arr_vals, 1000, 0.80)
+        valor_mediano = float(np.median(arr_vals))
     else:
-        valor_minimo = 0.0
-        valor_maximo = 0.0
-        valor_mediano = 0.0
+        valor_minimo = valor_maximo = valor_mediano = 0.0
 
-    # =========================================================================
-    # DETERMINAÇÃO DA ÁREA DE CÁLCULO
-    # =========================================================================
-    # Para finalidades regulares: usa a área total da planilha
-    # Para desapropriação/servidão: usa a área digitada pelo usuário no formulário
-    # Esta área será utilizada para todos os cálculos de valor e restrições
-    # =========================================================================
-    # DEFINIÇÃO CRÍTICA: Qual área usar para cálculos
-    # (desapropriação/servidão → área digitada // outros → área da planilha)
-    if finalidade_do_laudo in ["desapropriacao", "servidao"]:
-        area_utilizada = area_parcial_afetada
-        logger.info(f"DEBUG: Usando área parcial afetada (usuário): {area_utilizada} m²")
-    else:
-        area_utilizada = area_total_lida
-        logger.info(f"DEBUG: Usando área total da planilha: {area_utilizada} m²")
+    # [FIX-RESTRICOES] cálculo com restrições
+    restricoes_usuario = fatores_do_usuario.get("restricoes", []) or []
 
-  
+    def _coerce_restricao(r):
+        return {
+            "area": _to_float_safe(r.get("area", 0.0), 0.0),
+            "fator": _to_float_safe(r.get("fator", 1.0), 1.0),
+            "percentualDepreciacao": _to_float_safe(r.get("percentualDepreciacao", 0.0), 0.0),
+            "tipo": str(r.get("tipo", "Restrição")).strip() or "Restrição",
+        }
 
-    restricoes_usuario = fatores_do_usuario.get("restricoes", [])
+    restricoes_usuario = [_coerce_restricao(r) for r in (restricoes_usuario or [])]
 
     def calcular_valor_total_com_restricoes(valor_unit):
-        soma_area_restricoes = 0.0
+        soma_area_restr = 0.0
         valor_acumulado = 0.0
-        lista_subtotais = []
+        subtotais = []
         for r_ in restricoes_usuario:
-            a_ = r_["area"]
-            f_ = r_["fator"]
-            if a_ > 0:
-                subtotal = valor_unit * a_ * f_
-            else:
-                subtotal = 0.0
-            lista_subtotais.append(subtotal)
-            valor_acumulado += subtotal
-            soma_area_restricoes += a_
-        sobra = area_utilizada - soma_area_restricoes
+            a_ = r_["area"]; f_ = r_["fator"]
+            subt = (valor_unit * a_ * f_) if a_ > 0 else 0.0
+            subtotais.append(subt)
+            valor_acumulado += subt
+            soma_area_restr += a_
+        sobra = area_utilizada - soma_area_restr
         if sobra > 0:
             valor_acumulado += (valor_unit * sobra)
-        return valor_acumulado, lista_subtotais, sobra
+        return valor_acumulado, subtotais, sobra
 
-    valor_total_minimo, _, _ = calcular_valor_total_com_restricoes(valor_minimo)
+    valor_total_minimo,  _, _ = calcular_valor_total_com_restricoes(valor_minimo)
     valor_total_mediano, subtotais_medianos, sobra_median = calcular_valor_total_com_restricoes(valor_mediano)
-    valor_total_maximo, _, _ = calcular_valor_total_com_restricoes(valor_maximo)
+    valor_total_maximo,  _, _ = calcular_valor_total_com_restricoes(valor_maximo)
 
-    substituir_placeholder_por_texto_formatado(
-        documento, "[avaliacaoValorTotalMinimo]",
-        formatar_moeda_brasil(valor_total_minimo), Pt(18), False
-    )
-    substituir_placeholder_por_texto_formatado(
-        documento, "[avaliacaoValorTotal]",
-        formatar_moeda_brasil(valor_total_mediano), Pt(23), True
-    )
-    substituir_placeholder_por_texto_formatado(
-        documento, "[avaliacaoValorTotalMaximo]",
-        formatar_moeda_brasil(valor_total_maximo), Pt(18), False
-    )
+    substituir_placeholder_por_texto_formatado(documento, "[avaliacaoValorTotalMinimo]",       formatar_moeda_brasil(valor_total_minimo),  Pt(18), False)
+    substituir_placeholder_por_texto_formatado(documento, "[avaliacaoValorTotal]",             formatar_moeda_brasil(valor_total_mediano), Pt(23), True)
+    substituir_placeholder_por_texto_formatado(documento, "[avaliacaoValorTotalMaximo]",       formatar_moeda_brasil(valor_total_maximo),  Pt(18), False)
+    substituir_placeholder_por_texto_formatado(documento, "[avaliacaoValorTotalMinimoUnitario]", f"{formatar_moeda_brasil(valor_minimo)}/m²",  Pt(12), False)
+    substituir_placeholder_por_texto_formatado(documento, "[avaliacaoValorTotalUnitario]",       f"{formatar_moeda_brasil(valor_mediano)}/m²", Pt(12), True)
+    substituir_placeholder_por_texto_formatado(documento, "[avaliacaoValorTotalMaximoUnitario]", f"{formatar_moeda_brasil(valor_maximo)}/m²",  Pt(12), False)
 
-    substituir_placeholder_por_texto_formatado(
-        documento, "[avaliacaoValorTotalMinimoUnitario]",
-        f"{formatar_moeda_brasil(valor_minimo)}/m²", Pt(12), False
-    )
-    substituir_placeholder_por_texto_formatado(
-        documento, "[avaliacaoValorTotalUnitario]",
-        f"{formatar_moeda_brasil(valor_mediano)}/m²", Pt(12), True
-    )
-    substituir_placeholder_por_texto_formatado(
-        documento, "[avaliacaoValorTotalMaximoUnitario]",
-        f"{formatar_moeda_brasil(valor_maximo)}/m²", Pt(12), False
-    )
-
-    # Montar lista de restrições "oficiais" para exibir em [RESUMO VALORES]
+    # Resumo de valores
     soma_atual = 0.0
     restricoes_detalhadas_final = []
-    for i, r_ in enumerate(restricoes_usuario):
-        a_ = r_["area"]
-        f_ = r_["fator"]
-        perc_dep = r_["percentualDepreciacao"]
-        tipo_ = r_["tipo"]
+    for r_ in restricoes_usuario:
+        a_ = r_["area"]; f_ = r_["fator"]; perc_dep = r_["percentualDepreciacao"]; tipo_ = r_["tipo"]
         subt = valor_mediano * a_ * f_ if a_ > 0 else 0.0
         restricoes_detalhadas_final.append({
             "tipo": tipo_,
@@ -6583,227 +7270,136 @@ def gerar_relatorio_avaliacao_com_template(
         soma_atual += a_
     sobra_of = area_utilizada - soma_atual
     if sobra_of > 0:
-        valor_sobra = valor_mediano * sobra_of
         restricoes_detalhadas_final.append({
             "tipo": "Área Livre",
             "area": sobra_of,
             "percentualDepreciacao": 0.0,
             "fator": 1.0,
-            "subtotal": formatar_moeda_brasil(valor_sobra)
+            "subtotal": formatar_moeda_brasil(valor_mediano * sobra_of)
         })
 
-    if len(restricoes_usuario) == 0:
+    if not restricoes_usuario:
         texto_rest = "Não aplicada"
-    elif len(restricoes_usuario) == 1:
-        if abs(restricoes_usuario[0]["area"] - area_utilizada) < 1e-3:
-            texto_rest = "Aplicada a toda a área"
-        else:
-            texto_rest = "Aplicada parcialmente"
+    elif len(restricoes_usuario) == 1 and abs(restricoes_usuario[0]["area"] - area_utilizada) < 1e-3:
+        texto_rest = "Aplicada a toda a área"
     else:
         texto_rest = "Múltiplas restrições aplicadas"
 
-    if finalidade_do_laudo in ["desapropriacao", "servidao"]:
-        area_final = area_parcial_afetada
-    else:
-        area_final = float(dados_avaliando.get("AREA TOTAL", 0))
-
+    area_final_para_exibir = area_utilizada
     info_resumo = {
         "valor_unitario": f"{formatar_moeda_brasil(valor_mediano)}/m²",
-        "area_total_considerada": f"{formatar_numero_brasileiro(area_final)} m²",
+        "area_total_considerada": f"{formatar_numero_brasileiro(area_final_para_exibir)} m²",
         "texto_descritivo_restricoes": texto_rest,
         "restricoes": restricoes_detalhadas_final,
         "valor_total_indenizatorio": formatar_moeda_brasil(valor_total_mediano),
         "valor_por_extenso": ""
     }
-
     inserir_tabela_resumo_de_valores(documento, "[RESUMO VALORES]", info_resumo, area_utilizada)
 
-    # Gráficos de aderência e dispersão
-    substituir_placeholder_por_imagem(documento, "[graficoAderencia2]", caminho_imagem_aderencia, largura=Inches(5))
-    substituir_placeholder_por_imagem(documento, "[graficoDispersao]", caminho_imagem_dispersao, largura=Inches(5))
+    # Gráficos de aderência e dispersão (assume que caminhos são válidos/vêm de fora)
+    try:
+        if caminho_imagem_aderencia and os.path.exists(caminho_imagem_aderencia):
+            substituir_placeholder_por_imagem(documento, "[graficoAderencia2]", caminho_imagem_aderencia, largura=Inches(5))
+        if caminho_imagem_dispersao and os.path.exists(caminho_imagem_dispersao):
+            substituir_placeholder_por_imagem(documento, "[graficoDispersao]", caminho_imagem_dispersao, largura=Inches(5))
+    except Exception as e:
+        logger.warning(f"⚠️ Falha ao inserir gráficos finais: {e}")
 
-    # Grau de precisão
-    if len(valores_homogeneizados_validos) > 0:
-        # Converte lista (floats ou dicts) → lista de floats
-        def _extrair_valores_float(seq, chave_preferida="valor_unitario"):
-            import math
-            out = []
-            for v in seq or []:
-                if isinstance(v, dict):
-                    # <<< corrigido: sem aspas após a variável >>>
-                    val = v.get(chave_preferida, v.get("valor_estimado", v.get("VUH", v.get("vuh", 0))))
-                else:
-                    val = v
-                try:
-                    val = float(val)
-                except (TypeError, ValueError):
-                    continue
-                if math.isfinite(val):
-                    out.append(val)
-            return out
-
-        vals = _extrair_valores_float(valores_homogeneizados_validos, "valor_unitario")
-
-        if vals:
-            arr = numpy.array(vals, dtype=float)
-            mediana_hom = float(numpy.median(arr))
-            valor_minimo = float(numpy.min(arr))
-            valor_maximo = float(numpy.max(arr))
-            amplitude_ic80 = ((valor_maximo - valor_minimo) / mediana_hom) * 100 if mediana_hom > 0 else 0.0
+    # Grau de precisão (amplitude IC80 / mediana)
+    try:
+        if arr_vals.size > 0:
+            mediana_hom = float(np.median(arr_vals))
+            vmin = float(np.min(arr_vals))
+            vmax = float(np.max(arr_vals))
+            amplitude_ic80 = ((vmax - vmin) / mediana_hom) * 100 if mediana_hom > 0 else 0.0
         else:
-            mediana_hom = 0.0
             amplitude_ic80 = 0.0
-    else:
-        mediana_hom = 0.0
-        amplitude_ic80 = 0.0
-
-    inserir_tabela_classificacao_de_precisao(documento, "[texto_grau_precisao]", amplitude_ic80)
+        inserir_tabela_classificacao_de_precisao(documento, "[texto_grau_precisao]", amplitude_ic80)
+    except Exception as e:
+        logger.warning(f"⚠️ Falha no grau de precisão: {e}")
 
     # Fundamentação e enquadramento
-    quantidade_amostras_validadas = len(dataframe_amostras_filtrado)
-
-    inserir_fundamentacao_e_enquadramento(
-            documento,
-            "[FUNDAMENTACAO]",
-            "[enquadramento final]",
+    try:
+        qtde_validas = int(len(dataframe_amostras_filtrado))
+        inserir_fundamentacao_e_enquadramento(
+            documento, "[FUNDAMENTACAO]", "[enquadramento final]",
             fatores_do_usuario.get("tipoImovel", "Gleba Rural"),
-            quantidade_amostras_validadas,
-            lista_todos_os_fatores          # << novo argumento
-    )  
-    
-    # Fotos do avaliando (agora é uma lista de listas)
-    for grupo in caminhos_fotos_avaliando:
-        for caminho in grupo:
-            if os.path.exists(caminho):
-                logger.info(f"✅ Foto do avaliando encontrada: {caminho}")
-            else:
-                logger.warning(f"❌ Foto do avaliando NÃO encontrada: {caminho}")
-
-    # Documentos adicionais (matrícula)
-    for grupo in caminhos_fotos_adicionais:
-        for caminho in grupo:
-            if os.path.exists(caminho):
-                logger.info(f"✅ Documento adicional (matrícula) encontrado: {caminho}")
-            else:
-                logger.warning(f"❌ Documento adicional (matrícula) NÃO encontrado: {caminho}")
-
-    # Documentos do proprietário
-    for grupo in caminhos_fotos_proprietario:
-        for caminho in grupo:
-            if os.path.exists(caminho):
-                logger.info(f"✅ Documento do proprietário encontrado: {caminho}")
-            else:
-                logger.warning(f"❌ Documento do proprietário NÃO encontrado: {caminho}")
-
-    # Documentos da planta
-    for grupo in caminhos_fotos_planta:
-        for caminho in grupo:
-            if os.path.exists(caminho):
-                logger.info(f"✅ Documento de planta encontrado: {caminho}")
-            else:
-                logger.warning(f"❌ Documento de planta NÃO encontrado: {caminho}")
-
-
-    # Verificar se o logo existe
-    caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
-    if caminho_logo:
-        if os.path.exists(caminho_logo):
-            logger.info(f"✅ Logo encontrado: {caminho_logo}")
-        else:
-            logger.warning(f"❌ Logo NÃO encontrado: {caminho_logo}")
-
-    from itertools import chain
-
-    # Inserir fotos do imóvel
-    if caminhos_fotos_avaliando:
-        todas_as_fotos = list(chain.from_iterable(caminhos_fotos_avaliando))
-        inserir_fotos_no_placeholder(documento, "[FOTOS]", todas_as_fotos, largura_imagem=Inches(3.2), um_por_pagina=False)
-    else:
-        substituir_placeholder_por_texto_formatado(
-            documento,
-            "[FOTOS]",
-            "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS",
-            Pt(12),
-            True
+            qtde_validas,
+            lista_todos_os_fatores
         )
+    except Exception as e:
+        logger.warning(f"⚠️ Falha na fundamentação/enquadramento: {e}")
 
-
-    
-    # Inserir documentos adicionais (matrícula)
-    if caminhos_fotos_adicionais:
-        todas_matriculas = list(chain.from_iterable(caminhos_fotos_adicionais))
-        inserir_fotos_no_placeholder(documento, "[MATRICULA]", todas_matriculas, largura_imagem=Inches(5), um_por_pagina=True)
-    else:
-        substituir_placeholder_por_texto_formatado(
-            documento,
-            "[MATRICULA]",
-            "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA",
-            Pt(12),
-            True
-        )
-
-
-    
-    # Inserir documentação do proprietário
-    if caminhos_fotos_proprietario:
-        todos_proprietarios = list(chain.from_iterable(caminhos_fotos_proprietario))
-        inserir_fotos_no_placeholder(documento, "[PROPRIETARIO]", todos_proprietarios, largura_imagem=Inches(5), um_por_pagina=True)
-    else:
-        substituir_placeholder_por_texto_formatado(
-            documento,
-            "[PROPRIETARIO]",
-            "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA",
-            Pt(12),
-            True
-        )
-
-    # Inserir documentação da planta
-    if caminhos_fotos_planta:
-        todas_plantas = list(chain.from_iterable(caminhos_fotos_planta))
-        inserir_fotos_no_placeholder(documento, "[PLANTA]", todas_plantas, largura_imagem=Inches(5), um_por_pagina=True)
-    else:
-        substituir_placeholder_por_texto_formatado(
-            documento,
-            "[PLANTA]",
-            "PLANTA DO IMÓVEL NÃO FORNECIDA",
-            Pt(12),
-            True
-        )
-  
     # Logo
     caminho_logo = fatores_do_usuario.get("caminhoLogo", "")
     if caminho_logo and os.path.exists(caminho_logo):
-        inserir_logo_no_placeholder(documento, "[logo]", caminho_logo)
+        try:
+            inserir_logo_no_placeholder(documento, "[logo]", caminho_logo)
+        except Exception as e:
+            logger.warning(f"⚠️ Falha ao inserir logo: {e}")
 
-    # (Exemplo) Inserir tabela [RESUMO GERAL] se existir placeholder
-    # A função 'inserir_tabela_resumo_geral_completo' foi meramente ilustrativa
-    # no código anterior. Você pode chamar se quiser:
-    # inserir_tabela_resumo_geral_completo(documento, "[RESUMO GERAL]", {...})
+    # [FIX-IMG-LOOPS] — somente logs (não iterar se vazio)
+    for lbl, grupos in [
+        ("avaliando", caminhos_fotos_avaliando),
+        ("adicionais/matrícula", caminhos_fotos_adicionais),
+        ("proprietário", caminhos_fotos_proprietario),
+        ("planta", caminhos_fotos_planta),
+    ]:
+        for caminho in _flatten_grupos_imagens(grupos):
+            if os.path.exists(caminho):
+                logger.info(f"✅ Imagem ({lbl}) encontrada: {caminho}")
+            else:
+                logger.warning(f"❌ Imagem ({lbl}) NÃO encontrada: {caminho}")
 
-    # Salvar
+    # [FIX-IMG-ONLY-ONE] — Use apenas substituir_placeholder_por_varias_imagens
+    fotos_fotos        = _flatten_grupos_imagens(caminhos_fotos_avaliando) + _flatten_grupos_imagens(caminhos_fotos_adicionais)
+    fotos_matricula    = _flatten_grupos_imagens(caminhos_fotos_adicionais)
+    fotos_proprietario = _flatten_grupos_imagens(caminhos_fotos_proprietario)
+    fotos_planta       = _flatten_grupos_imagens(caminhos_fotos_planta)
+
+    if fotos_fotos:
+        substituir_placeholder_por_varias_imagens(documento, "[FOTOS]", fotos_fotos, largura=Inches(6), quebra_pagina_entre=True)
+    else:
+        substituir_placeholder_por_texto_formatado(documento, "[FOTOS]", "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS", Pt(12), True)
+
+    if fotos_matricula:
+        substituir_placeholder_por_varias_imagens(documento, "[MATRICULA]", fotos_matricula, largura=Inches(6), quebra_pagina_entre=True)
+    else:
+        substituir_placeholder_por_texto_formatado(documento, "[MATRICULA]", "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA", Pt(12), True)
+
+    if fotos_proprietario:
+        substituir_placeholder_por_varias_imagens(documento, "[PROPRIETARIO]", fotos_proprietario, largura=Inches(6), quebra_pagina_entre=True)
+    else:
+        substituir_placeholder_por_texto_formatado(documento, "[PROPRIETARIO]", "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA", Pt(12), True)
+
+    if fotos_planta:
+        substituir_placeholder_por_varias_imagens(documento, "[PLANTA]", fotos_planta, largura=Inches(6), quebra_pagina_entre=True)
+    else:
+        substituir_placeholder_por_texto_formatado(documento, "[PLANTA]", "PLANTA DO IMÓVEL NÃO FORNECIDA", Pt(12), True)
+
+    # Salvar DOCX
     documento.save(nome_arquivo_word)
-    # Limpar arquivos PNG temporários gerados a partir de PDFs
-    def limpar_arquivos_temp_png(lista_de_caminhos):
-        for caminho in lista_de_caminhos:
-            if isinstance(caminho, str) and caminho.endswith(".png") and os.path.exists(caminho):
+
+    # Limpeza de PNGs temporários (somente PDFs convertidos)
+    def limpar_pngs(lista_de_grupos):
+        for caminho in _flatten_grupos_imagens(lista_de_grupos):
+            if isinstance(caminho, str) and caminho.lower().endswith(".png") and os.path.exists(caminho):
                 try:
                     os.remove(caminho)
                     logger.info(f"🗑️ PNG temporário removido: {caminho}")
                 except Exception as e:
                     logger.warning(f"⚠️ Falha ao remover {caminho}: {e}")
 
-    # Apagar apenas os arquivos gerados a partir de PDFs
-    # Flatten antes de filtrar PNGs
-    limpar_arquivos_temp_png([c for grupo in caminhos_fotos_adicionais for c in grupo if c.endswith(".png")])
-    limpar_arquivos_temp_png([c for grupo in caminhos_fotos_proprietario for c in grupo if c.endswith(".png")])
-    limpar_arquivos_temp_png([c for grupo in caminhos_fotos_planta for c in grupo if c.endswith(".png")])
-
+    limpar_pngs(caminhos_fotos_adicionais)
+    limpar_pngs(caminhos_fotos_proprietario)
+    limpar_pngs(caminhos_fotos_planta)
 
     try:
-        os.startfile(nome_arquivo_word)
-    except:
+        os.startfile(nome_arquivo_word)  # no Linux/macOS será ignorado
+    except Exception:
         pass
 
+    logger.info(f"📄 Relatório salvo em: {nome_arquivo_word}")
 
 
 
