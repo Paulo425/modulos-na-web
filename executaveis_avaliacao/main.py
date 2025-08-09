@@ -109,6 +109,49 @@ if not logger.handlers:
 
 logger.info("✅ Logger MAIN.py inicializado corretamente!")
 
+def normaliza_sim_nao(valor):
+    try:
+        import pandas as pd
+        if pd.isna(valor):
+            return None
+    except Exception:
+        pass
+    if valor is None:
+        return None
+    s = str(valor).strip().upper()
+    s = (s.replace("Ã", "A")
+         .replace("Â", "A")
+         .replace("Á", "A")
+         .replace("Ó", "O")
+         .replace("Õ", "O"))
+    if s in {"S", "SIM", "TRUE", "1", "YES"}:
+        return "SIM"
+    if s in {"N", "NAO", "NÃO", "FALSE", "0", "NO"}:
+        return "NAO"
+    return None
+
+def get_multi(dic_or_series, *keys):
+    for k in keys:
+        if k in dic_or_series:
+            v = dic_or_series.get(k)
+            try:
+                import pandas as pd
+                if pd.isna(v):
+                    continue
+            except Exception:
+                pass
+            if v is not None and str(v).strip() != "":
+                return v
+    return None
+
+def fator_pavimentacao(valor):
+    norm = normaliza_sim_nao(valor)
+    return 1.0 if norm == "SIM" else 0.9
+
+def fator_acessibilidade(valor):
+    norm = normaliza_sim_nao(valor)
+    return 1.0 if norm == "SIM" else 0.9
+
 
 def adicionar_paragrafo_apos(paragrafo):
     """
@@ -1377,8 +1420,16 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         else:
             fator_pedologia_calculado = 1.0
 
-        # Fator Pavimentação
-        f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
+        # -------- Fator Pavimentação --------
+        amostra_pav = get_multi(linha, "PAVIMENTACAO?", "PAVIMENTAÇÃO?", "PAVIMENTACAO ?")
+        aval_pav    = get_multi(dados_avaliando, "PAVIMENTACAO?", "PAVIMENTAÇÃO?")
+        f_sample_pavim   = fator_pavimentacao(amostra_pav)
+        f_avaliado_pavim = fator_pavimentacao(aval_pav)
+
+        # Se amostra vier vazia/None ⇒ usa o mesmo do avaliado (garante 1.00 em SIM/SIM e NÃO/NÃO)
+        if amostra_pav is None:
+            f_sample_pavim = f_avaliado_pavim
+
         if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
             fator_pavimentacao_calculado = limitar_fator(f_avaliado_pavim / f_sample_pavim)
         else:
@@ -1391,13 +1442,25 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         else:
             fator_esquina_calculado = 1.0
 
-        # Fator Acessibilidade
-        f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
+        logger.info(f"[FPA] AM={identificador_amostra} | Avaliado={aval_pav} ({f_avaliado_pavim}) "
+            f"| Amostra={amostra_pav} ({f_sample_pavim}) => FPA={fator_pavimentacao_calculado:.2f}")
+
+        # -------- Fator Acessibilidade --------
+        amostra_ace = get_multi(linha, "ACESSIBILIDADE?", "ACESSIBILIDADE ?")
+        aval_ace    = get_multi(dados_avaliando, "ACESSIBILIDADE?")
+        f_sample_acess   = fator_acessibilidade(amostra_ace)
+        f_avaliado_acess = fator_acessibilidade(aval_ace)
+
+        if amostra_ace is None:
+            f_sample_acess = f_avaliado_acess
+
         if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
             fator_acessibilidade_calculado = limitar_fator(f_avaliado_acess / f_sample_acess)
         else:
-            fator_acessibilidade_calculado = 1.0      
-              
+            fator_acessibilidade_calculado = 1.0 
+                
+        logger.info(f"[FAC] AM={identificador_amostra} | Avaliado={aval_ace} ({f_avaliado_acess}) "
+            f"| Amostra={amostra_ace} ({f_sample_acess}) => FAC={fator_acessibilidade_calculado:.2f}")     
                   
         # Fator Localização
         if fatores_do_usuario.get("localizacao_mesma_regiao", False):
