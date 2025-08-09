@@ -5791,10 +5791,9 @@ def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder
       - Entre amostras, é inserida uma QUEBRA DE PÁGINA.
     """
     alvo_par = None
-    alvo_cell = None
     alvo_table = None
 
-    # 1) localizar o parágrafo contendo o marcador (corpo / tabelas)
+    # Localiza o parágrafo com o marcador
     for p in documento.paragraphs:
         if marcador_placeholder in p.text:
             alvo_par = p
@@ -5806,52 +5805,47 @@ def inserir_texto_memoria_calculo_no_placeholder(documento, marcador_placeholder
                     for p in cell.paragraphs:
                         if marcador_placeholder in p.text:
                             alvo_par = p
-                            alvo_cell = cell
                             alvo_table = t
                             break
-                    if alvo_par: break
-                if alvo_par: break
-            if alvo_par: break
+                    if alvo_par:
+                        break
+                if alvo_par:
+                    break
+            if alvo_par:
+                break
 
     if alvo_par is None:
-        return  # não achou, sai silenciosamente
+        return  # não encontrou o marcador
 
-    # 2) limpa o marcador no parágrafo original
+    # Remove o marcador do texto
     alvo_par.text = alvo_par.text.replace(marcador_placeholder, "")
 
-    # 3) se estiver dentro de tabela, habilita quebra de linha na tabela
+    # Se estiver em tabela, permite quebra de página
     if isinstance(alvo_table, Table):
         _enable_row_split_for_table(alvo_table)
 
-    # 4) obtém o bloco raiz (<w:p> ou <w:tbl>) e insere APÓS ele
+    # Obtém o bloco raiz (<w:p> ou <w:tbl>) e define como âncora
     bloco_raiz = _top_block_item(alvo_par)
-    insert_anchor = bloco_raiz  # insere depois desse bloco
+    insert_anchor = bloco_raiz
 
-    total = len(lista_memorias or [])
+    total_blocos = len(lista_memorias or [])
     for i, bloco in enumerate(lista_memorias or []):
-        # parágrafo para o bloco
         p_out = inserir_paragrafo_apos_bloco(documento, insert_anchor, "")
-        # estilização básica
         p_out.paragraph_format.keep_together = False
         p_out.paragraph_format.keep_with_next = False
         p_out.paragraph_format.widow_control = True
 
-        # escreve linhas
-        if isinstance(bloco, str):
-            linhas = bloco.split("\n")
-        else:
-            linhas = [str(bloco)]
+        linhas = bloco.split("\n") if isinstance(bloco, str) else [str(bloco)]
         for ln in linhas:
             run = p_out.add_run(ln + "\n")
             run.font.name = "Arial"
             run.font.size = Pt(10)
 
-        # quebra de página entre amostras
-        if i < total - 1:
+        # Quebra de página entre amostras
+        if i < total_blocos - 1:
             br = p_out.add_run()
             br.add_break(WD_BREAK.PAGE)
 
-        # próxima inserção deve ocorrer depois do último parágrafo criado
         insert_anchor = p_out._p
 
 
