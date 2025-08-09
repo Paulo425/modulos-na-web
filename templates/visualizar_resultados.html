@@ -86,8 +86,8 @@
             <input type="checkbox" class="amostra-checkbox" data-idx="{{ amostra.idx }}" name="amostra_{{ amostra.index }}" checked>
           </td>
           <td>{{ amostra.identificador }}</td>
-          <td style="text-align:center;">{{ "%.2f"|format(amostra.valor_total) }}</td>
-          <td style="text-align:center;">{{ "%.2f"|format(amostra.area) }}</td>
+          <td style="text-align:center;">{{ amostra.valor_total|brlmoeda }}</td>
+          <td style="text-align:center;">{{ amostra.area|brlnum }}</td>
           <td style="text-align:center;">{{ "%.2f"|format(amostra.valor_unitario_original) }}</td>
           <td style="text-align:center;">{{ "%.2f"|format(amostra.valor_estimado) }}</td>
           <td style="text-align:center;">{{ "%.2f"|format(amostra.residuo_rel) }}</td>
@@ -98,8 +98,8 @@
         <tr style="background-color: #ffff99; font-weight: bold;">
           <td></td>
           <td>AV</td>
-          <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('VALOR TOTAL', 0)) }}</td>
-          <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('AREA TOTAL', 0)) }}</td>
+          <td style="text-align:center;">{{ dados_avaliando['valor_total']|brlmoeda }}</td>
+          <td style="text-align:center;">{{ dados_avaliando['AREA TOTAL']|brlnum }}</td>
           <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('valor_unitario_medio', 0)) }}</td>
           <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('valor_estimado', 0)) }}</td>
           <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('residuo_rel', 0)) }}</td>

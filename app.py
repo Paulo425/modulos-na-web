@@ -20,9 +20,6 @@ from PIL import Image, UnidentifiedImageError
 import uuid
 import logging
 import re
-import pandas as pd  # ← inclusão imediata dessa linha resolve definitivamente
-import sys
-import traceback
 import subprocess
 import pandas as pd
 from executaveis_avaliacao.main import homogeneizar_amostras
@@ -112,6 +109,29 @@ def salvar_com_nome_unico(arquivo, destino_base):
     arquivo.save(caminho_completo)
     return caminho_completo
 
+# depois de: app = Flask(__name__)
+from math import isnan
+
+@app.template_filter("brlmoeda")
+def brlmoeda(value):
+    try:
+        v = float(str(value).replace(".", "").replace(",", "."))
+        if isnan(v): 
+            return "-"
+    except Exception:
+        return "-"
+    s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {s}"
+
+@app.template_filter("brlnum")
+def brlnum(value, casas=2):
+    try:
+        v = float(str(value).replace(".", "").replace(",", "."))
+        if isnan(v):
+            return "-"
+    except Exception:
+        return "-"
+    return f"{v:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 @app.route('/')
 def home():
@@ -1555,30 +1575,24 @@ def visualizar_resultados(uuid):
         media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
 
 
-        # >>> CALCULA CAMPOS PARA A LINHA "AV" NA TABELA <<<
+        # >>> CALCULA CAMPOS PARA A LINHA "AV" NA TABELA PELO VALOR MEDIO <<<
         import numpy as np
 
-        vals = np.array([v for v in valores_ativos if v > 0], dtype=float)
+        vals = np.array([float(v) for v in valores_ativos if v and v > 0], dtype=float)
 
-        # Centro robusto = mediana
-        vuh_mediana = float(np.median(vals)) if vals.size else 0.0
+        # Centro e dispersão coerentes com as amostras: MÉDIA e DESVIO-PADRÃO (amostral)
+        vuh_media = float(np.mean(vals)) if vals.size else 0.0
+        sigma = float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0
 
-        # Dispersão robusta via MAD
-        def _mad(x):
-            if x.size == 0:
-                return 0.0
-            med = np.median(x)
-            return float(np.median(np.abs(x - med)))
-
-        mad = _mad(vals)
-        sigma_robusta = 1.4826 * mad if mad > 0 else (float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0)
-
-        # VU do avaliando
+        # VU do avaliando (já calculado antes e guardado em dados_avaliando)
         vu_av = float(dados_avaliando.get("valor_unitario_medio", 0.0) or 0.0)
+        area_av = float(dados_avaliando.get("AREA TOTAL", 0.0) or 0.0)
 
-        dados_avaliando["valor_estimado"] = vuh_mediana
-        dados_avaliando["residuo_rel"] = ((vu_av - vuh_mediana) / vuh_mediana) * 100 if vuh_mediana > 0 else 0.0
-        dados_avaliando["residuo_dp"] = ((vu_av - vuh_mediana) / sigma_robusta) if sigma_robusta > 0 else 0.0
+        # Preenche campos da linha amarela "AV"
+        dados_avaliando["valor_total"] = (vu_av * area_av) if (vu_av > 0 and area_av > 0) else None
+        dados_avaliando["valor_estimado"] = vuh_media
+        dados_avaliando["residuo_rel"] = ((vu_av - vuh_media) / vuh_media) * 100 if vuh_media > 0 else None
+        dados_avaliando["residuo_dp"] = ((vu_av - vuh_media) / sigma) if sigma > 0 else None
 
 
 
