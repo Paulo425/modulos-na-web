@@ -1554,6 +1554,34 @@ def visualizar_resultados(uuid):
         ]
         media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
 
+
+        # >>> CALCULA CAMPOS PARA A LINHA "AV" NA TABELA <<<
+        import numpy as np
+
+        vals = np.array([v for v in valores_ativos if v > 0], dtype=float)
+
+        # Centro robusto = mediana
+        vuh_mediana = float(np.median(vals)) if vals.size else 0.0
+
+        # Dispersão robusta via MAD
+        def _mad(x):
+            if x.size == 0:
+                return 0.0
+            med = np.median(x)
+            return float(np.median(np.abs(x - med)))
+
+        mad = _mad(vals)
+        sigma_robusta = 1.4826 * mad if mad > 0 else (float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0)
+
+        # VU do avaliando
+        vu_av = float(dados_avaliando.get("valor_unitario_medio", 0.0) or 0.0)
+
+        dados_avaliando["valor_estimado"] = vuh_mediana
+        dados_avaliando["residuo_rel"] = ((vu_av - vuh_mediana) / vuh_mediana) * 100 if vuh_mediana > 0 else 0.0
+        dados_avaliando["residuo_dp"] = ((vu_av - vuh_mediana) / sigma_robusta) if sigma_robusta > 0 else 0.0
+
+
+
         # IC 80%
         bootstrap_n = int(params.get("bootstrap_n", 400) or 400)
         amplitude_ic80 = 0.0
@@ -1736,31 +1764,31 @@ def gerar_laudo_final(uuid):
 
         # Chamada correta da função (sem variáveis inexistentes)
         gerar_relatorio_avaliacao_com_template(
-        dados_avaliando=dados_avaliando,
-        dataframe_amostras_inicial=df_amostras_inicial,     # seus dfs aqui
-        dataframe_amostras_filtrado=df_amostras_filtrado,
-        indices_excluidos=indices_excluidos,
-        amostras_excluidas=amostras_excluidas,
-        media=media,
-        desvio_padrao=desvio_padrao,
-        menor_valor=menor_valor,
-        maior_valor=maior_valor,
-        mediana_valor=mediana_valor,
-        valores_originais_iniciais=valores_originais_iniciais,
-        valores_homogeneizados_validos=valores_homogeneizados_validos,
-        caminho_imagem_aderencia=caminho_imagem_aderencia,
-        caminho_imagem_dispersao=caminho_imagem_dispersao,
-        uuid_atual=uuid_execucao,
-        finalidade_do_laudo="desapropriacao",  # ou conforme seu fluxo
-        area_parcial_afetada=dados_avaliando.get("AREA_PARCIAL_AFETADA", 0),
-        fatores_do_usuario=fatores_do_usuario,
-        caminhos_fotos_avaliando=caminhos_fotos_avaliando,
-        caminhos_fotos_adicionais=caminhos_fotos_adicionais,
-        caminhos_fotos_proprietario=caminhos_fotos_proprietario,
-        caminhos_fotos_planta=caminhos_fotos_planta,
-        caminho_template="template.docx",
-        nome_arquivo_word=f"static/arquivos/avaliacao_{uuid_execucao}/laudo_avaliacao_{uuid_execucao}.docx",
-    )
+            dados_avaliando=dados["dados_avaliando"],
+            dataframe_amostras_inicial=df_ativas,
+            dataframe_amostras_filtrado=df_filtrado,
+            indices_excluidos=idx_exc,
+            amostras_excluidas=amostras_exc,
+            media=media,
+            desvio_padrao=dp,
+            menor_valor=menor,
+            maior_valor=maior,
+            mediana_valor=mediana,
+            valores_originais_iniciais=df_ativas["VALOR TOTAL"].tolist(),
+            valores_homogeneizados_validos=amostras_homog,
+            caminho_imagem_aderencia=img1,
+            caminho_imagem_dispersao=img2,
+            uuid_atual=uuid,
+            finalidade_do_laudo=finalidade_do_laudo,
+            area_parcial_afetada=area_parcial_afetada,
+            fatores_do_usuario=dados["fatores_do_usuario"],
+            caminhos_fotos_avaliando=arquivos.get("fotos_imovel", []),
+            caminhos_fotos_adicionais=arquivos.get("fotos_adicionais", []),
+            caminhos_fotos_proprietario=arquivos.get("fotos_proprietario", []),
+            caminhos_fotos_planta=arquivos.get("fotos_planta", []),
+            caminho_template="template.docx",
+            nome_arquivo_word=caminho_docx,
+        )
 
     if os.path.exists(caminho_docx):
         logger.info(f"✅ DOCX gerado com sucesso: {caminho_docx}")

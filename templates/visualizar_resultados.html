@@ -94,6 +94,18 @@
           <td style="text-align:center;">{{ "%.2f"|format(amostra.residuo_dp) }}</td>
         </tr>
         {% endfor %}
+
+        <tr style="background-color: #ffff99; font-weight: bold;">
+          <td></td>
+          <td>AV</td>
+          <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('VALOR TOTAL', 0)) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('AREA TOTAL', 0)) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('valor_unitario_medio', 0)) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('valor_estimado', 0)) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('residuo_rel', 0)) }}</td>
+          <td style="text-align:center;">{{ "%.2f"|format(dados_avaliando.get('residuo_dp', 0)) }}</td>
+        </tr>
+
       </tbody>
     </table>
 
