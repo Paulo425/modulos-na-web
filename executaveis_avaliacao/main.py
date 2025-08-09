@@ -4389,9 +4389,7 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
 
         f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
         if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
-            base = f_sample_pavim / (f_avaliado_pavim or 1.0)   # << antes era f_avaliado_pavim / f_sample_pavim
-            # clamp específico de pavimentação 0.90..1.00
-            fator_pavimentacao_calculado = min(1.0, max(0.90, base))
+            fator_pavimentacao_calculado = f_avaliado_pavim / f_sample_pavim
         else:
             fator_pavimentacao_calculado = 1.0
 
@@ -4401,12 +4399,9 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
         else:
             fator_esquina_calculado = 1.0
 
-        # Fator Acessibilidade  (trocar a ordem)
         f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
         if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
-            base = f_sample_acess / (f_avaliado_acess or 1.0)   # << antes era f_avaliado_acess / f_sample_acess
-            # clamp específico de acessibilidade 0.90..1.00
-            fator_acessibilidade_calculado = min(1.0, max(0.90, base))
+            fator_acessibilidade_calculado = f_avaliado_acess / f_sample_acess
         else:
             fator_acessibilidade_calculado = 1.0
 
@@ -4568,27 +4563,11 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=Non
                     # Se a coluna representa um fator, converte, aplica *clamp específico* e formata
                     if nome_col in colunas_fator:
                         try:
-                            raw = dic_amostra.get(nome_col, 0)
-                            s = str(raw).strip()
-                            # caso venha "0,95" ou "1,00"
-                            if "," in s:
-                                s = s.replace(".", "").replace(",", ".")
-                            valor_num = float(s)
+                            valor_num = float(dic_amostra.get(nome_col, 0))
+                            # Aplica a limitação ao intervalo [0.50, 2.0]
+                            valor_cel = f"{limitar_fator(valor_num):.2f}"
                         except Exception:
-                            valor_num = 0.0
-
-                        # Clamps específicos por regra de negócio:
-                        if nome_col in ("FPA", "FAC"):
-                            # Pavimentação e Acessibilidade: 0.90..1.00
-                            valor_num = min(1.0, max(0.90, valor_num))
-                        elif nome_col == "FL":
-                            # Localização: 0.50..1.40
-                            valor_num = max(0.50, min(1.40, valor_num))
-                        else:
-                            # Demais fatores (se aplicável): 0.50..2.00
-                            valor_num = max(0.50, min(2.00, valor_num))
-
-                        valor_cel = f"{valor_num:.2f}"
+                            valor_cel = str(dic_amostra.get(nome_col, ""))
                     else:
                         valor_cel = str(dic_amostra.get(nome_col, ""))
 
@@ -4941,8 +4920,7 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         # Fator Pavimentação
         f_sample_pavim = fator_pavimentacao(linha.get("PAVIMENTACAO?", "NÃO"))
         if fatores_do_usuario["pavimentacao"] and f_sample_pavim != 0:
-            base = f_sample_pavim / (f_avaliado_pavim or 1.0)
-            fator_pavimentacao_calculado = min(1.0, max(0.90, base))
+            fator_pavimentacao_calculado = limitar_fator(f_avaliado_pavim / f_sample_pavim)
         else:
             fator_pavimentacao_calculado = 1.0
 
@@ -4953,12 +4931,10 @@ def gerar_lista_memoria_calculo(dataframe_amostras, dados_avaliando, fatores_do_
         else:
             fator_esquina_calculado = 1.0
 
-        # Fator Acessibilidade
+         # Fator Acessibilidade
         f_sample_acess = fator_acessibilidade(linha.get("ACESSIBILIDADE?", "NÃO"))
         if fatores_do_usuario["acessibilidade"] and f_sample_acess != 0:
-            base = f_sample_acess / (f_avaliado_acess or 1.0)   # << antes era f_avaliado_acess / f_sample_acess
-            # clamp específico de acessibilidade 0.90..1.00
-            fator_acessibilidade_calculado = min(1.0, max(0.90, base))
+            fator_acessibilidade_calculado = limitar_fator(f_avaliado_acess / f_sample_acess)
         else:
             fator_acessibilidade_calculado = 1.0      
               
