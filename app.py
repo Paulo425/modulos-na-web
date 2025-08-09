@@ -1622,120 +1622,120 @@ def gerar_laudo_final(uuid):
 
 
     # Carrega JSON
-with open(caminho_json, "r", encoding="utf-8") as f:
-    dados = json.load(f)
+    with open(caminho_json, "r", encoding="utf-8") as f:
+        dados = json.load(f)
 
-dados_avaliando       = dados.get("dados_avaliando", {}) or {}
-fatores_do_usuario    = dados.get("fatores_do_usuario", {}) or {}
-amostras_raw          = dados.get("amostras", []) or {}
-arquivos              = dados.get("arquivos", {}) or {}
+    dados_avaliando       = dados.get("dados_avaliando", {}) or {}
+    fatores_do_usuario    = dados.get("fatores_do_usuario", {}) or {}
+    amostras_raw          = dados.get("amostras", []) or {}
+    arquivos              = dados.get("arquivos", {}) or {}
 
-# ✅ fotos vêm de dados["arquivos"], não da raiz
-caminhos_fotos_avaliando    = arquivos.get("fotos_imovel", [])
-caminhos_fotos_adicionais   = arquivos.get("fotos_adicionais", [])
-caminhos_fotos_proprietario = arquivos.get("fotos_proprietario", [])
-caminhos_fotos_planta       = arquivos.get("fotos_planta", [])
+    # ✅ fotos vêm de dados["arquivos"], não da raiz
+    caminhos_fotos_avaliando    = arquivos.get("fotos_imovel", [])
+    caminhos_fotos_adicionais   = arquivos.get("fotos_adicionais", [])
+    caminhos_fotos_proprietario = arquivos.get("fotos_proprietario", [])
+    caminhos_fotos_planta       = arquivos.get("fotos_planta", [])
 
-area_parcial_afetada = float(dados_avaliando.get("AREA_PARCIAL_AFETADA", 0) or 0)
+    area_parcial_afetada = float(dados_avaliando.get("AREA_PARCIAL_AFETADA", 0) or 0)
 
-# Atualiza estado das amostras (se o front enviou "ativo_*")
-chaves_postadas = {k for k in request.form.keys() if k.startswith("ativo_")}
-logger.info(f"🔎 Campos recebidos no POST: {sorted(request.form.keys())}")
+    # Atualiza estado das amostras (se o front enviou "ativo_*")
+    chaves_postadas = {k for k in request.form.keys() if k.startswith("ativo_")}
+    logger.info(f"🔎 Campos recebidos no POST: {sorted(request.form.keys())}")
 
-if chaves_postadas:
-    for amostra in dados["amostras"]:
-        campo = f"ativo_{amostra['idx']}"
-        amostra["ativo"] = campo in request.form
-else:
-    logger.warning("⚠️ Nenhuma chave 'ativo_*' recebida. Mantendo estados 'ativo' do JSON.")
-
-    # Salva JSON atualizado
-    with open(caminho_json, "w", encoding="utf-8") as f:
-        json.dump(dados, f, indent=2, ensure_ascii=False)
-
-    # Importações obrigatórias
-    import pandas as pd
-    from executaveis_avaliacao.main import (
-        aplicar_chauvenet_e_filtrar,
-        homogeneizar_amostras,
-        gerar_grafico_aderencia_totais,
-        gerar_grafico_dispersao_mediana,
-        gerar_relatorio_avaliacao_com_template
-    )
-
-    # Preparação de amostras
-    ativos_frontend = [a["idx"] for a in dados["amostras"] if a.get("ativo", False)]
-    amostras_usuario_retirou = [a["idx"] for a in dados["amostras"] if not a.get("ativo", False)]
-    amostras_ativas = [a for a in dados["amostras"] if a.get("ativo") and (a.get("area", 0) or 0) > 0]
-
-    if not amostras_ativas:
-        flash("Nenhuma amostra ativa para gerar o laudo.", "warning")
-        return redirect(url_for("visualizar_resultados", uuid=uuid))
-
-    df_ativas = pd.DataFrame(amostras_ativas)
-    df_ativas.rename(columns={
-        "valor_total": "VALOR TOTAL",
-        "area": "AREA TOTAL",
-        "distancia_centro": "DISTANCIA CENTRO"
-    }, inplace=True)
-
-    # valor_unitario_medio do avaliando
-    valores_unitarios = [
-        (row["VALOR TOTAL"] / row["AREA TOTAL"]) if row["AREA TOTAL"] > 0 else 0
-        for _, row in df_ativas.iterrows()
-    ]
-    vu_validos = [v for v in valores_unitarios if v > 0]
-    dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
-
-    # Chauvenet + homogeneização
-    df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
-    amostras_homog = homogeneizar_amostras(df_filtrado, dados_avaliando, fatores_do_usuario, "mercado")
-
-    # Alinhamentos para gráficos
-    idx_filtrados = df_filtrado["idx"].astype(int).tolist()
-    ativos_frontend_set = set(int(i) for i in ativos_frontend)
-    amostras_chauvenet_retirou = [i for i in ativos_frontend_set if i not in idx_filtrados]
-    map_vu_por_idx = {int(a["idx"]): float(a["valor_unitario"]) for a in amostras_homog}
-    indices_ativos_alinhados = [i for i in idx_filtrados if i in ativos_frontend_set and i in map_vu_por_idx]
-    valores_unit_ativos = [map_vu_por_idx[i] for i in indices_ativos_alinhados]
-
-    # Paths de saída
-    pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
-    os.makedirs(pasta_saida, exist_ok=True)
-    img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
-    img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
-
-    # Gera gráficos (você já tinha dispersão; se quiser aderência, gere também)
-    gerar_grafico_dispersao_mediana(
-        df_filtrado,
-        valores_unit_ativos,
-        img2,
-        ativos_frontend,
-        amostras_usuario_retirou,
-        amostras_chauvenet_retirou
-    )
-
-    # Finalidade
-    finalidade_digitada = (fatores_do_usuario.get("finalidade_descricao", "") or "").strip().lower()
-    if "desapropria" in finalidade_digitada:
-        finalidade_do_laudo = "desapropriacao"
-    elif "servid" in finalidade_digitada:
-        finalidade_do_laudo = "servidao"
+    if chaves_postadas:
+        for amostra in dados["amostras"]:
+            campo = f"ativo_{amostra['idx']}"
+            amostra["ativo"] = campo in request.form
     else:
-        finalidade_do_laudo = "mercado"
+        logger.warning("⚠️ Nenhuma chave 'ativo_*' recebida. Mantendo estados 'ativo' do JSON.")
 
-    # >>> DOCX
-    caminho_docx = os.path.join(pasta_saida, f"laudo_avaliacao_{uuid}.docx")
+        # Salva JSON atualizado
+        with open(caminho_json, "w", encoding="utf-8") as f:
+            json.dump(dados, f, indent=2, ensure_ascii=False)
 
-    # ✨ Valores auxiliares para o relatório
-    valores_originais_iniciais = [a.get("VALOR TOTAL", 0) for _, a in df_ativas.iterrows()]
-    valores_homogeneizados_validos = [
-        {"valor_unitario": float(a.get("valor_unitario", 0) or 0)}
-        for a in amostras_homog if float(a.get("valor_unitario", 0) or 0) > 0
-    ]
+        # Importações obrigatórias
+        import pandas as pd
+        from executaveis_avaliacao.main import (
+            aplicar_chauvenet_e_filtrar,
+            homogeneizar_amostras,
+            gerar_grafico_aderencia_totais,
+            gerar_grafico_dispersao_mediana,
+            gerar_relatorio_avaliacao_com_template
+        )
 
-    # Chamada correta da função (sem variáveis inexistentes)
-    gerar_relatorio_avaliacao_com_template(
+        # Preparação de amostras
+        ativos_frontend = [a["idx"] for a in dados["amostras"] if a.get("ativo", False)]
+        amostras_usuario_retirou = [a["idx"] for a in dados["amostras"] if not a.get("ativo", False)]
+        amostras_ativas = [a for a in dados["amostras"] if a.get("ativo") and (a.get("area", 0) or 0) > 0]
+
+        if not amostras_ativas:
+            flash("Nenhuma amostra ativa para gerar o laudo.", "warning")
+            return redirect(url_for("visualizar_resultados", uuid=uuid))
+
+        df_ativas = pd.DataFrame(amostras_ativas)
+        df_ativas.rename(columns={
+            "valor_total": "VALOR TOTAL",
+            "area": "AREA TOTAL",
+            "distancia_centro": "DISTANCIA CENTRO"
+        }, inplace=True)
+
+        # valor_unitario_medio do avaliando
+        valores_unitarios = [
+            (row["VALOR TOTAL"] / row["AREA TOTAL"]) if row["AREA TOTAL"] > 0 else 0
+            for _, row in df_ativas.iterrows()
+        ]
+        vu_validos = [v for v in valores_unitarios if v > 0]
+        dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
+
+        # Chauvenet + homogeneização
+        df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
+        amostras_homog = homogeneizar_amostras(df_filtrado, dados_avaliando, fatores_do_usuario, "mercado")
+
+        # Alinhamentos para gráficos
+        idx_filtrados = df_filtrado["idx"].astype(int).tolist()
+        ativos_frontend_set = set(int(i) for i in ativos_frontend)
+        amostras_chauvenet_retirou = [i for i in ativos_frontend_set if i not in idx_filtrados]
+        map_vu_por_idx = {int(a["idx"]): float(a["valor_unitario"]) for a in amostras_homog}
+        indices_ativos_alinhados = [i for i in idx_filtrados if i in ativos_frontend_set and i in map_vu_por_idx]
+        valores_unit_ativos = [map_vu_por_idx[i] for i in indices_ativos_alinhados]
+
+        # Paths de saída
+        pasta_saida = os.path.join("static", "arquivos", f"avaliacao_{uuid}")
+        os.makedirs(pasta_saida, exist_ok=True)
+        img1 = os.path.join(pasta_saida, "grafico_aderencia_iterativo.png")
+        img2 = os.path.join(pasta_saida, "grafico_dispersao_iterativo.png")
+
+        # Gera gráficos (você já tinha dispersão; se quiser aderência, gere também)
+        gerar_grafico_dispersao_mediana(
+            df_filtrado,
+            valores_unit_ativos,
+            img2,
+            ativos_frontend,
+            amostras_usuario_retirou,
+            amostras_chauvenet_retirou
+        )
+
+        # Finalidade
+        finalidade_digitada = (fatores_do_usuario.get("finalidade_descricao", "") or "").strip().lower()
+        if "desapropria" in finalidade_digitada:
+            finalidade_do_laudo = "desapropriacao"
+        elif "servid" in finalidade_digitada:
+            finalidade_do_laudo = "servidao"
+        else:
+            finalidade_do_laudo = "mercado"
+
+        # >>> DOCX
+        caminho_docx = os.path.join(pasta_saida, f"laudo_avaliacao_{uuid}.docx")
+
+        # ✨ Valores auxiliares para o relatório
+        valores_originais_iniciais = [a.get("VALOR TOTAL", 0) for _, a in df_ativas.iterrows()]
+        valores_homogeneizados_validos = [
+            {"valor_unitario": float(a.get("valor_unitario", 0) or 0)}
+            for a in amostras_homog if float(a.get("valor_unitario", 0) or 0) > 0
+        ]
+
+        # Chamada correta da função (sem variáveis inexistentes)
+        gerar_relatorio_avaliacao_com_template(
         dados_avaliando=dados_avaliando,
         dataframe_amostras_inicial=df_amostras_inicial,     # seus dfs aqui
         dataframe_amostras_filtrado=df_amostras_filtrado,
