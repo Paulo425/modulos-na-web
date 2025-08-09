@@ -1765,6 +1765,12 @@ def gerar_laudo_final(uuid):
         for a in amostras_homog if float(a.get("valor_unitario", 0) or 0) > 0
     ]
 
+    template_docx = os.path.join(BASE_DIR, "templates_doc", "Template.docx")
+
+    # (opcional) log defensivo
+    if not os.path.exists(template_docx):
+        logger.error(f"❌ template.docx não encontrado em: {template_docx}")
+
     # Geração do DOCX
     gerar_relatorio_avaliacao_com_template(
         dados_avaliando=dados["dados_avaliando"],
@@ -1789,7 +1795,7 @@ def gerar_laudo_final(uuid):
         caminhos_fotos_adicionais=arquivos.get("fotos_adicionais", []),
         caminhos_fotos_proprietario=arquivos.get("fotos_proprietario", []),
         caminhos_fotos_planta=arquivos.get("fotos_planta", []),
-        caminho_template="template.docx",
+        caminho_template=template_docx,  # ✅ Usa a variável com o caminho correto
         nome_arquivo_word=caminho_docx,
     )
 
