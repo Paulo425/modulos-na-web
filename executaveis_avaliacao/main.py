@@ -2135,6 +2135,91 @@ def _insert_paragraph_after(documento, bloco_oxml):
 #             br.add_break(WD_BREAK.PAGE)
 #         # atualiza âncora
 #         anchor = p._p
+def substituir_placeholder_por_varias_imagens(
+    documento,
+    placeholder,
+    caminhos_imagens,
+    largura=Inches(6),
+    quebra_pagina_entre=True,
+    centralizar=True,
+):
+    """
+    Insere imagens uma por página no lugar do placeholder.
+    - placeholder: ex. "[MATRICULA]"
+    - caminhos_imagens: lista de paths (str)
+    """
+
+    # 0) Se não há imagens: apenas remove o placeholder (se existir) e retorna
+    if not caminhos_imagens:
+        # tenta remover em parágrafos do corpo
+        for p in documento.paragraphs:
+            if placeholder in p.text:
+                p.text = p.text.replace(placeholder, "")
+                return
+        # tenta remover em células de tabela
+        for tab in documento.tables:
+            for row in tab.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if placeholder in p.text:
+                            p.text = p.text.replace(placeholder, "")
+                            return
+        return
+
+    # 1) Acha o parágrafo âncora que contém o placeholder (corpo e tabelas)
+    def _find_paragraph_with_text(doc, text):
+        for p in doc.paragraphs:
+            if text in p.text:
+                return p
+        for tab in doc.tables:
+            for row in tab.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if text in p.text:
+                            return p
+        return None
+
+    par_ancora = _find_paragraph_with_text(documento, placeholder)
+    if par_ancora:
+        # remove o marcador preservando o parágrafo
+        for run in par_ancora.runs:
+            if placeholder in run.text:
+                run.text = run.text.replace(placeholder, "")
+        if placeholder in par_ancora.text:  # fallback
+            par_ancora.text = par_ancora.text.replace(placeholder, "")
+    else:
+        # se o placeholder não está no template (caso raro), ancora no final
+        par_ancora = documento.add_paragraph()
+
+    # 2) Insere cada imagem após a âncora, com quebra de página entre elas
+    total = len(caminhos_imagens)
+    for i, caminho in enumerate(caminhos_imagens):
+        # cria um parágrafo novo para a imagem
+        p_img = documento.add_paragraph()
+        if centralizar:
+            p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        run = p_img.add_run()
+        if isinstance(caminho, str) and os.path.exists(caminho):
+            try:
+                run.add_picture(caminho, width=largura)
+            except Exception:
+                p_img.add_run(f"[erro ao inserir: {os.path.basename(caminho)}]")
+        else:
+            p_img.add_run("[imagem não encontrada]")
+
+        # move o parágrafo recém-criado para logo DEPOIS do par_ancora
+        par_ancora._p.addnext(p_img._element)
+        par_ancora = p_img  # atualiza âncora
+
+        # adiciona quebra de página entre imagens (menos depois da última)
+        if quebra_pagina_entre and (i < total - 1):
+            p_break = documento.add_paragraph()
+            p_break.add_run().add_break(WD_BREAK.PAGE)
+            par_ancora._p.addnext(p_break._element)
+            par_ancora = p_break  # âncora após a quebra
+
+    return True
 
 
 def substituir_placeholder_por_varias_imagens_em_grade(
