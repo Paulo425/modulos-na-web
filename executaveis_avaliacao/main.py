@@ -2140,119 +2140,119 @@ def _insert_paragraph_after(documento, bloco_oxml):
 #         anchor = p._p
 
 
-def substituir_placeholder_por_varias_imagens_em_grade(
-    documento,
-    placeholder,
-    caminhos_imagens,
-    cols=2,
-    rows_por_pagina=3,
-    margem_extra_inch=0.2,     # pequena folga para não colar nas margens
-    centralizar=True,
-    remover_bordas=True,
-):
-    """
-    Insere imagens em grade (cols x rows_por_pagina) no lugar do placeholder.
-    Preenche 6 por página (2 col x 3 lin) e quebra página para continuar.
+# def substituir_placeholder_por_varias_imagens_em_grade(
+#     documento,
+#     placeholder,
+#     caminhos_imagens,
+#     cols=2,
+#     rows_por_pagina=3,
+#     margem_extra_inch=0.2,     # pequena folga para não colar nas margens
+#     centralizar=True,
+#     remover_bordas=True,
+# ):
+#     """
+#     Insere imagens em grade (cols x rows_por_pagina) no lugar do placeholder.
+#     Preenche 6 por página (2 col x 3 lin) e quebra página para continuar.
 
-    - placeholder: ex. "[FOTOS]"
-    - caminhos_imagens: lista de paths (str)
-    """
+#     - placeholder: ex. "[FOTOS]"
+#     - caminhos_imagens: lista de paths (str)
+#     """
        
     
        
-    if not caminhos_imagens:
-        # Se nada a inserir, apenas remove o placeholder se existir
-        for par in documento.paragraphs:
-            if placeholder in par.text:
-                par.text = par.text.replace(placeholder, "")
-                break
-        return
+#     if not caminhos_imagens:
+#         # Se nada a inserir, apenas remove o placeholder se existir
+#         for par in documento.paragraphs:
+#             if placeholder in par.text:
+#                 par.text = par.text.replace(placeholder, "")
+#                 break
+#         return
 
-    # 1) Encontrar parágrafo com placeholder (em parágrafos ou em células de tabela)
-    def _find_paragraph_with_text(doc, text):
-        # procura em parágrafos do corpo
-        for p in doc.paragraphs:
-            if text in p.text:
-                return p
-        # procura em tabelas
-        for tab in doc.tables:
-            for row in tab.rows:
-                for cell in row.cells:
-                    for p in cell.paragraphs:
-                        if text in p.text:
-                            return p
-        return None
+#     # 1) Encontrar parágrafo com placeholder (em parágrafos ou em células de tabela)
+#     def _find_paragraph_with_text(doc, text):
+#         # procura em parágrafos do corpo
+#         for p in doc.paragraphs:
+#             if text in p.text:
+#                 return p
+#         # procura em tabelas
+#         for tab in doc.tables:
+#             for row in tab.rows:
+#                 for cell in row.cells:
+#                     for p in cell.paragraphs:
+#                         if text in p.text:
+#                             return p
+#         return None
 
-    par_ancora = _find_paragraph_with_text(documento, placeholder)
-    if par_ancora:
-        par_ancora.text = par_ancora.text.replace(placeholder, "")
-    else:
-        # Se não achou, cria um parágrafo âncora no final
-        par_ancora = documento.add_paragraph()
+#     par_ancora = _find_paragraph_with_text(documento, placeholder)
+#     if par_ancora:
+#         par_ancora.text = par_ancora.text.replace(placeholder, "")
+#     else:
+#         # Se não achou, cria um parágrafo âncora no final
+#         par_ancora = documento.add_paragraph()
 
-    # 2) Largura útil da página para calcular a largura de cada coluna
-    # (usa a primeira seção; normalmente seu template tem margens padrão)
-    section = documento.sections[0]
-    EMU_PER_INCH = 914400
-    largura_util_emu = section.page_width - section.left_margin - section.right_margin
-    largura_util_in = float(largura_util_emu) / EMU_PER_INCH
-    largura_col_in = max(largura_util_in / float(cols) - margem_extra_inch, 1.0)  # evita zero/negativo
+#     # 2) Largura útil da página para calcular a largura de cada coluna
+#     # (usa a primeira seção; normalmente seu template tem margens padrão)
+#     section = documento.sections[0]
+#     EMU_PER_INCH = 914400
+#     largura_util_emu = section.page_width - section.left_margin - section.right_margin
+#     largura_util_in = float(largura_util_emu) / EMU_PER_INCH
+#     largura_col_in = max(largura_util_in / float(cols) - margem_extra_inch, 1.0)  # evita zero/negativo
 
-    # 3) Iterar imagens e criar uma tabela (rows_por_pagina x cols) por página
-    i = 0
-    total = len(caminhos_imagens)
+#     # 3) Iterar imagens e criar uma tabela (rows_por_pagina x cols) por página
+#     i = 0
+#     total = len(caminhos_imagens)
 
-    def _remover_bordas_tabela(tbl):
-        # remove bordas da tabela para as fotos ficarem "limpas"
-        tbl_pr = tbl._tbl.tblPr
-        tbl_borders = OxmlElement('w:tblBorders')
-        for tag in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
-            elem = OxmlElement(f'w:{tag}')
-            elem.set(qn('w:val'), 'nil')
-            tbl_borders.append(elem)
-        tbl_pr.append(tbl_borders)
+#     def _remover_bordas_tabela(tbl):
+#         # remove bordas da tabela para as fotos ficarem "limpas"
+#         tbl_pr = tbl._tbl.tblPr
+#         tbl_borders = OxmlElement('w:tblBorders')
+#         for tag in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+#             elem = OxmlElement(f'w:{tag}')
+#             elem.set(qn('w:val'), 'nil')
+#             tbl_borders.append(elem)
+#         tbl_pr.append(tbl_borders)
 
-    while i < total:
-        # criar tabela da página
-        tabela = documento.add_table(rows=rows_por_pagina, cols=cols)
-        tabela.autofit = False
-        if remover_bordas:
-            _remover_bordas_tabela(tabela)
+#     while i < total:
+#         # criar tabela da página
+#         tabela = documento.add_table(rows=rows_por_pagina, cols=cols)
+#         tabela.autofit = False
+#         if remover_bordas:
+#             _remover_bordas_tabela(tabela)
 
-        # preencher as células
-        for r in range(rows_por_pagina):
-            for c in range(cols):
-                if i >= total:
-                    break
-                caminho = caminhos_imagens[i]
-                i += 1
+#         # preencher as células
+#         for r in range(rows_por_pagina):
+#             for c in range(cols):
+#                 if i >= total:
+#                     break
+#                 caminho = caminhos_imagens[i]
+#                 i += 1
 
-                cell = tabela.cell(r, c)
-                # garante parágrafo vazio
-                for para in list(cell.paragraphs)[1:]:
-                    p = para._p
-                    p.getparent().remove(p)
-                p = cell.paragraphs[0]
-                if centralizar:
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run = p.add_run()
+#                 cell = tabela.cell(r, c)
+#                 # garante parágrafo vazio
+#                 for para in list(cell.paragraphs)[1:]:
+#                     p = para._p
+#                     p.getparent().remove(p)
+#                 p = cell.paragraphs[0]
+#                 if centralizar:
+#                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#                 run = p.add_run()
 
-                if isinstance(caminho, str) and os.path.exists(caminho):
-                    try:
-                        run.add_picture(caminho, width=Inches(largura_col_in))
-                    except Exception as e:
-                        # se algo der errado, pelo menos escreve o path
-                        p.add_run(f"[Erro na imagem: {os.path.basename(caminho)}]")
-                else:
-                    p.add_run("[imagem não encontrada]")
+#                 if isinstance(caminho, str) and os.path.exists(caminho):
+#                     try:
+#                         run.add_picture(caminho, width=Inches(largura_col_in))
+#                     except Exception as e:
+#                         # se algo der errado, pelo menos escreve o path
+#                         p.add_run(f"[Erro na imagem: {os.path.basename(caminho)}]")
+#                 else:
+#                     p.add_run("[imagem não encontrada]")
 
-        # inserir a tabela logo após o parágrafo âncora
-        par_ancora._p.addnext(tabela._element)
-        par_ancora = documento.add_paragraph()  # atualiza âncora
+#         # inserir a tabela logo após o parágrafo âncora
+#         par_ancora._p.addnext(tabela._element)
+#         par_ancora = documento.add_paragraph()  # atualiza âncora
 
-        # quebra de página se ainda restarem imagens
-        if i < total:
-            documento.add_page_break()
+#         # quebra de página se ainda restarem imagens
+#         if i < total:
+#             documento.add_page_break()
 
 
 ###############################################################################
@@ -7750,14 +7750,12 @@ def gerar_relatorio_avaliacao_com_template(
    
     # FOTOS DO IMÓVEL — grade 2x3 (6 por página)
     if fotos_fotos:
-        substituir_placeholder_por_varias_imagens_em_grade(
-            documento,
-            "[FOTOS]",
-            fotos_fotos,
-            cols=2,
-            rows_por_pagina=3,
-            replace_all=False  # só preenche o 1º [FOTOS]; se quiser tb no fim, crie [FOTOS_FIM]
+       substituir_placeholder_por_varias_imagens_em_grade(
+            documento, "[FOTOS]", fotos_fotos, cols=2, rows_por_pagina=3
         )
+
+
+
     else:
         substituir_placeholder_por_texto_formatado(
             documento,
