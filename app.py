@@ -1609,15 +1609,17 @@ def visualizar_resultados(uuid):
         vuh_media = float(np.mean(vals)) if vals.size else 0.0
         sigma     = float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0
 
-        area_av = float(dados_avaliando.get("AREA TOTAL") or 0.0)
-        vu_av   = float(dados_avaliando.get("valor_unitario_medio") or 0.0)
+        area_av = float(dados_avaliando.get("AREA TOTAL") or 0)
+        vu_base = float(vuh_media or 0)   # <-- ESTE é o "Valor Unitário Médio" da tabela
 
-        dados_avaliando["valor_total"]   = round(vu_av * area_av, 2) if (vu_av > 0 and area_av > 0) else None
-        dados_avaliando["valor_estimado"] = vuh_media if vuh_media > 0 else None
-        dados_avaliando["residuo_rel"]    = ((vu_av - vuh_media) / vuh_media * 100) if vuh_media > 0 else None
-        dados_avaliando["residuo_dp"]     = ((vu_av - vuh_media) / sigma) if sigma > 0 else None
+        dados_avaliando["valor_unitario_para_calculo"] = vu_base
+        dados_avaliando["valor_total"] = (vu_base * area_av) if (vu_base > 0 and area_av > 0) else None
+        dados_avaliando["valor_estimado"] = vu_base
+        # Se não quiser residuais para o AV, deixe None:
+        dados_avaliando["residuo_rel"] = None
+        dados_avaliando["residuo_dp"]  = None
 
-        logger.debug(f"[AV] area={area_av}, vu_av={vu_av}, media={vuh_media}, dp={sigma}, total={dados_avaliando.get('valor_total')}")
+        logger.debug(f"[AV] area={area_av}, vu_base={vu_base}, total={dados_avaliando['valor_total']}")
 
 
 
@@ -1751,12 +1753,31 @@ def gerar_laudo_final(uuid):
     }, inplace=True)
 
     # valor_unitario_medio do avaliando
-    valores_unitarios = [
-        (row["VALOR TOTAL"] / row["AREA TOTAL"]) if row["AREA TOTAL"] > 0 else 0
-        for _, row in df_ativas.iterrows()
-    ]
-    vu_validos = [v for v in valores_unitarios if v > 0]
-    dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
+    # valor_unitario_medio do avaliando — usa o que veio da TELA iterativa (se houver)
+    vu_calc = float(dados_avaliando.get("valor_unitario_para_calculo") or 0)
+
+    if vu_calc > 0:
+        # força o mesmo número que aparece na tela (ex.: 71,53)
+        dados_avaliando["valor_unitario_medio"] = vu_calc
+    else:
+        # Fallback: calcula pela média das amostras (só se não veio nada da tela)
+        valores_unitarios = [
+            (row["VALOR TOTAL"] / row["AREA TOTAL"]) if row["AREA TOTAL"] > 0 else 0
+            for _, row in df_ativas.iterrows()
+        ]
+        vu_validos = [v for v in valores_unitarios if v > 0]
+        dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
+
+    # Calcula o VALOR TOTAL do AVALIANDO pro DOCX
+    area_total_av = float(dados_avaliando.get("AREA TOTAL") or dados_avaliando.get("AREA_TOTAL") or 0)
+    vu_docx = float(dados_avaliando.get("valor_unitario_medio") or 0)
+    dados_avaliando["valor_total"] = round(vu_docx * area_total_av, 2) if (vu_docx > 0 and area_total_av > 0) else None
+
+    # persiste de volta no JSON ANTES de chamar o gerador de DOCX
+    dados["dados_avaliando"] = dados_avaliando
+    with open(caminho_json, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+
 
     # Chauvenet + homogeneização
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
@@ -2254,6 +2275,21 @@ def calcular_valores_iterativos(uuid):
             li, ls = intervalo_confianca_bootstrap_mediana(array_homog, bootstrap_n, 0.80)
 
         valor_medio  = round(float(np.median(array_homog)), 2)
+
+        # >>> PERSISTE o valor da TELA para ser usado no DOCX
+        area_total_av = float(dados_avaliando.get("AREA TOTAL") 
+                            or dados_avaliando.get("AREA_TOTAL") 
+                            or 0)
+
+        dados_avaliando["valor_unitario_para_calculo"] = float(valor_medio)
+        dados_avaliando["valor_total"] = round(valor_medio * area_total_av, 2) if area_total_av > 0 else None
+
+        data["dados_avaliando"] = dados_avaliando
+
+        # sobrescreve o JSON com esses campos atualizados
+        with open(caminho_json, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
         valor_minimo = round(float(li), 2)
         valor_maximo = round(float(ls), 2)
         amplitude_intervalo_confianca = round(((valor_maximo - valor_minimo) / valor_medio) * 100, 2) if valor_medio > 0 else 0.0
@@ -2278,6 +2314,8 @@ def calcular_valores_iterativos(uuid):
             "valor_minimo": valor_minimo,
             "valor_medio": valor_medio,
             "valor_maximo": valor_maximo,
+            "valor_unitario_para_calculo": valor_medio,  # <--- ADICIONADO
+            "valor_total_avaliando": round(valor_medio * area_total_av, 2) if area_total_av > 0 else None,  # <--- ADICIONADO
             "amplitude_intervalo_confianca": amplitude_intervalo_confianca,
             "quantidade_amostras_iniciais": len(amostras),
             "quantidade_amostras_usuario_retirou": len(off_set),

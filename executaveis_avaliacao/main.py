@@ -7746,41 +7746,83 @@ def gerar_relatorio_avaliacao_com_template(
     fotos_proprietario = _unique_keep_order(fotos_proprietario)
     fotos_planta       = _unique_keep_order(fotos_planta)
 
-    # FOTOS DO IMÓVEL
+    from docx.shared import Pt, Inches
+
+    # FOTOS DO IMÓVEL — grade 2x3 (6 por página)
     if fotos_fotos:
         substituir_placeholder_por_varias_imagens_em_grade(
-            documento, "[FOTOS]", fotos_fotos, cols=2, rows_por_pagina=3
+            documento,
+            "[FOTOS]",
+            fotos_fotos,
+            cols=2,
+            rows_por_pagina=3,
+            replace_all=False  # só preenche o 1º [FOTOS]; se quiser tb no fim, crie [FOTOS_FIM]
         )
     else:
-        substituir_placeholder_por_texto_formatado(documento, "[FOTOS]",
-            "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS", Pt(12), True)
+        substituir_placeholder_por_texto_formatado(
+            documento,
+            "[FOTOS]",
+            "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS",
+            Pt(12),
+            True
+        )
 
-    # MATRÍCULA / ADICIONAIS
+    # MATRÍCULA — 1 imagem por página
     if fotos_matricula:
-        substituir_placeholder_por_varias_imagens_em_grade(
-            documento, "[MATRICULA]", fotos_matricula, cols=2, rows_por_pagina=3
+        substituir_placeholder_por_varias_imagens(
+            documento,
+            "[MATRICULA]",
+            fotos_matricula,
+            largura=Inches(6),
+            quebra_pagina_entre=True,
+            replace_all=False
         )
     else:
-        substituir_placeholder_por_texto_formatado(documento, "[MATRICULA]",
-            "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA", Pt(12), True)
+        substituir_placeholder_por_texto_formatado(
+            documento,
+            "[MATRICULA]",
+            "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA",
+            Pt(12),
+            True
+        )
 
-    # PROPRIETÁRIO
+    # PROPRIETÁRIO — 1 imagem por página
     if fotos_proprietario:
-        substituir_placeholder_por_varias_imagens_em_grade(
-            documento, "[PROPRIETARIO]", fotos_proprietario, cols=2, rows_por_pagina=3
+        substituir_placeholder_por_varias_imagens(
+            documento,
+            "[PROPRIETARIO]",
+            fotos_proprietario,
+            largura=Inches(6),
+            quebra_pagina_entre=True,
+            replace_all=False
         )
     else:
-        substituir_placeholder_por_texto_formatado(documento, "[PROPRIETARIO]",
-            "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA", Pt(12), True)
+        substituir_placeholder_por_texto_formatado(
+            documento,
+            "[PROPRIETARIO]",
+            "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA",
+            Pt(12),
+            True
+        )
 
-    # PLANTA
+    # PLANTA — 1 imagem por página
     if fotos_planta:
-        substituir_placeholder_por_varias_imagens_em_grade(
-            documento, "[PLANTA]", fotos_planta, cols=2, rows_por_pagina=3
+        substituir_placeholder_por_varias_imagens(
+            documento,
+            "[PLANTA]",
+            fotos_planta,
+            largura=Inches(6),
+            quebra_pagina_entre=True,
+            replace_all=False
         )
     else:
-        substituir_placeholder_por_texto_formatado(documento, "[PLANTA]",
-            "PLANTA DO IMÓVEL NÃO FORNECIDA", Pt(12), True)
+        substituir_placeholder_por_texto_formatado(
+            documento,
+            "[PLANTA]",
+            "PLANTA DO IMÓVEL NÃO FORNECIDA",
+            Pt(12),
+            True
+        )
 
     # Salvar DOCX
     documento.save(nome_arquivo_word)
