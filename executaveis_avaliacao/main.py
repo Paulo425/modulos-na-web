@@ -7853,9 +7853,14 @@ def gerar_relatorio_avaliacao_com_template(
     fotos_fotos = _only_images(caminhos_fotos_avaliando)
 
     # 2) DOCUMENTOS (PDF → PNGs por página) → [MATRICULA], [PROPRIETARIO], [PLANTA]
-    fotos_matricula    = _pdfs_para_pngs(caminhos_matricula_pdf,    "matricula",    uuid_execucao, dpi=200)
-    fotos_proprietario = _pdfs_para_pngs(caminhos_proprietario_pdf, "proprietario", uuid_execucao, dpi=200)
-    fotos_planta       = _pdfs_para_pngs(caminhos_planta_pdf,       "planta",       uuid_execucao, dpi=200)
+    pdfs_matricula    = _only_pdfs(caminhos_fotos_adicionais)
+    pdfs_proprietario = _only_pdfs(caminhos_fotos_proprietario)
+    pdfs_planta       = _only_pdfs(caminhos_fotos_planta)
+
+    fotos_matricula    = _pdfs_para_pngs(pdfs_matricula,    "matricula",    uuid_execucao, dpi=200)
+    fotos_proprietario = _pdfs_para_pngs(pdfs_proprietario, "proprietario", uuid_execucao, dpi=200)
+    fotos_planta       = _pdfs_para_pngs(pdfs_planta,       "planta",       uuid_execucao, dpi=200)
+
 
 
     # (opcional) deduplicar mantendo a ordem
