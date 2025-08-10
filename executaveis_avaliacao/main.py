@@ -5147,24 +5147,38 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
         else:
             fator_acessibilidade_calculado = 1.0
 
-        # Fator localização
+               # Fator localização
         if fatores_do_usuario.get("localizacao_mesma_regiao", False):
             fator_localizacao_calculado = 1.0
         else:
             try:
-                distancia_amostra = float(linha.get("DISTANCIA CENTRO", 0))
-                distancia_avaliando = float(dados_avaliando.get("DISTANCIA CENTRO",0))   
-                    fator_item_comparativo = 1 / math.pow(distancia_amostra, 1/10)
-                    fator_bem_avaliando = 1 / math.pow(distancia_avaliando, 1/10)
-                    fator_localizacao_calculado = fator_bem_avaliando / fator_item_comparativo
+                def _to_float_br(val):
+                    try:
+                        if isinstance(val, str):
+                            v = val.strip().replace(" ", "")
+                            if "," in v and v.count(",") == 1:
+                                v = v.replace(".", "").replace(",", ".")
+                            return float(v)
+                        return float(val)
+                    except Exception:
+                        return 0.0
+
+                distancia_amostra   = _to_float_br(linha.get("DISTANCIA CENTRO", 0))
+                distancia_avaliando = _to_float_br(dados_avaliando.get("DISTANCIA CENTRO", 0))
+
+                fator_item_comparativo = 1.0 / math.pow(distancia_amostra, 1.0/10.0) if distancia_amostra > 0 else 1.0
+                fator_bem_avaliando   = 1.0 / math.pow(distancia_avaliando, 1.0/10.0) if distancia_avaliando > 0 else 1.0
+                fator_localizacao_calculado = fator_bem_avaliando / fator_item_comparativo
+
+                # clamp 0.50–1.40 (mantém o valor calculado se estiver no intervalo)
                 if fator_localizacao_calculado > 1.40:
-                        fator_localizacao_calculado = 1.40
-                    elif fator_localizacao_calculado < 0.50:
-                        fator_localizacao_calculado = 0.50
-                else:
-                    fator_localizacao_calculado = 1.0
-            except:
+                    fator_localizacao_calculado = 1.40
+                elif fator_localizacao_calculado < 0.50:
+                    fator_localizacao_calculado = 0.50
+                # else: mantém o valor calculado
+            except Exception:
                 fator_localizacao_calculado = 1.0
+
 
         # Cálculo do valor total homogenizado aplicando todos os fatores
         valor_total_homogeneizado = (
