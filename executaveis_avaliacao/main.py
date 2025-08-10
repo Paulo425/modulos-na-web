@@ -4,6 +4,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+
+from docx.enum.text import WD_BREAK
+
 import contextily as ctx  # Adicionar no início do arquivo
 import pandas as pd  # Adicionar no início do arquivo
 import os
@@ -66,9 +69,7 @@ from lxml import etree
 from docx.oxml.ns import nsdecls, qn
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.shared import Pt, Inches
 
-from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
 from docx.oxml.ns import nsdecls, qn
@@ -5272,7 +5273,7 @@ def inserir_tabela_amostras_originais(documento, dataframe):
     com as colunas: AM, VALOR TOTAL, ÁREA TOTAL (m²), VALOR UNITÁRIO (R$/m²), CIDADE, FONTE.
     Agora, deixamos um espaço um pouco maior entre as linhas.
     """
-    from docx.shared import Pt, Inches
+    
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.shared import OxmlElement
@@ -7746,8 +7747,7 @@ def gerar_relatorio_avaliacao_com_template(
     fotos_proprietario = _unique_keep_order(fotos_proprietario)
     fotos_planta       = _unique_keep_order(fotos_planta)
 
-    from docx.shared import Pt, Inches
-
+   
     # FOTOS DO IMÓVEL — grade 2x3 (6 por página)
     if fotos_fotos:
         substituir_placeholder_por_varias_imagens_em_grade(
