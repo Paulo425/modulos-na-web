@@ -1051,143 +1051,143 @@ def salvar_pdf_como_png(caminho_pdf, pasta_saida="static/temp", dpi=200):
 
 #     return lista_detalhes
 
-def calcular_detalhes_amostras(dataframe_ou_amostras, dados_avaliando, fatores_do_usuario, finalidade_do_laudo="mercado"):
-    """
-    Retorna lista de linhas para a tabela:
-      - AM, AREA (formatada), VU (moeda), FA/FO/FAP/FT/FP/FPA/FE/FAC/FL, VUH (moeda)
-    Aceita DataFrame OU lista de dicts (snapshot v2).
-    """
-    import numpy as np
-    import pandas as pd
+# def calcular_detalhes_amostras(dataframe_ou_amostras, dados_avaliando, fatores_do_usuario, finalidade_do_laudo="mercado"):
+#     """
+#     Retorna lista de linhas para a tabela:
+#       - AM, AREA (formatada), VU (moeda), FA/FO/FAP/FT/FP/FPA/FE/FAC/FL, VUH (moeda)
+#     Aceita DataFrame OU lista de dicts (snapshot v2).
+#     """
+#     import numpy as np
+#     import pandas as pd
 
-    def _coerce_float(x, default=0.0):
-        try:
-            if isinstance(x, str):
-                x = x.replace("R$", "").replace(".", "").replace(",", ".").strip()
-            v = float(x)
-            if v != v:
-                return default
-            return v
-        except Exception:
-            return default
+#     def _coerce_float(x, default=0.0):
+#         try:
+#             if isinstance(x, str):
+#                 x = x.replace("R$", "").replace(".", "").replace(",", ".").strip()
+#             v = float(x)
+#             if v != v:
+#                 return default
+#             return v
+#         except Exception:
+#             return default
 
-    def get_multi(d: dict, *keys, default=None):
-        for k in keys:
-            if isinstance(d, dict) and k in d and d[k] not in (None, "", "NaN"):
-                return d[k]
-        return default
+#     def get_multi(d: dict, *keys, default=None):
+#         for k in keys:
+#             if isinstance(d, dict) and k in d and d[k] not in (None, "", "NaN"):
+#                 return d[k]
+#         return default
 
-    def _sn(v):
-        if v is None: return None
-        s = str(v).strip().upper()
-        if s in ("SIM", "S"): return "SIM"
-        if s in ("NAO", "NÃO", "N", "NAO "): return "NAO"
-        return None
+#     def _sn(v):
+#         if v is None: return None
+#         s = str(v).strip().upper()
+#         if s in ("SIM", "S"): return "SIM"
+#         if s in ("NAO", "NÃO", "N", "NAO "): return "NAO"
+#         return None
 
-    # normaliza → DataFrame com nomes canônicos
-    if isinstance(dataframe_ou_amostras, pd.DataFrame):
-        df = dataframe_ou_amostras.copy()
-    else:
-        df = pd.DataFrame(list(dataframe_ou_amostras or []))
+#     # normaliza → DataFrame com nomes canônicos
+#     if isinstance(dataframe_ou_amostras, pd.DataFrame):
+#         df = dataframe_ou_amostras.copy()
+#     else:
+#         df = pd.DataFrame(list(dataframe_ou_amostras or []))
 
-    df.rename(columns={
-        "VALOR TOTAL": "valor_total",
-        "AREA TOTAL": "area",
-        "AM": "idx",
-        "distancia_centro": "DISTANCIA CENTRO",
-        "PAVIMENTAÇÃO?": "PAVIMENTACAO?",
-        "PAVIMENTACAO ?": "PAVIMENTACAO?",
-        "ACESSIBILIDADE ?": "ACESSIBILIDADE?",
-        "BOA TOPOGRAFIA ?": "BOA TOPOGRAFIA?",
-        "PEDOLOGIA ALAGAVEL?": "PEDOLOGIA ALAGÁVEL? ",
-        "ESQUINA?": " ESQUINA?",
-    }, inplace=True)
+#     df.rename(columns={
+#         "VALOR TOTAL": "valor_total",
+#         "AREA TOTAL": "area",
+#         "AM": "idx",
+#         "distancia_centro": "DISTANCIA CENTRO",
+#         "PAVIMENTAÇÃO?": "PAVIMENTACAO?",
+#         "PAVIMENTACAO ?": "PAVIMENTACAO?",
+#         "ACESSIBILIDADE ?": "ACESSIBILIDADE?",
+#         "BOA TOPOGRAFIA ?": "BOA TOPOGRAFIA?",
+#         "PEDOLOGIA ALAGAVEL?": "PEDOLOGIA ALAGÁVEL? ",
+#         "ESQUINA?": " ESQUINA?",
+#     }, inplace=True)
 
-    for col, default in [("idx", 0), ("valor_total", 0.0), ("area", 0.0)]:
-        if col not in df.columns:
-            df[col] = default
-    if "DISTANCIA CENTRO" not in df.columns:
-        df["DISTANCIA CENTRO"] = 0.0
-    if "ativo" in df.columns:
-        df = df[df["ativo"] == True].copy()
+#     for col, default in [("idx", 0), ("valor_total", 0.0), ("area", 0.0)]:
+#         if col not in df.columns:
+#             df[col] = default
+#     if "DISTANCIA CENTRO" not in df.columns:
+#         df["DISTANCIA CENTRO"] = 0.0
+#     if "ativo" in df.columns:
+#         df = df[df["ativo"] == True].copy()
 
-    # valores do avaliado
-    area_av = _coerce_float(get_multi(dados_avaliando, "AREA TOTAL", "AREA_TOTAL", default=0.0), 0.0)
-    f_av_aprov = fator_aproveitamento(get_multi(dados_avaliando, "APROVEITAMENTO", default="URBANO"))
-    f_av_topog = fator_topografia(get_multi(dados_avaliando, "BOA TOPOGRAFIA?", "BOA TOPOGRAFIA ?", default="NÃO"))
-    f_av_pedol = fator_pedologia(get_multi(dados_avaliando, "PEDOLOGIA ALAGÁVEL? ", "PEDOLOGIA ALAGAVEL?", default="NÃO"))
-    f_av_pav   = fator_pavimentacao(_sn(get_multi(dados_avaliando, "PAVIMENTACAO?", "PAVIMENTAÇÃO?")))
-    f_av_esq   = fator_esquina(get_multi(dados_avaliando, " ESQUINA?", "ESQUINA?", default="NÃO"))
-    f_av_acess = fator_acessibilidade(_sn(get_multi(dados_avaliando, "ACESSIBILIDADE?", "ACESSIBILIDADE ?", " ACESSIBILIDADE?")))
+#     # valores do avaliado
+#     area_av = _coerce_float(get_multi(dados_avaliando, "AREA TOTAL", "AREA_TOTAL", default=0.0), 0.0)
+#     f_av_aprov = fator_aproveitamento(get_multi(dados_avaliando, "APROVEITAMENTO", default="URBANO"))
+#     f_av_topog = fator_topografia(get_multi(dados_avaliando, "BOA TOPOGRAFIA?", "BOA TOPOGRAFIA ?", default="NÃO"))
+#     f_av_pedol = fator_pedologia(get_multi(dados_avaliando, "PEDOLOGIA ALAGÁVEL? ", "PEDOLOGIA ALAGAVEL?", default="NÃO"))
+#     f_av_pav   = fator_pavimentacao(_sn(get_multi(dados_avaliando, "PAVIMENTACAO?", "PAVIMENTAÇÃO?")))
+#     f_av_esq   = fator_esquina(get_multi(dados_avaliando, " ESQUINA?", "ESQUINA?", default="NÃO"))
+#     f_av_acess = fator_acessibilidade(_sn(get_multi(dados_avaliando, "ACESSIBILIDADE?", "ACESSIBILIDADE ?", " ACESSIBILIDADE?")))
 
-    lista_detalhes = []
+#     lista_detalhes = []
 
-    for _, row in df.iterrows():
-        am_id = str(row.get("idx") or row.get("AM") or "")
-        vt    = _coerce_float(row.get("valor_total", 0.0), 0.0)
-        ar    = _coerce_float(row.get("area", 0.0), 0.0)
+#     for _, row in df.iterrows():
+#         am_id = str(row.get("idx") or row.get("AM") or "")
+#         vt    = _coerce_float(row.get("valor_total", 0.0), 0.0)
+#         ar    = _coerce_float(row.get("area", 0.0), 0.0)
 
-        # toggles básicos
-        f_area   = calcular_fator_area(area_av, ar, bool(fatores_do_usuario.get("area")))
-        f_oferta = calcular_fator_oferta(True, bool(fatores_do_usuario.get("oferta")))
+#         # toggles básicos
+#         f_area   = calcular_fator_area(area_av, ar, bool(fatores_do_usuario.get("area")))
+#         f_oferta = calcular_fator_oferta(True, bool(fatores_do_usuario.get("oferta")))
 
-        # fatores por amostra (fallback pro avaliado quando None)
-        f_s_aprov = fator_aproveitamento(row.get("APROVEITAMENTO", "URBANO"))
-        f_aprov   = limitar_fator(f_av_aprov / f_s_aprov) if bool(fatores_do_usuario.get("aproveitamento")) and f_s_aprov else 1.0
+#         # fatores por amostra (fallback pro avaliado quando None)
+#         f_s_aprov = fator_aproveitamento(row.get("APROVEITAMENTO", "URBANO"))
+#         f_aprov   = limitar_fator(f_av_aprov / f_s_aprov) if bool(fatores_do_usuario.get("aproveitamento")) and f_s_aprov else 1.0
 
-        f_s_topog = fator_topografia(row.get("BOA TOPOGRAFIA?", row.get("BOA TOPOGRAFIA ?", "NÃO")))
-        f_topog   = limitar_fator(f_av_topog / f_s_topog) if bool(fatores_do_usuario.get("topografia")) and f_s_topog else 1.0
+#         f_s_topog = fator_topografia(row.get("BOA TOPOGRAFIA?", row.get("BOA TOPOGRAFIA ?", "NÃO")))
+#         f_topog   = limitar_fator(f_av_topog / f_s_topog) if bool(fatores_do_usuario.get("topografia")) and f_s_topog else 1.0
 
-        f_s_pedol = fator_pedologia(row.get("PEDOLOGIA ALAGÁVEL? ", row.get("PEDOLOGIA ALAGAVEL?", "NÃO")))
-        f_pedol   = limitar_fator(f_av_pedol / f_s_pedol) if bool(fatores_do_usuario.get("pedologia")) and f_s_pedol else 1.0
+#         f_s_pedol = fator_pedologia(row.get("PEDOLOGIA ALAGÁVEL? ", row.get("PEDOLOGIA ALAGAVEL?", "NÃO")))
+#         f_pedol   = limitar_fator(f_av_pedol / f_s_pedol) if bool(fatores_do_usuario.get("pedologia")) and f_s_pedol else 1.0
 
-        pav_am    = _sn(row.get("PAVIMENTACAO?", None))
-        f_s_pav   = f_av_pav if pav_am is None else fator_pavimentacao(pav_am)
-        f_pav     = limitar_fator(f_av_pav / f_s_pav) if bool(fatores_do_usuario.get("pavimentacao")) and f_s_pav else 1.0
+#         pav_am    = _sn(row.get("PAVIMENTACAO?", None))
+#         f_s_pav   = f_av_pav if pav_am is None else fator_pavimentacao(pav_am)
+#         f_pav     = limitar_fator(f_av_pav / f_s_pav) if bool(fatores_do_usuario.get("pavimentacao")) and f_s_pav else 1.0
 
-        f_s_esq   = fator_esquina(row.get(" ESQUINA?", row.get("ESQUINA?", "NÃO")))
-        f_esq     = limitar_fator(f_av_esq / f_s_esq) if bool(fatores_do_usuario.get("esquina")) and f_s_esq else 1.0
+#         f_s_esq   = fator_esquina(row.get(" ESQUINA?", row.get("ESQUINA?", "NÃO")))
+#         f_esq     = limitar_fator(f_av_esq / f_s_esq) if bool(fatores_do_usuario.get("esquina")) and f_s_esq else 1.0
 
-        acess_am  = _sn(row.get("ACESSIBILIDADE?", row.get("ACESSIBILIDADE ?", None)))
-        f_s_acess = f_av_acess if acess_am is None else fator_acessibilidade(acess_am)
-        f_acess   = limitar_fator(f_av_acess / f_s_acess) if bool(fatores_do_usuario.get("acessibilidade")) and f_s_acess else 1.0
+#         acess_am  = _sn(row.get("ACESSIBILIDADE?", row.get("ACESSIBILIDADE ?", None)))
+#         f_s_acess = f_av_acess if acess_am is None else fator_acessibilidade(acess_am)
+#         f_acess   = limitar_fator(f_av_acess / f_s_acess) if bool(fatores_do_usuario.get("acessibilidade")) and f_s_acess else 1.0
 
-        # localização
-        if bool(fatores_do_usuario.get("localizacao_mesma_regiao")):
-            f_loc = 1.0
-        else:
-            d_am = _coerce_float(row.get("DISTANCIA CENTRO", 0.0), 0.0)
-            d_av = _coerce_float(dados_avaliando.get("DISTANCIA CENTRO", dados_avaliando.get("distancia_centro", 0.0)), 0.0)
-            if d_am > 0 and d_av > 0:
-                f_item = 1.0 / (d_am ** 0.1)
-                f_bem  = 1.0 / (d_av ** 0.1)
-                f_loc  = limitar_fator(f_bem / f_item)    # usamos limitar_fator (não depender de limitar_localizacao)
-            else:
-                f_loc = 1.0
+#         # localização
+#         if bool(fatores_do_usuario.get("localizacao_mesma_regiao")):
+#             f_loc = 1.0
+#         else:
+#             d_am = _coerce_float(row.get("DISTANCIA CENTRO", 0.0), 0.0)
+#             d_av = _coerce_float(dados_avaliando.get("DISTANCIA CENTRO", dados_avaliando.get("distancia_centro", 0.0)), 0.0)
+#             if d_am > 0 and d_av > 0:
+#                 f_item = 1.0 / (d_am ** 0.1)
+#                 f_bem  = 1.0 / (d_av ** 0.1)
+#                 f_loc  = limitar_fator(f_bem / f_item)    # usamos limitar_fator (não depender de limitar_localizacao)
+#             else:
+#                 f_loc = 1.0
 
-        # VU / VUH
-        vu = (vt / ar) if ar > 0 else 0.0
-        vt_homog = vt * f_area * f_oferta * f_loc * f_aprov * f_topog * f_pedol * f_pav * f_esq * f_acess
-        vuh = (vt_homog / ar) if ar > 0 else 0.0
+#         # VU / VUH
+#         vu = (vt / ar) if ar > 0 else 0.0
+#         vt_homog = vt * f_area * f_oferta * f_loc * f_aprov * f_topog * f_pedol * f_pav * f_esq * f_acess
+#         vuh = (vt_homog / ar) if ar > 0 else 0.0
 
-        linha = {
-            "AM": am_id,
-            "AREA": formatar_numero_brasileiro(ar),
-            "VU": formatar_moeda_brasil(vu),
-            "FA": f"{f_area:.2f}",
-            "FO": f"{f_oferta:.2f}",
-            "FAP": f"{f_aprov:.2f}",
-            "FT": f"{f_topog:.2f}",
-            "FP": f"{f_pedol:.2f}",
-            "FPA": f"{f_pav:.2f}",
-            "FE": f"{f_esq:.2f}",
-            "FAC": f"{f_acess:.2f}",
-            "FL": f"{f_loc:.2f}",
-            "VUH": formatar_moeda_brasil(vuh),
-        }
-        lista_detalhes.append(linha)
+#         linha = {
+#             "AM": am_id,
+#             "AREA": formatar_numero_brasileiro(ar),
+#             "VU": formatar_moeda_brasil(vu),
+#             "FA": f"{f_area:.2f}",
+#             "FO": f"{f_oferta:.2f}",
+#             "FAP": f"{f_aprov:.2f}",
+#             "FT": f"{f_topog:.2f}",
+#             "FP": f"{f_pedol:.2f}",
+#             "FPA": f"{f_pav:.2f}",
+#             "FE": f"{f_esq:.2f}",
+#             "FAC": f"{f_acess:.2f}",
+#             "FL": f"{f_loc:.2f}",
+#             "VUH": formatar_moeda_brasil(vuh),
+#         }
+#         lista_detalhes.append(linha)
 
-    return lista_detalhes
+#     return lista_detalhes
 
     
 # ##############################################################################################################
@@ -2137,104 +2137,104 @@ def _insert_paragraph_after(documento, bloco_oxml):
 #         anchor = p._p
 
 
-def substituir_placeholder_por_varias_imagens(
-    documento,
-    placeholder,
-    caminhos_imagens,
-    largura=Inches(6),
-    quebra_pagina_entre=True,
-    centralizar=True,
-    replace_all=False,   # <-- novo parâmetro aceito (safe no-op)
-):
-    """
-    Insere imagens uma por página no lugar do placeholder.
-    - placeholder: ex. "[MATRICULA]"
-    - caminhos_imagens: lista de paths (str)
-    - replace_all: se True, remove todas as ocorrências do placeholder no doc;
-                   insere as imagens apenas na primeira âncora encontrada.
-    """
+# def substituir_placeholder_por_varias_imagens(
+#     documento,
+#     placeholder,
+#     caminhos_imagens,
+#     largura=Inches(6),
+#     quebra_pagina_entre=True,
+#     centralizar=True,
+#     replace_all=False,   # <-- novo parâmetro aceito (safe no-op)
+# ):
+#     """
+#     Insere imagens uma por página no lugar do placeholder.
+#     - placeholder: ex. "[MATRICULA]"
+#     - caminhos_imagens: lista de paths (str)
+#     - replace_all: se True, remove todas as ocorrências do placeholder no doc;
+#                    insere as imagens apenas na primeira âncora encontrada.
+#     """
 
-    # 0) Se não há imagens: apenas remova o placeholder (todas as ocorrências se replace_all=True)
-    if not caminhos_imagens:
-        removido = False
-        # corpo
-        for p in documento.paragraphs:
-            if placeholder in p.text:
-                p.text = p.text.replace(placeholder, "")
-                removido = True
-                if not replace_all:
-                    return
-        # tabelas
-        for tab in documento.tables:
-            for row in tab.rows:
-                for cell in row.cells:
-                    for p in cell.paragraphs:
-                        if placeholder in p.text:
-                            p.text = p.text.replace(placeholder, "")
-                            removido = True
-                            if not replace_all:
-                                return
-        return
+#     # 0) Se não há imagens: apenas remova o placeholder (todas as ocorrências se replace_all=True)
+#     if not caminhos_imagens:
+#         removido = False
+#         # corpo
+#         for p in documento.paragraphs:
+#             if placeholder in p.text:
+#                 p.text = p.text.replace(placeholder, "")
+#                 removido = True
+#                 if not replace_all:
+#                     return
+#         # tabelas
+#         for tab in documento.tables:
+#             for row in tab.rows:
+#                 for cell in row.cells:
+#                     for p in cell.paragraphs:
+#                         if placeholder in p.text:
+#                             p.text = p.text.replace(placeholder, "")
+#                             removido = True
+#                             if not replace_all:
+#                                 return
+#         return
 
-    # 1) Colete TODAS as âncoras que contenham o placeholder (corpo + tabelas)
-    def _collect_paragraphs_with_text(doc, text):
-        achados = []
-        for p in doc.paragraphs:
-            if text in p.text:
-                achados.append(p)
-        for tab in doc.tables:
-            for row in tab.rows:
-                for cell in row.cells:
-                    for p in cell.paragraphs:
-                        if text in p.text:
-                            achados.append(p)
-        return achados
+#     # 1) Colete TODAS as âncoras que contenham o placeholder (corpo + tabelas)
+#     def _collect_paragraphs_with_text(doc, text):
+#         achados = []
+#         for p in doc.paragraphs:
+#             if text in p.text:
+#                 achados.append(p)
+#         for tab in doc.tables:
+#             for row in tab.rows:
+#                 for cell in row.cells:
+#                     for p in cell.paragraphs:
+#                         if text in p.text:
+#                             achados.append(p)
+#         return achados
 
-    ancoras = _collect_paragraphs_with_text(documento, placeholder)
+#     ancoras = _collect_paragraphs_with_text(documento, placeholder)
 
-    if ancoras:
-        # 2) remova o texto do placeholder em todas as âncoras
-        for p in ancoras:
-            if p.runs:
-                for r in p.runs:
-                    if placeholder in r.text:
-                        r.text = r.text.replace(placeholder, "")
-            if placeholder in p.text:
-                p.text = p.text.replace(placeholder, "")
-        # a primeira âncora é onde vamos inserir o conteúdo
-        par_ancora = ancoras[0]
-    else:
-        # se não achou placeholder, ancora no final
-        par_ancora = documento.add_paragraph()
+#     if ancoras:
+#         # 2) remova o texto do placeholder em todas as âncoras
+#         for p in ancoras:
+#             if p.runs:
+#                 for r in p.runs:
+#                     if placeholder in r.text:
+#                         r.text = r.text.replace(placeholder, "")
+#             if placeholder in p.text:
+#                 p.text = p.text.replace(placeholder, "")
+#         # a primeira âncora é onde vamos inserir o conteúdo
+#         par_ancora = ancoras[0]
+#     else:
+#         # se não achou placeholder, ancora no final
+#         par_ancora = documento.add_paragraph()
 
-    # 3) Insere cada imagem após a âncora, com quebra de página entre elas
-    total = len(caminhos_imagens)
-    for i, caminho in enumerate(caminhos_imagens):
-        p_img = documento.add_paragraph()
-        if centralizar:
-            p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#     # 3) Insere cada imagem após a âncora, com quebra de página entre elas
+#     total = len(caminhos_imagens)
+#     for i, caminho in enumerate(caminhos_imagens):
+#         p_img = documento.add_paragraph()
+#         if centralizar:
+#             p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        run = p_img.add_run()
-        if isinstance(caminho, str) and os.path.exists(caminho):
-            try:
-                run.add_picture(caminho, width=largura)
-            except Exception:
-                p_img.add_run(f"[erro ao inserir: {os.path.basename(caminho)}]")
-        else:
-            p_img.add_run("[imagem não encontrada]")
+#         run = p_img.add_run()
+#         if isinstance(caminho, str) and os.path.exists(caminho):
+#             try:
+#                 run.add_picture(caminho, width=largura)
+#             except Exception:
+#                 p_img.add_run(f"[erro ao inserir: {os.path.basename(caminho)}]")
+#         else:
+#             p_img.add_run("[imagem não encontrada]")
 
-        # insere o novo parágrafo logo depois da âncora atual
-        par_ancora._p.addnext(p_img._element)
-        par_ancora = p_img  # atualiza âncora
+#         # insere o novo parágrafo logo depois da âncora atual
+#         par_ancora._p.addnext(p_img._element)
+#         par_ancora = p_img  # atualiza âncora
 
-        # quebra de página entre imagens (menos após a última)
-        if quebra_pagina_entre and (i < total - 1):
-            p_break = documento.add_paragraph()
-            p_break.add_run().add_break(WD_BREAK.PAGE)
-            par_ancora._p.addnext(p_break._element)
-            par_ancora = p_break
+#         # quebra de página entre imagens (menos após a última)
+#         if quebra_pagina_entre and (i < total - 1):
+#             p_break = documento.add_paragraph()
+#             p_break.add_run().add_break(WD_BREAK.PAGE)
+#             par_ancora._p.addnext(p_break._element)
+#             par_ancora = p_break
 
-
+substituir_placeholder_por_varias_imagens
 
 def substituir_placeholder_por_varias_imagens_em_grade(
         documento, placeholder, caminhos_imagens,
@@ -5158,8 +5158,7 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
         else:
             try:
                 distancia_amostra = float(linha.get("DISTANCIA CENTRO", 0))
-                distancia_avaliando = float(dados_avaliando.get("DISTANCIA CENTRO", 0))
-                if distancia_amostra > 0 and distancia_avaliando > 0:
+                distancia_avaliando = float(dados_avaliando.get("DISTANCIA distancia_avaliando > 0:   
                     fator_item_comparativo = 1 / math.pow(distancia_amostra, 1/10)
                     fator_bem_avaliando = 1 / math.pow(distancia_avaliando, 1/10)
                     fator_localizacao_calculado = fator_bem_avaliando / fator_item_comparativo
