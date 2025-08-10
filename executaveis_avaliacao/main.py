@@ -2146,9 +2146,12 @@ def substituir_placeholder_por_varias_imagens_em_grade(
     import os
     from docx.shared import Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml import OxmlElement
+    try:
+        from docx.oxml import OxmlElement
+    except Exception:
+        from docx.oxml.xmlchemy import OxmlElement
     from docx.oxml.ns import qn
-
+       
     if not caminhos_imagens:
         # Se nada a inserir, apenas remove o placeholder se existir
         for par in documento.paragraphs:
