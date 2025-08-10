@@ -1641,9 +1641,9 @@ def visualizar_resultados(uuid):
         )
 
     except FileNotFoundError as e:
-    logger.error(f"❌ Snapshot JSON não encontrado para UUID={uuid}: {e}")
-    flash("Arquivo JSON de entrada não encontrado. Refaça a etapa de entrada.", "danger")
-    return redirect(url_for("gerar_avaliacao"))
+        logger.error(f"❌ Snapshot JSON não encontrado para UUID={uuid}: {e}")
+        flash("Arquivo JSON de entrada não encontrado. Refaça a etapa de entrada.", "danger")
+        return redirect(url_for("gerar_avaliacao"))
 
     except Exception as erro:
         logger.exception(f"🚨 Exceção capturada em visualizar_resultados: {erro}")
