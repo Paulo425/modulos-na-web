@@ -130,6 +130,33 @@ if not logger.handlers:
 
 logger.info("✅ Logger MAIN.py inicializado corretamente!")
 
+# >>> PDFs → PNGs (helper)
+from pathlib import Path
+import os
+
+def _pdfs_para_pngs(lista_pdfs, subdir, uuid_execucao, dpi=200):
+    """
+    Usa sua salvar_pdf_como_png para cada PDF e retorna lista ordenada de PNGs.
+    Saída em: static/tmp/{uuid_execucao}/{subdir}/
+    """
+    destino = os.path.join(BASE_DIR, "static", "tmp", str(uuid_execucao), subdir)
+    os.makedirs(destino, exist_ok=True)
+    out = []
+    for pdf in (lista_pdfs or []):
+        out.extend(salvar_pdf_como_png(pdf, pasta_saida=destino, dpi=dpi))
+
+    # Ordena por (nome_base, índice da página). O seu nome termina com ..._{i}.png
+    def _page_idx(path):
+        try:
+            stem = Path(path).stem  # ex: nomebase_ab12cd_3
+            return int(stem.split("_")[-1])
+        except Exception:
+            return 0
+
+    out.sort(key=lambda p: (Path(p).stem.split("_")[0], _page_idx(p)))
+    return out
+
+
 def _norm_flag(v: str) -> str:
     return str(v).strip().upper()
 
@@ -2137,132 +2164,93 @@ def _insert_paragraph_after(documento, bloco_oxml):
 #         anchor = p._p
 
 
-# def substituir_placeholder_por_varias_imagens(
-#     documento,
-#     placeholder,
-#     caminhos_imagens,
-#     largura=Inches(6),
-#     quebra_pagina_entre=True,
-#     centralizar=True,
-#     replace_all=False,   # <-- novo parâmetro aceito (safe no-op)
-# ):
-#     """
-#     Insere imagens uma por página no lugar do placeholder.
-#     - placeholder: ex. "[MATRICULA]"
-#     - caminhos_imagens: lista de paths (str)
-#     - replace_all: se True, remove todas as ocorrências do placeholder no doc;
-#                    insere as imagens apenas na primeira âncora encontrada.
-#     """
 
-#     # 0) Se não há imagens: apenas remova o placeholder (todas as ocorrências se replace_all=True)
-#     if not caminhos_imagens:
-#         removido = False
-#         # corpo
-#         for p in documento.paragraphs:
-#             if placeholder in p.text:
-#                 p.text = p.text.replace(placeholder, "")
-#                 removido = True
-#                 if not replace_all:
-#                     return
-#         # tabelas
-#         for tab in documento.tables:
-#             for row in tab.rows:
-#                 for cell in row.cells:
-#                     for p in cell.paragraphs:
-#                         if placeholder in p.text:
-#                             p.text = p.text.replace(placeholder, "")
-#                             removido = True
-#                             if not replace_all:
-#                                 return
-#         return
 
-#     # 1) Colete TODAS as âncoras que contenham o placeholder (corpo + tabelas)
-#     def _collect_paragraphs_with_text(doc, text):
-#         achados = []
-#         for p in doc.paragraphs:
-#             if text in p.text:
-#                 achados.append(p)
-#         for tab in doc.tables:
-#             for row in tab.rows:
-#                 for cell in row.cells:
-#                     for p in cell.paragraphs:
-#                         if text in p.text:
-#                             achados.append(p)
-#         return achados
+def substituir_placeholder_por_varias_imagens(
+    documento,
+    marcador_placeholder: str,
+    lista_caminhos_imagens,
+    largura=Inches(6),
+    quebra_pagina_entre: bool = True,
+    replace_all: bool = False
+):
+    if not lista_caminhos_imagens:
+        return False
 
-#     ancoras = _collect_paragraphs_with_text(documento, placeholder)
+    def _find_paragraphs_with(doc, marker):
+        return [p for p in doc.paragraphs if p.text and marker in p.text]
 
-#     if ancoras:
-#         # 2) remova o texto do placeholder em todas as âncoras
-#         for p in ancoras:
-#             if p.runs:
-#                 for r in p.runs:
-#                     if placeholder in r.text:
-#                         r.text = r.text.replace(placeholder, "")
-#             if placeholder in p.text:
-#                 p.text = p.text.replace(placeholder, "")
-#         # a primeira âncora é onde vamos inserir o conteúdo
-#         par_ancora = ancoras[0]
-#     else:
-#         # se não achou placeholder, ancora no final
-#         par_ancora = documento.add_paragraph()
+    def _delete_paragraph(paragraph):
+        p = paragraph._element
+        p.getparent().remove(p)
+        paragraph._p = paragraph._element = None
 
-#     # 3) Insere cada imagem após a âncora, com quebra de página entre elas
-#     total = len(caminhos_imagens)
-#     for i, caminho in enumerate(caminhos_imagens):
-#         p_img = documento.add_paragraph()
-#         if centralizar:
-#             p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    encontrados = _find_paragraphs_with(documento, marcador_placeholder)
+    if not encontrados:
+        # ← GATE: não insere em lugar nenhum se o marcador não existir
+        return False
 
-#         run = p_img.add_run()
-#         if isinstance(caminho, str) and os.path.exists(caminho):
-#             try:
-#                 run.add_picture(caminho, width=largura)
-#             except Exception:
-#                 p_img.add_run(f"[erro ao inserir: {os.path.basename(caminho)}]")
-#         else:
-#             p_img.add_run("[imagem não encontrada]")
+    alvos = encontrados if replace_all else [encontrados[0]]
 
-#         # insere o novo parágrafo logo depois da âncora atual
-#         par_ancora._p.addnext(p_img._element)
-#         par_ancora = p_img  # atualiza âncora
+    for par in alvos:
+        par.text = par.text.replace(marcador_placeholder, "")
+        for run in list(par.runs):
+            if run.text:
+                run.text = ""
 
-#         # quebra de página entre imagens (menos após a última)
-#         if quebra_pagina_entre and (i < total - 1):
-#             p_break = documento.add_paragraph()
-#             p_break.add_run().add_break(WD_BREAK.PAGE)
-#             par_ancora._p.addnext(p_break._element)
-#             par_ancora = p_break
+        try:
+            par.paragraph_format.page_break_before = False
+        except Exception:
+            pass
 
-substituir_placeholder_por_varias_imagens
+        doc_pars = documento.paragraphs
+        try:
+            idx = doc_pars.index(par)
+            prox = doc_pars[idx + 1] if idx + 1 < len(doc_pars) else None
+        except ValueError:
+            prox = None
+
+        if prox is not None:
+            try:
+                if getattr(prox.paragraph_format, "page_break_before", False):
+                    prox.paragraph_format.page_break_before = False
+            except Exception:
+                pass
+            if (not prox.text.strip()) and (len(prox.runs) == 0):
+                _delete_paragraph(prox)
+
+        total = len(lista_caminhos_imagens)
+        for i, caminho_img in enumerate(lista_caminhos_imagens):
+            r = par.add_run()
+            r.add_picture(str(caminho_img), width=largura)
+            if quebra_pagina_entre and (i < total - 1):
+                r.add_break(WD_BREAK.PAGE)
+
+    return True
+
+
+
+
+
 
 def substituir_placeholder_por_varias_imagens_em_grade(
         documento, placeholder, caminhos_imagens,
         cols=2, rows_por_pagina=3,
         margem_extra_inch=0.2, centralizar=True, remover_bordas=True,
-        replace_all=False,   # <- só aceitar e tratar remoção em todas âncoras
+        replace_all=False,
     ):
     """
     Insere imagens em grade (cols x rows_por_pagina) no lugar do placeholder.
-    Ex.: 2x3 = 6 por página; insere quebra de página e continua.
-    - placeholder: ex. "[FOTOS]"
-    - caminhos_imagens: lista de paths (str)
+    • GATE FORTE: se o placeholder não existir, retorna False (NÃO ancora no final).
+    • Sem quebra extra após a última página.
     """
+    import os
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Inches
 
-    # Nada a inserir: só remove o placeholder, se existir
+    # Nada a inserir → não remove placeholder; deixa o chamador decidir fallback
     if not caminhos_imagens:
-        for p in documento.paragraphs:
-            if placeholder in p.text:
-                p.text = p.text.replace(placeholder, "")
-                return
-        for tab in documento.tables:
-            for row in tab.rows:
-                for cell in row.cells:
-                    for p in cell.paragraphs:
-                        if placeholder in p.text:
-                            p.text = p.text.replace(placeholder, "")
-                            return
-        return
+        return False
 
     # Localiza o parágrafo âncora (parágrafos e células de tabela)
     def _find_paragraph_with_text(doc, text):
@@ -2278,16 +2266,22 @@ def substituir_placeholder_por_varias_imagens_em_grade(
         return None
 
     par_ancora = _find_paragraph_with_text(documento, placeholder)
-    if par_ancora:
-        # remove placeholder preservando o parágrafo
-        for run in par_ancora.runs:
-            if placeholder in run.text:
-                run.text = run.text.replace(placeholder, "")
-        if placeholder in par_ancora.text:  # fallback
-            par_ancora.text = par_ancora.text.replace(placeholder, "")
-    else:
-        # se não achou no template, ancora no final
-        par_ancora = documento.add_paragraph()
+    if not par_ancora:
+        # GATE FORTE: placeholder ausente → não insere nada
+        return False
+
+    # remove placeholder preservando o parágrafo
+    for run in par_ancora.runs:
+        if placeholder in run.text:
+            run.text = run.text.replace(placeholder, "")
+    if placeholder in par_ancora.text:  # fallback
+        par_ancora.text = par_ancora.text.replace(placeholder, "")
+
+    # evita "page break before" herdado que poderia gerar página em branco
+    try:
+        par_ancora.paragraph_format.page_break_before = False
+    except Exception:
+        pass
 
     # Largura útil da página para dimensionar as colunas
     section = documento.sections[0]
@@ -2304,12 +2298,12 @@ def substituir_placeholder_por_varias_imagens_em_grade(
         tabela = documento.add_table(rows=rows_por_pagina, cols=cols)
         tabela.autofit = False
 
-        # Remover bordas sem usar OxmlElement: usar estilo "Table Normal" (sem bordas no template padrão)
+        # Remover bordas sem usar OxmlElement: usar estilo "Table Normal" (se existir)
         if remover_bordas:
             try:
                 tabela.style = "Table Normal"
             except Exception:
-                pass  # se o estilo não existir, segue com o padrão do template
+                pass
 
         # Preenche as células
         for r in range(rows_por_pagina):
@@ -2320,7 +2314,6 @@ def substituir_placeholder_por_varias_imagens_em_grade(
                 i += 1
 
                 cell = tabela.cell(r, c)
-
                 # Limpa parágrafos extras da célula
                 if len(cell.paragraphs) > 1:
                     for extra in cell.paragraphs[1:]:
@@ -2349,6 +2342,8 @@ def substituir_placeholder_por_varias_imagens_em_grade(
             documento.add_page_break()
 
     return True
+
+
 
 
 
@@ -5158,7 +5153,7 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
         else:
             try:
                 distancia_amostra = float(linha.get("DISTANCIA CENTRO", 0))
-                distancia_avaliando = float(dados_avaliando.get("DISTANCIA distancia_avaliando > 0:   
+                distancia_avaliando = float(dados_avaliando.get("DISTANCIA CENTRO",0))   
                     fator_item_comparativo = 1 / math.pow(distancia_amostra, 1/10)
                     fator_bem_avaliando = 1 / math.pow(distancia_avaliando, 1/10)
                     fator_localizacao_calculado = fator_bem_avaliando / fator_item_comparativo
@@ -7825,10 +7820,29 @@ def gerar_relatorio_avaliacao_com_template(
                 logger.warning(f"❌ Imagem ({lbl}) NÃO encontrada: {caminho}")
 
     # [FIX-IMG-ONLY-ONE] — NÃO misturar categorias
-    fotos_fotos        = _flatten_grupos_imagens(caminhos_fotos_avaliando)      # só fotos do imóvel
-    fotos_matricula    = _flatten_grupos_imagens(caminhos_fotos_adicionais)     # docs adicionais (matrícula etc.)
-    fotos_proprietario = _flatten_grupos_imagens(caminhos_fotos_proprietario)
-    fotos_planta       = _flatten_grupos_imagens(caminhos_fotos_planta)
+    # ============================
+    #  ENTRADAS SEPARADAS POR TIPO
+    # ============================
+    # 1) FOTOS (somente IMAGENS) → [FOTOS]
+    def _only_images(seq):
+        if not seq: return []
+        allow = {".jpg", ".jpeg", ".png", ".webp"}
+        out = []
+        for s in seq:
+            try:
+                if Path(s).suffix.lower() in allow:
+                    out.append(s)
+            except Exception:
+                pass
+        return out
+
+    fotos_fotos = _only_images(caminhos_fotos_avaliando)
+
+    # 2) DOCUMENTOS (PDF → PNGs por página) → [MATRICULA], [PROPRIETARIO], [PLANTA]
+    fotos_matricula    = _pdfs_para_pngs(caminhos_matricula_pdf,    "matricula",    uuid_execucao, dpi=200)
+    fotos_proprietario = _pdfs_para_pngs(caminhos_proprietario_pdf, "proprietario", uuid_execucao, dpi=200)
+    fotos_planta       = _pdfs_para_pngs(caminhos_planta_pdf,       "planta",       uuid_execucao, dpi=200)
+
 
     # (opcional) deduplicar mantendo a ordem
     def _unique_keep_order(seq):
@@ -7846,76 +7860,78 @@ def gerar_relatorio_avaliacao_com_template(
    
     # FOTOS DO IMÓVEL — grade 2x3 (6 por página)
     if fotos_fotos:
-       substituir_placeholder_por_varias_imagens_em_grade(
+        ok_fotos = substituir_placeholder_por_varias_imagens_em_grade(
             documento, "[FOTOS]", fotos_fotos, cols=2, rows_por_pagina=3
         )
-
-
-
+        if not ok_fotos:
+            substituir_placeholder_por_texto_formatado(
+                documento, "[FOTOS]",
+                "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS OU PLACEHOLDER AUSENTE",
+                Pt(12), True
+            )
     else:
         substituir_placeholder_por_texto_formatado(
-            documento,
-            "[FOTOS]",
+            documento, "[FOTOS]",
             "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS",
-            Pt(12),
-            True
+            Pt(12), True
         )
 
-    # MATRÍCULA — 1 imagem por página
+
+    # MATRÍCULA — 1 imagem por página (pdf→png)
     if fotos_matricula:
-        substituir_placeholder_por_varias_imagens(
-            documento,
-            "[MATRICULA]",
-            fotos_matricula,
-            largura=Inches(6),
-            quebra_pagina_entre=True,
-            replace_all=False
+        ok_mat = substituir_placeholder_por_varias_imagens(
+            documento, "[MATRICULA]", fotos_matricula,
+            largura=Inches(6), quebra_pagina_entre=True, replace_all=False
         )
+        if not ok_mat:
+            substituir_placeholder_por_texto_formatado(
+                documento, "[MATRICULA]",
+                "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA OU PLACEHOLDER AUSENTE",
+                Pt(12), True
+            )
     else:
         substituir_placeholder_por_texto_formatado(
-            documento,
-            "[MATRICULA]",
+            documento, "[MATRICULA]",
             "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA",
-            Pt(12),
-            True
+            Pt(12), True
         )
 
-    # PROPRIETÁRIO — 1 imagem por página
+    # PROPRIETÁRIO — 1 imagem por página (pdf→png)
     if fotos_proprietario:
-        substituir_placeholder_por_varias_imagens(
-            documento,
-            "[PROPRIETARIO]",
-            fotos_proprietario,
-            largura=Inches(6),
-            quebra_pagina_entre=True,
-            replace_all=False
+        ok_prop = substituir_placeholder_por_varias_imagens(
+            documento, "[PROPRIETARIO]", fotos_proprietario,
+            largura=Inches(6), quebra_pagina_entre=True, replace_all=False
         )
+        if not ok_prop:
+            substituir_placeholder_por_texto_formatado(
+                documento, "[PROPRIETARIO]",
+                "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA OU PLACEHOLDER AUSENTE",
+                Pt(12), True
+            )
     else:
         substituir_placeholder_por_texto_formatado(
-            documento,
-            "[PROPRIETARIO]",
+            documento, "[PROPRIETARIO]",
             "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA",
-            Pt(12),
-            True
+            Pt(12), True
         )
 
-    # PLANTA — 1 imagem por página
+    # PLANTA — 1 imagem por página (pdf→png)
     if fotos_planta:
-        substituir_placeholder_por_varias_imagens(
-            documento,
-            "[PLANTA]",
-            fotos_planta,
-            largura=Inches(6),
-            quebra_pagina_entre=True,
-            replace_all=False
+        ok_planta = substituir_placeholder_por_varias_imagens(
+            documento, "[PLANTA]", fotos_planta,
+            largura=Inches(6), quebra_pagina_entre=True, replace_all=False
         )
+        if not ok_planta:
+            substituir_placeholder_por_texto_formatado(
+                documento, "[PLANTA]",
+                "PLANTA DO IMÓVEL NÃO FORNECIDA OU PLACEHOLDER AUSENTE",
+                Pt(12), True
+            )
     else:
         substituir_placeholder_por_texto_formatado(
-            documento,
-            "[PLANTA]",
+            documento, "[PLANTA]",
             "PLANTA DO IMÓVEL NÃO FORNECIDA",
-            Pt(12),
-            True
+            Pt(12), True
         )
 
     # Salvar DOCX
