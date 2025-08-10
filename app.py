@@ -115,23 +115,43 @@ from math import isnan
 @app.template_filter("brlmoeda")
 def brlmoeda(value):
     try:
-        v = float(str(value).replace(".", "").replace(",", "."))
-        if isnan(v): 
+        if value is None:
             return "-"
+        if isinstance(value, (int, float)):
+            v = float(value)
+        else:
+            s = str(value).strip()
+            if "," in s and "." in s:
+                s = s.replace(".", "").replace(",", ".")
+            elif "," in s:
+                s = s.replace(",", ".")
+            v = float(s)
+        if not math.isfinite(v):
+            return "-"
+        s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"R$ {s}"
     except Exception:
         return "-"
-    s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"R$ {s}"
 
 @app.template_filter("brlnum")
 def brlnum(value, casas=2):
     try:
-        v = float(str(value).replace(".", "").replace(",", "."))
-        if isnan(v):
+        if value is None:
             return "-"
+        if isinstance(value, (int, float)):
+            v = float(value)
+        else:
+            s = str(value).strip()
+            if "," in s and "." in s:
+                s = s.replace(".", "").replace(",", ".")
+            elif "," in s:
+                s = s.replace(",", ".")
+            v = float(s)
+        if not math.isfinite(v):
+            return "-"
+        return f"{v:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except Exception:
         return "-"
-    return f"{v:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 @app.route('/')
 def home():
@@ -1581,18 +1601,21 @@ def visualizar_resultados(uuid):
         vals = np.array([float(v) for v in valores_ativos if v and v > 0], dtype=float)
 
         # Centro e dispersão coerentes com as amostras: MÉDIA e DESVIO-PADRÃO (amostral)
+        import numpy as np
+
+        vals = np.array([float(v) for v in valores_ativos if v is not None and math.isfinite(float(v))], dtype=float)
         vuh_media = float(np.mean(vals)) if vals.size else 0.0
-        sigma = float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0
+        sigma     = float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0
 
-        # VU do avaliando (já calculado antes e guardado em dados_avaliando)
-        vu_av = float(dados_avaliando.get("valor_unitario_medio", 0.0) or 0.0)
-        area_av = float(dados_avaliando.get("AREA TOTAL", 0.0) or 0.0)
+        area_av = float(dados_avaliando.get("AREA TOTAL") or 0.0)
+        vu_av   = float(dados_avaliando.get("valor_unitario_medio") or 0.0)
 
-        # Preenche campos da linha amarela "AV"
-        dados_avaliando["valor_total"] = (vu_av * area_av) if (vu_av > 0 and area_av > 0) else None
-        dados_avaliando["valor_estimado"] = vuh_media
-        dados_avaliando["residuo_rel"] = ((vu_av - vuh_media) / vuh_media) * 100 if vuh_media > 0 else None
-        dados_avaliando["residuo_dp"] = ((vu_av - vuh_media) / sigma) if sigma > 0 else None
+        dados_avaliando["valor_total"]   = round(vu_av * area_av, 2) if (vu_av > 0 and area_av > 0) else None
+        dados_avaliando["valor_estimado"] = vuh_media if vuh_media > 0 else None
+        dados_avaliando["residuo_rel"]    = ((vu_av - vuh_media) / vuh_media * 100) if vuh_media > 0 else None
+        dados_avaliando["residuo_dp"]     = ((vu_av - vuh_media) / sigma) if sigma > 0 else None
+
+        logger.debug(f"[AV] area={area_av}, vu_av={vu_av}, media={vuh_media}, dp={sigma}, total={dados_avaliando.get('valor_total')}")
 
 
 

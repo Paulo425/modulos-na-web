@@ -2069,61 +2069,179 @@ def _insert_paragraph_after(documento, bloco_oxml):
     bloco_oxml.addnext(new_p)
     return Paragraph(new_p, documento)
 
-def substituir_placeholder_por_varias_imagens(documento, marcador, caminhos, largura=Inches(6), quebra_pagina_entre=False):
-    """
-    Insere imagens no lugar do marcador.
-    - Se o marcador estiver em tabela, insere AS IMAGENS APÓS A TABELA (fora dela).
-    - Suporta marcador quebrado em múltiplos runs.
-    """
-    # 1) localizar parágrafo com marcador (em qualquer lugar)
-    alvo_par = None
-    alvo_table = None
+# def substituir_placeholder_por_varias_imagens(documento, marcador, caminhos, largura=Inches(6), quebra_pagina_entre=False):
+#     """
+#     Insere imagens no lugar do marcador.
+#     - Se o marcador estiver em tabela, insere AS IMAGENS APÓS A TABELA (fora dela).
+#     - Suporta marcador quebrado em múltiplos runs.
+#     """
+#     # 1) localizar parágrafo com marcador (em qualquer lugar)
+#     alvo_par = None
+#     alvo_table = None
 
-    for p in _iter_all_paragraphs(documento):
-        full = "".join(run.text for run in p.runs) if p.runs else p.text
-        if marcador in full:
-            alvo_par = p
-            break
+#     for p in _iter_all_paragraphs(documento):
+#         full = "".join(run.text for run in p.runs) if p.runs else p.text
+#         if marcador in full:
+#             alvo_par = p
+#             break
 
-    if alvo_par is None:
-        # nada a fazer se não encontrou
+#     if alvo_par is None:
+#         # nada a fazer se não encontrou
+#         return
+
+#     # 2) descobrir se está dentro de tabela
+#     # (sobe a árvore até achar uma tabela)
+#     parent = alvo_par._p
+#     while parent is not None and parent.tag not in {qn("w:tbl"), qn("w:body")}:
+#         parent = parent.getparent()
+#     if parent is not None and parent.tag == qn("w:tbl"):
+#         alvo_table = Table(parent, alvo_par._parent)
+
+#     # 3) remover marcador do parágrafo (junta runs → replace → reconstrói)
+#     full = "".join(run.text for run in alvo_par.runs) if alvo_par.runs else alvo_par.text
+#     full = full.replace(marcador, "")
+#     for _ in range(len(alvo_par.runs)):
+#         alvo_par.runs[0].clear(); alvo_par.runs[0].text = ""
+#         del alvo_par.runs[0]
+#     alvo_par.text = full
+
+#     # 4) âncora de inserção: parágrafo ou tabela
+#     bloco_raiz = _top_block_item(alvo_par)
+#     anchor = bloco_raiz
+
+#     # 5) inserir imagens após o bloco raiz (fora de tabela se for o caso)
+#     for i, caminho in enumerate(caminhos or []):
+#         p = _insert_paragraph_after(documento, anchor)
+#         try:
+#             run = p.add_run()
+#             run.add_picture(caminho, width=largura)
+#         except Exception as e:
+#             # Se uma imagem falhar, segue com as demais
+#             run = p.add_run(f"[Falha ao inserir imagem: {caminho} ({e})]")
+#         # quebra entre imagens
+#         if quebra_pagina_entre and i < len(caminhos) - 1:
+#             br = p.add_run()
+#             br.add_break(WD_BREAK.PAGE)
+#         # atualiza âncora
+#         anchor = p._p
+
+
+def substituir_placeholder_por_varias_imagens_em_grade(
+    documento,
+    placeholder,
+    caminhos_imagens,
+    cols=2,
+    rows_por_pagina=3,
+    margem_extra_inch=0.2,     # pequena folga para não colar nas margens
+    centralizar=True,
+    remover_bordas=True,
+):
+    """
+    Insere imagens em grade (cols x rows_por_pagina) no lugar do placeholder.
+    Preenche 6 por página (2 col x 3 lin) e quebra página para continuar.
+
+    - placeholder: ex. "[FOTOS]"
+    - caminhos_imagens: lista de paths (str)
+    """
+    import os
+    from docx.shared import Inches
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    if not caminhos_imagens:
+        # Se nada a inserir, apenas remove o placeholder se existir
+        for par in documento.paragraphs:
+            if placeholder in par.text:
+                par.text = par.text.replace(placeholder, "")
+                break
         return
 
-    # 2) descobrir se está dentro de tabela
-    # (sobe a árvore até achar uma tabela)
-    parent = alvo_par._p
-    while parent is not None and parent.tag not in {qn("w:tbl"), qn("w:body")}:
-        parent = parent.getparent()
-    if parent is not None and parent.tag == qn("w:tbl"):
-        alvo_table = Table(parent, alvo_par._parent)
+    # 1) Encontrar parágrafo com placeholder (em parágrafos ou em células de tabela)
+    def _find_paragraph_with_text(doc, text):
+        # procura em parágrafos do corpo
+        for p in doc.paragraphs:
+            if text in p.text:
+                return p
+        # procura em tabelas
+        for tab in doc.tables:
+            for row in tab.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if text in p.text:
+                            return p
+        return None
 
-    # 3) remover marcador do parágrafo (junta runs → replace → reconstrói)
-    full = "".join(run.text for run in alvo_par.runs) if alvo_par.runs else alvo_par.text
-    full = full.replace(marcador, "")
-    for _ in range(len(alvo_par.runs)):
-        alvo_par.runs[0].clear(); alvo_par.runs[0].text = ""
-        del alvo_par.runs[0]
-    alvo_par.text = full
+    par_ancora = _find_paragraph_with_text(documento, placeholder)
+    if par_ancora:
+        par_ancora.text = par_ancora.text.replace(placeholder, "")
+    else:
+        # Se não achou, cria um parágrafo âncora no final
+        par_ancora = documento.add_paragraph()
 
-    # 4) âncora de inserção: parágrafo ou tabela
-    bloco_raiz = _top_block_item(alvo_par)
-    anchor = bloco_raiz
+    # 2) Largura útil da página para calcular a largura de cada coluna
+    # (usa a primeira seção; normalmente seu template tem margens padrão)
+    section = documento.sections[0]
+    EMU_PER_INCH = 914400
+    largura_util_emu = section.page_width - section.left_margin - section.right_margin
+    largura_util_in = float(largura_util_emu) / EMU_PER_INCH
+    largura_col_in = max(largura_util_in / float(cols) - margem_extra_inch, 1.0)  # evita zero/negativo
 
-    # 5) inserir imagens após o bloco raiz (fora de tabela se for o caso)
-    for i, caminho in enumerate(caminhos or []):
-        p = _insert_paragraph_after(documento, anchor)
-        try:
-            run = p.add_run()
-            run.add_picture(caminho, width=largura)
-        except Exception as e:
-            # Se uma imagem falhar, segue com as demais
-            run = p.add_run(f"[Falha ao inserir imagem: {caminho} ({e})]")
-        # quebra entre imagens
-        if quebra_pagina_entre and i < len(caminhos) - 1:
-            br = p.add_run()
-            br.add_break(WD_BREAK.PAGE)
-        # atualiza âncora
-        anchor = p._p
+    # 3) Iterar imagens e criar uma tabela (rows_por_pagina x cols) por página
+    i = 0
+    total = len(caminhos_imagens)
+
+    def _remover_bordas_tabela(tbl):
+        # remove bordas da tabela para as fotos ficarem "limpas"
+        tbl_pr = tbl._tbl.tblPr
+        tbl_borders = OxmlElement('w:tblBorders')
+        for tag in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+            elem = OxmlElement(f'w:{tag}')
+            elem.set(qn('w:val'), 'nil')
+            tbl_borders.append(elem)
+        tbl_pr.append(tbl_borders)
+
+    while i < total:
+        # criar tabela da página
+        tabela = documento.add_table(rows=rows_por_pagina, cols=cols)
+        tabela.autofit = False
+        if remover_bordas:
+            _remover_bordas_tabela(tabela)
+
+        # preencher as células
+        for r in range(rows_por_pagina):
+            for c in range(cols):
+                if i >= total:
+                    break
+                caminho = caminhos_imagens[i]
+                i += 1
+
+                cell = tabela.cell(r, c)
+                # garante parágrafo vazio
+                for para in list(cell.paragraphs)[1:]:
+                    p = para._p
+                    p.getparent().remove(p)
+                p = cell.paragraphs[0]
+                if centralizar:
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = p.add_run()
+
+                if isinstance(caminho, str) and os.path.exists(caminho):
+                    try:
+                        run.add_picture(caminho, width=Inches(largura_col_in))
+                    except Exception as e:
+                        # se algo der errado, pelo menos escreve o path
+                        p.add_run(f"[Erro na imagem: {os.path.basename(caminho)}]")
+                else:
+                    p.add_run("[imagem não encontrada]")
+
+        # inserir a tabela logo após o parágrafo âncora
+        par_ancora._p.addnext(tabela._element)
+        par_ancora = documento.add_paragraph()  # atualiza âncora
+
+        # quebra de página se ainda restarem imagens
+        if i < total:
+            documento.add_page_break()
 
 
 ###############################################################################
@@ -4511,8 +4629,8 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
         ax.annotate(
             f"{int(i_amostra)}", (float(xi), float(yi)),
             xytext=(3, 3), textcoords="offset points",
-            fontsize=8, color="black",
-            bbox=dict(boxstyle="round,pad=0.1", fc="white", alpha=0.7)
+            fontsize=9, color="black",
+           
         )
 
     # Limites e regressão
@@ -4990,7 +5108,7 @@ def calcular_detalhes_amostras(dataframe_amostras_validas, dados_avaliando, fato
     return lista_detalhes
 
 
-def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=None):
+def inserir_tabela_amostras_calculadas(documento, lista_detalhes, dados_avaliando=None, col_widths=None):
     """
     Insere a tabela de amostras homogeneizadas no local do placeholder [tabelaSimilares].
     
@@ -5003,12 +5121,13 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, col_widths=Non
     o valor exibido é convertido para float, limitado ao intervalo [0.50, 2.0] pela função
     limitar_fator() e formatado com duas casas decimais.
     """
-    from docx.shared import Pt, Inches
-    from lxml import etree
+    
 
     from docx.oxml.ns import nsdecls
     from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
     from docx.enum.table import WD_TABLE_ALIGNMENT
+
+    dados_avaliando = dados_avaliando or {}
 
     if not lista_detalhes:
         return
@@ -7392,7 +7511,7 @@ def gerar_relatorio_avaliacao_com_template(
         lista_detalhes_calc = calcular_detalhes_amostras(
             dataframe_amostras_filtrado, dados_avaliando, fatores_do_usuario, finalidade_do_laudo
         )
-        inserir_tabela_amostras_calculadas(documento, lista_detalhes_calc)
+        inserir_tabela_amostras_calculadas(documento, lista_detalhes_calc, dados_avaliando)
     except Exception as e:
         logger.warning(f"⚠️ Falha ao calcular/inserir amostras homogeneizadas: {e}")
         lista_detalhes_calc = []
@@ -7598,31 +7717,60 @@ def gerar_relatorio_avaliacao_com_template(
             else:
                 logger.warning(f"❌ Imagem ({lbl}) NÃO encontrada: {caminho}")
 
-    # [FIX-IMG-ONLY-ONE] — Use apenas substituir_placeholder_por_varias_imagens
-    fotos_fotos        = _flatten_grupos_imagens(caminhos_fotos_avaliando) + _flatten_grupos_imagens(caminhos_fotos_adicionais)
-    fotos_matricula    = _flatten_grupos_imagens(caminhos_fotos_adicionais)
+    # [FIX-IMG-ONLY-ONE] — NÃO misturar categorias
+    fotos_fotos        = _flatten_grupos_imagens(caminhos_fotos_avaliando)      # só fotos do imóvel
+    fotos_matricula    = _flatten_grupos_imagens(caminhos_fotos_adicionais)     # docs adicionais (matrícula etc.)
     fotos_proprietario = _flatten_grupos_imagens(caminhos_fotos_proprietario)
     fotos_planta       = _flatten_grupos_imagens(caminhos_fotos_planta)
 
+    # (opcional) deduplicar mantendo a ordem
+    def _unique_keep_order(seq):
+        seen, out = set(), []
+        for s in (seq or []):
+            if isinstance(s, str) and s not in seen:
+                seen.add(s); out.append(s)
+        return out
+
+    fotos_fotos        = _unique_keep_order(fotos_fotos)
+    fotos_matricula    = _unique_keep_order(fotos_matricula)
+    fotos_proprietario = _unique_keep_order(fotos_proprietario)
+    fotos_planta       = _unique_keep_order(fotos_planta)
+
+    # FOTOS DO IMÓVEL
     if fotos_fotos:
-        substituir_placeholder_por_varias_imagens(documento, "[FOTOS]", fotos_fotos, largura=Inches(6), quebra_pagina_entre=True)
+        substituir_placeholder_por_varias_imagens_em_grade(
+            documento, "[FOTOS]", fotos_fotos, cols=2, rows_por_pagina=3
+        )
     else:
-        substituir_placeholder_por_texto_formatado(documento, "[FOTOS]", "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS", Pt(12), True)
+        substituir_placeholder_por_texto_formatado(documento, "[FOTOS]",
+            "FOTOS DO IMÓVEL AVALIADO NÃO FORNECIDAS", Pt(12), True)
 
+    # MATRÍCULA / ADICIONAIS
     if fotos_matricula:
-        substituir_placeholder_por_varias_imagens(documento, "[MATRICULA]", fotos_matricula, largura=Inches(6), quebra_pagina_entre=True)
+        substituir_placeholder_por_varias_imagens_em_grade(
+            documento, "[MATRICULA]", fotos_matricula, cols=2, rows_por_pagina=3
+        )
     else:
-        substituir_placeholder_por_texto_formatado(documento, "[MATRICULA]", "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA", Pt(12), True)
+        substituir_placeholder_por_texto_formatado(documento, "[MATRICULA]",
+            "DOCUMENTAÇÃO ADICIONAL NÃO FORNECIDA", Pt(12), True)
 
+    # PROPRIETÁRIO
     if fotos_proprietario:
-        substituir_placeholder_por_varias_imagens(documento, "[PROPRIETARIO]", fotos_proprietario, largura=Inches(6), quebra_pagina_entre=True)
+        substituir_placeholder_por_varias_imagens_em_grade(
+            documento, "[PROPRIETARIO]", fotos_proprietario, cols=2, rows_por_pagina=3
+        )
     else:
-        substituir_placeholder_por_texto_formatado(documento, "[PROPRIETARIO]", "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA", Pt(12), True)
+        substituir_placeholder_por_texto_formatado(documento, "[PROPRIETARIO]",
+            "DOCUMENTAÇÃO DO PROPRIETÁRIO NÃO FORNECIDA", Pt(12), True)
 
+    # PLANTA
     if fotos_planta:
-        substituir_placeholder_por_varias_imagens(documento, "[PLANTA]", fotos_planta, largura=Inches(6), quebra_pagina_entre=True)
+        substituir_placeholder_por_varias_imagens_em_grade(
+            documento, "[PLANTA]", fotos_planta, cols=2, rows_por_pagina=3
+        )
     else:
-        substituir_placeholder_por_texto_formatado(documento, "[PLANTA]", "PLANTA DO IMÓVEL NÃO FORNECIDA", Pt(12), True)
+        substituir_placeholder_por_texto_formatado(documento, "[PLANTA]",
+            "PLANTA DO IMÓVEL NÃO FORNECIDA", Pt(12), True)
 
     # Salvar DOCX
     documento.save(nome_arquivo_word)
