@@ -100,6 +100,19 @@ from docx.table import Table
 
 from docx.table import _Cell, Table
 
+try:
+    from docx.oxml import OxmlElement, parse_xml  # funciona em muitas versões
+except Exception:
+    # fallback: cria elementos usando lxml diretamente
+    from lxml import etree
+    def OxmlElement(tag_str: str):
+        return etree.Element(qn(tag_str))
+    def parse_xml(xml_str: str):
+        return etree.fromstring(xml_str)
+
+
+
+
 
 logger = logging.getLogger("meu_app_logger")
 # Para garantir que o logger esteja configurado se o main.py executar separadamente:
@@ -2143,14 +2156,8 @@ def substituir_placeholder_por_varias_imagens_em_grade(
     - placeholder: ex. "[FOTOS]"
     - caminhos_imagens: lista de paths (str)
     """
-    import os
-    from docx.shared import Inches
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    try:
-        from docx.oxml import OxmlElement
-    except Exception:
-        from docx.oxml.xmlchemy import OxmlElement
-    from docx.oxml.ns import qn
+       
+    
        
     if not caminhos_imagens:
         # Se nada a inserir, apenas remove o placeholder se existir

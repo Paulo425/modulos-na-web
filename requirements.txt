@@ -30,6 +30,8 @@ requests
 loguru
 PyPDF2
 num2words>=0.5.12
+python-docx>=0.8.11
+
 
 
 
