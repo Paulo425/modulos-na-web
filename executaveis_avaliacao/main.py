@@ -2288,6 +2288,16 @@ def substituir_placeholder_por_varias_imagens_em_grade(
             run.text = run.text.replace(placeholder, "")
     if placeholder in par_ancora.text:  # fallback
         par_ancora.text = par_ancora.text.replace(placeholder, "")
+    
+    # limpa runs e remove quebras manuais (w:br) nesse parágrafo
+    for run in list(par_ancora.runs):
+        try:
+            for br in run._r.xpath('.//w:br'):
+                br.getparent().remove(br)
+        except Exception:
+            pass
+        run.text = ""
+
 
     # evita "page break before" herdado que poderia gerar página em branco
     try:
