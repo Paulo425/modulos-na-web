@@ -4045,22 +4045,24 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
         fator_area = calcular_fator_area(area_do_avaliando, area_da_amostra, fatores_do_usuario["area"])
         fator_oferta = calcular_fator_oferta(True, fatores_do_usuario["oferta"])
 
-        # Fator localização se "localizacao_mesma_regiao" for falso,
-        # faz a comparação, senão = 1.0
+        # Fator localização
         if fatores_do_usuario.get("localizacao_mesma_regiao", False):
-            fator_localiz_calc = 1.0
+            fator_localizacao_calculado = 1.0
         else:
             try:
-                dist_amostra = float(linha.get("DISTANCIA CENTRO", 0))
-                dist_avalia = float(dados_avaliando.get("DISTANCIA CENTRO", 0))
-                if dist_amostra > 0 and dist_avalia > 0:
-                    fa_item = 1.0 / (dist_amostra ** 0.1)
-                    fa_avaliado = 1.0 / (dist_avalia ** 0.1)
-                    fator_localiz_calc = limitar_fator(fa_avaliado / fa_item)
+                ds = float(linha.get("DISTANCIA CENTRO") or 0)                 # distância da amostra
+                da = float(dados_avaliando.get("DISTANCIA CENTRO") or 0)        # distância do bem avaliando
+                if ds > 0 and da > 0:
+                    fator_localizacao_calculado = (ds / da) ** 0.1              # = (fator_amostra / fator_avaliando)^{-1}
+                    if fator_localizacao_calculado > 1.40:
+                        fator_localizacao_calculado = 1.40
+                    elif fator_localizacao_calculado < 0.50:
+                        fator_localizacao_calculado = 0.50
                 else:
-                    fator_localiz_calc = 1.0
-            except:
-                fator_localiz_calc = 1.0
+                    fator_localizacao_calculado = 1.0
+            except Exception:
+                fator_localizacao_calculado = 1.0
+
             fator_localiz_calc = limitar_fator(fator_localiz_calc)
 
         # Fator aproveitamento (f_avaliado / f_amostra)
