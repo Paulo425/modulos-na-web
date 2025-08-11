@@ -7853,12 +7853,12 @@ def gerar_relatorio_avaliacao_com_template(
                 pass
         return out
 
-    fotos_fotos = _only_images(caminhos_fotos_avaliando)
+    fotos_fotos = _only_images(_flatten_grupos_imagens(caminhos_fotos_avaliando))
 
-    # 2) DOCUMENTOS (PDF → PNGs por página) → [MATRICULA], [PROPRIETARIO], [PLANTA]
-    pdfs_matricula    = [s for s in (caminhos_fotos_adicionais or []) if isinstance(s, str) and s.lower().endswith(".pdf")]
-    pdfs_proprietario = [s for s in (caminhos_fotos_proprietario or []) if isinstance(s, str) and s.lower().endswith(".pdf")]
-    pdfs_planta       = [s for s in (caminhos_fotos_planta or []) if isinstance(s, str) and s.lower().endswith(".pdf")]
+    pdfs_matricula    = [s for s in _flatten_grupos_imagens(caminhos_fotos_adicionais    or []) if isinstance(s, str) and s.lower().endswith(".pdf")]
+    pdfs_proprietario = [s for s in _flatten_grupos_imagens(caminhos_fotos_proprietario  or []) if isinstance(s, str) and s.lower().endswith(".pdf")]
+    pdfs_planta       = [s for s in _flatten_grupos_imagens(caminhos_fotos_planta        or []) if isinstance(s, str) and s.lower().endswith(".pdf")]
+
 
 
     fotos_matricula    = _pdfs_para_pngs(pdfs_matricula,    "matricula",    uuid_execucao, dpi=200)
