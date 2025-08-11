@@ -2332,12 +2332,10 @@ def substituir_placeholder_por_varias_imagens_em_grade(
 
     total = len(caminhos_imagens)
     i = 0
-    primeira_pagina = True
+    
 
 
     while i < total:
-        if not primeira_pagina:
-            par_ancora.add_run().add_break(WD_BREAK.PAGE)
         # Cria a grade da "página"
         tabela = documento.add_table(rows=rows_por_pagina, cols=cols)
         tabela.autofit = False
@@ -2350,6 +2348,7 @@ def substituir_placeholder_por_varias_imagens_em_grade(
                 pass
 
         # Preenche as células
+        last_p = None
         for r in range(rows_por_pagina):
             for c in range(cols):
                 if i >= total:
@@ -2364,6 +2363,7 @@ def substituir_placeholder_por_varias_imagens_em_grade(
                         extra._element.getparent().remove(extra._element)
 
                 p = cell.paragraphs[0]
+                last_p = p
                 if centralizar:
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -2375,6 +2375,9 @@ def substituir_placeholder_por_varias_imagens_em_grade(
                         p.add_run(f"[erro ao inserir: {os.path.basename(caminho)}]")
                 else:
                     p.add_run("[imagem não encontrada]")
+        # quebra de página no último parágrafo da grade (evita página em branco)
+        if i < total and last_p is not None:
+            last_p.add_run().add_break(WD_BREAK.PAGE)
 
         # Insere a tabela imediatamente após o parágrafo âncora
         par_ancora._p.addnext(tabela._element)
@@ -2387,7 +2390,7 @@ def substituir_placeholder_por_varias_imagens_em_grade(
         new_p = OxmlElement("w:p")
         tabela._element.addnext(new_p)
         par_ancora = Paragraph(new_p, documento)
-        primeira_pagina = False
+        
      
 
 
