@@ -555,7 +555,7 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
         slope, intercept, r_value, p_value, std_err = linregress(x, y)
         x_fit = np.linspace(limite_min, limite_max, 100)
         y_fit = slope * x_fit + intercept
-        ax.plot(x_fit, y_fit, 'r-', label=f'Reta Ajustada (R² = {r_value**2:.2f})')
+        ax.plot(x_fit, y_fit, 'r-', label=f'Reta Ajustada (R² = {r_value**2:.3f})')
     else:
         ax.text(0.5, 0.5, "Dados insuficientes para regressão", 
                 horizontalalignment='center', verticalalignment='center', 
@@ -5372,10 +5372,12 @@ def inserir_tabela_amostras_calculadas(documento, lista_detalhes, dados_avaliand
                     
                     
                     # Se a coluna representa um fator, converte, aplica *clamp específico* e formata
+                    # Se a coluna representa um fator, converte, aplica clamp e formata
                     if nome_col in colunas_fator:
                         try:
-                            valor_num = float(dic_amostra.get(nome_col, 0))
-                            # Aplica a limitação ao intervalo [0.50, 2.0]
+                            # FL vem de 'f_loc' (calculado), com fallback para chave 'FL' se existir
+                            bruto = dic_amostra.get("f_loc", dic_amostra.get("FL", 1.0)) if nome_col == "FL" else dic_amostra.get(nome_col, 1.0)
+                            valor_num = float(bruto)
                             valor_cel = f"{limitar_fator(valor_num):.2f}"
                         except Exception:
                             valor_cel = str(dic_amostra.get(nome_col, ""))
@@ -8197,18 +8199,21 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             try:
                 dist_amostra = float(linha.get("DISTANCIA CENTRO") or 0)
                 if dist_amostra <= 0:
-                    la = float(linha.get("LATITUDE") or 0); lo = float(linha.get("LONGITUDE") or 0)
-                    lc = float(dados_avaliando.get("LAT_CENTRO") or 0);  oc = float(dados_avaliando.get("LON_CENTRO") or 0)
+                    la = float(linha.get("LATITUDE") or 0)
+                    lo = float(linha.get("LONGITUDE") or 0)
+                    lc = float(dados_avaliando.get("LAT_CENTRO") or 0)
+                    oc = float(dados_avaliando.get("LON_CENTRO") or 0)
                     if la and lo and lc and oc:
                         dist_amostra = _haversine_km(la, lo, lc, oc)
 
                 dist_avalia = float(dados_avaliando.get("DISTANCIA CENTRO") or 0)
                 if dist_avalia <= 0:
-                    la = float(dados_avaliando.get("LATITUDE") or 0); lo = float(dados_avaliando.get("LONGITUDE") or 0)
-                    lc = float(dados_avaliando.get("LAT_CENTRO") or 0);  oc = float(dados_avaliando.get("LON_CENTRO") or 0)
+                    la = float(dados_avaliando.get("LATITUDE") or 0)
+                    lo = float(dados_avaliando.get("LONGITUDE") or 0)
+                    lc = float(dados_avaliando.get("LAT_CENTRO") or 0)
+                    oc = float(dados_avaliando.get("LON_CENTRO") or 0)
                     if la and lo and lc and oc:
                         dist_avalia = _haversine_km(la, lo, lc, oc)
-
 
                 if dist_amostra > 0 and dist_avalia > 0:
                     fa_item = 1.0 / (dist_amostra ** 0.1)
@@ -8216,8 +8221,11 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
                     fator_localiz_calc = limitar_fator(fa_avaliado / fa_item)
                 else:
                     fator_localiz_calc = 1.0
-            except:
+            except Exception:
                 fator_localiz_calc = 1.0
+
+
+
             fator_localiz_calc = limitar_fator(fator_localiz_calc)
 
         f_sample_aprov = fator_aproveitamento(linha.get("APROVEITAMENTO", "URBANO"))
@@ -8297,7 +8305,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
         FPA: {fator_pavim_calc}
         FE: {fator_esq_calc}
         FAC: {fator_acess_calc}
-        FL: {fator_localiz_calc}
+        FL: {fator_localiz_calc:.2f}
         VALOR_HOMOG (Numerador): {valor_homog}
         VUH CALCULADO: {valor_unitario}
         VUH ESPERADO (planilha): [coloque o valor manual aqui para comparação]
@@ -8328,6 +8336,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             "valor_estimado": lista_valores_estimados[i],
             "residuo_rel": lista_residuos_relativos[i],
             "residuo_dp": lista_residuos_dp[i],
+            "f_loc": fator_localiz_calc,
             "idx": linha.get("idx") or linha.get("AM"),  # ← ESSENCIAL!
         })
 
