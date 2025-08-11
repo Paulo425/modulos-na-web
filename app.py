@@ -1195,6 +1195,7 @@ def gerar_avaliacao():
                             "LONGITUDE": longitude,
                             "cidade": linha.get("CIDADE", ""),
                             "fonte": linha.get("FONTE", ""),
+                            "DISTANCIA CENTRO": float(linha.get("DISTANCIA CENTRO") or linha.get("distancia_centro") or 0.0),
                             "ativo": True
                         })
 
@@ -1755,6 +1756,27 @@ def gerar_laudo_final(uuid):
         "area": "AREA TOTAL",
         "distancia_centro": "DISTANCIA CENTRO"
     }, inplace=True)
+
+    # Recalcula DISTANCIA CENTRO se vier ausente/zerada no JSON
+    if ("DISTANCIA CENTRO" not in df_ativas.columns) or (df_ativas["DISTANCIA CENTRO"].fillna(0) == 0).all():
+        from math import radians, sin, cos, sqrt, atan2
+        def haversine_km(lat1, lon1, lat2, lon2):
+            R = 6371.0
+            dlat = radians(float(lat2) - float(lat1))
+            dlon = radians(float(lon2) - float(lon1))
+            a = sin(dlat/2)**2 + cos(radians(float(lat1))) * cos(radians(float(lat2))) * sin(dlon/2)**2
+            return 2 * R * atan2(sqrt(a), sqrt(1 - a))
+
+        lat_ctr = float(dados_avaliando.get("LAT_CENTRO", dados_avaliando.get("LATITUDE", 0)) or 0)
+        lon_ctr = float(dados_avaliando.get("LON_CENTRO", dados_avaliando.get("LONGITUDE", 0)) or 0)
+
+        df_ativas["DISTANCIA CENTRO"] = df_ativas.apply(
+            lambda r: haversine_km(float(r.get("LATITUDE", 0) or 0),
+                                float(r.get("LONGITUDE", 0) or 0),
+                                lat_ctr, lon_ctr),
+            axis=1
+        )
+
 
     # valor_unitario_medio do avaliando
     # valor_unitario_medio do avaliando — usa o que veio da TELA iterativa (se houver)

@@ -8173,6 +8173,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     lista_residuos_relativos = []
     lista_valores_estimados = []
     lista_valores_originais = []
+    lista_f_loc = []
 
     for i, (_, linha) in enumerate(dataframe_amostras_validas.iterrows()):
         valor_total_amostra = linha["VALOR TOTAL"]
@@ -8219,6 +8220,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
                     fa_item = 1.0 / (dist_amostra ** 0.1)
                     fa_avaliado = 1.0 / (dist_avalia ** 0.1)
                     fator_localiz_calc = limitar_fator(fa_avaliado / fa_item)
+                    lista_f_loc.append(float(fator_localiz_calc))
                 else:
                     fator_localiz_calc = 1.0
             except Exception:
@@ -8336,7 +8338,7 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             "valor_estimado": lista_valores_estimados[i],
             "residuo_rel": lista_residuos_relativos[i],
             "residuo_dp": lista_residuos_dp[i],
-            "f_loc": fator_localiz_calc,
+            "f_loc": lista_f_loc[i],
             "idx": linha.get("idx") or linha.get("AM"),  # ← ESSENCIAL!
         })
 
