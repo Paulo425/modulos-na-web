@@ -28,6 +28,7 @@ import math
 
 
 
+
 # 🔧 Configuração do logger DEFINITIVA (completa e segura)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1650,7 +1651,10 @@ def visualizar_resultados(uuid):
     except Exception as erro:
         logger.exception(f"🚨 Exceção capturada em visualizar_resultados: {erro}")
         flash(f"Erro detalhado capturado: {erro}", "danger")
-        return redirect(url_for("visualizar_resultados", uuid=uuid))
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+            return jsonify({"redirect": url_for("visualizar_resultados", uuid=uuid)})
+        return redirect(url_for("visualizar_resultados", uuid=uuid), code=303)
+
 
 
 
