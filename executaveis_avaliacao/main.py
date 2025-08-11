@@ -2295,6 +2295,24 @@ def substituir_placeholder_por_varias_imagens_em_grade(
     except Exception:
         pass
 
+    # remove/paralisa o parágrafo logo após o placeholder se for só quebra/empty
+    doc_pars = documento.paragraphs
+    try:
+        idx = doc_pars.index(par_ancora)
+        prox = doc_pars[idx + 1] if idx + 1 < len(doc_pars) else None
+    except ValueError:
+        prox = None
+
+    if prox is not None:
+        try:
+            prox.paragraph_format.page_break_before = False
+        except Exception:
+            pass
+        if (not prox.text.strip()) and all((not r.text.strip()) for r in prox.runs):
+            p = prox._element
+            p.getparent().remove(p)
+
+
     # Largura útil da página para dimensionar as colunas
     section = documento.sections[0]
     EMU_PER_INCH = 914400
