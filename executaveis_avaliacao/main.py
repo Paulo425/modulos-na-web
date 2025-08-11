@@ -2181,14 +2181,14 @@ def substituir_placeholder_por_varias_imagens(
         return False
 
     def _find_paragraphs_with(doc, marker):
-    pars = [p for p in doc.paragraphs if p.text and marker in p.text]
-    for tab in doc.tables:
-        for row in tab.rows:
-            for cell in row.cells:
-                for p in cell.paragraphs:
-                    if p.text and marker in p.text:
-                        pars.append(p)
-    return pars
+        pars = [p for p in doc.paragraphs if p.text and marker in p.text]
+        for tab in doc.tables:
+            for row in tab.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if p.text and marker in p.text:
+                            pars.append(p)
+        return pars
 
 
     def _delete_paragraph(paragraph):
