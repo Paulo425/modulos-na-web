@@ -8174,6 +8174,8 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
     lista_valores_estimados = []
     lista_valores_originais = []
     lista_f_loc = []
+    lista_FA, lista_FO, lista_FAP, lista_FT, lista_FP, lista_FPA, lista_FE, lista_FAC, lista_f_loc = [], [], [], [], [], [], [], [], []
+
 
     for i, (_, linha) in enumerate(dataframe_amostras_validas.iterrows()):
         valor_total_amostra = linha["VALOR TOTAL"]
@@ -8265,6 +8267,16 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             fator_acess_calc = limitar_fator(f_avaliado_acess / f_sample_acess)
         else:
             fator_acess_calc = 1.0
+        lista_FA.append(float(fator_area))
+        lista_FO.append(float(fator_oferta))
+        lista_FAP.append(float(fator_aprov_calc))
+        lista_FT.append(float(fator_topog_calc))
+        lista_FP.append(float(fator_pedol_calc))
+        lista_FPA.append(float(fator_pavim_calc))
+        lista_FE.append(float(fator_esq_calc))
+        lista_FAC.append(float(fator_acess_calc))
+        lista_f_loc.append(float(fator_localiz_calc))
+
 
         valor_homog = (
             valor_total_amostra *
@@ -8338,8 +8350,18 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             "valor_estimado": lista_valores_estimados[i],
             "residuo_rel": lista_residuos_relativos[i],
             "residuo_dp": lista_residuos_dp[i],
-            "f_loc": lista_f_loc[i],
             "idx": linha.get("idx") or linha.get("AM"),  # ← ESSENCIAL!
+            "FA":  lista_FA[i],
+            "FO":  lista_FO[i],
+            "FAP": lista_FAP[i],
+            "FT":  lista_FT[i],
+            "FP":  lista_FP[i],
+            "FPA": lista_FPA[i],
+            "FE":  lista_FE[i],
+            "FAC": lista_FAC[i],
+            "FL":  lista_f_loc[i],
+            "f_loc": lista_f_loc[i],
+
         })
 
     return amostras_resultantes

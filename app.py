@@ -1809,6 +1809,31 @@ def gerar_laudo_final(uuid):
     df_filtrado, idx_exc, amostras_exc, media, dp, menor, maior, mediana = aplicar_chauvenet_e_filtrar(df_ativas)
     amostras_homog = homogeneizar_amostras(df_filtrado, dados_avaliando, fatores_do_usuario, "mercado")
 
+    # 👉 Persistir fatores e VUs calculados no snapshot JSON
+    map_h = {int(a["idx"]): a for a in amostras_homog}
+    for am in dados["amostras"]:
+        h = map_h.get(int(am.get("idx", 0)))
+        if not h:
+            continue
+        am.update({
+            "FA":  h.get("FA"),
+            "FO":  h.get("FO"),
+            "FAP": h.get("FAP"),
+            "FT":  h.get("FT"),
+            "FP":  h.get("FP"),
+            "FPA": h.get("FPA"),
+            "FE":  h.get("FE"),
+            "FAC": h.get("FAC"),
+            "FL":  h.get("FL", h.get("f_loc")),
+            "valor_unitario_original":      h.get("valor_unitario_original"),
+            "valor_unitario_homogeneizado": h.get("valor_unitario"),
+        })
+
+    # salvar snapshot atualizado (antes de gerar o DOCX/ZIP)
+    with open(caminho_json, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+
+
     # Alinhamentos para gráficos
     idx_filtrados = df_filtrado["idx"].astype(int).tolist()
     ativos_frontend_set = set(int(i) for i in ativos_frontend)
