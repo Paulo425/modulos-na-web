@@ -2322,8 +2322,12 @@ def substituir_placeholder_por_varias_imagens_em_grade(
 
     total = len(caminhos_imagens)
     i = 0
+    primeira_pagina = True
+
 
     while i < total:
+        if not primeira_pagina:
+            par_ancora.add_run().add_break(WD_BREAK.PAGE)
         # Cria a grade da "página"
         tabela = documento.add_table(rows=rows_por_pagina, cols=cols)
         tabela.autofit = False
@@ -2373,9 +2377,8 @@ def substituir_placeholder_por_varias_imagens_em_grade(
         new_p = OxmlElement("w:p")
         tabela._element.addnext(new_p)
         par_ancora = Paragraph(new_p, documento)
-
-        if i < total:
-            par_ancora.add_run().add_break(WD_BREAK.PAGE)
+        primeira_pagina = False
+     
 
 
     return True
