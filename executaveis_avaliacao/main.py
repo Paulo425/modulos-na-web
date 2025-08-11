@@ -134,6 +134,9 @@ logger.info("✅ Logger MAIN.py inicializado corretamente!")
 from pathlib import Path
 import os
 
+uuid_execucao = locals().get('uuid_execucao') or locals().get('uuid') or uuid4().hex
+
+
 def _pdfs_para_pngs(lista_pdfs, subdir, uuid_execucao, dpi=200):
     """
     Usa sua salvar_pdf_como_png para cada PDF e retorna lista ordenada de PNGs.
