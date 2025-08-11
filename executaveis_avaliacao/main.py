@@ -2181,7 +2181,15 @@ def substituir_placeholder_por_varias_imagens(
         return False
 
     def _find_paragraphs_with(doc, marker):
-        return [p for p in doc.paragraphs if p.text and marker in p.text]
+    pars = [p for p in doc.paragraphs if p.text and marker in p.text]
+    for tab in doc.tables:
+        for row in tab.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    if p.text and marker in p.text:
+                        pars.append(p)
+    return pars
+
 
     def _delete_paragraph(paragraph):
         p = paragraph._element
@@ -7861,9 +7869,10 @@ def gerar_relatorio_avaliacao_com_template(
 
 
 
-    fotos_matricula    = _pdfs_para_pngs(pdfs_matricula,    "matricula",    uuid_execucao, dpi=200)
-    fotos_proprietario = _pdfs_para_pngs(pdfs_proprietario, "proprietario", uuid_execucao, dpi=200)
-    fotos_planta       = _pdfs_para_pngs(pdfs_planta,       "planta",       uuid_execucao, dpi=200)
+    fotos_matricula    = _pdfs_para_pngs(pdfs_matricula,    "matricula",    uuid_execucao, dpi=200)    if pdfs_matricula    else _only_images(_flatten_grupos_imagens(caminhos_fotos_adicionais    or []))
+    fotos_proprietario = _pdfs_para_pngs(pdfs_proprietario, "proprietario", uuid_execucao, dpi=200)    if pdfs_proprietario else _only_images(_flatten_grupos_imagens(caminhos_fotos_proprietario  or []))
+    fotos_planta       = _pdfs_para_pngs(pdfs_planta,       "planta",       uuid_execucao, dpi=200)    if pdfs_planta       else _only_images(_flatten_grupos_imagens(caminhos_fotos_planta        or []))
+
 
 
 
