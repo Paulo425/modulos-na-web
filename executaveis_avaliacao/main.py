@@ -8096,11 +8096,15 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
         try:
             geoloc = Nominatim(user_agent="aval-geo")
             loc = geoloc.geocode(f"{nome_cidade}, Brazil", timeout=10)
-            lat_ctr, lon_ctr = loc.latitude, loc.longitude if loc else (lat_av, lon_av)
+            lat_ctr, lon_ctr = (loc.latitude, loc.longitude) if loc else (lat_av, lon_av)
+            dados_avaliando["LAT_CENTRO"] = lat_ctr
+            dados_avaliando["LON_CENTRO"] = lon_ctr
+
         except:
             lat_ctr, lon_ctr = lat_av, lon_av
     else:
         lat_ctr, lon_ctr = lat_av, lon_av
+
 
     dados_avaliando["DISTANCIA CENTRO"] = haversine_km(lat_av, lon_av, lat_ctr, lon_ctr)
 
@@ -8145,6 +8149,14 @@ def ler_planilha_excel(caminho_arquivo_excel: str, raio_limite_km: float = 150.0
 def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_do_usuario, finalidade_do_laudo):
     import math
     import numpy as np
+    
+    def _haversine_km(lat1, lon1, lat2, lon2):
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+    return 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)) * R
+
 
     area_do_avaliando = float(dados_avaliando.get("AREA TOTAL", 0))
 
@@ -8183,8 +8195,21 @@ def homogeneizar_amostras(dataframe_amostras_validas, dados_avaliando, fatores_d
             fator_localiz_calc = 1.0
         else:
             try:
-                dist_amostra = float(linha.get("DISTANCIA CENTRO", 0))
-                dist_avalia = float(dados_avaliando.get("DISTANCIA CENTRO", 0))
+                dist_amostra = float(linha.get("DISTANCIA CENTRO") or 0)
+                if dist_amostra <= 0:
+                    la = float(linha.get("LATITUDE") or 0); lo = float(linha.get("LONGITUDE") or 0)
+                    lc = float(dados_avaliando.get("LAT_CENTRO") or 0);  oc = float(dados_avaliando.get("LON_CENTRO") or 0)
+                    if la and lo and lc and oc:
+                        dist_amostra = _haversine_km(la, lo, lc, oc)
+
+                dist_avalia = float(dados_avaliando.get("DISTANCIA CENTRO") or 0)
+                if dist_avalia <= 0:
+                    la = float(dados_avaliando.get("LATITUDE") or 0); lo = float(dados_avaliando.get("LONGITUDE") or 0)
+                    lc = float(dados_avaliando.get("LAT_CENTRO") or 0);  oc = float(dados_avaliando.get("LON_CENTRO") or 0)
+                    if la and lo and lc and oc:
+                        dist_avalia = _haversine_km(la, lo, lc, oc)
+
+
                 if dist_amostra > 0 and dist_avalia > 0:
                     fa_item = 1.0 / (dist_amostra ** 0.1)
                     fa_avaliado = 1.0 / (dist_avalia ** 0.1)
