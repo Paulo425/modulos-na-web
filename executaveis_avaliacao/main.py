@@ -2345,12 +2345,19 @@ def substituir_placeholder_por_varias_imagens_em_grade(
 
         # Insere a tabela imediatamente após o parágrafo âncora
         par_ancora._p.addnext(tabela._element)
-        # Atualiza âncora para continuar inserindo depois
-        par_ancora = documento.add_paragraph()
 
-        # Quebra de página se ainda restarem imagens
+        # Cria parágrafo LOGO APÓS a tabela (não no fim) e quebra local
+        from docx.oxml import OxmlElement
+        from docx.text.paragraph import Paragraph
+        from docx.enum.text import WD_BREAK
+
+        new_p = OxmlElement("w:p")
+        tabela._element.addnext(new_p)
+        par_ancora = Paragraph(new_p, documento)
+
         if i < total:
-            documento.add_page_break()
+            par_ancora.add_run().add_break(WD_BREAK.PAGE)
+
 
     return True
 
