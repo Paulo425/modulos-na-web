@@ -2256,7 +2256,8 @@ def substituir_placeholder_por_varias_imagens_em_grade(
     • Sem quebra extra após a última página.
     """
     import os
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+
     from docx.shared import Inches
 
     # Nada a inserir → não remove placeholder; deixa o chamador decidir fallback
@@ -2347,7 +2348,7 @@ def substituir_placeholder_por_varias_imagens_em_grade(
         par_ancora._p.addnext(tabela._element)
 
         # Cria parágrafo LOGO APÓS a tabela (não no fim) e quebra local
-        from docx.oxml import OxmlElement
+        from docx.oxml.shared import OxmlElement
         from docx.text.paragraph import Paragraph
         from docx.enum.text import WD_BREAK
 
