@@ -142,7 +142,7 @@ def _pdfs_para_pngs(lista_pdfs, subdir, uuid_execucao, dpi=200):
     Usa sua salvar_pdf_como_png para cada PDF e retorna lista ordenada de PNGs.
     Saída em: static/tmp/{uuid_execucao}/{subdir}/
     """
-    destino = os.path.join(BASE_DIR, "static", "tmp", str(uuid_execucao), subdir)
+    destino = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")), "static", "tmp", str(uuid_execucao), subdir)
     os.makedirs(destino, exist_ok=True)
     out = []
     for pdf in (lista_pdfs or []):
