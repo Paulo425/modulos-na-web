@@ -614,44 +614,65 @@ import math
 #     except Exception as e:
 #         print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
 
-def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentido_poligonal='horario'):
+import math
+
+def _xy(pt):
+    # aceita tuple/list (x,y) OU dict com chaves 'x','y' ou 'X','Y'
+    if isinstance(pt, dict):
+        if 'x' in pt and 'y' in pt:
+            return float(pt['x']), float(pt['y'])
+        if 'X' in pt and 'Y' in pt:
+            return float(pt['X']), float(pt['Y'])
+        # se houver outras chaves, tente mapear por índice
+        return float(pt.get(0)), float(pt.get(1))
+    return float(pt[0]), float(pt[1])
+
+def _ang(p_from, p_to):
+    dx = p_to[0] - p_from[0]
+    dy = p_to[1] - p_from[1]
+    return (math.degrees(math.atan2(dy, dx)) + 360.0) % 360.0
+
+def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentido_poligonal):
+    """
+    Desenha os arcos de ângulos internos SEMPRE para dentro.
+    Premissa: 'ordered_points' já está no sentido desejado (horário ou anti_horário).
+    'sentido_poligonal' deve ser 'horario' ou 'anti_horario'.
+    """
     try:
-        total_points = len(ordered_points)
+        n = len(ordered_points)
+        if n < 3:
+            return  # nada a fazer
 
-        for i, p2 in enumerate(ordered_points):
-            p1 = ordered_points[i - 1]
-            p3 = ordered_points[(i + 1) % total_points]
+        for i in range(n):
+            # vizinhos (p1 <- p2 -> p3)
+            p2 = _xy(ordered_points[i])
+            p1 = _xy(ordered_points[i - 1])
+            p3 = _xy(ordered_points[(i + 1) % n])
 
-            # Vetores adjacentes ao vértice atual (p2)
-            vec_p2_p1 = (p1[0] - p2[0], p1[1] - p2[1])
-            vec_p2_p3 = (p3[0] - p2[0], p3[1] - p2[1])
+            # ângulos das DIREÇÕES adjacentes no vértice
+            ang_in  = _ang(p2, p1)  # direção de entrada (segmento p1->p2, visto a partir de p2)
+            ang_out = _ang(p2, p3)  # direção de saída   (segmento p2->p3, visto a partir de p2)
 
-            # Ângulo interno vindo da planilha (em graus decimais)
-            internal_angle = float(angulos_decimais[i])
+            interno = float(angulos_decimais[i])
 
-            # Raio proporcional ao menor lado adjacente
-            lado1 = math.hypot(*vec_p2_p1)
-            lado2 = math.hypot(*vec_p2_p3)
-            raio = max(0.01, min(lado1, lado2) * 0.1)
+            # raio: 10% do menor lado adjacente (com piso de 1 cm)
+            lado1 = math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+            lado2 = math.hypot(p3[0] - p2[0], p3[1] - p2[1])
+            raio = max(0.01, 0.10 * min(lado1, lado2))
 
-            # Ângulo polar de um vetor (em graus 0–360)
-            def polar_angle(v):
-                return math.degrees(math.atan2(v[1], v[0])) % 360
+            # ===== REGRA FUNDAMENTAL (ezdxf varre SEMPRE CCW de start->end) =====
+            if sentido_poligonal == 'anti_horario':
+                # para ficar "por dentro", varra CCW de SAÍDA para ENTRADA
+                start_angle = ang_out
+                end_angle   = (start_angle + interno) % 360.0
+                mid_angle   = (start_angle + interno / 2.0) % 360.0
+            else:
+                # 'horario' → varra CCW de ENTRADA para SAÍDA (minor arc é o interno)
+                start_angle = ang_in
+                end_angle   = (start_angle + interno) % 360.0
+                mid_angle   = (start_angle + interno / 2.0) % 360.0
 
-            angle1 = polar_angle(vec_p2_p1)  # direção p2->p1
-            angle2 = polar_angle(vec_p2_p3)  # direção p2->p3
-
-            # >>> chave: desenhar o arco sempre "por dentro" conforme o sentido da poligonal
-            # horário  -> INÍCIO = p2->p1, FIM = girar -internal_angle
-            # anti-hor -> INÍCIO = p2->p1, FIM = girar +internal_angle
-            if sentido_poligonal == 'horario':
-                start_angle = angle1
-                end_angle   = (start_angle - internal_angle) % 360
-            else:  # 'anti_horario'
-                start_angle = angle1
-                end_angle   = (start_angle + internal_angle) % 360
-
-            # Desenhar arco interno no vértice p2
+            # desenha arco
             msp.add_arc(
                 center=(p2[0], p2[1]),
                 radius=raio,
@@ -660,33 +681,26 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentid
                 dxfattribs={'layer': 'Internal_Arcs'}
             )
 
-            # Posição do rótulo no meio do arco
-            # (meio circular considerando direção escolhida)
-            if sentido_poligonal == 'horario':
-                mid = (start_angle - internal_angle / 2.0) % 360
-            else:
-                mid = (start_angle + internal_angle / 2.0) % 360
-
+            # rótulo no meio do arco
             distancia_label = raio + 1.0
-            posicao_label = (
-                p2[0] + distancia_label * math.cos(math.radians(mid)),
-                p2[1] + distancia_label * math.sin(math.radians(mid)),
+            pos_label = (
+                p2[0] + distancia_label * math.cos(math.radians(mid_angle)),
+                p2[1] + distancia_label * math.sin(math.radians(mid_angle)),
             )
 
-            internal_angle_dms = convert_to_dms(internal_angle)
+            # se já tem sua função utilitária, mantenha
+            ang_texto = convert_to_dms(interno) if 'convert_to_dms' in globals() else f"{interno:.4f}°"
 
             msp.add_text(
-                internal_angle_dms,
+                ang_texto,
                 dxfattribs={
                     'height': 0.7,
                     'layer': 'Labels',
-                    'insert': posicao_label,
-                    # rotação legível (evita ficar de ponta cabeça)
-                    'rotation': mid if mid <= 180 else mid - 180
+                    'insert': pos_label,
+                    # rotação amigável
+                    'rotation': mid_angle if mid_angle <= 180 else mid_angle - 180
                 }
             )
-
-            print(f"Vértice V{i+1}: Ângulo interno {internal_angle_dms}")
 
     except Exception as e:
         print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
