@@ -1599,8 +1599,8 @@ def visualizar_resultados(uuid):
         ]
         media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
         vu_painel = float(media or 0.0)
-        dados_avaliando["valor_unitario_medio"] = float(media or 0.0)
-        dados_avaliando["valor_unitario_para_calculo"] = float(media or 0.0)
+        dados_avaliando["valor_unitario_medio"] = vu_painel
+        dados_avaliando["valor_unitario_para_calculo"] = vu_painel
 
 
 
@@ -1712,6 +1712,7 @@ def visualizar_resultados(uuid):
 
 
 
+        logger.debug(f"[PAINEL] media={media}  vu_medio_card={vu_painel}  valor_unit_resumo={resumo['valor_unit']}")
 
         logger.info("🚩 Renderizando template visualizar_resultados.html")
         return render_template(
