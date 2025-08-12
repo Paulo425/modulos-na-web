@@ -1644,10 +1644,12 @@ def visualizar_resultados(uuid):
 
         restricoes = (fatores.get("restricoes") or [])
         vu_base = float(
-        dados_avaliando.get("valor_unitario_para_calculo")
-        or dados_avaliando.get("valor_unitario_medio")
-        or 0.0
-    )
+            (media if media is not None else 0)                 # usa o VU MÉDIO mostrado acima
+            or dados_avaliando.get("valor_unitario_medio")
+            or dados_avaliando.get("valor_unitario_para_calculo")
+            or 0.0
+        )
+
 
         # Área usada no cálculo (prioriza a parcial afetada; fallback: área total)
         area_utilizada = float(
@@ -1698,11 +1700,7 @@ def visualizar_resultados(uuid):
 
         sit_rest = "Nenhuma restrição aplicada." if not restricoes else f"{len(restricoes)} restrição(ões) aplicada(s)"
 
-        total_area_restrita = sum(float(r.get("area") or 0) for r in restricoes)
-        area_livre = max(area_utilizada - total_area_restrita, 0.0)
-        subtotal_area_livre = area_livre * vu_base
-        valor_total_inden += subtotal_area_livre  # soma no total
-
+       
         resumo = {
             "valor_unit": f"R$ {br_num(vu_base)}",
             "area_utilizada": br_num(area_utilizada),

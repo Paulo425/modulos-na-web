@@ -512,72 +512,72 @@ def calcular_fator_oferta(oferta_aplicada, usar_fator_oferta):
 
 
 
-###############################################################################
-# GRÁFICOS DE ADERÊNCIA E DISPERSÃO
-###############################################################################
-def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, nome_arquivo_imagem):
-    """
-    Gera um gráfico comparando os VALORES TOTAIS ORIGINAIS de cada amostra 
-    com os VALORES TOTAIS ESTIMADOS, calculados a partir do valor unitário homogeneizado (R$/m²)
-    multiplicado pela área de cada amostra.
-    """
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from scipy.stats import linregress
-    import matplotlib.ticker as ticker
+# ###############################################################################
+# # GRÁFICOS DE ADERÊNCIA E DISPERSÃO
+# ###############################################################################
+# def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, nome_arquivo_imagem):
+#     """
+#     Gera um gráfico comparando os VALORES TOTAIS ORIGINAIS de cada amostra 
+#     com os VALORES TOTAIS ESTIMADOS, calculados a partir do valor unitário homogeneizado (R$/m²)
+#     multiplicado pela área de cada amostra.
+#     """
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     from scipy.stats import linregress
+#     import matplotlib.ticker as ticker
 
-    # 1) Obter os valores totais originais
-    valores_originais_totais = dataframe["VALOR TOTAL"].tolist()
+#     # 1) Obter os valores totais originais
+#     valores_originais_totais = dataframe["VALOR TOTAL"].tolist()
 
-    # 2) Calcular os valores estimados
-    valores_estimados_totais = []
-    for i, valor_unit in enumerate(valores_homogeneizados_unitarios):
-        area = dataframe.iloc[i]["AREA TOTAL"]
-        if area > 0:
-            valor_total_estimado = valor_unit * area
-        else:
-            valor_total_estimado = 0.0
-        valores_estimados_totais.append(valor_total_estimado)
+#     # 2) Calcular os valores estimados
+#     valores_estimados_totais = []
+#     for i, valor_unit in enumerate(valores_homogeneizados_unitarios):
+#         area = dataframe.iloc[i]["AREA TOTAL"]
+#         if area > 0:
+#             valor_total_estimado = valor_unit * area
+#         else:
+#             valor_total_estimado = 0.0
+#         valores_estimados_totais.append(valor_total_estimado)
 
-    x = np.array(valores_originais_totais, dtype=float)
-    y = np.array(valores_estimados_totais, dtype=float)
+#     x = np.array(valores_originais_totais, dtype=float)
+#     y = np.array(valores_estimados_totais, dtype=float)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.scatter(x, y, color='blue', label='Amostras')
+#     fig, ax = plt.subplots(figsize=(8, 6))
+#     ax.scatter(x, y, color='blue', label='Amostras')
 
-    if x.size > 0 and y.size > 0:
-        limite_min = min(np.min(x), np.min(y))
-        limite_max = max(np.max(x), np.max(y))
-    else:
-        limite_min, limite_max = 0, 1
+#     if x.size > 0 and y.size > 0:
+#         limite_min = min(np.min(x), np.min(y))
+#         limite_max = max(np.max(x), np.max(y))
+#     else:
+#         limite_min, limite_max = 0, 1
 
-    if len(x) >= 2 and len(y) >= 2:
-        slope, intercept, r_value, p_value, std_err = linregress(x, y)
-        x_fit = np.linspace(limite_min, limite_max, 100)
-        y_fit = slope * x_fit + intercept
-        ax.plot(x_fit, y_fit, 'r-', label=f'Reta Ajustada (R² = {r_value**2:.3f})')
-    else:
-        ax.text(0.5, 0.5, "Dados insuficientes para regressão", 
-                horizontalalignment='center', verticalalignment='center', 
-                transform=ax.transAxes, fontsize=12, color='red')
+#     if len(x) >= 2 and len(y) >= 2:
+#         slope, intercept, r_value, p_value, std_err = linregress(x, y)
+#         x_fit = np.linspace(limite_min, limite_max, 100)
+#         y_fit = slope * x_fit + intercept
+#         ax.plot(x_fit, y_fit, 'r-', label=f'Reta Ajustada (R² = {r_value**2:.3f})')
+#     else:
+#         ax.text(0.5, 0.5, "Dados insuficientes para regressão", 
+#                 horizontalalignment='center', verticalalignment='center', 
+#                 transform=ax.transAxes, fontsize=12, color='red')
 
-    ax.set_title("Gráfico de Aderência - Valores Totais")
-    ax.set_xlabel("Valor Total Original (R$)")
-    ax.set_ylabel("Valor Total Estimado (R$)")
-    ax.legend()
-    ax.grid(True)
-    ax.tick_params(axis='x', rotation=45)
+#     ax.set_title("Gráfico de Aderência - Valores Totais")
+#     ax.set_xlabel("Valor Total Original (R$)")
+#     ax.set_ylabel("Valor Total Estimado (R$)")
+#     ax.legend()
+#     ax.grid(True)
+#     ax.tick_params(axis='x', rotation=45)
 
-    def formatar_valor_em_reais(valor, pos):
-        return formatar_moeda_brasil(valor)
+#     def formatar_valor_em_reais(valor, pos):
+#         return formatar_moeda_brasil(valor)
 
-    formatador = ticker.FuncFormatter(formatar_valor_em_reais)
-    ax.xaxis.set_major_formatter(formatador)
-    ax.yaxis.set_major_formatter(formatador)
+#     formatador = ticker.FuncFormatter(formatar_valor_em_reais)
+#     ax.xaxis.set_major_formatter(formatador)
+#     ax.yaxis.set_major_formatter(formatador)
 
-    fig.tight_layout()
-    fig.savefig(nome_arquivo_imagem, bbox_inches='tight')
-    plt.close(fig)
+#     fig.tight_layout()
+#     fig.savefig(nome_arquivo_imagem, bbox_inches='tight')
+#     plt.close(fig)
 
 
 def gerar_grafico_dispersao_mediana(valores_homogeneizados, nome_arquivo):
@@ -4802,7 +4802,7 @@ def gerar_grafico_aderencia_totais(dataframe, valores_homogeneizados_unitarios, 
         slope, intercept, r_value, p_value, std_err = linregress(x, y)
         x_fit = np.linspace(limite_min, limite_max, 100)
         y_fit = slope * x_fit + intercept
-        ax.plot(x_fit, y_fit, "r-", label=f"Reta Ajustada (R² = {r_value**2:.2f})")
+        ax.plot(x_fit, y_fit, "r-", label=f"Reta Ajustada (R² = {r_value**2:.3f})")
     else:
         ax.text(0.5, 0.5, "Dados insuficientes para regressão",
                 ha="center", va="center", transform=ax.transAxes, fontsize=12, color="red")
