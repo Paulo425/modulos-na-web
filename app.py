@@ -1448,50 +1448,50 @@ def visualizar_resultados(uuid):
                 area_restrita_total += area_r
                 valor_total_inden   += subtotal
 
-                # >>> ACRESCENTE estes 3 campos (area_float, fator_float, livre)
                 linhas_restr.append({
                     "area": br_num(area_r),
-                    "area_float": float(area_r),            # ← numérico p/ JS
+                    "area_float": float(area_r),        # p/ JS
                     "percentual": f"{perc_r:.0f}%",
-                    "percentual_float": float(perc_r),      # ← numérico p/ JS
+                    "percentual_float": float(perc_r),  # p/ JS (opcional)
                     "fator": f"{fator_r:.2f}",
-                    "fator_float": float(fator_r),          # ← numérico p/ JS
+                    "fator_float": float(fator_r),      # p/ JS
                     "tipo": (r.get("tipo") or ""),
                     "subtotal": f"R$ {br_num(subtotal)}",
-                    "subtotal_float": float(subtotal),      # ← numérico p/ JS
+                    "subtotal_float": float(subtotal),  # p/ JS
                 })
 
+            # —— Linha da ÁREA LIVRE (apenas se houver restrições) ——
+            area_livre = max(area_utilizada - area_restrita_total, 0.0)
+            subtotal_livre = area_livre * vu_base
+            linhas_restr.append({
+                "area": br_num(area_livre),
+                "area_float": float(area_livre),
+                "percentual": "0%",
+                "percentual_float": 0.0,
+                "fator": "1.00",
+                "fator_float": 1.0,
+                "tipo": "Área Livre",
+                "subtotal": f"R$ {br_num(subtotal_livre)}",
+                "subtotal_float": float(subtotal_livre),
+                "livre": True,   # <- usado no JS
+            })
+            valor_total_inden += subtotal_livre
 
-        # —— SEMPRE crie a linha da ÁREA LIVRE, com ou sem restrições ——
-        area_livre = max(area_utilizada - area_restrita_total, 0.0)
-        subtotal_livre = area_livre * vu_base
-        linhas_restr.append({
-            "area": br_num(area_livre),
-            "percentual": "0%",
-            "fator": "1.00",
-            "tipo": "Área Livre",
-            "subtotal": f"R$ {br_num(subtotal_livre)}",
-            "area_float": area_livre,
-            "livre": True,
-        })
-        valor_total_inden = (valor_total_inden + subtotal_livre) if restricoes else (vu_base * area_utilizada)
-
-
-
+        else:
+            # Sem restrições → total é VU * área utilizada (e NÃO cria linha “Área Livre”)
+            valor_total_inden = vu_base * area_utilizada
 
         sit_rest = "Nenhuma restrição aplicada." if not restricoes else f"{len(restricoes)} restrição(ões) aplicada(s)"
 
-        
         resumo = {
             "valor_unit": f"R$ {br_num(vu_base)}",
-            "valor_unit_float": float(vu_base),               # ← numérico p/ JS
             "area_utilizada": br_num(area_utilizada),
-            "area_utilizada_float": float(area_utilizada),    # ← você já tinha
+            "area_utilizada_float": area_utilizada,
             "sit_rest": sit_rest,
-            "restricoes": linhas_restr,                       # agora com *_float
+            "restricoes": linhas_restr,                 # pode ficar vazia se não houver restrições
             "valor_total": f"R$ {br_num(valor_total_inden)}",
-            "valor_total_float": float(valor_total_inden),    # ← numérico p/ JS
         }
+
 
 
 

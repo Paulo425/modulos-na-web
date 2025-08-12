@@ -235,53 +235,45 @@ function deBR(s) { // fallback: "4.111,34" -> 4111.34
 }
 
 function atualizarResumo(vu) {
-  // 1) atualiza o VU mostrado
-  const vuSpan = document.getElementById('painel-valor-unit');
-  if (vuSpan) vuSpan.textContent = `R$ ${br(vu)}`;
+  // helper de moeda pt-BR
+  const brNum = (v) => Number(v || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 
-  // 2) recalcula subtotais e total
+  // 1) Atualiza o VU na cabeça do painel
+  const elVU = document.getElementById("painel-valor-unit");
+  if (elVU) elVU.textContent = `R$ ${brNum(vu)}`;
+
+  // 2) Recalcula subtotais por restrição (se existirem)
+  const tbody = document.getElementById("painel-restricoes");
   let total = 0;
-  const tbody = document.getElementById('painel-restricoes');
 
-  if (tbody) {
-    tbody.querySelectorAll('tr').forEach(tr => {
-      const isLivre = tr.classList.contains('area-livre');
+  if (tbody && tbody.querySelectorAll("tr").length > 0) {
+    tbody.querySelectorAll("tr").forEach((row) => {
+      const area = parseFloat(row.dataset.area || "0");
+      const fator = row.classList.contains("area-livre")
+        ? 1.0
+        : parseFloat(row.dataset.fator || "1");
 
-      // área (dataset ou texto)
-      let area = parseFloat(tr.dataset.area);
-      if (!isFinite(area)) {
-        const areaTxt = tr.querySelector('td:nth-child(1)')?.textContent || '0';
-        area = deBR(areaTxt);
-      }
+      const subtotal = area * Number(vu || 0) * fator;
 
-      // fator (somente para restrição)
-      let fator = 1.0;
-      if (!isLivre) {
-        fator = parseFloat(tr.dataset.fator);
-        if (!isFinite(fator)) {
-          const fatorTxt = tr.querySelector('td:nth-child(3)')?.textContent || '1';
-          fator = deBR(fatorTxt);
-        }
-      }
+      // ATENÇÃO: aqui é o <span class="subtotal"> (não td.subtotal)
+      const subSpan = row.querySelector(".subtotal");
+      if (subSpan) subSpan.textContent = `R$ ${brNum(subtotal)}`;
 
-      const subtotal = area * vu * fator;
-      const tdSub = tr.querySelector('td.subtotal');
-      if (tdSub) tdSub.textContent = `R$ ${br(subtotal)}`;
       total += subtotal;
     });
   } else {
-    // fallback: total = vu * área utilizada
-    const wrap = document.getElementById('painel-resumo');
-    let areaUtil = parseFloat(wrap?.dataset.areaUtilizada);
-    if (!isFinite(areaUtil)) {
-      const txt = document.getElementById('painel-area-utilizada')?.textContent || '0';
-      areaUtil = deBR(txt);
-    }
-    total = vu * areaUtil;
+    // 3) Sem restrições → usa área total do dataset do container
+    const painel = document.getElementById("painel-resumo");
+    const areaUtil = painel ? parseFloat(painel.dataset.areaUtilizada || "0") : 0;
+    total = areaUtil * Number(vu || 0);
   }
 
-  const totalEl = document.getElementById('painel-total');
-  if (totalEl) totalEl.textContent = `R$ ${br(total)}`;
+  // 4) Atualiza o total do painel
+  const elTotal = document.getElementById("painel-total");
+  if (elTotal) elTotal.textContent = `R$ ${brNum(total)}`;
 }
 </script>
 
