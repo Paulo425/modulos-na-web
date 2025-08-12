@@ -1633,6 +1633,61 @@ def visualizar_resultados(uuid):
             if li > 0:
                 amplitude_ic80 = round(((ls - li) / ((li + ls) / 2)) * 100, 1)
 
+
+        # ===== Painel "Resumo dos Valores Totais" (lado direito) =====
+        def br_num(v):
+            try:
+                return f"{float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            except Exception:
+                return "0,00"
+
+        restricoes = (fatores.get("restricoes") or [])
+        vu_base = float(dados_avaliando.get("valor_unitario_para_calculo") or 0.0)
+
+        # Área usada no cálculo (prioriza a parcial afetada; fallback: área total)
+        area_utilizada = float(
+            dados_avaliando.get("AREA_PARCIAL_AFETADA")
+            or dados_avaliando.get("AREA TOTAL")
+            or 0.0
+        )
+
+        # Monta linhas da sub-tabela de restrições e calcula o total indenizatório
+        linhas_restr = []
+        valor_total_inden = 0.0
+
+        if restricoes:
+            for r in restricoes:
+                area_r = float(r.get("area") or 0)
+                # se não vier fator, usa 1 - percentual/100
+                fator_r = float(r.get("fator") or (1.0 - float(r.get("percentualDepreciacao") or 0)/100.0))
+                perc_r  = 100.0 * (1.0 - fator_r)
+                subtotal = area_r * vu_base * fator_r
+                valor_total_inden += subtotal
+
+                linhas_restr.append({
+                    "area": br_num(area_r),
+                    "percentual": f"{perc_r:.0f}%",
+                    "fator": f"{fator_r:.2f}",
+                    "tipo": (r.get("tipo") or ""),
+                    "subtotal": f"R$ {br_num(subtotal)}",
+                })
+        else:
+            # Sem restrições → total é VU * área utilizada
+            valor_total_inden = vu_base * area_utilizada
+
+        sit_rest = "Nenhuma restrição aplicada." if not restricoes else f"{len(restricoes)} restrição(ões) aplicada(s)"
+
+        resumo = {
+            "valor_unit": f"R$ {br_num(vu_base)}",
+            "area_utilizada": br_num(area_utilizada),
+            "sit_rest": sit_rest,
+            "restricoes": linhas_restr,   # lista (pode estar vazia)
+            "valor_total": f"R$ {br_num(valor_total_inden)}",
+        }
+
+
+
+
         logger.info("🚩 Renderizando template visualizar_resultados.html")
         return render_template(
             "visualizar_resultados.html",
@@ -1642,6 +1697,7 @@ def visualizar_resultados(uuid):
             amplitude_ic80=amplitude_ic80,
             dados_avaliando=dados_avaliando,
             fatores=fatores,
+             resumo=resumo,
         )
 
     except FileNotFoundError as e:

@@ -62,6 +62,71 @@
 
 
 
+
+
+<div style="margin-top: 20px; padding: 15px; background-color:#f6f6f6; border:1px solid #d9d9d9; border-radius:6px;">
+  <h3 style="margin:0 0 10px 0; text-align:center;">RESUMO DOS VALORES TOTAIS</h3>
+
+  <table style="width:100%; border-collapse:collapse;">
+    <tr>
+      <td style="padding:6px; font-weight:bold; width:50%;">Valor Unitário Calculado:</td>
+      <td style="padding:6px; text-align:right;">{{ resumo.valor_unit }}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; font-weight:bold;">Área Total de Interesse:</td>
+      <td style="padding:6px; text-align:right;">{{ resumo.area_utilizada }}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; font-weight:bold;">Situação das Restrições:</td>
+      <td style="padding:6px; text-align:right;">{{ resumo.sit_rest }}</td>
+    </tr>
+  </table>
+
+  {# Sub-tabela de restrições #}
+  {% if resumo.restricoes and resumo.restricoes|length > 0 %}
+    <div style="margin-top:12px; background:#E0ECF8; padding:10px; border-radius:4px;">
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="padding:6px; font-size:12px; text-align:center;">Área (m²)</th>
+            <th style="padding:6px; font-size:12px; text-align:center;">% Depreciação</th>
+            <th style="padding:6px; font-size:12px; text-align:center;">Fator aplicado</th>
+            <th style="padding:6px; font-size:12px; text-align:center;">Tipo Restrição</th>
+            <th style="padding:6px; font-size:12px; text-align:center;">Subtotal (R$)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in resumo.restricoes %}
+            <tr>
+              <td style="padding:6px; text-align:center;">{{ r.area }}</td>
+              <td style="padding:6px; text-align:center;">{{ r.percentual }}</td>
+              <td style="padding:6px; text-align:center;">{{ r.fator }}</td>
+              <td style="padding:6px; text-align:center;">{{ r.tipo }}</td>
+              <td style="padding:6px; text-align:center;">{{ r.subtotal }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="margin-top:12px; background:#E0ECF8; padding:10px; border-radius:4px; text-align:center;">
+      Nenhuma restrição aplicada.
+    </div>
+  {% endif %}
+
+  <table style="width:100%; border-collapse:collapse; margin-top:12px;">
+    <tr>
+      <td style="padding:6px; font-weight:bold;">Valor Total Indenizatório:</td>
+      <td style="padding:6px; text-align:right; font-weight:bold;">{{ resumo.valor_total }}</td>
+    </tr>
+  </table>
+</div>
+
+
+
+
+
+
 <h2 style="margin-top: 30px; text-align: center;">Avaliação Interativa das Amostras</h2>
 
 <div style="max-width: 900px; margin: auto;">
