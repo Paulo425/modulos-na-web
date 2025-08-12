@@ -379,75 +379,157 @@ def create_arrow_block(doc, block_name="ARROW"):
     block.add_solid([base1, base2, tip])
 import math
 
-def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2):
+# def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, sentido_poligonal='horario'):
 
+#     """
+#     Adiciona um arco representando o giro angular horário no espaço de modelo do DXF já aberto.
+#     """
+#     try:
+#         msp = doc_dxf.modelspace()
+#         # Calcular distância entre V1–Az e V1–V2 para escolher o menor
+#         dist_az = calculate_distance(v1, az)
+#         dist_v2 = calculate_distance(v1, v2)
+#         min_dist = min(dist_az, dist_v2)
+
+#         radius = 0.4 if min_dist <= 0.5 else 1.0  # Raio adaptativo
+#         # Traçar a reta entre V1 e Az
+#         msp.add_line(start=v1[:2], end=az[:2])
+#         logger.info(f"Linha entre V1 e Az traçada com sucesso.")
+
+#         # Definir os pontos de apoio
+#         def calculate_displacement(point1, point2, distance):
+#             dx = point2[0] - point1[0]
+#             dy = point2[1] - point1[1]
+#             magnitude = math.hypot(dx, dy)
+#             return (
+#                 point1[0] + (dx / magnitude) * distance,
+#                 point1[1] + (dy / magnitude) * distance,
+#             )
+
+#         # Calcular os pontos de apoio
+#         ponto_inicial = calculate_displacement(v1, v2, radius)  # 2m na reta V1-V2
+#         ponto_final = calculate_displacement(v1, az, radius)   # 2m na reta V1-Az
+
+#         # Calcular os ângulos dos vetores
+#         angle_v2 = math.degrees(math.atan2(ponto_inicial[1] - v1[1], ponto_inicial[0] - v1[0]))
+#         angle_az = math.degrees(math.atan2(ponto_final[1] - v1[1], ponto_final[0] - v1[0]))
+
+#         # Calcular o giro angular no sentido horário
+#         giro_angular = (angle_az - angle_v2) % 360  # Garantir que o ângulo esteja no intervalo [0, 360)
+#         if giro_angular < 0:  # Caso negativo, ajustar para o sentido horário
+#             giro_angular += 360
+
+#         logger.info(f"Giro angular calculado corretamente: {giro_angular:.2f}°")
+
+#         # Traçar o arco
+#         msp.add_arc(center=v1[:2], radius=radius, start_angle=angle_v2, end_angle=angle_az)
+#         logger.info(f"Arco do giro angular traçado com sucesso.")
+
+#         # Adicionar rótulo ao arco
+#         label_offset = 3.0
+#         deslocamento_x=3
+#         deslocamento_y=-3
+#         angle_middle = math.radians((angle_v2 + angle_az) / 2)
+#         label_position = (
+#             v1[0] + (label_offset+deslocamento_x) * math.cos(angle_middle),
+#             v1[1] + (label_offset+deslocamento_y) * math.sin(angle_middle),
+#         )
+#         # Converter o ângulo para DMS e exibir no rótulo
+#         giro_angular_dms = f"{convert_to_dms(giro_angular)}"
+#         msp.add_text(
+#             giro_angular_dms,
+#             dxfattribs={
+#                 'height': 0.3,
+#                 'layer': 'Labels',
+#                 'insert': label_position  # Define a posição do texto
+#             }
+#         )
+#         logger.info(f"Rótulo do giro angular ({giro_angular_dms}) adicionado com sucesso.")
+
+#     except Exception as e:
+#         logger.error(f"Erro ao adicionar o arco do giro angular ao DXF: {e}") 
+
+
+def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, sentido_poligonal='horario'):
     """
-    Adiciona um arco representando o giro angular horário no espaço de modelo do DXF já aberto.
+    Adiciona um arco representando o giro angular no espaço de modelo do DXF já aberto.
+    Desenha internamente tanto para sentido horário quanto anti-horário,
+    trocando a ordem INÍCIO/FIM no caso anti-horário.
     """
     try:
         msp = doc_dxf.modelspace()
-        # Calcular distância entre V1–Az e V1–V2 para escolher o menor
+
+        # Calcular distância entre V1–Az e V1–V2 para escolher um raio seguro
         dist_az = calculate_distance(v1, az)
         dist_v2 = calculate_distance(v1, v2)
         min_dist = min(dist_az, dist_v2)
 
-        radius = 0.4 if min_dist <= 0.5 else 1.0  # Raio adaptativo
-        # Traçar a reta entre V1 e Az
+        radius = 0.4 if min_dist <= 0.5 else 1.0
+
+        # Linha de referência V1–Az (opcional, só visual)
         msp.add_line(start=v1[:2], end=az[:2])
-        logger.info(f"Linha entre V1 e Az traçada com sucesso.")
+        logger.info("Linha entre V1 e Az traçada com sucesso.")
 
-        # Definir os pontos de apoio
-        def calculate_displacement(point1, point2, distance):
-            dx = point2[0] - point1[0]
-            dy = point2[1] - point1[1]
-            magnitude = math.hypot(dx, dy)
-            return (
-                point1[0] + (dx / magnitude) * distance,
-                point1[1] + (dy / magnitude) * distance,
-            )
+        # >>> Escolha da ordem conforme o sentido
+        #     - horário: INÍCIO = V1->V2, FIM = V1->Az
+        #     - anti-horário: FIM = V1->V2, INÍCIO = V1->Az  (swap)
+        if sentido_poligonal == 'horario':
+            lado_inicio = v2
+            lado_fim    = az
+        else:  # 'anti_horario'
+            lado_inicio = az
+            lado_fim    = v2
 
-        # Calcular os pontos de apoio
-        ponto_inicial = calculate_displacement(v1, v2, radius)  # 2m na reta V1-V2
-        ponto_final = calculate_displacement(v1, az, radius)   # 2m na reta V1-Az
+        # Desloca um pontinho em cada raio para medir os ângulos
+        def deslocado(centro, alvo, d):
+            dx = alvo[0] - centro[0]
+            dy = alvo[1] - centro[1]
+            mag = math.hypot(dx, dy)
+            return (centro[0] + (dx / mag) * d, centro[1] + (dy / mag) * d)
 
-        # Calcular os ângulos dos vetores
-        angle_v2 = math.degrees(math.atan2(ponto_inicial[1] - v1[1], ponto_inicial[0] - v1[0]))
-        angle_az = math.degrees(math.atan2(ponto_final[1] - v1[1], ponto_final[0] - v1[0]))
+        # >>> Usa a ordem escolhida
+        p_inicio = deslocado(v1, lado_inicio, radius)
+        p_fim    = deslocado(v1, lado_fim,    radius)
 
-        # Calcular o giro angular no sentido horário
-        giro_angular = (angle_az - angle_v2) % 360  # Garantir que o ângulo esteja no intervalo [0, 360)
-        if giro_angular < 0:  # Caso negativo, ajustar para o sentido horário
+        # Ângulos (em graus) dos raios
+        ang_inicio = math.degrees(math.atan2(p_inicio[1] - v1[1], p_inicio[0] - v1[0]))
+        ang_fim    = math.degrees(math.atan2(p_fim[1]    - v1[1], p_fim[0]    - v1[0]))
+
+        # Giro (mantém a mesma lógica existente)
+        giro_angular = (ang_fim - ang_inicio) % 360
+        if giro_angular < 0:
             giro_angular += 360
 
         logger.info(f"Giro angular calculado corretamente: {giro_angular:.2f}°")
 
-        # Traçar o arco
-        msp.add_arc(center=v1[:2], radius=radius, start_angle=angle_v2, end_angle=angle_az)
-        logger.info(f"Arco do giro angular traçado com sucesso.")
+        # >>> Arco usando start/end conforme o sentido
+        msp.add_arc(center=v1[:2], radius=radius, start_angle=ang_inicio, end_angle=ang_fim)
+        logger.info("Arco do giro angular traçado com sucesso.")
 
-        # Adicionar rótulo ao arco
+        # Rótulo (posição no meio do arco)
+        angle_middle = math.radians((ang_inicio + ang_fim) / 2.0)
         label_offset = 3.0
-        deslocamento_x=3
-        deslocamento_y=-3
-        angle_middle = math.radians((angle_v2 + angle_az) / 2)
+        deslocamento_x = 3
+        deslocamento_y = -3
         label_position = (
-            v1[0] + (label_offset+deslocamento_x) * math.cos(angle_middle),
-            v1[1] + (label_offset+deslocamento_y) * math.sin(angle_middle),
+            v1[0] + (label_offset + deslocamento_x) * math.cos(angle_middle),
+            v1[1] + (label_offset + deslocamento_y) * math.sin(angle_middle),
         )
-        # Converter o ângulo para DMS e exibir no rótulo
+
         giro_angular_dms = f"{convert_to_dms(giro_angular)}"
         msp.add_text(
             giro_angular_dms,
             dxfattribs={
                 'height': 0.3,
                 'layer': 'Labels',
-                'insert': label_position  # Define a posição do texto
+                'insert': label_position
             }
         )
         logger.info(f"Rótulo do giro angular ({giro_angular_dms}) adicionado com sucesso.")
 
     except Exception as e:
-        logger.error(f"Erro ao adicionar o arco do giro angular ao DXF: {e}") 
+        logger.error(f"Erro ao adicionar o arco do giro angular ao DXF: {e}")
+
 
 
 
@@ -874,7 +956,7 @@ def create_memorial_descritivo(
 
         try:
             v2 = ordered_points[1]
-            add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_amarracao, v2)
+            add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_amarracao, v2, sentido_poligonal=sentido_poligonal)
         except Exception as e:
             logger.warning(f"⚠️ Falha ao adicionar giro angular: {e}")
 

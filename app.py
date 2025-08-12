@@ -25,6 +25,8 @@ import pandas as pd
 from executaveis_avaliacao.main import homogeneizar_amostras
 import numpy as np
 import math
+from executaveis_avaliacao.utils_json import carregar_entrada_corrente_json, salvar_entrada_corrente_json
+
 
 
 
@@ -1108,6 +1110,8 @@ def gerar_avaliacao():
                 valor_unitario_medio = sum(valores_unitarios) / len(valores_unitarios) if valores_unitarios else 0
                 dados_imovel["valor_unitario_medio"] = valor_unitario_medio
 
+
+
                 # ▲▲▲ FIM DO BLOCO DE CÁLCULO ▲▲▲
 
                 # NOVA LINHA: Pegue a área digitada pelo usuário no input
@@ -1211,6 +1215,7 @@ def gerar_avaliacao():
                         fotos_proprietario=fotos_proprietario,
                         fotos_planta=fotos_planta,
                         base_dir=BASE_DIR,  # opcional, mas bom para garantir o caminho correto
+                        
                     )
                    
                     return redirect(url_for('visualizar_resultados', uuid=id_execucao))
@@ -1599,8 +1604,8 @@ def visualizar_resultados(uuid):
         ]
         media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
         vu_painel = float(media or 0.0)
-        dados_avaliando["valor_unitario_medio"] = vu_painel
-        dados_avaliando["valor_unitario_para_calculo"] = vu_painel
+        # dados_avaliando["valor_unitario_medio"] = vu_painel
+        # dados_avaliando["valor_unitario_para_calculo"] = vu_painel
 
 
 
@@ -1645,9 +1650,19 @@ def visualizar_resultados(uuid):
                 return f"{float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             except Exception:
                 return "0,00"
+        
+        media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
+        mediana = float(np.median(valores_ativos)) if valores_ativos else 0.0
 
+        vu_medio_card = float(
+            dados_avaliando.get("valor_unitario_para_calculo")  # 1ª prioridade
+            or dados_avaliando.get("valor_unitario_medio")      # 2ª
+            or mediana                                          # 3ª (coerente com seu IC 80%)
+            or media                                            # 4ª
+            or 0.0
+        )
         restricoes = (fatores.get("restricoes") or [])
-        vu_base = vu_painel  # ✅ sempre o 71,20 do topo
+        vu_base = vu_medio_card  # ✅ sempre o 71,20 do topo
 
 
 
@@ -1701,7 +1716,7 @@ def visualizar_resultados(uuid):
 
         sit_rest = "Nenhuma restrição aplicada." if not restricoes else f"{len(restricoes)} restrição(ões) aplicada(s)"
 
-        vu_base = vu_painel
+        
         resumo = {
             "valor_unit": f"R$ {br_num(vu_base)}",
             "area_utilizada": br_num(area_utilizada),
@@ -1712,7 +1727,12 @@ def visualizar_resultados(uuid):
 
 
 
-        logger.debug(f"[PAINEL] media={media}  vu_medio_card={vu_painel}  valor_unit_resumo={resumo['valor_unit']}")
+        logger.debug(
+            f"[PAINEL] media={media:.2f}  mediana={mediana:.2f}  "
+            f"vu_json_para_calculo={dados_avaliando.get('valor_unitario_para_calculo')}  "
+            f"vu_json_medio={dados_avaliando.get('valor_unitario_medio')}  "
+            f"VU_USADO={vu_base:.2f}"
+        )
 
         logger.info("🚩 Renderizando template visualizar_resultados.html")
         return render_template(
@@ -2367,14 +2387,14 @@ def calcular_valores_iterativos(uuid):
         if "DISTANCIA CENTRO" not in df_ativas.columns:
             df_ativas["DISTANCIA CENTRO"] = 0.0
 
-        # valor_unitario_medio informativo
-        vu = [(float(vt) / float(ar)) if float(ar or 0) > 0 else 0.0
-              for vt, ar in zip(df_ativas["VALOR TOTAL"], df_ativas["AREA TOTAL"])]
-        vu_validos = [v for v in vu if v > 0]
-        dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
-        data["dados_avaliando"] = dados_avaliando
-        with open(caminho_json, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        # # valor_unitario_medio informativo
+        # vu = [(float(vt) / float(ar)) if float(ar or 0) > 0 else 0.0
+        #       for vt, ar in zip(df_ativas["VALOR TOTAL"], df_ativas["AREA TOTAL"])]
+        # vu_validos = [v for v in vu if v > 0]
+        # dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
+        # data["dados_avaliando"] = dados_avaliando
+        # with open(caminho_json, "w", encoding="utf-8") as f:
+        #     json.dump(data, f, ensure_ascii=False, indent=2)
 
         # Chauvenet
         df_filtrado, _, _, _, _, _, _, _ = aplicar_chauvenet_e_filtrar(df_ativas)
@@ -2415,13 +2435,38 @@ def calcular_valores_iterativos(uuid):
                             or 0)
 
         dados_avaliando["valor_unitario_para_calculo"] = float(valor_medio)
+        dados_avaliando["valor_unitario_medio"] = float(valor_medio) 
         dados_avaliando["valor_total"] = round(valor_medio * area_total_av, 2) if area_total_av > 0 else None
 
         data["dados_avaliando"] = dados_avaliando
 
-        # sobrescreve o JSON com esses campos atualizados
+
+
+
+
+        from executaveis_avaliacao.utils_json import salvar_entrada_corrente_json, carregar_entrada_corrente_json
+
+        # 1) salvar snapshot usando a função utilitária
+        arquivos = data.get("arquivos", {})
+        salvar_entrada_corrente_json(
+            uuid_execucao=uuid,
+            dados_avaliando=dados_avaliando,             # já com valor_medio nos dois campos
+            fatores_do_usuario=fatores_usuario,
+            amostras=amostras,                           # já com 'ativo' atualizado
+            fotos_imovel=arquivos.get("fotos_imovel", []),
+            fotos_adicionais=arquivos.get("fotos_adicionais", []),
+            fotos_proprietario=arquivos.get("fotos_proprietario", []),
+            fotos_planta=arquivos.get("fotos_planta", []),
+            base_dir=BASE_DIR,
+        )
+
+        # 2) garantir que 'config_modelo' (onde você guarda amostras_desabilitadas) também fique no JSON
+        _atual = carregar_entrada_corrente_json(uuid)
+        _atual["config_modelo"] = cfg
         with open(caminho_json, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(_atual, f, ensure_ascii=False, indent=2)
+
+      
 
         valor_minimo = round(float(li), 2)
         valor_maximo = round(float(ls), 2)
