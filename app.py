@@ -1598,6 +1598,7 @@ def visualizar_resultados(uuid):
             if float(a.get("area", 0) or 0) > 0
         ]
         media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
+        vu_painel = float(media or 0.0)
         dados_avaliando["valor_unitario_medio"] = float(media or 0.0)
         dados_avaliando["valor_unitario_para_calculo"] = float(media or 0.0)
 
@@ -1646,13 +1647,7 @@ def visualizar_resultados(uuid):
                 return "0,00"
 
         restricoes = (fatores.get("restricoes") or [])
-        vu_base = float(
-            dados_avaliando.get("valor_unitario_para_calculo")
-            or dados_avaliando.get("valor_unitario_medio")
-            or media   # fallback final
-            or 0.0
-        )
-        dados_avaliando["valor_unitario_para_calculo"] = vu_base
+        vu_base = vu_painel  # ✅ sempre o 71,20 do topo
 
 
 
@@ -1706,7 +1701,7 @@ def visualizar_resultados(uuid):
 
         sit_rest = "Nenhuma restrição aplicada." if not restricoes else f"{len(restricoes)} restrição(ões) aplicada(s)"
 
-        vu_base = float(dados_avaliando.get("valor_unitario_medio") or 0.0)
+        vu_base = vu_painel
         resumo = {
             "valor_unit": f"R$ {br_num(vu_base)}",
             "area_utilizada": br_num(area_utilizada),
