@@ -27,7 +27,9 @@
   {% endif %}
 {% endwith %}
 
-
+<script>
+  window.RESUMO_BASE = {{ resumo_totais | tojson }};
+</script>
 
 
 <div style="margin-top: 25px; padding: 15px; background-color: #eef7ff; border-radius: 6px; border: 1px solid #bdd7ee;">
@@ -64,17 +66,20 @@
 
 
 
-<div style="margin-top: 20px; padding: 15px; background-color:#f6f6f6; border:1px solid #d9d9d9; border-radius:6px;">
+<div id="painel-resumo"
+     data-area-utilizada="{{ resumo_totais.area_utilizada_float }}"
+     style="margin-top: 20px; padding: 15px; background-color:#f6f6f6; border:1px solid #d9d9d9; border-radius:6px;">
+
   <h3 style="margin:0 0 10px 0; text-align:center;">RESUMO DOS VALORES TOTAIS</h3>
 
   <table style="width:100%; border-collapse:collapse;">
     <tr>
       <td style="padding:6px; font-weight:bold; width:50%;">Valor Unitário Médio:</td>
-      <td style="padding:6px; text-align:right;">{{ resumo_totais.valor_unit }}</td>
+      <td style="padding:6px; text-align:right;"><span id="painel-valor-unit">{{ resumo_totais.valor_unit }}</span></td>
     </tr>
     <tr>
       <td style="padding:6px; font-weight:bold;">Área Total de Interesse:</td>
-      <td style="padding:6px; text-align:right;">{{ resumo_totais.area_utilizada }}</td>
+      <td style="padding:6px; text-align:right;"><span id="painel-area-utilizada">{{ resumo_totais.area_utilizada }}</span></td>
     </tr>
     <tr>
       <td style="padding:6px; font-weight:bold;">Situação das Restrições:</td>
@@ -95,17 +100,20 @@
             <th style="padding:6px; font-size:12px; text-align:center;">Subtotal (R$)</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="painel-restricoes">
           {% for r in resumo_totais.restricoes %}
-            <tr>
+            <tr class="{{ 'area-livre' if r.livre else 'restricao' }}"
+                data-area="{{ r.area_float or 0 }}"
+                {% if not r.livre %}data-fator="{{ r.fator_float or 1 }}"{% endif %}>
               <td style="padding:6px; text-align:center;">{{ r.area }}</td>
               <td style="padding:6px; text-align:center;">{{ r.percentual }}</td>
               <td style="padding:6px; text-align:center;">{{ r.fator }}</td>
               <td style="padding:6px; text-align:center;">{{ r.tipo }}</td>
-              <td style="padding:6px; text-align:center;">{{ r.subtotal }}</td>
+              <td style="padding:6px; text-align:center;"><span class="subtotal">{{ r.subtotal }}</span></td>
             </tr>
           {% endfor %}
         </tbody>
+
       </table>
     </div>
   {% else %}
@@ -118,7 +126,7 @@
   <table style="width:100%; border-collapse:collapse; margin-top:12px;">
     <tr>
       <td style="padding:6px; font-weight:bold;">Valor Total Indenizatório:</td>
-      <td style="padding:6px; text-align:right; font-weight:bold;">{{ resumo_totais.valor_total }}</td>
+      <td style="padding:6px; text-align:right; font-weight:bold;"><span id="painel-total">{{ resumo_totais.valor_total }}</span></td>
     </tr>
   </table>
 </div>
@@ -214,6 +222,72 @@
   </form>
 </div>
 
+
+
+
+<script>
+function br(n) {
+  return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function deBR(s) { // fallback: "4.111,34" -> 4111.34
+  if (s == null) return 0;
+  return parseFloat(String(s).replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+}
+
+function atualizarResumo(vu) {
+  // 1) atualiza o VU mostrado
+  const vuSpan = document.getElementById('painel-valor-unit');
+  if (vuSpan) vuSpan.textContent = `R$ ${br(vu)}`;
+
+  // 2) recalcula subtotais e total
+  let total = 0;
+  const tbody = document.getElementById('painel-restricoes');
+
+  if (tbody) {
+    tbody.querySelectorAll('tr').forEach(tr => {
+      const isLivre = tr.classList.contains('area-livre');
+
+      // área (dataset ou texto)
+      let area = parseFloat(tr.dataset.area);
+      if (!isFinite(area)) {
+        const areaTxt = tr.querySelector('td:nth-child(1)')?.textContent || '0';
+        area = deBR(areaTxt);
+      }
+
+      // fator (somente para restrição)
+      let fator = 1.0;
+      if (!isLivre) {
+        fator = parseFloat(tr.dataset.fator);
+        if (!isFinite(fator)) {
+          const fatorTxt = tr.querySelector('td:nth-child(3)')?.textContent || '1';
+          fator = deBR(fatorTxt);
+        }
+      }
+
+      const subtotal = area * vu * fator;
+      const tdSub = tr.querySelector('td.subtotal');
+      if (tdSub) tdSub.textContent = `R$ ${br(subtotal)}`;
+      total += subtotal;
+    });
+  } else {
+    // fallback: total = vu * área utilizada
+    const wrap = document.getElementById('painel-resumo');
+    let areaUtil = parseFloat(wrap?.dataset.areaUtilizada);
+    if (!isFinite(areaUtil)) {
+      const txt = document.getElementById('painel-area-utilizada')?.textContent || '0';
+      areaUtil = deBR(txt);
+    }
+    total = vu * areaUtil;
+  }
+
+  const totalEl = document.getElementById('painel-total');
+  if (totalEl) totalEl.textContent = `R$ ${br(total)}`;
+}
+</script>
+
+
+
+
 <script>
 function atualizarValoresIterativos(uuid_execucao) {
     const ativos = Array.from(document.querySelectorAll(".amostra-checkbox:checked"))
@@ -238,6 +312,10 @@ function atualizarValoresIterativos(uuid_execucao) {
             document.getElementById("valor-medio").innerText = `R$ ${data.valor_medio.toFixed(2)}`;
             document.getElementById("valor-maximo").innerText = `R$ ${data.valor_maximo.toFixed(2)}`;
 
+            // >>> NOVO: recalcula o painel Resumo
+            if (typeof data.valor_unitario_para_calculo === 'number') {
+              atualizarResumo(data.valor_unitario_para_calculo);
+            }
            
 
 
