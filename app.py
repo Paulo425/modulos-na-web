@@ -1644,8 +1644,7 @@ def visualizar_resultados(uuid):
 
         restricoes = (fatores.get("restricoes") or [])
         vu_base = float(
-            (media if media is not None else 0)                 # usa o VU MÉDIO mostrado acima
-            or dados_avaliando.get("valor_unitario_medio")
+            dados_avaliando.get("valor_unitario_medio")
             or dados_avaliando.get("valor_unitario_para_calculo")
             or 0.0
         )
@@ -1706,10 +1705,6 @@ def visualizar_resultados(uuid):
             "area_utilizada": br_num(area_utilizada),
             "sit_rest": sit_rest,
             "restricoes": linhas_restr,   # lista (pode estar vazia)
-            "area_livre": {                      # <-- novo
-                "area": br_num(area_livre),
-                "subtotal": f"R$ {br_num(subtotal_area_livre)}",
-            },
             "valor_total": f"R$ {br_num(valor_total_inden)}",
         }
 
