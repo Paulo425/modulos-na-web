@@ -1564,6 +1564,7 @@ def visualizar_resultados(uuid):
                 amplitude_ic80=0.0,
                 dados_avaliando=dados_avaliando,
                 fatores=fatores,
+                resumo_totais=resumo,
             )
 
         # Cria DF direto das amostras
@@ -1642,7 +1643,11 @@ def visualizar_resultados(uuid):
                 return "0,00"
 
         restricoes = (fatores.get("restricoes") or [])
-        vu_base = float(dados_avaliando.get("valor_unitario_para_calculo") or 0.0)
+        vu_base = float(
+        dados_avaliando.get("valor_unitario_para_calculo")
+        or dados_avaliando.get("valor_unitario_medio")
+        or 0.0
+    )
 
         # Área usada no cálculo (prioriza a parcial afetada; fallback: área total)
         area_utilizada = float(
@@ -1654,15 +1659,17 @@ def visualizar_resultados(uuid):
         # Monta linhas da sub-tabela de restrições e calcula o total indenizatório
         linhas_restr = []
         valor_total_inden = 0.0
+        area_restrita_total = 0.0  # <<< NOVO
 
         if restricoes:
             for r in restricoes:
                 area_r = float(r.get("area") or 0)
-                # se não vier fator, usa 1 - percentual/100
                 fator_r = float(r.get("fator") or (1.0 - float(r.get("percentualDepreciacao") or 0)/100.0))
                 perc_r  = 100.0 * (1.0 - fator_r)
                 subtotal = area_r * vu_base * fator_r
-                valor_total_inden += subtotal
+
+                area_restrita_total += area_r             # <<< NOVO
+                valor_total_inden   += subtotal
 
                 linhas_restr.append({
                     "area": br_num(area_r),
@@ -1671,17 +1678,40 @@ def visualizar_resultados(uuid):
                     "tipo": (r.get("tipo") or ""),
                     "subtotal": f"R$ {br_num(subtotal)}",
                 })
+
+            # —— Linha da ÁREA LIVRE ——
+            area_livre = max(area_utilizada - area_restrita_total, 0.0)
+            subtotal_livre = area_livre * vu_base
+            linhas_restr.append({
+                "area": br_num(area_livre),
+                "percentual": "0%",
+                "fator": "1.00",
+                "tipo": "Área Livre",
+                "subtotal": f"R$ {br_num(subtotal_livre)}",
+            })
+            valor_total_inden += subtotal_livre          # <<< NOVO
         else:
             # Sem restrições → total é VU * área utilizada
             valor_total_inden = vu_base * area_utilizada
 
+
+
         sit_rest = "Nenhuma restrição aplicada." if not restricoes else f"{len(restricoes)} restrição(ões) aplicada(s)"
+
+        total_area_restrita = sum(float(r.get("area") or 0) for r in restricoes)
+        area_livre = max(area_utilizada - total_area_restrita, 0.0)
+        subtotal_area_livre = area_livre * vu_base
+        valor_total_inden += subtotal_area_livre  # soma no total
 
         resumo = {
             "valor_unit": f"R$ {br_num(vu_base)}",
             "area_utilizada": br_num(area_utilizada),
             "sit_rest": sit_rest,
             "restricoes": linhas_restr,   # lista (pode estar vazia)
+            "area_livre": {                      # <-- novo
+                "area": br_num(area_livre),
+                "subtotal": f"R$ {br_num(subtotal_area_livre)}",
+            },
             "valor_total": f"R$ {br_num(valor_total_inden)}",
         }
 
@@ -1697,7 +1727,7 @@ def visualizar_resultados(uuid):
             amplitude_ic80=amplitude_ic80,
             dados_avaliando=dados_avaliando,
             fatores=fatores,
-             resumo=resumo,
+            resumo_totais=resumo,
         )
 
     except FileNotFoundError as e:

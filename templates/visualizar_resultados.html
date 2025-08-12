@@ -69,21 +69,21 @@
 
   <table style="width:100%; border-collapse:collapse;">
     <tr>
-      <td style="padding:6px; font-weight:bold; width:50%;">Valor Unitário Calculado:</td>
-      <td style="padding:6px; text-align:right;">{{ resumo.valor_unit }}</td>
+      <td style="padding:6px; font-weight:bold; width:50%;">Valor Unitário Médio:</td>
+      <td style="padding:6px; text-align:right;">{{ resumo_totais.valor_unit }}</td>
     </tr>
     <tr>
       <td style="padding:6px; font-weight:bold;">Área Total de Interesse:</td>
-      <td style="padding:6px; text-align:right;">{{ resumo.area_utilizada }}</td>
+      <td style="padding:6px; text-align:right;">{{ resumo_totais.area_utilizada }}</td>
     </tr>
     <tr>
       <td style="padding:6px; font-weight:bold;">Situação das Restrições:</td>
-      <td style="padding:6px; text-align:right;">{{ resumo.sit_rest }}</td>
+      <td style="padding:6px; text-align:right;">{{ resumo_totais.sit_rest }}</td>
     </tr>
   </table>
 
   {# Sub-tabela de restrições #}
-  {% if resumo.restricoes and resumo.restricoes|length > 0 %}
+  {% if resumo_totais.restricoes and resumo_totais.restricoes|length > 0 %}
     <div style="margin-top:12px; background:#E0ECF8; padding:10px; border-radius:4px;">
       <table style="width:100%; border-collapse:collapse;">
         <thead>
@@ -96,7 +96,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for r in resumo.restricoes %}
+          {% for r in resumo_totais.restricoes %}
             <tr>
               <td style="padding:6px; text-align:center;">{{ r.area }}</td>
               <td style="padding:6px; text-align:center;">{{ r.percentual }}</td>
@@ -114,10 +114,20 @@
     </div>
   {% endif %}
 
+  {% if resumo_totais.area_livre %}
+    <tr>
+      <td style="padding:6px; text-align:center;">{{ resumo_totais.area_livre.area }}</td>
+      <td style="padding:6px; text-align:center;">0%</td>
+      <td style="padding:6px; text-align:center;">1,00</td>
+      <td style="padding:6px; text-align:center;">Área Livre</td>
+      <td style="padding:6px; text-align:center;">{{ resumo_totais.area_livre.subtotal }}</td>
+    </tr>
+  {% endif %}
+
   <table style="width:100%; border-collapse:collapse; margin-top:12px;">
     <tr>
       <td style="padding:6px; font-weight:bold;">Valor Total Indenizatório:</td>
-      <td style="padding:6px; text-align:right; font-weight:bold;">{{ resumo.valor_total }}</td>
+      <td style="padding:6px; text-align:right; font-weight:bold;">{{ resumo_totais.valor_total }}</td>
     </tr>
   </table>
 </div>
