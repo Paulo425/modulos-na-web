@@ -1613,7 +1613,7 @@ def visualizar_resultados(uuid):
         sigma     = float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0
 
         area_av = float(dados_avaliando.get("AREA TOTAL") or 0)
-        vu_base = float(vuh_media or 0)   # <-- ESTE é o "Valor Unitário Médio" da tabela
+        vu_base = float(dados_avaliando.get("valor_unitario_medio") or 0.0)  # <-- usa o VU do card
 
         dados_avaliando["valor_unitario_para_calculo"] = vu_base
         dados_avaliando["valor_total"] = (vu_base * area_av) if (vu_base > 0 and area_av > 0) else None
@@ -1644,10 +1644,11 @@ def visualizar_resultados(uuid):
 
         restricoes = (fatores.get("restricoes") or [])
         vu_base = float(
-            dados_avaliando.get("valor_unitario_medio")
-            or dados_avaliando.get("valor_unitario_para_calculo")
+            dados_avaliando.get("valor_unitario_para_calculo")
+            or dados_avaliando.get("valor_unitario_medio")
             or 0.0
         )
+
 
 
         # Área usada no cálculo (prioriza a parcial afetada; fallback: área total)
