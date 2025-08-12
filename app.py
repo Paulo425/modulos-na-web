@@ -1581,7 +1581,7 @@ def visualizar_resultados(uuid):
         # Valor unitário médio bruto
         vu_list    = [(vt / ar) if ar > 0 else 0.0 for vt, ar in zip(df_ativas["VALOR TOTAL"], df_ativas["AREA TOTAL"])]
         vu_validos = [v for v in vu_list if v > 0]
-        dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
+        #dados_avaliando["valor_unitario_medio"] = (sum(vu_validos) / len(vu_validos)) if vu_validos else 0.0
 
         # Homogeneização
         amostras_prontas = homogeneizar_amostras(
@@ -1598,31 +1598,34 @@ def visualizar_resultados(uuid):
             if float(a.get("area", 0) or 0) > 0
         ]
         media = round(sum(valores_ativos) / len(valores_ativos), 2) if valores_ativos else 0.0
+        dados_avaliando["valor_unitario_medio"] = float(media or 0.0)
+        dados_avaliando["valor_unitario_para_calculo"] = float(media or 0.0)
 
 
-        # >>> CALCULA CAMPOS PARA A LINHA "AV" NA TABELA PELO VALOR MEDIO <<<
-        import numpy as np
 
-        vals = np.array([float(v) for v in valores_ativos if v and v > 0], dtype=float)
+        # # >>> CALCULA CAMPOS PARA A LINHA "AV" NA TABELA PELO VALOR MEDIO <<<
+        # import numpy as np
 
-        # Centro e dispersão coerentes com as amostras: MÉDIA e DESVIO-PADRÃO (amostral)
-        import numpy as np
+        # vals = np.array([float(v) for v in valores_ativos if v and v > 0], dtype=float)
 
-        vals = np.array([float(v) for v in valores_ativos if v is not None and math.isfinite(float(v))], dtype=float)
-        vuh_media = float(np.mean(vals)) if vals.size else 0.0
-        sigma     = float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0
+        # # Centro e dispersão coerentes com as amostras: MÉDIA e DESVIO-PADRÃO (amostral)
+        # import numpy as np
 
-        area_av = float(dados_avaliando.get("AREA TOTAL") or 0)
-        vu_base = float(dados_avaliando.get("valor_unitario_medio") or 0.0)  # <-- usa o VU do card
+        # vals = np.array([float(v) for v in valores_ativos if v is not None and math.isfinite(float(v))], dtype=float)
+        # vuh_media = float(np.mean(vals)) if vals.size else 0.0
+        # sigma     = float(np.std(vals, ddof=1)) if vals.size > 1 else 0.0
 
-        dados_avaliando["valor_unitario_para_calculo"] = vu_base
-        dados_avaliando["valor_total"] = (vu_base * area_av) if (vu_base > 0 and area_av > 0) else None
-        dados_avaliando["valor_estimado"] = vu_base
-        # Se não quiser residuais para o AV, deixe None:
-        dados_avaliando["residuo_rel"] = None
-        dados_avaliando["residuo_dp"]  = None
+        # area_av = float(dados_avaliando.get("AREA TOTAL") or 0)
+        # vu_base = float(dados_avaliando.get("valor_unitario_medio") or 0.0)  # <-- usa o VU do card
 
-        logger.debug(f"[AV] area={area_av}, vu_base={vu_base}, total={dados_avaliando['valor_total']}")
+        # dados_avaliando["valor_unitario_para_calculo"] = vu_base
+        # dados_avaliando["valor_total"] = (vu_base * area_av) if (vu_base > 0 and area_av > 0) else None
+        # dados_avaliando["valor_estimado"] = vu_base
+        # # Se não quiser residuais para o AV, deixe None:
+        # dados_avaliando["residuo_rel"] = None
+        # dados_avaliando["residuo_dp"]  = None
+
+        # logger.debug(f"[AV] area={area_av}, vu_base={vu_base}, total={dados_avaliando['valor_total']}")
 
 
 
@@ -1643,7 +1646,12 @@ def visualizar_resultados(uuid):
                 return "0,00"
 
         restricoes = (fatores.get("restricoes") or [])
-        vu_base = float(dados_avaliando.get("valor_unitario_medio") or 0.0)
+        vu_base = float(
+            dados_avaliando.get("valor_unitario_para_calculo")
+            or dados_avaliando.get("valor_unitario_medio")
+            or media   # fallback final
+            or 0.0
+        )
         dados_avaliando["valor_unitario_para_calculo"] = vu_base
 
 
@@ -1652,6 +1660,7 @@ def visualizar_resultados(uuid):
         area_utilizada = float(
             dados_avaliando.get("AREA_PARCIAL_AFETADA")
             or dados_avaliando.get("AREA TOTAL")
+            or dados_avaliando.get("AREA_TOTAL")
             or 0.0
         )
 

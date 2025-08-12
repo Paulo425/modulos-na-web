@@ -161,17 +161,7 @@
         </tr>
         {% endfor %}
 
-        <tr style="background-color: #ffff99; font-weight: bold;">
-          <td></td>
-          <td>AV</td>
-          <td style="text-align:center;">{{ dados_avaliando.get('valor_total') | brlmoeda }}</td>
-          <td style="text-align:center;">{{ dados_avaliando.get('AREA TOTAL') | brlnum(2) }}</td>
-          <td style="text-align:center;">{{ dados_avaliando.get('valor_unitario_medio') | brlmoeda }}</td>
-          <td style="text-align:center;">{{ dados_avaliando.get('valor_estimado') | brlmoeda }}</td>
-          <td style="text-align:center;">{{ dados_avaliando.get('residuo_rel') | brlnum(2) }}%</td>
-          <td style="text-align:center;">{{ dados_avaliando.get('residuo_dp') | brlnum(2) }}</td>
-                </tr>
-
+        
       </tbody>
     </table>
 
