@@ -264,86 +264,77 @@ def set_default_font(doc):
     font.name = 'Arial'
     font.size = Pt(12)
     
-def calculate_point_on_line(start, end, distance):
-    """
-    Calcula um ponto a uma determinada distância sobre uma linha.
-    """
-    dx, dy = end[0] - start[0], end[1] - start[1]
-    length = math.hypot(dx, dy)
-    return (
-        start[0] + dx / length * distance,
-        start[1] + dy / length * distance
-    )
+def calculate_point_on_line(a, b, dist):
+    """Retorna o ponto a uma distância 'dist' ao longo do segmento A->B."""
+    ax, ay = float(a[0]), float(a[1])
+    bx, by = float(b[0]), float(b[1])
+    dx, dy = bx - ax, by - ay
+    L = math.hypot(dx, dy)
+    if L <= 1e-9:
+        return (ax, ay)
+    t = dist / L
+    return (ax + dx * t, ay + dy * t)
 
 def add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute):
     """
-    Adiciona o arco do azimute ao DXF usando ezdxf.
+    Desenha: segmento Az–V1, linha norte e arco do azimute, com rótulo 'Azimute: ...'.
+    Abortará se a distância Az–V1 for ~0.
     """
-
     try:
         logger.info(f"Iniciando a adição do arco de azimute. Azimute: {azimute}°")
 
-        # --- GUARD CLAUSE: evita distâncias ~0 entre Az e V1 ---
-        if ponto_az is None or v1 is None:
-            logger.error("ponto_az ou v1 ausente; abortando desenho do azimute.")
-            return
-        # garante tuplas 2D
-        az_xy = (float(ponto_az[0]), float(ponto_az[1]))
-        v1_xy = (float(v1[0]), float(v1[1]))
-        dist_az_v1 = math.hypot(v1_xy[0] - az_xy[0], v1_xy[1] - az_xy[1])
-        if dist_az_v1 <= 1e-9:
+        # Guarda contra distância zero (evita div/0 e geometria degenerada)
+        if math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1]) <= 1e-9:
             logger.error("Distância Az–V1 zero; abortando desenho.")
             return
 
-
-    try:
-        logger.info(f"Iniciando a adição do arco de azimute. Azimute: {azimute}°")
-
-        # Criar camada 'Azimute', se não existir
+        # Camada
         if 'Azimute' not in msp.doc.layers:
             msp.doc.layers.new(name='Azimute', dxfattribs={'color': 1})
             logger.info("Camada 'Azimute' criada com sucesso.")
 
-        # Traçar segmento entre Az e V1
-        msp.add_line(start=az_xy, end=v1_xy, dxfattribs={'layer': 'Azimute'})
-        logger.info(f"Segmento entre Az e V1 desenhado de {az_xy} para {v1_xy}")
+        # Segmento Az–V1
+        msp.add_line(start=ponto_az, end=v1, dxfattribs={'layer': 'Azimute'})
+        logger.info(f"Segmento entre Az e V1 desenhado de {ponto_az} para {v1}")
 
-        # Traçar segmento para o norte (vetor unitário +Y)
-        north_point = (az_xy[0], az_xy[1] + 2.0)
-        msp.add_line(start=az_xy, end=north_point, dxfattribs={'layer': 'Azimute'})
-        logger.info(f"Linha para o norte desenhada com sucesso de {az_xy} para {north_point}")
+        # Linha para o norte (2 m)
+        north_point = (ponto_az[0], ponto_az[1] + 2.0)
+        msp.add_line(start=ponto_az, end=north_point, dxfattribs={'layer': 'Azimute'})
+        logger.info(f"Linha para o norte desenhada com sucesso de {ponto_az} para {north_point}")
 
-        # Raio adaptativo em função da distância Az–V1
-        radius = 0.4 if dist_az_v1 <= 0.5 else 1.0
+        # Raio adaptativo para o arco
+        dist = calculate_distance(ponto_az, v1)
+        radius = 0.4 if dist <= 0.5 else 1.0
 
-        # Pontos do arco (um na direção Az→V1, outro na direção do norte)
-        start_arc = calculate_point_on_line(az_xy, v1_xy, radius)
-        end_arc   = calculate_point_on_line(az_xy, north_point, radius)
+        # Pontos para calcular ângulos do arco
+        start_arc = calculate_point_on_line(ponto_az, v1, radius)
+        end_arc = calculate_point_on_line(ponto_az, north_point, radius)
 
-        # Traçar o arco do azimute (centro em Az)
+        start_ang = math.degrees(math.atan2(start_arc[1] - ponto_az[1], start_arc[0] - ponto_az[0]))
+        end_ang   = math.degrees(math.atan2(end_arc[1]   - ponto_az[1], end_arc[0]   - ponto_az[0]))
+
         msp.add_arc(
-            center=az_xy,
+            center=ponto_az,
             radius=radius,
-            start_angle=math.degrees(math.atan2(start_arc[1] - az_xy[1], start_arc[0] - az_xy[0])),
-            end_angle=math.degrees(math.atan2(end_arc[1] - az_xy[1], end_arc[0] - az_xy[0])),
+            start_angle=start_ang,
+            end_angle=end_ang,
             dxfattribs={'layer': 'Azimute'}
         )
-        logger.info(f"Arco do azimute desenhado com sucesso com valor de {azimute}° no ponto {az_xy}")
+        logger.info(f"Arco do azimute desenhado com sucesso com valor de {azimute}° no ponto {ponto_az}")
 
         # Rótulo "Azimute: ..."
         azimuth_label = f"Azimute: {convert_to_dms(azimute)}"
         label_position = (
-            az_xy[0] + 1.0 * math.cos(math.radians(azimute / 2.0)),
-            az_xy[1] + 1.0 * math.sin(math.radians(azimute / 2.0))
+            ponto_az[0] + 1.0 * math.cos(math.radians(azimute / 2.0)),
+            ponto_az[1] + 1.0 * math.sin(math.radians(azimute / 2.0)),
         )
         msp.add_text(
             azimuth_label,
             dxfattribs={'height': 0.25, 'layer': 'Azimute', 'insert': label_position}
         )
         logger.info(f"Rótulo do azimute adicionado com sucesso: '{azimuth_label}' em {label_position}")
-
     except Exception as e:
-        logger.error(f"Erro na função `add_azimuth_arc_to_dxf`: {e}")
+        logger.error(f"Erro na função add_azimuth_arc_to_dxf: {e}")
 
 
 
@@ -1097,46 +1088,32 @@ def escolher_ponto_az_externo(v1_xy, ponto_az_dxf, pontos_aberta, ponto_amarraca
 
 def add_distance_label(msp, ponto_inicial, ponto_final, distancia, layer_name="Distancias"):
     """
-    Adiciona um rótulo de distância entre dois pontos no DXF.
-
-    :param msp: Modelspace do DXF (ezdxf)
-    :param ponto_inicial: tupla (x, y) ou (x, y, z) do ponto inicial
-    :param ponto_final: tupla (x, y) ou (x, y, z) do ponto final
-    :param distancia: valor da distância (float)
-    :param layer_name: nome da camada onde o texto será criado
+    Adiciona um rótulo de distância no ponto médio entre 'ponto_inicial' e 'ponto_final'.
     """
     try:
-        # Normaliza coordenadas para 2D
         pi = (float(ponto_inicial[0]), float(ponto_inicial[1]))
         pf = (float(ponto_final[0]), float(ponto_final[1]))
 
         # Guarda contra distância zero
         if math.hypot(pf[0] - pi[0], pf[1] - pi[1]) <= 1e-9:
-            logger.error("Distância zero entre pontos; rótulo não será adicionado.")
+            logger.error("Distância zero entre pontos; rótulo suprimido.")
             return
 
-        # Calcula ponto médio para posicionar o texto
-        mid_x = (pi[0] + pf[0]) / 2.0
-        mid_y = (pi[1] + pf[1]) / 2.0
+        # Garante camada
+        if layer_name not in msp.doc.layers:
+            msp.doc.layers.new(name=layer_name, dxfattribs={"color": 2})
 
-        # Formata distância (com vírgula no lugar do ponto se quiser padrão BR)
+        # Posição (ponto médio)
+        mid = ((pi[0] + pf[0]) / 2.0, (pi[1] + pf[1]) / 2.0)
+
+        # Formatação BR
         dist_str = f"{distancia:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-        # Garante que a camada exista
-        if layer_name not in msp.doc.layers:
-            msp.doc.layers.new(name=layer_name, dxfattribs={"color": 2})  # amarelo
-
-        # Adiciona o texto no DXF
         msp.add_text(
             dist_str,
-            dxfattribs={
-                "height": 0.25,
-                "layer": layer_name,
-                "insert": (mid_x, mid_y)
-            }
+            dxfattribs={"height": 0.25, "layer": layer_name, "insert": mid}
         )
-        logger.info(f"Rótulo de distância '{dist_str}' adicionado em ({mid_x}, {mid_y})")
-
+        logger.info(f"Rótulo de distância '{dist_str}' adicionado em {mid}")
     except Exception as e:
         logger.error(f"Erro na função add_distance_label: {e}")
 
