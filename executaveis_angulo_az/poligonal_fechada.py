@@ -54,6 +54,17 @@ MESES_PT_BR = {
     'December': 'dezembro'
 }
 
+def calcular_area_poligonal(pontos):
+    """Calcula a área da poligonal fechada usando a fórmula shoelace."""
+    n = len(pontos)
+    area = 0.0
+    for i in range(n):
+        x1, y1 = pontos[i]
+        x2, y2 = pontos[(i + 1) % n]
+        area += (x1 * y2) - (x2 * y1)
+    return abs(area) / 2
+
+
 def limpar_dxf(original_path, saida_path):
     try:
         doc_antigo = ezdxf.readfile(original_path)
