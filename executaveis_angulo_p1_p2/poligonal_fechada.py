@@ -16,6 +16,7 @@ from docx.shared import Pt
 import openpyxl
 from openpyxl.styles import Alignment, Font
 import logging 
+EPS_BULGE = 1e-9
 
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -1138,6 +1139,91 @@ def add_distance_label(msp, p1, p2, distancia):
 
 
 # ==== HELPERS_ANGULOS_DXF_END ====
+#DAQUI PARA BAIXO HELPERS RELATIVOS A EXISTENCIA DE BULGE NA POLIGONAL
+
+
+
+
+def _deg(a_rad): 
+    return math.degrees(a_rad)
+
+def _rad(a_deg):
+    return math.radians(a_deg)
+
+def _norm_deg(a):
+    """Normaliza para (-180, 180]."""
+    a = (a + 180.0) % 360.0 - 180.0
+    return 180.0 if abs(a + 180.0) < 1e-12 else a
+
+def _bearing(p, q):
+    """Azimute da corda PQ em graus (0°=E, CCW)."""
+    return _deg(math.atan2(q[1] - p[1], q[0] - p[0]))
+
+def _theta_from_bulge(b):
+    """Ângulo central do arco (ASSINADO) em graus."""
+    return _deg(4.0 * math.atan(b))
+
+def _tangent_dir_at_start(p, q, bulge):
+    """
+    Direção da TANGENTE no ponto inicial (p) do segmento/ARCO p→q.
+    - Linha: direção da corda.
+    - Arco: φ + 90° - θ/2   (θ assinado; CCW>0, CW<0)
+    """
+    phi = _bearing(p, q)
+    if abs(bulge) < EPS_BULGE:
+        return phi  # linha
+    theta = _theta_from_bulge(bulge)
+    return phi + 90.0 - (theta / 2.0)
+
+def _tangent_dir_at_end(p, q, bulge):
+    """
+    Direção da TANGENTE no ponto final (q) do segmento/ARCO p→q.
+    - Linha: direção da corda.
+    - Arco: φ + 90° + θ/2
+    """
+    phi = _bearing(p, q)
+    if abs(bulge) < EPS_BULGE:
+        return phi  # linha
+    theta = _theta_from_bulge(bulge)
+    return phi + 90.0 + (theta / 2.0)
+
+def _internal_angles_with_bulge(points_bulge):
+    """
+    Calcula ângulos internos (0–360) em todos os vértices usando tangentes reais.
+    `points_bulge`: lista de dicts [{'x':..,'y':..,'bulge_next':..}, ...]
+    Retorna lista em graus (float).
+    """
+    n = len(points_bulge)
+    angs = []
+    for i in range(n):
+        # índices circularmente
+        i_prev = (i - 1) % n
+        i_next = (i + 1) % n
+
+        p_prev = (points_bulge[i_prev]['x'], points_bulge[i_prev]['y'])
+        p_curr = (points_bulge[i]['x'],     points_bulge[i]['y'])
+        p_next = (points_bulge[i_next]['x'], points_bulge[i_next]['y'])
+
+        bulge_prev = float(points_bulge[i_prev].get('bulge_next', 0.0))  # do seg (i-1)→i
+        bulge_curr = float(points_bulge[i].get('bulge_next', 0.0))        # do seg i→(i+1)
+
+        # direções tangentes no vértice i
+        dir_in  = _tangent_dir_at_end(p_prev, p_curr, bulge_prev)   # chegando em Vi
+        dir_out = _tangent_dir_at_start(p_curr, p_next, bulge_curr) # saindo de Vi
+
+        # giro assinado (esquerda + / direita -)
+        turn = _norm_deg(dir_out - dir_in)
+
+        # ângulo interno da poligonal (concavo pode passar de 180)
+        interno = 180.0 - turn
+        # normaliza para [0, 360)
+        if interno < 0.0:
+            interno += 360.0
+        elif interno >= 360.0:
+            interno -= 360.0
+
+        angs.append(interno)
+    return angs
 
 
 
@@ -1366,6 +1452,10 @@ def create_memorial_descritivo(
     """
     logger.info("[CMD] pontos_bulge recebidos: %s", len(points_bulge) if points_bulge else 0)
 
+    # Garante que o estilo de texto "STANDARD" exista no DXF
+    if "STANDARD" not in msp.doc.styles:
+        msp.doc.styles.new("STANDARD")
+
     if diretorio_concluido is None:
         diretorio_concluido = caminho_salvar
 
@@ -1385,7 +1475,18 @@ def create_memorial_descritivo(
     _log_info(f"Sentido normalizado: {'anti-horário' if orient == +1 else 'horário'}")
 
     # 2) ângulos internos + concavidade
-    internos_deg, concavo = _internal_angles_and_concavity(pts, sentido_poligonal)
+    EPS_BULGE = 1e-9
+
+    has_any_bulge = any(abs(float(p.get('bulge_next', 0.0))) > EPS_BULGE for p in pts)
+
+    if has_any_bulge:
+        internos_deg = _internal_angles_with_bulge(pts)  # usa tangentes reais (funciona também para bulge=0)
+        concavo = [a > 180.0 for a in internos_deg]      # se você quiser a flag de concavidade
+        logger.info("Ângulos internos: modo BULGE-AWARE (misto retas+arcos).")
+    else:
+        # compatibilidade com sua rotina antiga quando não há bulge algum
+        internos_deg, concavo = _internal_angles_and_concavity(pts, sentido_poligonal)
+        logger.info("Ângulos internos: modo LEGADO (somente retas).")
 
     # 3) desenha arcos internos por dentro
     _draw_internal_angles(msp, pts, internos_deg, sentido_poligonal, raio_frac=0.10)
