@@ -279,6 +279,23 @@ def add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute):
     """
     Adiciona o arco do azimute ao DXF usando ezdxf.
     """
+
+    try:
+        logger.info(f"Iniciando a adição do arco de azimute. Azimute: {azimute}°")
+
+        # --- GUARD CLAUSE: evita distâncias ~0 entre Az e V1 ---
+        if ponto_az is None or v1 is None:
+            logger.error("ponto_az ou v1 ausente; abortando desenho do azimute.")
+            return
+        # garante tuplas 2D
+        az_xy = (float(ponto_az[0]), float(ponto_az[1]))
+        v1_xy = (float(v1[0]), float(v1[1]))
+        dist_az_v1 = math.hypot(v1_xy[0] - az_xy[0], v1_xy[1] - az_xy[1])
+        if dist_az_v1 <= 1e-9:
+            logger.error("Distância Az–V1 zero; abortando desenho.")
+            return
+
+
     try:
         logger.info(f"Iniciando a adição do arco de azimute. Azimute: {azimute}°")
 
@@ -288,57 +305,48 @@ def add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute):
             logger.info("Camada 'Azimute' criada com sucesso.")
 
         # Traçar segmento entre Az e V1
-        msp.add_line(start=ponto_az, end=v1, dxfattribs={'layer': 'Azimute'})
-        logger.info(f"Segmento entre Az e V1 desenhado de {ponto_az} para {v1}")
+        msp.add_line(start=az_xy, end=v1_xy, dxfattribs={'layer': 'Azimute'})
+        logger.info(f"Segmento entre Az e V1 desenhado de {az_xy} para {v1_xy}")
 
-        # Traçar segmento para o norte
-        north_point = (ponto_az[0], ponto_az[1] + 2)
-        msp.add_line(start=ponto_az, end=north_point, dxfattribs={'layer': 'Azimute'})
-        logger.info(f"Linha para o norte desenhada com sucesso de {ponto_az} para {north_point}")
+        # Traçar segmento para o norte (vetor unitário +Y)
+        north_point = (az_xy[0], az_xy[1] + 2.0)
+        msp.add_line(start=az_xy, end=north_point, dxfattribs={'layer': 'Azimute'})
+        logger.info(f"Linha para o norte desenhada com sucesso de {az_xy} para {north_point}")
 
-        # Calcular o ponto inicial (1 metro de Az para V1)
-        # Calcular distância entre ponto Az e V1 para definir raio adaptativo
-        dist = calculate_distance(ponto_az, v1)
-        radius = 0.4 if dist <= 0.5 else 1.0
+        # Raio adaptativo em função da distância Az–V1
+        radius = 0.4 if dist_az_v1 <= 0.5 else 1.0
 
-        # Calcular os pontos do arco com esse raio
-        start_arc = calculate_point_on_line(ponto_az, v1, radius)
-        end_arc = calculate_point_on_line(ponto_az, north_point, radius)
+        # Pontos do arco (um na direção Az→V1, outro na direção do norte)
+        start_arc = calculate_point_on_line(az_xy, v1_xy, radius)
+        end_arc   = calculate_point_on_line(az_xy, north_point, radius)
 
-        # Traçar o arco do azimute
+        # Traçar o arco do azimute (centro em Az)
         msp.add_arc(
-            center=ponto_az,
+            center=az_xy,
             radius=radius,
-            start_angle=math.degrees(math.atan2(start_arc[1] - ponto_az[1], start_arc[0] - ponto_az[0])),
-            end_angle=math.degrees(math.atan2(end_arc[1] - ponto_az[1], end_arc[0] - ponto_az[0])),
+            start_angle=math.degrees(math.atan2(start_arc[1] - az_xy[1], start_arc[0] - az_xy[0])),
+            end_angle=math.degrees(math.atan2(end_arc[1] - az_xy[1], end_arc[0] - az_xy[0])),
             dxfattribs={'layer': 'Azimute'}
         )
-        logger.info(f"Arco do azimute desenhado com sucesso com valor de {azimute}° no ponto {ponto_az}")
+        logger.info(f"Arco do azimute desenhado com sucesso com valor de {azimute}° no ponto {az_xy}")
 
-       # Adicionar rótulo do azimute diretamente com o texto "Azimute:"
-        azimuth_label = f"Azimute: {convert_to_dms(azimute)}"  # Incluir o prefixo "Azimute:"
-
-        # Calcular a posição do rótulo
+        # Rótulo "Azimute: ..."
+        azimuth_label = f"Azimute: {convert_to_dms(azimute)}"
         label_position = (
-            ponto_az[0] + 1.0 * math.cos(math.radians(azimute / 2)),
-            ponto_az[1] + 1.0 * math.sin(math.radians(azimute / 2))
+            az_xy[0] + 1.0 * math.cos(math.radians(azimute / 2.0)),
+            az_xy[1] + 1.0 * math.sin(math.radians(azimute / 2.0))
         )
-
-        # Adicionar o texto ao desenho
         msp.add_text(
             azimuth_label,
-            dxfattribs={
-                'height': 0.25,
-                'layer': 'Azimute',
-                'insert': label_position  # Define a posição diretamente
-            }
+            dxfattribs={'height': 0.25, 'layer': 'Azimute', 'insert': label_position}
         )
-
         logger.info(f"Rótulo do azimute adicionado com sucesso: '{azimuth_label}' em {label_position}")
-
 
     except Exception as e:
         logger.error(f"Erro na função `add_azimuth_arc_to_dxf`: {e}")
+
+
+
 
 def calculate_polygon_area(points):
     """
@@ -1045,6 +1053,94 @@ def _draw_internal_angles(msp, points, internos_deg, sentido_poligonal, raio_fra
                 'rotation': mid if mid <= 180 else mid - 180
             }
         )
+
+def _dist2(a, b):
+    return (a[0]-b[0])**2 + (a[1]-b[1])**2
+
+def escolher_ponto_az_externo(v1_xy, ponto_az_dxf, pontos_aberta, ponto_amarracao):
+    """
+    Decide o 'ponto AZ externo' a usar nos cálculos/desenho:
+    - Prioriza ponto Az do DXF (se existir e ≠ V1),
+    - senão pega o ponto externo mais próximo de V1 vindo da poligonal ABERTA,
+    - senão usa o ponto de amarração,
+    - senão retorna None.
+    Todos como tuplas (x,y,0.0).
+    """
+    EPS2 = 1e-12
+    vx, vy = float(v1_xy[0]), float(v1_xy[1])
+
+    # 1) Az do DXF
+    if ponto_az_dxf is not None:
+        ax, ay = float(ponto_az_dxf[0]), float(ponto_az_dxf[1])
+        if _dist2((ax, ay), (vx, vy)) > EPS2:
+            return (ax, ay, 0.0)
+
+    # 2) ponto externo mais próximo (ABERTA)
+    if pontos_aberta:
+        # cada item pode ser (x,y) ou (x,y,...) → normalize
+        candidatos = []
+        for p in pontos_aberta:
+            px, py = float(p[0]), float(p[1])
+            if _dist2((px, py), (vx, vy)) > EPS2:
+                candidatos.append((px, py))
+        if candidatos:
+            px, py = min(candidatos, key=lambda q: _dist2(q, (vx, vy)))
+            return (px, py, 0.0)
+
+    # 3) ponto de amarração
+    if ponto_amarracao is not None:
+        px, py = float(ponto_amarracao[0]), float(ponto_amarracao[1])
+        if _dist2((px, py), (vx, vy)) > EPS2:
+            return (px, py, 0.0)
+
+    return None
+
+def add_distance_label(msp, ponto_inicial, ponto_final, distancia, layer_name="Distancias"):
+    """
+    Adiciona um rótulo de distância entre dois pontos no DXF.
+
+    :param msp: Modelspace do DXF (ezdxf)
+    :param ponto_inicial: tupla (x, y) ou (x, y, z) do ponto inicial
+    :param ponto_final: tupla (x, y) ou (x, y, z) do ponto final
+    :param distancia: valor da distância (float)
+    :param layer_name: nome da camada onde o texto será criado
+    """
+    try:
+        # Normaliza coordenadas para 2D
+        pi = (float(ponto_inicial[0]), float(ponto_inicial[1]))
+        pf = (float(ponto_final[0]), float(ponto_final[1]))
+
+        # Guarda contra distância zero
+        if math.hypot(pf[0] - pi[0], pf[1] - pi[1]) <= 1e-9:
+            logger.error("Distância zero entre pontos; rótulo não será adicionado.")
+            return
+
+        # Calcula ponto médio para posicionar o texto
+        mid_x = (pi[0] + pf[0]) / 2.0
+        mid_y = (pi[1] + pf[1]) / 2.0
+
+        # Formata distância (com vírgula no lugar do ponto se quiser padrão BR)
+        dist_str = f"{distancia:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+        # Garante que a camada exista
+        if layer_name not in msp.doc.layers:
+            msp.doc.layers.new(name=layer_name, dxfattribs={"color": 2})  # amarelo
+
+        # Adiciona o texto no DXF
+        msp.add_text(
+            dist_str,
+            dxfattribs={
+                "height": 0.25,
+                "layer": layer_name,
+                "insert": (mid_x, mid_y)
+            }
+        )
+        logger.info(f"Rótulo de distância '{dist_str}' adicionado em ({mid_x}, {mid_y})")
+
+    except Exception as e:
+        logger.error(f"Erro na função add_distance_label: {e}")
+
+
 # ==== HELPERS_ANGULOS_DXF_END ====
 
 
@@ -1261,7 +1357,7 @@ def _draw_internal_angles(msp, points, internos_deg, sentido_poligonal, raio_fra
 def create_memorial_descritivo(
     uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
     dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-    giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario',
+    giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario', modo="ANGULO_P1_P2",
     diretorio_concluido=None,
     points_bulge=None   # <<< NOVO
 ):
@@ -1272,7 +1368,9 @@ def create_memorial_descritivo(
     - Gera Excel diretamente dos ângulos desenhados (sem reler a planilha para o DXF).
     """
     logger.info(f"[CMD] pontos_bulge recebidos: {len(points_bulge) if points_bulge else 0}")
-
+    # harmoniza nomes para helpers legados
+    doc_dxf = doc
+    msp_dxf = msp
 
     # Garantias iniciais
     if diretorio_concluido is None:
@@ -1298,6 +1396,28 @@ def create_memorial_descritivo(
 
     # 3) Desenhar arcos internos “por dentro”
     _draw_internal_angles(msp, pts, internos_deg, sentido_poligonal, raio_frac=0.10)
+
+        # 4) --- desenho do AZ depende do modo ---
+    # ANGULO_AZ  → desenha Az, linha Az–V1, arco e rótulos
+    # ANGULO_P1_P2 → NÃO desenha Az/linha/arco (a poligonal ABERTA já mostra a amarração),
+    #                mas os valores (dist/azimute/giro) já foram calculados e vão para Excel/DOCX
+    if modo == "ANGULO_AZ":
+        dx = v1[0] - ponto_az[0]
+        dy = v1[1] - ponto_az[1]
+        dist = math.hypot(dx, dy)
+        if dist > 1e-6:
+            try:
+                # camada/estilo já criados nos seus helpers
+                # 1) segmento AZ–V1
+                msp_dxf.add_line((ponto_az[0], ponto_az[1]), (v1[0], v1[1]), dxfattribs={"layer": "Azimute"})
+                # 2) arco do azimute (use seu helper existente)
+                add_azimuth_arc_to_dxf(doc_dxf, msp_dxf, ponto_az, v1, azimute)
+                # 3) rótulo distância
+                add_distance_label(msp_dxf, ponto_az, v1, dist)
+            except Exception as e:
+                logger.error(f"Erro ao desenhar referência de Az: {e}")
+        else:
+            logger.warning("⚠️ Distância Az–V1 ≈ 0; desenho do Az suprimido.")
 
     # 5) Montar Excel e anotações adicionais
     try:
@@ -1420,8 +1540,15 @@ def create_memorial_descritivo(
             _log_error(f"Erro ao adicionar distância Az–V1: {e}")
 
         # 6) Salvar DXF
-        doc_dxf.saveas(dxf_output_path)
-        _log_info(f"📁 Arquivo DXF final salvo em: {dxf_output_path}")
+        dxf_fechada_saida = os.path.join(
+            diretorio_concluido,
+            f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf"
+        )
+        try:
+            doc_dxf.saveas(dxf_fechada_saida)
+            logger.info(f"✅ DXF FECHADA salvo corretamente: {dxf_fechada_saida}")
+        except Exception as e:
+            logger.error(f"Erro ao salvar DXF FECHADA: {e}")
 
     except Exception as e:
         _log_error(f"❌ Erro ao gerar o memorial descritivo: {e}")
@@ -1876,43 +2003,58 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         return
 
     # 🔍 Extrair geometria do DXF
-    doc, lines, perimeter_dxf, area_dxf, ponto_az, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
-    if not doc or not ponto_amarracao:
+    # Extrair geometria FECHADA do DXF
+    doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
+    if not doc or not lines:
         logger.info("Erro ao processar o arquivo DXF.")
         return
 
-    # try:
-    #     doc_dxf = ezdxf.readfile(dxf_file_path)
-    #     msp = doc_dxf.modelspace()
-    # except Exception as e:
-    #     logger.error(f"Erro ao abrir o arquivo DXF para edição: {e}")
-    #     return
+    # V1 e V2 internos
+    v1 = lines[0][0]
+    v2 = lines[1][0]
 
-    if doc and lines:
-        logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
-        v1 = lines[0][0]
-        v2 = lines[1][0]
-        azimute = calculate_azimuth(ponto_az, v1)
-        distancia_az_v1 = calculate_distance(ponto_az, v1)
-        giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
-        giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
-    
-        logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
+    # Se você tiver os pontos externos da ABERTA disponíveis, recupere-os aqui.
+    # Caso não tenha a lista pronta, passe [] que cai no amarracao.
+    try:
+        pontos_aberta = obter_pontos_ordenados_do_dxf(planilha_aberta_saida)  # se sua função devolver os 'POINT' da ABERTA
+    except Exception:
+        pontos_aberta = []
 
-        # Caminho do Excel de saída
-        excel_file_path = os.path.join(
-            diretorio_concluido,
-            f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
-        )
+    # AZ externo "lógico"
+    ponto_az_externo = escolher_ponto_az_externo(
+        v1_xy=v1,
+        ponto_az_dxf=ponto_az_dxf,           # pode ser None
+        pontos_aberta=pontos_aberta,         # lista de pontos da ABERTA (se houver)
+        ponto_amarracao=ponto_amarracao      # (x,y) vindo da ABERTA
+    )
 
-        
+    if ponto_az_externo is None:
+        logger.error("❌ Não há ponto Az externo válido (DXF/ABERTA/amarração).")
+        return
 
-        # 🛠 Criar memorial e Excel
-        create_memorial_descritivo(
-            uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
-            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms, distancia_az_v1,
-            sentido_poligonal=sentido_poligonal,points_bulge=pts_bulge
-        )
+    # Cálculos sempre existem (mesmo que não desenhe)
+    azimute = calculate_azimuth(ponto_az_externo, v1)
+    distancia_az_v1 = calculate_distance(ponto_az_externo, v1)
+    giro_angular_v1 = calculate_angular_turn(ponto_az_externo, v1, v2)
+    giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
+
+    # Caminho do Excel de saída (mantido igual)
+    excel_file_path = os.path.join(
+        diretorio_concluido,
+        f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
+    )
+
+    # Chamada da create_memorial_descritivo com o modo propagado
+    create_memorial_descritivo(
+        uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes,
+        ponto_az_externo, dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename,
+        excel_file_path, tipo, giro_angular_v1_dms, distancia_az_v1,
+        sentido_poligonal=sentido_poligonal,
+        diretorio_concluido=diretorio_concluido_real,
+        points_bulge=pts_bulge,
+        modo=modo
+    )
+
         
         logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
 
