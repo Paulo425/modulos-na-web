@@ -93,8 +93,7 @@ data_atual = datetime.now().strftime("%d de %B de %Y")
 def limpar_dxf_e_converter_r2010(original_path, saida_path):
     """
     Lê um DXF original e regrava o arquivo com a versão R2010,
-    garantindo a preservação de entidades como ARC e CIRCLE.
-    Não adiciona nenhum ponto ou geometria nova.
+    preservando LWPOLYLINE (com bulge). Não cria geometria nova.
     """
     try:
         doc_antigo = ezdxf.readfile(original_path)
@@ -106,20 +105,17 @@ def limpar_dxf_e_converter_r2010(original_path, saida_path):
 
         for entity in msp_antigo.query('LWPOLYLINE'):
             if entity.closed:
-                # pega lista de tuplas (x, y, bulge)
-                pontos_xyb = entity.get_points('xyb')  # -> [(x, y, b), ...]
-                # regrava preservando bulge
+                # Pega (x, y, bulge) como tuplas
+                pontos_xyb = entity.get_points('xyb')  # [(x, y, bulge), ...]
+                # Regrava preservando o bulge
                 msp_novo.add_lwpolyline(
                     pontos_xyb,
-                    format='xyb',  # <<< preserva bulge
+                    format='xyb',
                     close=True,
                     dxfattribs={'layer': entity.dxf.layer}
                 )
                 encontrou_polilinha = True
                 break
-
-
-
 
         if not encontrou_polilinha:
             raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
@@ -131,6 +127,7 @@ def limpar_dxf_e_converter_r2010(original_path, saida_path):
     except Exception as e:
         logger.error(f"❌ Erro ao converter DXF para R2010: {e}")
         return original_path
+
 
 def obter_pontos_ordenados_do_dxf(dxf_file):
     doc = ezdxf.readfile(dxf_file)
@@ -152,90 +149,85 @@ def calcular_area_poligonal(pontos):
 
 def get_document_info_from_dxf(dxf_file_path):
     try:
-        doc = ezdxf.readfile(dxf_file_path)  
-        msp = doc.modelspace()  
+        doc = ezdxf.readfile(dxf_file_path)
+        msp = doc.modelspace()
+
         lines = []
-        perimeter_dxf = 0
-        area_dxf = 0
+        perimeter_dxf = 0.0
+        area_dxf = 0.0
         ponto_az = None
         ordered_points = []
         ordered_points_with_bulge = []
 
-        # Busca a primeira polilinha fechada
+        # Lê a PRIMEIRA LWPOLYLINE fechada
         for entity in msp.query('LWPOLYLINE'):
             if entity.closed:
-                verts = list(entity)  # vertices com .dxf
-                for v in verts:
-                    x, y = v.dxf.x, v.dxf.y
-                    b = float(v.dxf.bulge or 0.0)  # bulge do segmento v->próximo
+                pts_xyb = entity.get_points('xyb')  # lista de tuplas (x, y, bulge)
+                # Se houver último = primeiro, remove duplicata
+                if len(pts_xyb) >= 2 and (pts_xyb[0][0], pts_xyb[0][1]) == (pts_xyb[-1][0], pts_xyb[-1][1]):
+                    pts_xyb = pts_xyb[:-1]
+
+                # Monta listas
+                for (x, y, b) in pts_xyb:
                     ordered_points.append((x, y))
-                    ordered_points_with_bulge.append({'x': x, 'y': y, 'bulge_next': b})
+                    ordered_points_with_bulge.append({'x': x, 'y': y, 'bulge_next': float(b or 0.0)})
 
-                # remove duplicata final (se houver)
-                if len(ordered_points) >= 2 and ordered_points[0] == ordered_points[-1]:
-                    ordered_points.pop()
-                    ordered_points_with_bulge.pop()
-
-                num_points = len(ordered_points)
-                for i in range(num_points):
-                    start_point = ordered_points[i]
-                    end_point = ordered_points[(i + 1) % num_points]
-                    lines.append((start_point, end_point))
-
-                    segment_length = ((end_point[0] - start_point[0]) ** 2 +
-                                    (end_point[1] - start_point[1]) ** 2) ** 0.5
-                    perimeter_dxf += segment_length
-
-                x = [p[0] for p in ordered_points]
-                y = [p[1] for p in ordered_points]
-                area_dxf = abs(sum(x[i] * y[(i + 1) % num_points] - x[(i + 1) % num_points] * y[i]
-                                for i in range(num_points)) / 2)
                 logger.info(
                     f"pts_bulge: n={len(ordered_points_with_bulge)} | exemplo={ordered_points_with_bulge[:2]}"
                 )
 
+                # Linhas + perímetro
+                n = len(ordered_points)
+                for i in range(n):
+                    p1 = ordered_points[i]
+                    p2 = ordered_points[(i + 1) % n]
+                    lines.append((p1, p2))
+                    perimeter_dxf += ((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2) ** 0.5
+
+                # Área por shoelace
+                x = [p[0] for p in ordered_points]
+                y = [p[1] for p in ordered_points]
+                area_dxf = abs(sum(x[i] * y[(i + 1) % n] - x[(i + 1) % n] * y[i] for i in range(n)) / 2.0)
                 break
 
-
         if not lines:
-            print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
-            return None, [], 0, 0, None, None
+            logger.info("Nenhuma polilinha fechada encontrada no arquivo DXF.")
+            return None, [], 0.0, 0.0, None, None, []
 
-        # Busca ponto Az por TEXT, INSERT ou POINT (em ordem)
+        # Ponto Az (TEXT → INSERT → POINT)
         for entity in msp.query('TEXT'):
-            if "Az" in entity.dxf.text:
-                ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
-                print(f"Ponto Az encontrado em TEXT: {ponto_az}")
+            if "Az" in (entity.dxf.text or ""):
+                ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0.0)
                 break
 
         if ponto_az is None:
             for entity in msp.query('INSERT'):
-                if "Az" in entity.dxf.name:
-                    ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
-                    print(f"Ponto Az encontrado em INSERT: {ponto_az}")
+                if "Az" in (entity.dxf.name or ""):
+                    ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0.0)
                     break
 
         if ponto_az is None:
             for entity in msp.query('POINT'):
-                ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
-                print(f"Ponto Az encontrado como POINT: {ponto_az}")
+                ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0.0)
                 break
 
-        # Fallback caso não tenha ponto Az
         if ponto_az is None:
-            logger.warning("⚠️ Ponto Az não encontrado no arquivo DXF. Utilizando fallback (primeiro ponto).")
-            ponto_az = (ordered_points[0][0], ordered_points[0][1], 0)
+            # Fallback: primeiro vértice
+            ponto_az = (ordered_points[0][0], ordered_points[0][1], 0.0)
+            logger.warning("⚠️ Ponto Az não encontrado no DXF. Usando fallback (primeiro ponto).")
 
-        # Informações finais no log:
-        print(f"Linhas processadas: {len(lines)}")
-        print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
-        print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
+        logger.info(f"Linhas processadas: {len(lines)}")
+        logger.info(f"Perímetro do DXF: {perimeter_dxf:.2f} m")
+        logger.info(f"Área do DXF: {area_dxf:.2f} m²")
 
-        return doc, lines, perimeter_dxf, area_dxf, ponto_az, msp, ordered_points_with_bulge  
+        # >>> RETORNA 7 ITENS <<<
+        return doc, lines, perimeter_dxf, area_dxf, ponto_az, msp, ordered_points_with_bulge
 
     except Exception as e:
         logger.error(f"Erro ao obter informações do documento: {e}")
-        return None, [], 0, 0, None, None, []
+        # >>> TAMBÉM retorna 7 itens no erro <<<
+        return None, [], 0.0, 0.0, None, None, []
+
 
 
 
