@@ -582,7 +582,7 @@ import math
 
 
 
-def add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel):
+def internal_angle_decimal(msp, ordered_points, angulos_excel):
     try:
         total_points = len(ordered_points)
         
@@ -774,7 +774,7 @@ def calculate_angular_turn(p1, p2, p3):
 
 def create_memorial_descritivo(
     uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar, excel_confrontantes,
-    excel_file_path, ponto_az, distancia_az_v1, azimute_az_v1, tipo, giro_angular_v1_dms, dxf_file_path,
+    excel_file_path, ponto_az, distancia_az_v1, azimute_az_v1, tipo, giro_angular_v1_dms, dxf_file_path, sentido_poligonal='horario',
     diretorio_concluido=None, encoding='ISO-8859-1'
 ):
 
@@ -815,6 +815,33 @@ def create_memorial_descritivo(
         ordered_points.append(lines[-1][1])
 
     ordered_points = ensure_counterclockwise(ordered_points)
+    area = calcular_area_poligonal(ordered_points)
+
+    # Agora inverter o sentido corretamente, incluindo tratamento dos arcos (bulge)
+    if sentido_poligonal == 'horario':
+        if area > 0:
+            ordered_points.reverse()
+            area = abs(area)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido horário com ajuste dos arcos: {area:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido horário: {abs(area):.4f} m²")
+
+    else:  # sentido_poligonal == 'anti_horario'
+        if area < 0:
+            ordered_points.reverse()
+            area = abs(area)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido anti-horário com ajuste dos arcos: {area:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido anti-horário: {abs(area):.4f} m²")
+
 
     distance_az_v1 = calculate_distance(ponto_az, ordered_points[0])
 
@@ -1278,7 +1305,7 @@ def sanitize_filename(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
         
-def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template):
+def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template, sentido_poligonal='horario'):
 
      # 🔹 Leitura dos dados do Excel
     df_excel = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None, engine='openpyxl')
@@ -1408,7 +1435,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         tipo=tipo,
         giro_angular_v1_dms=giro_angular_v1_dms,
         diretorio_concluido=caminho_salvar,
-        dxf_file_path=dxf_file_path
+        dxf_file_path=dxf_file_path,
+        sentido_poligonal=sentido_poligonal
         
         
     )

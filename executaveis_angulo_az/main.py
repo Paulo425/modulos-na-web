@@ -43,18 +43,19 @@ except Exception:
     pass  # Em alguns ambientes, reconfigure não está disponível
 
 def main():
-    if len(sys.argv) != 4:
-        logger.error("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf>")
+    if len(sys.argv) < 4 or len(sys.argv) > 5:
+        print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf> [sentido_poligonal]")
         sys.exit(1)
 
     cidade = sys.argv[1]
     uuid_str = str(uuid.uuid4())[:8]
-    logger.info(f"Iniciando execução com UUID: {uuid_str}")
-    cidade_formatada = cidade.replace(" ", "_")  # 🔧 Adicione esta linha
+    cidade_formatada = cidade.replace(" ", "_")
     caminho_excel = sys.argv[2]
     caminho_dxf = sys.argv[3]
-    #BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    sentido_poligonal = sys.argv[4] if len(sys.argv) == 5 else 'horario'
+    logger.info(f"Sentido poligonal recebido no main.py: {sentido_poligonal}")
     caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
+
 
 
     if not os.path.exists(caminho_template):
@@ -78,6 +79,7 @@ def main():
         variaveis["diretorio_preparado"],
         variaveis["diretorio_concluido"],
         caminho_template,
+        sentido_poligonal
   
     )
 

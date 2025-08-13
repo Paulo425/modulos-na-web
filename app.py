@@ -647,6 +647,11 @@ def gerar_memorial_angulo_az():
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
+        sentido_poligonal = 'anti_horario' if 'sentidoPoligonal' in request.form else 'horario'
+        logger.info(f"Valor recebido do checkbox (sentidoPoligonal): {request.form.get('sentidoPoligonal')}")
+        logger.info(f"Sentido poligonal interpretado no Flask: {sentido_poligonal}")
+
+
         id_execucao = str(uuid.uuid4())[:8]
         diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
 
@@ -665,29 +670,29 @@ def gerar_memorial_angulo_az():
         log_relativo = f"static/logs/{log_filename}"
 
         try:
+            comando = [
+                sys.executable,
+                os.path.join(BASE_DIR, "executaveis_angulo_az", "main.py"),
+                cidade, caminho_excel, caminho_dxf, sentido_poligonal
+            ]
+
+            logger.info(f"Comando enviado ao subprocess: {comando}")
+
             processo = Popen(
-                ["python", os.path.join(BASE_DIR, "executaveis_angulo_az", "main.py"),
-                 cidade, caminho_excel, caminho_dxf],
-                stdout=PIPE, stderr=subprocess.STDOUT, text=True
+                comando,
+                stdout=PIPE, stderr=STDOUT, text=True
             )
 
-            log_lines = []
-            with open(log_path, 'w', encoding='utf-8') as log_file:
-                for linha in processo.stdout:
-                    log_file.write(linha)
-                    if len(log_lines) < 500:
-                        log_lines.append(linha)
-                    print("🖨️", linha.strip())
-
-            processo.wait()
-
-            if processo.returncode == 0:
-                resultado = "✅ Processamento concluído com sucesso!"
-            else:
-                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+            try:
+                saida, _ = processo.communicate(timeout=300)
+                logger.info(f"Saída do subprocess:\n{saida}")
+            except TimeoutExpired:
+                processo.kill()
+                saida, _ = processo.communicate()
+                logger.error(f"Subprocess atingiu timeout. Saída parcial:\n{saida}")
 
         except Exception as e:
-            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+            logger.error(f"Erro fatal ao executar subprocess: {e}")
 
         finally:
             os.remove(caminho_excel)
@@ -741,34 +746,7 @@ def gerar_memorial_angulo_p1_p2():
         log_path = os.path.join(log_dir_absoluto, log_filename)
         log_relativo = f"static/logs/{log_filename}"
 
-       
-
-        # try:
-        #     processo = Popen(
-        #         [sys.executable, os.path.join(BASE_DIR, "executaveis_angulo_p1_p2", "main.py"),
-        #         cidade, caminho_excel, caminho_dxf],
-        #         stdout=PIPE, stderr=STDOUT, text=True
-        #     )
-
-        #     log_lines = []
-        #     with open(log_path, 'w', encoding='utf-8') as log_file:
-        #         for linha in processo.stdout:
-        #             log_file.write(linha)
-        #             if len(log_lines) < 500:
-        #                 log_lines.append(linha)
-        #             print("🖨️", linha.strip())
-
-        #     processo.wait()
-
-        #     if processo.returncode == 0:
-        #         resultado = "✅ Processamento concluído com sucesso!"
-        #     else:
-        #         erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
-
-        # except Exception as e:
-        #     erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
-
-
+    
         try:
             comando = [
                 sys.executable,
