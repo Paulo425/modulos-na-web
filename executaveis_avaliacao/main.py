@@ -2376,8 +2376,8 @@ def substituir_placeholder_por_varias_imagens_em_grade(
                 else:
                     p.add_run("[imagem não encontrada]")
         # quebra de página no último parágrafo da grade (evita página em branco)
-        # if i < total and last_p is not None:
-        #     last_p.add_run().add_break(WD_BREAK.PAGE)
+        if i < total and last_p is not None:
+            last_p.add_run().add_break(WD_BREAK.PAGE)
 
         # Insere a tabela imediatamente após o parágrafo âncora
         par_ancora._p.addnext(tabela._element)
@@ -2392,12 +2392,12 @@ def substituir_placeholder_por_varias_imagens_em_grade(
         tabela._element.addnext(new_p)
         p_after = Paragraph(new_p, documento)
 
-        # se AINDA houver imagens a inserir, quebra a página aqui (fora da tabela)
-        if i < total:
-            p_after.add_run().add_break(WD_BREAK.PAGE)
+        # # se AINDA houver imagens a inserir, quebra a página aqui (fora da tabela)
+        # if i < total:
+        #     p_after.add_run().add_break(WD_BREAK.PAGE)
 
-        # reancora aqui para a próxima página/grade
-        par_ancora = p_after
+        # # reancora aqui para a próxima página/grade
+        # par_ancora = p_after
 
         
      
