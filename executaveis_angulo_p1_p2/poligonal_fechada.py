@@ -327,17 +327,17 @@ def add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute):
         logger.exception("Erro na função `add_azimuth_arc_to_dxf`")
 
 
-def add_distance_label(msp, p0, p1, dist):
-    """Rótulo simples da distância no ponto médio do segmento p0–p1."""
-    try:
-        mid = ((p0[0]+p1[0])/2.0, (p0[1]+p1[1])/2.0)
-        txt = f"{dist:,.2f} m".replace(",", "X").replace(".", ",").replace("X",".")
-        if 'Azimute' not in msp.doc.layers:
-            msp.doc.layers.new(name='Azimute', dxfattribs={'color': 1})
-        msp.add_text(txt, dxfattribs={'height': 0.25, 'layer': 'Azimute'}).set_pos(mid)
-        logger.info("Distância %.2f m adicionada corretamente em %s", dist, mid)
-    except Exception:
-        logger.exception("Erro ao adicionar rótulo de distância")
+# def add_distance_label(msp, p0, p1, dist):
+#     """Rótulo simples da distância no ponto médio do segmento p0–p1."""
+#     try:
+#         mid = ((p0[0]+p1[0])/2.0, (p0[1]+p1[1])/2.0)
+#         txt = f"{dist:,.2f} m".replace(",", "X").replace(".", ",").replace("X",".")
+#         if 'Azimute' not in msp.doc.layers:
+#             msp.doc.layers.new(name='Azimute', dxfattribs={'color': 1})
+#         msp.add_text(txt, dxfattribs={'height': 0.25, 'layer': 'Azimute'}).set_pos(mid)
+#         logger.info("Distância %.2f m adicionada corretamente em %s", dist, mid)
+#     except Exception:
+#         logger.exception("Erro ao adicionar rótulo de distância")
 
 
 def _desenhar_referencia_az(msp, ponto_az, v1, azimute):
@@ -897,14 +897,15 @@ def _bulge_tangents_deg(pA, pB, bulge):
     tan_end   = (alpha - s * offset) % 360.0
     return tan_start, tan_end
 
-def _polygon_orientation(points):
-    s = 0.0
-    n = len(points)
+def _polygon_orientation(pts_xyb) -> int:
+    # +1 CCW, -1 CW
+    area2 = 0.0
+    n = len(pts_xyb)
     for i in range(n):
-        x1, y1 = points[i]['x'], points[i]['y']
-        x2, y2 = points[(i + 1) % n]['x'], points[(i + 1) % n]['y']
-        s += (x2 - x1) * (y2 + y1)
-    return +1 if s < 0 else -1  # +1 CCW (anti-horário), -1 CW (horário)
+        x1, y1 = pts_xyb[i]['x'], pts_xyb[i]['y']
+        x2, y2 = pts_xyb[(i+1) % n]['x'], pts_xyb[(i+1) % n]['y']
+        area2 += x1*y2 - x2*y1
+    return +1 if area2 > 0 else -1
 
 def _ensure_orientation(points, sentido_desejado):
     pts = list(points)
@@ -977,31 +978,54 @@ def _ensure_poly_from_dxf(doc_dxf):
         _log_info("LWPOLYLINE criada a partir de LINEs.")
         return pts, e
 
-def _internal_angles_and_concavity(points, sentido_poligonal):
-    n = len(points)
-    internos = [0.0]*n
-    concavo  = [False]*n
-    orient = +1 if sentido_poligonal == 'anti_horario' else -1
+def _internal_angles_and_concavity(pts_xyb, sentido_poligonal):
+    import math
+    n = len(pts_xyb)
+    if n < 3:
+        return [], []
 
+    s = _polygon_orientation(pts_xyb)  # +1 CCW, -1 CW
+    internos_deg = []
+    concavo = []
+
+    EPS = 1e-12
     for i in range(n):
-        p1 = points[i - 1]
-        p2 = points[i]
-        p3 = points[(i + 1) % n]
+        p_prev = pts_xyb[(i-1) % n]
+        p      = pts_xyb[i]
+        p_next = pts_xyb[(i+1) % n]
 
-        tan_in_start, tan_in_end   = _bulge_tangents_deg(p1, p2, p1.get('bulge_next', 0.0))
-        tan_out_start, tan_out_end = _bulge_tangents_deg(p2, p3, p2.get('bulge_next', 0.0))
-        ang_in, ang_out = tan_in_end, tan_out_start
+        ux = p['x'] - p_prev['x']
+        uy = p['y'] - p_prev['y']
+        vx = p_next['x'] - p['x']
+        vy = p_next['y'] - p['y']
 
-        phi = _angle_diff_abs(ang_in, ang_out)
+        # evita degenerações
+        nu = math.hypot(ux, uy)
+        nv = math.hypot(vx, vy)
+        if nu < EPS or nv < EPS:
+            internos_deg.append(0.0)
+            concavo.append(False)
+            continue
+        ux /= nu; uy /= nu
+        vx /= nv; vy /= nv
 
-        v12x, v12y = p2['x'] - p1['x'], p2['y'] - p1['y']
-        v23x, v23y = p3['x'] - p2['x'], p3['y'] - p2['y']
-        cross = v12x * v23y - v12y * v23x
-        is_concave = (orient * cross) < 0
-        concavo[i] = is_concave
-        internos[i] = (360.0 - phi) if is_concave else phi
+        cross = ux*vy - uy*vx
+        dot   = ux*vx + uy*vy
+        theta = math.atan2(cross, dot)  # (-pi, pi]
 
-    return internos, concavo
+        internal = math.pi - s*theta
+        # normaliza para [0, 2pi)
+        while internal < 0:
+            internal += 2*math.pi
+        while internal >= 2*math.pi:
+            internal -= 2*math.pi
+
+        internos_deg.append(math.degrees(internal))
+
+        # côncavo se o giro tiver sinal oposto à orientação
+        concavo.append((s*theta) < 0)
+
+    return internos_deg, concavo
 
 def _draw_internal_angles(msp, points, internos_deg, sentido_poligonal, raio_frac=0.10):
     n = len(points)
@@ -1101,17 +1125,16 @@ def escolher_ponto_az_externo(v1_xy, ponto_az_dxf, pontos_aberta, ponto_amarraca
 
     return None
 
-def add_distance_label(msp, p0, p1, dist):
-    """Rótulo simples da distância no ponto médio do segmento p0–p1."""
+def add_distance_label(msp, p1, p2, distancia):
     try:
-        mid = ((p0[0]+p1[0])/2.0, (p0[1]+p1[1])/2.0)
-        txt = f"{dist:,.2f} m".replace(",", "X").replace(".", ",").replace("X",".")
-        if 'Azimute' not in msp.doc.layers:
-            msp.doc.layers.new(name='Azimute', dxfattribs={'color': 1})
-        msp.add_text(txt, dxfattribs={'height': 0.25, 'layer': 'Azimute'}).set_pos(mid)
-        logger.info("Distância %.2f m adicionada corretamente em %s", dist, mid)
-    except Exception:
-        logger.exception("Erro ao adicionar rótulo de distância")
+        mid = ((p1[0]+p2[0])/2.0, (p1[1]+p2[1])/2.0)
+        msp.add_text(
+            f"{distancia:,.2f}".replace(",", "").replace(".", ","),
+            dxfattribs={"height": 0.25, "layer": "Azimute", "insert": (mid[0], mid[1])}
+        )
+        logger.info("Rótulo de distância adicionado com sucesso.")
+    except Exception as e:
+        logger.error(f"Erro ao adicionar rótulo de distância: {e}")
 
 
 # ==== HELPERS_ANGULOS_DXF_END ====
@@ -1482,12 +1505,27 @@ def create_memorial_descritivo(
         except Exception:
             pass
 
+        # garanta a camada
+        try:
+            if "Vertices" not in msp.doc.layers:
+                msp.doc.layers.add("Vertices")
+        except Exception:
+            pass
+
         for i, (x, y) in enumerate(ordered_points_xy):
             try:
                 msp.add_circle(center=(x, y), radius=0.5, dxfattribs={"layer": "Vertices"})
-                msp.add_text(f"V{i + 1}", dxfattribs={"height": 0.3, "layer": "Vertices"}).set_pos((x + 0.3, y + 0.3))
-            except Exception:
-                pass
+                msp.add_text(
+                    f"V{i + 1}",
+                    dxfattribs={
+                        "height": 0.3,
+                        "layer": "Vertices",
+                        "insert": (x + 0.30, y + 0.30)  # <<< POSIÇÃO DO RÓTULO
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Falha rotulando V{i+1}: {e}")
+
 
         # só desenhe o arco do azimute se realmente quiser no produto FECHADA
         # e se houver amarração (Az) válida:
