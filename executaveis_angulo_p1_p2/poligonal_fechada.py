@@ -1963,16 +1963,18 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # Extrair geometria FECHADA do DXF
     doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
 
+    # Pare aqui se não houver geometria válida
     if not (doc and lines):
         logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento.")
         pythoncom.CoUninitialize()
-        return  # encerra aqui para evitar continuar com variáveis não definidas
+        return
 
     logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
+
     v1 = lines[0][0]
     v2 = lines[1][0]
 
-    # USE o ponto retornado pela função
+    # Use o ponto retornado pela função
     azimute = calculate_azimuth(ponto_az_dxf, v1)
     distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
     giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)
@@ -1980,14 +1982,14 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
 
-    # Caminho do Excel de saída (defina fora de if/else para existir sempre daqui pra baixo)
+    # Caminho do Excel de saída
     excel_file_path = os.path.join(
         diretorio_concluido,
         f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
     )
     logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
 
-    # 🛠 Criar memorial e Excel (passe pts_bulge se sua função aceitar)
+    # 🛠 Criar memorial e Excel (passe modo e pts_bulge)
     create_memorial_descritivo(
         uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az_dxf,
         dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
@@ -2033,55 +2035,6 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.info("excel_file_path não definido ou inválido.")
 
     logger.info("Documento do AutoCAD fechado.")
-
-
-
-        # 📄 Gerar DOCX
-        if excel_file_path:
-            # template_path = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
-            output_path_docx = os.path.join(
-                diretorio_concluido,
-                f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx"
-            )
-
-            logger.info(f"✅ DOCX FECHADA salvo corretamente: {output_path_docx}")
-
-            assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
-
-            desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"
-
-            create_memorial_document(
-                uuid_str=uuid_str,
-                proprietario=proprietario,
-                matricula=matricula,  # usado para salvar arquivos
-                matricula_texto=matricula_texto,  # usado no Word
-                area_total=area_total,
-                cpf=cpf,
-                rgi=rgi,
-                excel_file_path=excel_file_path,
-                template_path=template_path,
-                output_path=output_path_docx,
-                assinatura_path=assinatura_path,
-                ponto_amarracao=ponto_amarracao,
-                azimute=azimute,
-                distancia_amarracao_v1=distancia_az_v1,
-                rua=rua,
-                cidade=cidade,
-                confrontantes=confrontantes,
-                area_dxf=area_dxf,
-                desc_ponto_amarracao=desc_ponto_amarracao,
-                perimeter_dxf=perimeter_dxf,
-                giro_angular_v1_dms=giro_angular_v1_dms,
-               
-            )
-
-        else:
-            logger.info("excel_file_path não definido ou inválido.")
-        logger.info("Documento do AutoCAD fechado.")
-    else:
-        logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento.")
-        pythoncom.CoUninitialize()
-    #atualizado agora
 
 
 
