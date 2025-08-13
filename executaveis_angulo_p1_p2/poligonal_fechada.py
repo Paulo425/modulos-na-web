@@ -106,14 +106,22 @@ def limpar_dxf_e_converter_r2010(original_path, saida_path):
 
         for entity in msp_antigo.query('LWPOLYLINE'):
             if entity.closed:
-                pontos = [point[:2] for point in entity.get_points('xy')]
+                pontos_xyb = []
+                for v in list(entity):  # vertices da LWPOLYLINE
+                    x, y = v.dxf.x, v.dxf.y
+                    b = float(v.dxf.bulge or 0.0)
+                    pontos_xyb.append((x, y, b))
+
                 msp_novo.add_lwpolyline(
-                    pontos,
+                    pontos_xyb,
+                    format='xyb',  # <<< preserva bulge!
                     close=True,
                     dxfattribs={'layer': entity.dxf.layer}
                 )
                 encontrou_polilinha = True
                 break
+
+
 
         if not encontrou_polilinha:
             raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
@@ -154,34 +162,37 @@ def get_document_info_from_dxf(dxf_file_path):
         area_dxf = 0
         ponto_az = None
         ordered_points = []
+        ordered_points_with_bulge = []
 
         # Busca a primeira polilinha fechada
         for entity in msp.query('LWPOLYLINE'):
             if entity.closed:
-                points = entity.get_points('xy')
-                
-                # Remove vértice repetido no final, se houver
-                if points[0] == points[-1]:
-                    points.pop()
+                verts = list(entity)
+                for v in verts:
+                    x, y = v.dxf.x, v.dxf.y
+                    b = float(v.dxf.bulge or 0.0)  # bulge do segmento v->próximo
+                    ordered_points.append((x, y))
+                    ordered_points_with_bulge.append({'x': x, 'y': y, 'bulge_next': b})
 
-                ordered_points = points  # já temos os pontos ordenados aqui
-                
-                num_points = len(points)
+                # Remove duplicado final se existir
+                if len(ordered_points) >= 2 and ordered_points[0] == ordered_points[-1]:
+                    ordered_points.pop()
+                    ordered_points_with_bulge.pop()
+
+                num_points = len(ordered_points)
                 for i in range(num_points):
-                    start_point = points[i]
-                    end_point = points[(i + 1) % num_points]
+                    start_point = ordered_points[i]
+                    end_point = ordered_points[(i + 1) % num_points]
                     lines.append((start_point, end_point))
-
-                    segment_length = ((end_point[0] - start_point[0]) ** 2 + 
-                                      (end_point[1] - start_point[1]) ** 2) ** 0.5
+                    segment_length = ((end_point[0] - start_point[0]) ** 2 +
+                                    (end_point[1] - start_point[1]) ** 2) ** 0.5
                     perimeter_dxf += segment_length
 
-                # Área pela fórmula shoelace
-                x = [p[0] for p in points]
-                y = [p[1] for p in points]
-                area_dxf = abs(sum(x[i] * y[(i + 1) % num_points] - x[(i + 1) % num_points] * y[i] 
-                                   for i in range(num_points)) / 2)
-                break  # só a primeira fechada
+                x = [p[0] for p in ordered_points]
+                y = [p[1] for p in ordered_points]
+                area_dxf = abs(sum(x[i] * y[(i + 1) % num_points] - x[(i + 1) % num_points] * y[i]
+                                for i in range(num_points)) / 2)
+                break
 
         if not lines:
             print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
@@ -217,7 +228,7 @@ def get_document_info_from_dxf(dxf_file_path):
         print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
         print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
 
-        return doc, lines, perimeter_dxf, area_dxf, ponto_az, msp  
+        return doc, lines, perimeter_dxf, area_dxf, ponto_az, msp, ordered_points_with_bulge  
 
     except Exception as e:
         logger.error(f"Erro ao obter informações do documento: {e}")
@@ -1253,55 +1264,41 @@ def _draw_internal_angles(msp, points, internos_deg, sentido_poligonal, raio_fra
 #     return excel_file_path
 
 def create_memorial_descritivo(
-        uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
-        dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-        giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario',
-        diretorio_concluido=None
-    ):
+    uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
+    dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
+    giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario',
+    diretorio_concluido=None,
+    points_bulge=None   # <<< NOVO
+):
     """
     Pipeline: DXF → ângulos internos corrigidos (com bulge e concavidade) → desenha arcos por dentro → gera Excel.
     - Usa LWPOLYLINE fechada como fonte de verdade. Se não houver, tenta unir LINEs e cria uma LWPOLYLINE.
     - Normaliza o sentido (CW/CCW) conforme 'sentido_poligonal' e ajusta sinal de bulge ao reverter.
     - Gera Excel diretamente dos ângulos desenhados (sem reler a planilha para o DXF).
     """
+    # Garantias iniciais
     if diretorio_concluido is None:
         diretorio_concluido = caminho_salvar
 
-    if not dxf_file_path:
-        _log_error("Caminho DXF não informado.")
-        return None
-
-    dxf_file_path = dxf_file_path.strip('"')
     dxf_output_path = os.path.join(
         diretorio_concluido,
         f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf"
     )
 
-    _log_info(f"Alvo de saída do DXF: {dxf_output_path}")
-
-    # 1) Abre DXF e garante polilinha
-    try:
-        doc_dxf = ezdxf.readfile(dxf_file_path)
-        msp = doc_dxf.modelspace()
-    except Exception as e:
-        _log_error(f"Erro ao abrir o arquivo DXF para edição: {e}")
+    # 0) Usar o doc/msp recebidos (do pipeline) e a polilinha com bulge pré-extraída
+    if points_bulge is None or len(points_bulge) < 3:
+        _log_error("points_bulge ausente ou insuficiente; verifique get_document_info_from_dxf.")
         return None
 
-    try:
-        points_raw, created_entity = _ensure_poly_from_dxf(doc_dxf)
-    except Exception as e:
-        _log_error(f"Erro ao obter polilinha do DXF: {e}")
-        return None
-
-    # 2) Normaliza sentido pretendido
-    pts = _ensure_orientation(points_raw, sentido_poligonal)
+    # 1) Normaliza sentido conforme parâmetro
+    pts = _ensure_orientation(points_bulge, sentido_poligonal)
     orient = _polygon_orientation(pts)
     _log_info(f"Sentido normalizado: {'anti-horário' if orient==+1 else 'horário'}")
 
-    # 3) Ângulos internos e concavidade (por tangentes reais)
+    # 2) Ângulos internos (com concavidade) pelas tangentes reais
     internos_deg, concavo = _internal_angles_and_concavity(pts, sentido_poligonal)
 
-    # 4) Desenhar os arcos internos
+    # 3) Desenhar arcos internos “por dentro”
     _draw_internal_angles(msp, pts, internos_deg, sentido_poligonal, raio_frac=0.10)
 
     # 5) Montar Excel e anotações adicionais
@@ -1881,17 +1878,17 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         return
 
     # 🔍 Extrair geometria do DXF
-    doc, lines, perimeter_dxf, area_dxf, ponto_az, msp = get_document_info_from_dxf(dxf_file_path)
+    doc, lines, perimeter_dxf, area_dxf, ponto_az, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
     if not doc or not ponto_amarracao:
         logger.info("Erro ao processar o arquivo DXF.")
         return
 
-    try:
-        doc_dxf = ezdxf.readfile(dxf_file_path)
-        msp = doc_dxf.modelspace()
-    except Exception as e:
-        logger.error(f"Erro ao abrir o arquivo DXF para edição: {e}")
-        return
+    # try:
+    #     doc_dxf = ezdxf.readfile(dxf_file_path)
+    #     msp = doc_dxf.modelspace()
+    # except Exception as e:
+    #     logger.error(f"Erro ao abrir o arquivo DXF para edição: {e}")
+    #     return
 
     if doc and lines:
         logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
@@ -1910,13 +1907,16 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
         )
 
-        logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
+        
 
         # 🛠 Criar memorial e Excel
         create_memorial_descritivo(
             uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
-            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms, distancia_az_v1, sentido_poligonal=sentido_poligonal
+            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,giro_angular_v1_dms, distancia_az_v1,
+            sentido_poligonal=sentido_poligonal,points_bulge=pts_bulge
         )
+        
+        logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
 
         # 📄 Gerar DOCX
         if excel_file_path:
@@ -1957,17 +1957,6 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
                
             )
 
-
-
-
-            # 🧾 Converter para PDF
-            # time.sleep(2)
-            # if os.path.exists(output_path_docx):
-            #     pdf_file_path = os.path.join(caminho_salvar, f"FECHADA_{tipo}_Memorial_{matricula}.pdf")
-            #     convert_docx_to_pdf(output_path_docx, pdf_file_path)
-            #     logger.info(f"Arquivo PDF salvo em: {pdf_file_path}")
-            # else:
-            #     logger.info(f"Erro: O arquivo DOCX '{output_path_docx}' não foi encontrado.")
         else:
             logger.info("excel_file_path não definido ou inválido.")
         logger.info("Documento do AutoCAD fechado.")
