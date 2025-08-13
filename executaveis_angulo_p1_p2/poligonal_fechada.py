@@ -1376,7 +1376,7 @@ def create_memorial_descritivo(
         dist = math.hypot(dx, dy)
         if dist > 1e-6:
             try:
-                _desenhar_referencia_az(msp, ponto_az, v1, azimute)  # wrapper com guards
+                _desenhar_referencia_az(msp, ponto_az, v1, azimute)
             except Exception as e:
                 logger.error("Erro ao desenhar referência de Az: %s", e)
         else:
@@ -1962,73 +1962,78 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # 🔍 Extrair geometria do DXF
     # Extrair geometria FECHADA do DXF
     doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
-    if doc and lines:
-        logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
-        v1 = lines[0][0]
-        v2 = lines[1][0]
-        azimute = calculate_azimuth(ponto_az, v1)
-        distancia_az_v1 = calculate_distance(ponto_az, v1)
-        giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
-        giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
-        logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
-
-        # Caminho do Excel de saída
-        excel_file_path = os.path.join(
-            diretorio_concluido,
-            f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
-        )
-
-        logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
-
-        # 🛠 Criar memorial e Excel
-        create_memorial_descritivo(
-            uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
-            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-            giro_angular_v1_dms, distancia_az_v1, sentido_poligonal=sentido_poligonal
-        )
-
-        # 📄 Gerar DOCX
-        if excel_file_path:
-            output_path_docx = os.path.join(
-                diretorio_concluido,
-                f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx"
-            )
-            logger.info(f"✅ DOCX FECHADA salvo corretamente: {output_path_docx}")
-
-            assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
-            desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"
-
-            create_memorial_document(
-                uuid_str=uuid_str,
-                proprietario=proprietario,
-                matricula=matricula,
-                matricula_texto=matricula_texto,
-                area_total=area_total,
-                cpf=cpf,
-                rgi=rgi,
-                excel_file_path=excel_file_path,
-                template_path=template_path,
-                output_path=output_path_docx,
-                assinatura_path=assinatura_path,
-                ponto_amarracao=ponto_amarracao,
-                azimute=azimute,
-                distancia_amarracao_v1=distancia_az_v1,
-                rua=rua,
-                cidade=cidade,
-                confrontantes=confrontantes,
-                area_dxf=area_dxf,
-                desc_ponto_amarracao=desc_ponto_amarracao,
-                perimeter_dxf=perimeter_dxf,
-                giro_angular_v1_dms=giro_angular_v1_dms,
-            )
-        else:
-            logger.info("excel_file_path não definido ou inválido.")
-
-        logger.info("Documento do AutoCAD fechado.")
-    else:
+    if not (doc and lines):
         logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento.")
         pythoncom.CoUninitialize()
+        return  # encerra aqui para evitar continuar com variáveis não definidas
+
+    logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
+    v1 = lines[0][0]
+    v2 = lines[1][0]
+
+    # USE o ponto retornado pela função
+    azimute = calculate_azimuth(ponto_az_dxf, v1)
+    distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
+    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)
+    giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
+
+    logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
+
+    # Caminho do Excel de saída (defina fora de if/else para existir sempre daqui pra baixo)
+    excel_file_path = os.path.join(
+        diretorio_concluido,
+        f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
+    )
+    logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
+
+    # 🛠 Criar memorial e Excel (passe pts_bulge se sua função aceitar)
+    create_memorial_descritivo(
+        uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az_dxf,
+        dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
+        giro_angular_v1_dms, distancia_az_v1, sentido_poligonal=sentido_poligonal,
+        modo="ANGULO_P1_P2", points_bulge=pts_bulge
+    )
+
+    # 📄 Gerar DOCX (apenas uma vez)
+    if excel_file_path:
+        output_path_docx = os.path.join(
+            diretorio_concluido,
+            f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx"
+        )
+        logger.info(f"✅ DOCX FECHADA salvo corretamente: {output_path_docx}")
+
+        assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
+        desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"
+
+        create_memorial_document(
+            uuid_str=uuid_str,
+            proprietario=proprietario,
+            matricula=matricula,
+            matricula_texto=matricula_texto,
+            area_total=area_total,
+            cpf=cpf,
+            rgi=rgi,
+            excel_file_path=excel_file_path,
+            template_path=template_path,
+            output_path=output_path_docx,
+            assinatura_path=assinatura_path,
+            ponto_amarracao=ponto_amarracao,
+            azimute=azimute,
+            distancia_amarracao_v1=distancia_az_v1,
+            rua=rua,
+            cidade=cidade,
+            confrontantes=confrontantes,
+            area_dxf=area_dxf,
+            desc_ponto_amarracao=desc_ponto_amarracao,
+            perimeter_dxf=perimeter_dxf,
+            giro_angular_v1_dms=giro_angular_v1_dms,
+        )
+    else:
+        logger.info("excel_file_path não definido ou inválido.")
+
+    logger.info("Documento do AutoCAD fechado.")
+
 
 
         # 📄 Gerar DOCX
