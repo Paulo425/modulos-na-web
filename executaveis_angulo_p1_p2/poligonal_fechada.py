@@ -163,7 +163,7 @@ def get_document_info_from_dxf(dxf_file_path):
 
         # Busca a primeira polilinha fechada
         for entity in msp.query('LWPOLYLINE'):
-            if entity.closed:f
+            if entity.closed:
                 verts = list(entity)  # vertices com .dxf
                 for v in verts:
                     x, y = v.dxf.x, v.dxf.y
@@ -1279,7 +1279,8 @@ def create_memorial_descritivo(
     - Normaliza o sentido (CW/CCW) conforme 'sentido_poligonal' e ajusta sinal de bulge ao reverter.
     - Gera Excel diretamente dos ângulos desenhados (sem reler a planilha para o DXF).
     """
-    [CMD] pontos_bulge recebidos: {len(points_bulge) if points_bulge else 0}
+    logger.info(f"[CMD] pontos_bulge recebidos: {len(points_bulge) if points_bulge else 0}")
+
 
     # Garantias iniciais
     if diretorio_concluido is None:
