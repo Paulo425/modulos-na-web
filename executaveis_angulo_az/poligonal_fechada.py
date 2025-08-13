@@ -780,7 +780,78 @@ def calculate_angular_turn(p1, p2, p3):
 
     return angular_turn_degrees
 
+def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentido_poligonal):
+    """
+    Desenha os arcos de ângulos internos SEMPRE para dentro.
+    Premissa: 'ordered_points' já está no sentido desejado (horário ou anti_horário).
+    'sentido_poligonal' deve ser 'horario' ou 'anti_horario'.
+    """
+    try:
+        n = len(ordered_points)
+        if n < 3:
+            return  # nada a fazer
 
+        for i in range(n):
+            # vizinhos (p1 <- p2 -> p3)
+            p2 = _xy(ordered_points[i])
+            p1 = _xy(ordered_points[i - 1])
+            p3 = _xy(ordered_points[(i + 1) % n])
+
+            # ângulos das DIREÇÕES adjacentes no vértice
+            ang_in  = _ang(p2, p1)  # direção de entrada (segmento p1->p2, visto a partir de p2)
+            ang_out = _ang(p2, p3)  # direção de saída   (segmento p2->p3, visto a partir de p2)
+
+            interno = float(angulos_decimais[i])
+
+            # raio: 10% do menor lado adjacente (com piso de 1 cm)
+            lado1 = math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+            lado2 = math.hypot(p3[0] - p2[0], p3[1] - p2[1])
+            raio = max(0.01, 0.10 * min(lado1, lado2))
+
+            # ===== REGRA FUNDAMENTAL (ezdxf varre SEMPRE CCW de start->end) =====
+            if sentido_poligonal == 'anti_horario':
+                # para ficar "por dentro", varra CCW de SAÍDA para ENTRADA
+                start_angle = ang_out
+                end_angle   = (start_angle + interno) % 360.0
+                mid_angle   = (start_angle + interno / 2.0) % 360.0
+            else:
+                # 'horario' → varra CCW de ENTRADA para SAÍDA (minor arc é o interno)
+                start_angle = ang_in
+                end_angle   = (start_angle + interno) % 360.0
+                mid_angle   = (start_angle + interno / 2.0) % 360.0
+
+            # desenha arco
+            msp.add_arc(
+                center=(p2[0], p2[1]),
+                radius=raio,
+                start_angle=start_angle,
+                end_angle=end_angle,
+                dxfattribs={'layer': 'Internal_Arcs'}
+            )
+
+            # rótulo no meio do arco
+            distancia_label = raio + 1.0
+            pos_label = (
+                p2[0] + distancia_label * math.cos(math.radians(mid_angle)),
+                p2[1] + distancia_label * math.sin(math.radians(mid_angle)),
+            )
+
+            # se já tem sua função utilitária, mantenha
+            ang_texto = convert_to_dms(interno) if 'convert_to_dms' in globals() else f"{interno:.4f}°"
+
+            msp.add_text(
+                ang_texto,
+                dxfattribs={
+                    'height': 0.7,
+                    'layer': 'Labels',
+                    'insert': pos_label,
+                    # rotação amigável
+                    'rotation': mid_angle if mid_angle <= 180 else mid_angle - 180
+                }
+            )
+
+    except Exception as e:
+        print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
 
 
 def create_memorial_descritivo(
