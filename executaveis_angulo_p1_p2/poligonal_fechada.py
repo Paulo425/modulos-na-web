@@ -106,20 +106,18 @@ def limpar_dxf_e_converter_r2010(original_path, saida_path):
 
         for entity in msp_antigo.query('LWPOLYLINE'):
             if entity.closed:
-                pontos_xyb = []
-                for v in list(entity):  # vertices da LWPOLYLINE
-                    x, y = v.dxf.x, v.dxf.y
-                    b = float(v.dxf.bulge or 0.0)
-                    pontos_xyb.append((x, y, b))
-
+                # pega lista de tuplas (x, y, bulge)
+                pontos_xyb = entity.get_points('xyb')  # -> [(x, y, b), ...]
+                # regrava preservando bulge
                 msp_novo.add_lwpolyline(
                     pontos_xyb,
-                    format='xyb',  # <<< preserva bulge!
+                    format='xyb',  # <<< preserva bulge
                     close=True,
                     dxfattribs={'layer': entity.dxf.layer}
                 )
                 encontrou_polilinha = True
                 break
+
 
 
 
@@ -156,7 +154,6 @@ def get_document_info_from_dxf(dxf_file_path):
     try:
         doc = ezdxf.readfile(dxf_file_path)  
         msp = doc.modelspace()  
-
         lines = []
         perimeter_dxf = 0
         area_dxf = 0
@@ -166,15 +163,15 @@ def get_document_info_from_dxf(dxf_file_path):
 
         # Busca a primeira polilinha fechada
         for entity in msp.query('LWPOLYLINE'):
-            if entity.closed:
-                verts = list(entity)
+            if entity.closed:f
+                verts = list(entity)  # vertices com .dxf
                 for v in verts:
                     x, y = v.dxf.x, v.dxf.y
                     b = float(v.dxf.bulge or 0.0)  # bulge do segmento v->próximo
                     ordered_points.append((x, y))
                     ordered_points_with_bulge.append({'x': x, 'y': y, 'bulge_next': b})
 
-                # Remove duplicado final se existir
+                # remove duplicata final (se houver)
                 if len(ordered_points) >= 2 and ordered_points[0] == ordered_points[-1]:
                     ordered_points.pop()
                     ordered_points_with_bulge.pop()
@@ -184,6 +181,7 @@ def get_document_info_from_dxf(dxf_file_path):
                     start_point = ordered_points[i]
                     end_point = ordered_points[(i + 1) % num_points]
                     lines.append((start_point, end_point))
+
                     segment_length = ((end_point[0] - start_point[0]) ** 2 +
                                     (end_point[1] - start_point[1]) ** 2) ** 0.5
                     perimeter_dxf += segment_length
@@ -192,7 +190,12 @@ def get_document_info_from_dxf(dxf_file_path):
                 y = [p[1] for p in ordered_points]
                 area_dxf = abs(sum(x[i] * y[(i + 1) % num_points] - x[(i + 1) % num_points] * y[i]
                                 for i in range(num_points)) / 2)
+                logger.info(
+                    f"pts_bulge: n={len(ordered_points_with_bulge)} | exemplo={ordered_points_with_bulge[:2]}"
+                )
+
                 break
+
 
         if not lines:
             print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
@@ -232,7 +235,7 @@ def get_document_info_from_dxf(dxf_file_path):
 
     except Exception as e:
         logger.error(f"Erro ao obter informações do documento: {e}")
-        return None, [], 0, 0, None, None
+        return None, [], 0, 0, None, None, []
 
 
 
@@ -1276,6 +1279,8 @@ def create_memorial_descritivo(
     - Normaliza o sentido (CW/CCW) conforme 'sentido_poligonal' e ajusta sinal de bulge ao reverter.
     - Gera Excel diretamente dos ângulos desenhados (sem reler a planilha para o DXF).
     """
+    [CMD] pontos_bulge recebidos: {len(points_bulge) if points_bulge else 0}
+
     # Garantias iniciais
     if diretorio_concluido is None:
         diretorio_concluido = caminho_salvar
