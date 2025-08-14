@@ -1337,6 +1337,29 @@ def _tangent_dir_at_end(p, q, bulge):
     theta = _theta_from_bulge(bulge)
     return phi + 90.0 + (theta / 2.0)
 
+def safe_add_giro_angular(msp, doc, v1_pt, ponto_az_pt, v2_pt):
+    """
+    Adapta a chamada do helper de giro angular para as duas variantes:
+    - add_giro_angular_arc_to_dxf(doc, v1, ponto_az, v2)   # variante antiga (doc)
+    - add_giro_angular_arc_to_dxf(msp, v1, ponto_az, v2)   # variante nova (msp)
+    """
+    if 'add_giro_angular_arc_to_dxf' not in globals():
+        return
+
+    try:
+        # tenta assinatura nova (msp, ...)
+        add_giro_angular_arc_to_dxf(msp, v1_pt, ponto_az_pt, v2_pt)
+    except AttributeError as e:
+        # se dentro do helper tentaram usar msp.modelspace(), é porque esperavam doc
+        try:
+            add_giro_angular_arc_to_dxf(doc, v1_pt, ponto_az_pt, v2_pt)
+        except Exception:
+            raise
+    except TypeError:
+        # se a assinatura claramente exige doc, tenta doc
+        add_giro_angular_arc_to_dxf(doc, v1_pt, ponto_az_pt, v2_pt)
+
+
 def _internal_angles_with_bulge(points_bulge):
     """
     Calcula ângulos internos (0–360) em todos os vértices usando tangentes reais.
@@ -1379,9 +1402,9 @@ def create_memorial_descritivo(
     uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
     dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
     giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario', modo="ANGULO_P1_P2",
-    diretorio_concluido=None,
-    points_bulge=None
+    diretorio_concluido=None, points_bulge=None, metrica_az=None, **kwargs
 ):
+
     """
     Versão "pura" (idêntica no contrato à do ANGULO_P1_P2):
     - NÃO desenha ponto AZ, nem arco de azimute, nem giro no V1.
@@ -1393,6 +1416,9 @@ def create_memorial_descritivo(
     import pandas as pd
     import openpyxl
     from openpyxl.styles import Font, Alignment
+
+    logger.info("[FECHADA] create_memorial_descritivo INICIO | uuid=%s | tipo=%s | excel=%s", uuid_str, tipo, excel_file_path)
+
 
     # Helpers esperados já existentes no seu módulo:
     # _ensure_orientation, _polygon_orientation, _internal_angles_with_bulge,
@@ -1546,6 +1572,15 @@ def create_memorial_descritivo(
                     cell.alignment = Alignment(horizontal="center", vertical="center")
 
             wb.save(excel_file_path)
+
+            try:
+                os.makedirs(os.path.dirname(excel_file_path), exist_ok=True)
+                df.to_excel(excel_file_path, index=False)
+                logger.info("[FECHADA] Excel escrito: %s", os.path.abspath(excel_file_path))
+            except Exception as e:
+                logger.exception("❌ [FECHADA] Falha ao escrever o Excel: %s", e)
+                return None
+
         except Exception as e:
             print(f"[P1_P2] Aviso: formatação do Excel falhou: {e}")
 
@@ -2051,18 +2086,16 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     v1 = lines[0][0]
     v2 = lines[1][0]
 
-    # Guard contra AZ==V1
     dx = v1[0] - ponto_az_dxf[0]
     dy = v1[1] - ponto_az_dxf[1]
     dist_az_v1 = math.hypot(dx, dy)
 
     if dist_az_v1 > 1e-6:
-        # Camadas necessárias
-        ensure_layer(msp.doc, "Ponto_AZ", color=1)     # vermelho
-        ensure_layer(msp.doc, "Ligacoes_AZ", color=5)  # azul
-        ensure_layer(msp.doc, "Rotulos_AZ", color=3)   # verde
+        ensure_layer(msp.doc, "Ponto_AZ", color=1)
+        ensure_layer(msp.doc, "Ligacoes_AZ", color=5)
+        ensure_layer(msp.doc, "Rotulos_AZ", color=3)
 
-        # Desenho do ponto e ligação
+        # Ponto e ligação
         msp.add_point(ponto_az_dxf, dxfattribs={"layer": "Ponto_AZ"})
         msp.add_line(ponto_az_dxf, v1, dxfattribs={"layer": "Ligacoes_AZ"})
 
@@ -2071,13 +2104,13 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)
         giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
+        logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {dist_az_v1:.2f} m")
+
         metrica_az = {
             "az_az_v1_deg": round(float(azimute), 2),
             "dist_az_v1_m": round(float(dist_az_v1), 2),
             "giro_v1_deg":  round(float(giro_angular_v1), 2),
         }
-
-        logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {dist_az_v1:.2f} m")
 
         # Rótulos
         off = 0.60
@@ -2088,7 +2121,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         add_rotulo(msp, f"GIRO(V1) = {metrica_az['giro_v1_deg']:.2f}°",
                 (v1[0] + off, v1[1] + off), 0.35, "Rotulos_AZ")
 
-        # Arcos (se helpers existirem)
+        # Arco do azimute (somente com dist>0)
         try:
             if 'add_azimuth_arc_to_dxf' in globals():
                 add_azimuth_arc_to_dxf(msp, ponto_az_dxf, v1, azimute)
@@ -2097,9 +2130,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         except Exception as e:
             logger.warning("[AZ] Falha arco AZ: %s", e)
 
+        # Arco de giro (somente com dist>0)
         try:
-            if 'add_giro_angular_arc_to_dxf' in globals():
-                add_giro_angular_arc_to_dxf(msp, v1, ponto_az_dxf, v2)
+            safe_add_giro_angular(msp, doc, v1, ponto_az_dxf, v2)
         except Exception as e:
             logger.warning("[AZ] Falha arco GIRO: %s", e)
 
@@ -2111,8 +2144,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         metrica_az = {
             "az_az_v1_deg": 0.0,
             "dist_az_v1_m": 0.0,
-            "giro_v1_deg": 0.0,
+            "giro_v1_deg":  0.0,
         }
+
 
 
     # ── Validar Ponto_AZ vindo do DXF
@@ -2207,6 +2241,11 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     except Exception as e:
         logger.exception("❌ [AZ] Exceção na create_memorial_descritivo: %s", e)
 
+    # Pare aqui se não gerou o Excel
+    if not ret_excel or not os.path.exists(excel_file_path):
+        logger.error("❌ Excel não foi gerado; abortando criação de DOCX/PDF.")
+        return    
+
     # ─────────────────────────────────────────────────────────────────────────────
     # [ANGULO_AZ] DESENHO DO PONTO AZ, LINHA AZ→V1, ARCOS E RÓTULOS (NA MAIN)
     # (coloque logo após a chamada do create_memorial_descritivo, antes do DOCX)
@@ -2263,7 +2302,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         try:
             if 'add_giro_angular_arc_to_dxf' in globals():
                 # assinatura que combinamos: (msp, v1_pt, ponto_az, v2_pt)
-                add_giro_angular_arc_to_dxf(msp, v1, ponto_az_dxf, v2)
+                safe_add_giro_angular(msp, doc, v1, ponto_az_dxf, v2)
         except Exception as e:
             logger.warning("[AZ] Falha ao desenhar arco de giro: %s", e)
 
