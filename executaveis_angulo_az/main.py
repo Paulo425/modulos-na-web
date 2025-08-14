@@ -7,6 +7,8 @@ from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
 import shutil
 import uuid
+import glob  # ← FALTAVA
+
 
 # ✅ 1. Caminho base
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -19,7 +21,8 @@ os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
 # ✅ 3. Pasta de logs
 LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
-log_path = os.path.join(LOG_DIR, f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+log_path = os.path.join(LOG_DIR, f"log_ANGULOAZ_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+
 
 # ✅ 4. Configura logger
 # Configuração do logger
