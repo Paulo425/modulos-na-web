@@ -974,11 +974,35 @@ def ensure_layer(doc, name: str, color: int | None = None):
             doc.layers.new(name, dxfattribs={"color": color})
 
 def add_rotulo(msp, texto: str, xy: tuple[float, float], altura: float = 0.3, layer: str = "Rotulos"):
-    ensure_text_style_STANDARD(msp)
-    ensure_layer(msp.doc, layer)
-    txt = msp.add_text(texto, dxfattribs={"height": altura, "layer": layer, "style": "STANDARD"})
-    txt.set_pos(xy)
+    # garante estilo/layer
+    try:
+        ensure_text_style_STANDARD(msp)
+    except Exception:
+        pass
+    try:
+        ensure_layer(msp.doc, layer)
+    except Exception:
+        pass
+
+    # cria o TEXT e posiciona via dxf.insert (compatível com versões sem set_pos)
+    txt = msp.add_text(
+        texto,
+        dxfattribs={
+            "height": altura,
+            "layer": layer,
+            "style": "STANDARD",
+            "insert": xy,   # <- POSIÇÃO AQUI
+        },
+    )
+
+    # Se sua versão tiver set_pos, ótimo; se não, ignora
+    try:
+        txt.set_pos(xy)  # algumas versões possuem; se não tiver, cai no except
+    except Exception:
+        pass
+
     return txt
+
 
 # ==== HELPERS_ANGULOS_DXF_BEGIN ====
 def _log_info(msg):
@@ -1993,18 +2017,23 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
 
+
     # ── Identificar V1 e V2
     v1 = lines[0][0]
     v2 = lines[1][0]
 
+    # Guard contra AZ==V1
     dx = v1[0] - ponto_az_dxf[0]
     dy = v1[1] - ponto_az_dxf[1]
     dist_az_v1 = math.hypot(dx, dy)
 
     if dist_az_v1 > 1e-6:
-        # Desenhar Ponto_AZ e ligação AZ→V1
-        ensure_layer(msp.doc, "Ponto_AZ", color=1)
-        ensure_layer(msp.doc, "Ligacoes_AZ", color=5)
+        # Camadas necessárias
+        ensure_layer(msp.doc, "Ponto_AZ", color=1)     # vermelho
+        ensure_layer(msp.doc, "Ligacoes_AZ", color=5)  # azul
+        ensure_layer(msp.doc, "Rotulos_AZ", color=3)   # verde
+
+        # Desenho do ponto e ligação
         msp.add_point(ponto_az_dxf, dxfattribs={"layer": "Ponto_AZ"})
         msp.add_line(ponto_az_dxf, v1, dxfattribs={"layer": "Ligacoes_AZ"})
 
@@ -2013,13 +2042,49 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)
         giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
+        metrica_az = {
+            "az_az_v1_deg": round(float(azimute), 2),
+            "dist_az_v1_m": round(float(dist_az_v1), 2),
+            "giro_v1_deg":  round(float(giro_angular_v1), 2),
+        }
+
         logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {dist_az_v1:.2f} m")
+
+        # Rótulos
+        off = 0.60
+        add_rotulo(msp, f"AZ(AZ→V1) = {metrica_az['az_az_v1_deg']:.2f}°",
+                ((ponto_az_dxf[0]+v1[0])/2 + off, (ponto_az_dxf[1]+v1[1])/2 + off), 0.32, "Rotulos_AZ")
+        add_rotulo(msp, f"D(AZ,V1) = {metrica_az['dist_az_v1_m']:.2f} m",
+                ((ponto_az_dxf[0]+v1[0])/2 - off, (ponto_az_dxf[1]+v1[1])/2 + off), 0.32, "Rotulos_AZ")
+        add_rotulo(msp, f"GIRO(V1) = {metrica_az['giro_v1_deg']:.2f}°",
+                (v1[0] + off, v1[1] + off), 0.35, "Rotulos_AZ")
+
+        # Arcos (se helpers existirem)
+        try:
+            if 'add_azimuth_arc_to_dxf' in globals():
+                add_azimuth_arc_to_dxf(msp, ponto_az_dxf, v1, azimute)
+            elif '_desenhar_referencia_az' in globals():
+                _desenhar_referencia_az(msp, ponto_az_dxf, v1, azimute)
+        except Exception as e:
+            logger.warning("[AZ] Falha arco AZ: %s", e)
+
+        try:
+            if 'add_giro_angular_arc_to_dxf' in globals():
+                add_giro_angular_arc_to_dxf(msp, v1, ponto_az_dxf, v2)
+        except Exception as e:
+            logger.warning("[AZ] Falha arco GIRO: %s", e)
+
     else:
-        logger.info("ℹ️ AZ coincide com V1 (fallback). Suprimindo arco/linha/rotulagem de AZ.")
-        # defina métricas “neutras” para não quebrar planilha:
+        logger.info("ℹ️ AZ coincide com V1 (fallback). Suprimindo arco/linha/rótulos do AZ.")
         azimute = 0.0
         giro_angular_v1 = 0.0
         giro_angular_v1_dms = "0°0'0\""
+        metrica_az = {
+            "az_az_v1_deg": 0.0,
+            "dist_az_v1_m": 0.0,
+            "giro_v1_deg": 0.0,
+        }
+
 
     # ── Validar Ponto_AZ vindo do DXF
     if not ponto_az_dxf or len(ponto_az_dxf) != 2:
