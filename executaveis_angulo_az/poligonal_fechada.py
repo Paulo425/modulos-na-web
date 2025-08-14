@@ -16,6 +16,7 @@ from openpyxl.styles import Alignment, Font
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import logging
+EPS_BULGE = 1e-9  # pode ficar aqui mesmo, no topo dos helpers
 
 
 # Diretório para logs
@@ -65,152 +66,125 @@ def calcular_area_poligonal(pontos):
     return abs(area) / 2
 
 
-def limpar_dxf(original_path, saida_path):
+def limpar_dxf_e_converter_r2010(original_path, saida_path):
+    """
+    Lê um DXF original e regrava o arquivo com a versão R2010,
+    preservando LWPOLYLINE (com bulge). Não cria geometria nova.
+    """
     try:
         doc_antigo = ezdxf.readfile(original_path)
         msp_antigo = doc_antigo.modelspace()
         doc_novo = ezdxf.new(dxfversion='R2010')
         msp_novo = doc_novo.modelspace()
 
-        pontos_polilinha = None
+        encontrou_polilinha = False
 
-        # Copiar polilinha fechada
         for entity in msp_antigo.query('LWPOLYLINE'):
             if entity.closed:
-                pontos_polilinha = [point[:2] for point in entity.get_points('xy')]
-                
-                # Remover pontos duplicados consecutivos
-                pontos_unicos = []
-                tolerancia = 1e-6
-                for pt in pontos_polilinha:
-                    if not pontos_unicos or math.hypot(pt[0] - pontos_unicos[-1][0], pt[1] - pontos_unicos[-1][1]) > tolerancia:
-                        pontos_unicos.append(pt)
-
-                if math.hypot(pontos_unicos[0][0] - pontos_unicos[-1][0], pontos_unicos[0][1] - pontos_unicos[-1][1]) < tolerancia:
-                    pontos_unicos.pop()
-
-                # Inserir polilinha limpa no DXF
+                # Pega (x, y, bulge) como tuplas
+                pontos_xyb = entity.get_points('xyb')  # [(x, y, bulge), ...]
+                # Regrava preservando o bulge
                 msp_novo.add_lwpolyline(
-                    pontos_unicos,
+                    pontos_xyb,
+                    format='xyb',
                     close=True,
-                    dxfattribs={'layer': 'DIVISA_PROJETADA'}
-                )
-                break
-
-        # Copiar Ponto Az do arquivo original (TEXT, INSERT ou POINT)
-        ponto_az_copiado = False
-
-        # Copiar TEXT
-        for entity in msp_antigo.query('TEXT'):
-            if "Az" in entity.dxf.text:
-                msp_novo.add_text(
-                    entity.dxf.text,
-                    dxfattribs={
-                        'insert': (entity.dxf.insert.x, entity.dxf.insert.y),
-                        'height': entity.dxf.height,
-                        'rotation': entity.dxf.rotation,
-                        'layer': entity.dxf.layer
-                    }
-                )
-                ponto_az_copiado = True
-
-        # Copiar INSERT (blocos com nome contendo Az)
-        for entity in msp_antigo.query('INSERT'):
-            if "Az" in entity.dxf.name:
-                msp_novo.add_blockref(
-                    entity.dxf.name,
-                    insert=(entity.dxf.insert.x, entity.dxf.insert.y),
                     dxfattribs={'layer': entity.dxf.layer}
                 )
-                ponto_az_copiado = True
+                encontrou_polilinha = True
+                break
 
-        # Copiar POINT (ponto simples chamado Az)
-        for entity in msp_antigo.query('POINT'):
-            msp_novo.add_point(
-                (entity.dxf.location.x, entity.dxf.location.y),
-                dxfattribs={'layer': entity.dxf.layer}
-            )
-            ponto_az_copiado = True
-
-        if not ponto_az_copiado:
-            print("⚠️ Atenção: Ponto Az não foi encontrado para copiar!")
+        if not encontrou_polilinha:
+            raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
 
         doc_novo.saveas(saida_path)
-        print(f"✅ DXF limpo salvo em: {saida_path}")
+        logger.info(f"✅ DXF convertido e salvo como R2010 em: {saida_path}")
         return saida_path
 
     except Exception as e:
-        print(f"❌ Erro ao limpar DXF: {e}")
+        logger.error(f"❌ Erro ao converter DXF para R2010: {e}")
         return original_path
 
 
 def get_document_info_from_dxf(dxf_file_path):
     try:
-        doc = ezdxf.readfile(dxf_file_path)  
-        msp = doc.modelspace()  
+        doc = ezdxf.readfile(dxf_file_path)
+        msp = doc.modelspace()
 
         lines = []
-        perimeter_dxf = 0
-        area_dxf = 0
+        perimeter_dxf = 0.0
+        area_dxf = 0.0
         ponto_az = None
+        ordered_points = []
+        ordered_points_with_bulge = []
 
+        # Lê a PRIMEIRA LWPOLYLINE fechada
         for entity in msp.query('LWPOLYLINE'):
             if entity.closed:
-                points = entity.get_points('xy')
-                
-                # Remove vértice repetido no final, se houver
-                if points[0] == points[-1]:
-                    points.pop()
-                
-                num_points = len(points)
+                pts_xyb = entity.get_points('xyb')  # lista de tuplas (x, y, bulge)
+                # Se houver último = primeiro, remove duplicata
+                if len(pts_xyb) >= 2 and (pts_xyb[0][0], pts_xyb[0][1]) == (pts_xyb[-1][0], pts_xyb[-1][1]):
+                    pts_xyb = pts_xyb[:-1]
 
-                for i in range(num_points):
-                    start_point = (points[i][0], points[i][1])
-                    end_point = (points[(i + 1) % num_points][0], points[(i + 1) % num_points][1])
-                    lines.append((start_point, end_point))
+                # Monta listas
+                for (x, y, b) in pts_xyb:
+                    ordered_points.append((x, y))
+                    ordered_points_with_bulge.append({'x': x, 'y': y, 'bulge_next': float(b or 0.0)})
 
-                    segment_length = ((end_point[0] - start_point[0]) ** 2 + 
-                                      (end_point[1] - start_point[1]) ** 2) ** 0.5
-                    perimeter_dxf += segment_length
+                logger.info(
+                    f"pts_bulge: n={len(ordered_points_with_bulge)} | exemplo={ordered_points_with_bulge[:2]}"
+                )
 
-                x = [point[0] for point in points]
-                y = [point[1] for point in points]
-                area_dxf = abs(sum(x[i] * y[(i + 1) % num_points] - x[(i + 1) % num_points] * y[i] for i in range(num_points)) / 2)
+                # Linhas + perímetro
+                n = len(ordered_points)
+                for i in range(n):
+                    p1 = ordered_points[i]
+                    p2 = ordered_points[(i + 1) % n]
+                    lines.append((p1, p2))
+                    perimeter_dxf += ((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2) ** 0.5
 
-                break  
+                # Área por shoelace
+                x = [p[0] for p in ordered_points]
+                y = [p[1] for p in ordered_points]
+                area_dxf = abs(sum(x[i] * y[(i + 1) % n] - x[(i + 1) % n] * y[i] for i in range(n)) / 2.0)
+                break
 
         if not lines:
-            print("Nenhuma polilinha encontrada no arquivo DXF.")
-            return None, [], 0, 0, None, None
+            logger.info("Nenhuma polilinha fechada encontrada no arquivo DXF.")
+            return None, [], 0.0, 0.0, None, None, []
 
+        # Ponto Az (TEXT → INSERT → POINT)
         for entity in msp.query('TEXT'):
-            if "Az" in entity.dxf.text:
-                ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
-                print(f"Ponto Az encontrado em texto: {ponto_az}")
+            if "Az" in (entity.dxf.text or ""):
+                ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0.0)
+                break
 
-        for entity in msp.query('INSERT'):
-            if "Az" in entity.dxf.name:
-                ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0)
-                print(f"Ponto Az encontrado no bloco: {ponto_az}")
+        if ponto_az is None:
+            for entity in msp.query('INSERT'):
+                if "Az" in (entity.dxf.name or ""):
+                    ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0.0)
+                    break
 
-        for entity in msp.query('POINT'):
-            ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0)
-            print(f"Ponto Az encontrado como ponto: {ponto_az}")
-            
-        if not ponto_az:
-            print("Ponto Az não encontrado no arquivo DXF.")
-            return None, lines, 0, 0, None, None
+        if ponto_az is None:
+            for entity in msp.query('POINT'):
+                ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0.0)
+                break
 
-        print(f"Linhas processadas: {len(lines)}")
-        print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
-        print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
+        if ponto_az is None:
+            # Fallback: primeiro vértice
+            ponto_az = (ordered_points[0][0], ordered_points[0][1], 0.0)
+            logger.warning("⚠️ Ponto Az não encontrado no DXF. Usando fallback (primeiro ponto).")
 
-        # 👇 Retornando agora msp (correto):
-        return doc, lines, perimeter_dxf, area_dxf, ponto_az, msp  
+        logger.info(f"Linhas processadas: {len(lines)}")
+        logger.info(f"Perímetro do DXF: {perimeter_dxf:.2f} m")
+        logger.info(f"Área do DXF: {area_dxf:.2f} m²")
+
+        # >>> RETORNA 7 ITENS <<<
+        return doc, lines, perimeter_dxf, area_dxf, ponto_az, msp, ordered_points_with_bulge
 
     except Exception as e:
-        print(f"Erro ao obter informações do documento: {e}")
-        return None, [], 0, 0, None, None
+        logger.error(f"Erro ao obter informações do documento: {e}")
+        # >>> TAMBÉM retorna 7 itens no erro <<<
+        return None, [], 0.0, 0.0, None, None, []
 
 
 # # Função que processa as linhas da poligonal
@@ -853,108 +827,547 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentid
     except Exception as e:
         print(f"Erro ao adicionar ângulos internos ao DXF: {e}")
 
+#HELPERS ESPECIFICOS SOMENTE PARA O ANGULO_AZ
+
+
+def azimute_graus_de_norte(dx: float, dy: float) -> float:
+    """
+    Azimute geodésico em graus 0–360, medido a partir do NORTE (eixo +Y) no sentido horário.
+    Para coordenadas projetadas (UTM): dx = x_dest - x_ori, dy = y_dest - y_ori.
+    """
+    import math
+    # atan2 retorna ângulo relativo ao Eixo X; para azimute a partir do Norte, invertemos:
+    ang = math.degrees(math.atan2(dx, dy))
+    return (ang + 360.0) % 360.0
+
+def distancia_euclidea(p1: tuple[float, float], p2: tuple[float, float]) -> float:
+    import math
+    return math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+
+def giro_angular_sentido_horario(az_origem: float, az_dest: float) -> float:
+    """
+    Gera o giro (0–360) em sentido HORÁRIO necessário para ir do az_origem para o az_dest.
+    Por convenção do desenho catastral/engenharia, giro horário = (az_dest - az_origem) mod 360.
+    """
+    return (az_dest - az_origem) % 360.0
+
+def ensure_text_style_STANDARD(msp) -> None:
+    """Garante que exista um estilo de texto STANDARD, para compatibilidade DWG/DXF diversos."""
+    if "STANDARD" not in msp.doc.styles:
+        msp.doc.styles.new("STANDARD")
+
+def ensure_layer(doc, name: str, color: int | None = None):
+    """Cria a layer se não existir (opcional: definir cor)."""
+    if name not in doc.layers:
+        if color is None:
+            doc.layers.new(name)
+        else:
+            doc.layers.new(name, dxfattribs={"color": color})
+
+def add_rotulo(msp, texto: str, xy: tuple[float, float], altura: float = 0.3, layer: str = "Rotulos"):
+    ensure_text_style_STANDARD(msp)
+    ensure_layer(msp.doc, layer)
+    txt = msp.add_text(texto, dxfattribs={"height": altura, "layer": layer, "style": "STANDARD"})
+    txt.set_pos(xy)
+    return txt
+
+# ==== HELPERS_ANGULOS_DXF_BEGIN ====
+def _log_info(msg):
+    try:
+        logger.info(msg)
+    except Exception:
+        print(msg)
+
+def _log_error(msg):
+    try:
+        logger.error(msg)
+    except Exception:
+        print(msg)
+
+def _convert_to_dms_safe(graus):
+    if "convert_to_dms" in globals():
+        return convert_to_dms(graus)
+    g = float(graus)
+    d = int(g)
+    m_f = abs((g - d) * 60.0)
+    m = int(m_f)
+    s = (m_f - m) * 60.0
+    return f"{abs(d):02d}°{m:02d}'{s:06.3f}\"{'S' if g<0 else ''}"
+
+def _angle_deg(dx, dy):
+    return (math.degrees(math.atan2(dy, dx)) + 360.0) % 360.0
+
+def _chord_angle(pA, pB):
+    return _angle_deg(pB['x'] - pA['x'], pB['y'] - pA['y'])
+
+def _angle_diff_abs(a, b):
+    d = (b - a + 540.0) % 360.0 - 180.0
+    return abs(d)
+
+def _bulge_tangents_deg(pA, pB, bulge):
+    alpha = _chord_angle(pA, pB)
+    if abs(bulge) < 1e-12:
+        return alpha, alpha
+    theta = 4.0 * math.degrees(math.atan(bulge))
+    s = 1.0 if bulge > 0 else -1.0
+    offset = 90.0 - (abs(theta) / 2.0)
+    tan_start = (alpha + s * offset) % 360.0
+    tan_end   = (alpha - s * offset) % 360.0
+    return tan_start, tan_end
+
+def _polygon_orientation(pts_xyb) -> int:
+    # +1 CCW, -1 CW
+    area2 = 0.0
+    n = len(pts_xyb)
+    for i in range(n):
+        x1, y1 = pts_xyb[i]['x'], pts_xyb[i]['y']
+        x2, y2 = pts_xyb[(i+1) % n]['x'], pts_xyb[(i+1) % n]['y']
+        area2 += x1*y2 - x2*y1
+    return +1 if area2 > 0 else -1
+
+def _ensure_orientation(points, sentido_desejado):
+    pts = list(points)
+    orient = _polygon_orientation(pts)
+    target = +1 if sentido_desejado == 'anti_horario' else -1
+    if orient != target:
+        pts.reverse()
+        for p in pts:
+            p['bulge_next'] = -p.get('bulge_next', 0.0)
+    return pts
+
+def _extract_poly_points_with_bulge(doc_dxf):
+    msp = doc_dxf.modelspace()
+    for e in msp.query("LWPOLYLINE"):
+        if not e.closed:
+            continue
+        pts = []
+        for v in list(e):
+            x, y = v.dxf.x, v.dxf.y
+            bulge_next = float(v.dxf.bulge or 0.0)
+            pts.append({'x': x, 'y': y, 'bulge_next': bulge_next})
+        return pts
+    raise ValueError("Nenhuma LWPOLYLINE fechada encontrada.")
+
+def _chain_lines_closed(msp, tol=1e-6):
+    lines = list(msp.query("LINE"))
+    if not lines:
+        raise ValueError("Não há LWPOLYLINE e nem LINEs no DXF.")
+    segs = [((l.dxf.start.x, l.dxf.start.y), (l.dxf.end.x, l.dxf.end.y)) for l in lines]
+
+    def _close(a, b):
+        return (abs(a[0]-b[0]) <= tol) and (abs(a[1]-b[1]) <= tol)
+
+    used = [False]*len(segs)
+    path = [segs[0][0], segs[0][1]]
+    used[0] = True
+
+    changed = True
+    while changed:
+        changed = False
+        for i, (s, e) in enumerate(segs):
+            if used[i]:
+                continue
+            if _close(path[-1], s):
+                path.append(e); used[i] = True; changed = True
+            elif _close(path[-1], e):
+                path.append(s); used[i] = True; changed = True
+            elif _close(path[0], e):
+                path.insert(0, s); used[i] = True; changed = True
+            elif _close(path[0], s):
+                path.insert(0, e); used[i] = True; changed = True
+
+    if not _close(path[0], path[-1]):
+        raise ValueError("LINEs não formam anel fechado (ou tolerância insuficiente).")
+
+    path = path[:-1]  # remove duplicado final
+    pts = [{'x': x, 'y': y, 'bulge_next': 0.0} for (x, y) in path]
+    return pts
+
+def _ensure_poly_from_dxf(doc_dxf):
+    msp = doc_dxf.modelspace()
+    try:
+        pts = _extract_poly_points_with_bulge(doc_dxf)
+        return pts, None
+    except Exception:
+        _log_info("Nenhuma LWPOLYLINE fechada; tentando unir LINEs...")
+        pts = _chain_lines_closed(msp)
+        xy = [(p['x'], p['y']) for p in pts]
+        e = msp.add_lwpolyline(xy, format="xy", dxfattribs={"closed": True})
+        _log_info("LWPOLYLINE criada a partir de LINEs.")
+        return pts, e
+
+def _internal_angles_and_concavity(pts_xyb, sentido_poligonal):
+    import math
+    n = len(pts_xyb)
+    if n < 3:
+        return [], []
+
+    s = _polygon_orientation(pts_xyb)  # +1 CCW, -1 CW
+    internos_deg = []
+    concavo = []
+
+    EPS = 1e-12
+    for i in range(n):
+        p_prev = pts_xyb[(i-1) % n]
+        p      = pts_xyb[i]
+        p_next = pts_xyb[(i+1) % n]
+
+        ux = p['x'] - p_prev['x']
+        uy = p['y'] - p_prev['y']
+        vx = p_next['x'] - p['x']
+        vy = p_next['y'] - p['y']
+
+        # evita degenerações
+        nu = math.hypot(ux, uy)
+        nv = math.hypot(vx, vy)
+        if nu < EPS or nv < EPS:
+            internos_deg.append(0.0)
+            concavo.append(False)
+            continue
+        ux /= nu; uy /= nu
+        vx /= nv; vy /= nv
+
+        cross = ux*vy - uy*vx
+        dot   = ux*vx + uy*vy
+        theta = math.atan2(cross, dot)  # (-pi, pi]
+
+        internal = math.pi - s*theta
+        # normaliza para [0, 2pi)
+        while internal < 0:
+            internal += 2*math.pi
+        while internal >= 2*math.pi:
+            internal -= 2*math.pi
+
+        internos_deg.append(math.degrees(internal))
+
+        # côncavo se o giro tiver sinal oposto à orientação
+        concavo.append((s*theta) < 0)
+
+    return internos_deg, concavo
+
+def _draw_internal_angles(msp, points, internos_deg, sentido_poligonal, raio_frac=0.10):
+    n = len(points)
+    for i in range(n):
+        p1 = points[i - 1]
+        p2 = points[i]
+        p3 = points[(i + 1) % n]
+
+        ang_in  = _chord_angle(p2, p1)
+        ang_out = _chord_angle(p2, p3)
+        interno = internos_deg[i]
+
+        lado1 = math.hypot(p1['x'] - p2['x'], p1['y'] - p2['y'])
+        lado2 = math.hypot(p3['x'] - p2['x'], p3['y'] - p2['y'])
+        raio = max(0.01, raio_frac * min(lado1, lado2))
+
+        if sentido_poligonal == 'anti_horario':
+            start = ang_out
+        else:
+            start = ang_in
+        end = (start + interno) % 360.0
+        mid = (start + interno / 2.0) % 360.0
+
+        try:
+            if "Internal_Arcs" not in msp.doc.layers:
+                msp.doc.layers.add("Internal_Arcs")
+        except Exception:
+            pass
+
+        msp.add_arc(
+            center=(p2['x'], p2['y']),
+            radius=raio,
+            start_angle=start,
+            end_angle=end,
+            dxfattribs={'layer': 'Internal_Arcs'}
+        )
+
+        pos = (
+            p2['x'] + (raio + 1.0) * math.cos(math.radians(mid)),
+            p2['y'] + (raio + 1.0) * math.sin(math.radians(mid)),
+        )
+        texto = _convert_to_dms_safe(interno)
+        try:
+            if "Labels" not in msp.doc.layers:
+                msp.doc.layers.add("Labels")
+        except Exception:
+            pass
+
+        msp.add_text(
+            texto,
+            dxfattribs={
+                'height': 0.7,
+                'layer': 'Labels',
+                'insert': pos,
+                'rotation': mid if mid <= 180 else mid - 180
+            }
+        )
+
+def _dist2(a, b):
+    return (a[0]-b[0])**2 + (a[1]-b[1])**2
+
+def escolher_ponto_az_externo(v1_xy, ponto_az_dxf, pontos_aberta, ponto_amarracao):
+    """
+    Decide o 'ponto AZ externo' a usar nos cálculos/desenho:
+    - Prioriza ponto Az do DXF (se existir e ≠ V1),
+    - senão pega o ponto externo mais próximo de V1 vindo da poligonal ABERTA,
+    - senão usa o ponto de amarração,
+    - senão retorna None.
+    Todos como tuplas (x,y,0.0).
+    """
+    EPS2 = 1e-12
+    vx, vy = float(v1_xy[0]), float(v1_xy[1])
+
+    # 1) Az do DXF
+    if ponto_az_dxf is not None:
+        ax, ay = float(ponto_az_dxf[0]), float(ponto_az_dxf[1])
+        if _dist2((ax, ay), (vx, vy)) > EPS2:
+            return (ax, ay, 0.0)
+
+    # 2) ponto externo mais próximo (ABERTA)
+    if pontos_aberta:
+        # cada item pode ser (x,y) ou (x,y,...) → normalize
+        candidatos = []
+        for p in pontos_aberta:
+            px, py = float(p[0]), float(p[1])
+            if _dist2((px, py), (vx, vy)) > EPS2:
+                candidatos.append((px, py))
+        if candidatos:
+            px, py = min(candidatos, key=lambda q: _dist2(q, (vx, vy)))
+            return (px, py, 0.0)
+
+    # 3) ponto de amarração
+    if ponto_amarracao is not None:
+        px, py = float(ponto_amarracao[0]), float(ponto_amarracao[1])
+        if _dist2((px, py), (vx, vy)) > EPS2:
+            return (px, py, 0.0)
+
+    return None
+
+def add_distance_label(msp, p1, p2, distancia):
+    try:
+        mid = ((p1[0]+p2[0])/2.0, (p1[1]+p2[1])/2.0)
+        msp.add_text(
+            f"{distancia:,.2f}".replace(",", "").replace(".", ","),
+            dxfattribs={"height": 0.25, "layer": "Azimute", "insert": (mid[0], mid[1])}
+        )
+        logger.info("Rótulo de distância adicionado com sucesso.")
+    except Exception as e:
+        logger.error(f"Erro ao adicionar rótulo de distância: {e}")
+
+
+# ==== HELPERS_ANGULOS_DXF_END ====
+#DAQUI PARA BAIXO HELPERS RELATIVOS A EXISTENCIA DE BULGE NA POLIGONAL
+
+
+
+
+def _deg(a_rad): 
+    return math.degrees(a_rad)
+
+def _rad(a_deg):
+    return math.radians(a_deg)
+
+def _norm_deg(a):
+    """Normaliza para (-180, 180]."""
+    a = (a + 180.0) % 360.0 - 180.0
+    return 180.0 if abs(a + 180.0) < 1e-12 else a
+
+def _bearing(p, q):
+    """Azimute da corda PQ em graus (0°=E, CCW)."""
+    return _deg(math.atan2(q[1] - p[1], q[0] - p[0]))
+
+def _theta_from_bulge(b):
+    """Ângulo central do arco (ASSINADO) em graus."""
+    return _deg(4.0 * math.atan(b))
+
+def _tangent_dir_at_start(p, q, bulge):
+    """
+    Direção da TANGENTE no ponto inicial (p) do segmento/ARCO p→q.
+    - Linha: direção da corda.
+    - Arco: φ + 90° - θ/2   (θ assinado; CCW>0, CW<0)
+    """
+    phi = _bearing(p, q)
+    if abs(bulge) < EPS_BULGE:
+        return phi  # linha
+    theta = _theta_from_bulge(bulge)
+    return phi + 90.0 - (theta / 2.0)
+
+def _tangent_dir_at_end(p, q, bulge):
+    """
+    Direção da TANGENTE no ponto final (q) do segmento/ARCO p→q.
+    - Linha: direção da corda.
+    - Arco: φ + 90° + θ/2
+    """
+    phi = _bearing(p, q)
+    if abs(bulge) < EPS_BULGE:
+        return phi  # linha
+    theta = _theta_from_bulge(bulge)
+    return phi + 90.0 + (theta / 2.0)
+
+def _internal_angles_with_bulge(points_bulge):
+    """
+    Calcula ângulos internos (0–360) em todos os vértices usando tangentes reais.
+    `points_bulge`: lista de dicts [{'x':..,'y':..,'bulge_next':..}, ...]
+    Retorna lista em graus (float).
+    """
+    n = len(points_bulge)
+    angs = []
+    for i in range(n):
+        # índices circularmente
+        i_prev = (i - 1) % n
+        i_next = (i + 1) % n
+
+        p_prev = (points_bulge[i_prev]['x'], points_bulge[i_prev]['y'])
+        p_curr = (points_bulge[i]['x'],     points_bulge[i]['y'])
+        p_next = (points_bulge[i_next]['x'], points_bulge[i_next]['y'])
+
+        bulge_prev = float(points_bulge[i_prev].get('bulge_next', 0.0))  # do seg (i-1)→i
+        bulge_curr = float(points_bulge[i].get('bulge_next', 0.0))        # do seg i→(i+1)
+
+        # direções tangentes no vértice i
+        dir_in  = _tangent_dir_at_end(p_prev, p_curr, bulge_prev)   # chegando em Vi
+        dir_out = _tangent_dir_at_start(p_curr, p_next, bulge_curr) # saindo de Vi
+
+        # giro assinado (esquerda + / direita -)
+        turn = _norm_deg(dir_out - dir_in)
+
+        # ângulo interno da poligonal (concavo pode passar de 180)
+        interno = 180.0 - turn
+        # normaliza para [0, 360)
+        if interno < 0.0:
+            interno += 360.0
+        elif interno >= 360.0:
+            interno -= 360.0
+
+        angs.append(interno)
+    return angs
 
 def create_memorial_descritivo(
-    uuid_str, doc, msp, lines, proprietario, matricula, caminho_salvar, excel_confrontantes,
-    excel_file_path, ponto_az, distancia_az_v1, azimute_az_v1, tipo, giro_angular_v1_dms, dxf_file_path, sentido_poligonal='horario',
-    diretorio_concluido=None, encoding='ISO-8859-1'
+    uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
+    dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
+    giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario', modo="ANGULO_P1_P2",
+    diretorio_concluido=None, points_bulge=None,
+    metrica_az: dict | None = None    # ← NOVO (opcional)
 ):
-
-
     """
-    Cria o memorial descritivo e o arquivo DXF final para o caso com ponto Az definido no desenho.
+    DXF já vem tratado do pipeline (sem reler aqui):
+    - Usa LWPOLYLINE fechada (com bulge) fornecida por get_document_info_from_dxf.
+    - Normaliza sentido, calcula ângulos internos (com concavidade), desenha arcos internos.
+    - Só desenha AZ no modo ANGULO_AZ.
+    - Gera Excel diretamente.
     """
-    # Carregar confrontantes diretamente da planilha Excel recebida
-    confrontantes_df = pd.read_excel(excel_confrontantes)
+    logger.info("[CMD] pontos_bulge recebidos: %s", len(points_bulge) if points_bulge else 0)
+        # ── Normaliza metrica_az (deg e m). Se não vier, deriva do que temos.
+    def _dms_to_deg(dms_texto: str) -> float | None:
+        # Aceita formatos tipo "DDD°MM'SS\"" ou "DDD:MM:SS" etc.
+        import re, math
+        if not dms_texto:
+            return None
+        s = str(dms_texto).strip().replace(" ", "")
+        m = re.match(r"^(\d+)[°:\-](\d+)[\'’:\-](\d+(?:\.\d+)?)", s)
+        if not m:
+            return None
+        d, m_, s_ = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        return d + m_/60.0 + s_/3600.0
 
-    if confrontantes_df.empty:
-        logger.error("❌ Planilha de confrontantes está vazia.")
-        return None
+    giro_v1_deg_fallback = _dms_to_deg(giro_angular_v1_dms)
+    if giro_v1_deg_fallback is not None:
+        # você usa 360 - giro no main; aqui garantimos coerência (grau horário 0–360)
+        giro_v1_deg_fallback = round(float(giro_v1_deg_fallback), 2)
 
-    # ✅ Correção aqui:
-    confrontantes = confrontantes_df['Confrontante'].dropna().tolist()
-    if not lines:
-        print("Nenhuma linha disponível para criar o memorial descritivo.")
-        return None
+    metrica_az = metrica_az or {
+        "az_az_v1_deg": round(float(azimute), 2) if azimute is not None else None,
+        "dist_az_v1_m": round(float(distancia_az_v1), 2) if distancia_az_v1 is not None else None,
+        "giro_v1_deg":  giro_v1_deg_fallback,
+    }
+
+    # Garante que o estilo de texto "STANDARD" exista no DXF
+    if "STANDARD" not in msp.doc.styles:
+        msp.doc.styles.new("STANDARD")
+
+    if diretorio_concluido is None:
+        diretorio_concluido = caminho_salvar
 
     dxf_output_path = os.path.join(
-        caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf"
+        diretorio_concluido,
+        f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf"
     )
 
-
-    try:
-        doc_dxf = ezdxf.readfile(dxf_file_path)
-        msp = doc_dxf.modelspace()
-    except Exception as e:
-        print(f"Erro ao abrir o arquivo DXF para edição: {e}")
+    # 0) valida base
+    if points_bulge is None or len(points_bulge) < 3:
+        _log_error("points_bulge ausente ou insuficiente; verifique get_document_info_from_dxf.")
         return None
 
-    # Ordena os pontos da poligonal
-    ordered_points = [line[0] for line in lines]
-    logger.info(f"🚩 [DEBUG] ordered_points: {ordered_points}")
+    # 1) normaliza sentido
+    pts = _ensure_orientation(points_bulge, sentido_poligonal)
+    orient = _polygon_orientation(pts)
+    _log_info(f"Sentido normalizado: {'anti-horário' if orient == +1 else 'horário'}")
 
-    if ordered_points[-1] != lines[-1][1]:
-        ordered_points.append(lines[-1][1])
+    # 2) ângulos internos + concavidade
+    EPS_BULGE = 1e-9
 
-    ordered_points = ensure_counterclockwise(ordered_points)
-    area = calcular_area_poligonal(ordered_points)
+    has_any_bulge = any(abs(float(p.get('bulge_next', 0.0))) > EPS_BULGE for p in pts)
 
-    # Agora inverter o sentido corretamente, incluindo tratamento dos arcos (bulge)
-    if sentido_poligonal == 'horario':
-        if area > 0:
-            ordered_points.reverse()
-            area = abs(area)
-            # Inverte o sentido dos arcos (bulges), se existirem
-            for ponto in ordered_points:
-                if 'bulge' in ponto and ponto['bulge'] != 0:
-                    ponto['bulge'] *= -1
-            logger.info(f"Área da poligonal invertida para sentido horário com ajuste dos arcos: {area:.4f} m²")
+    if has_any_bulge:
+        internos_deg = _internal_angles_with_bulge(pts)  # usa tangentes reais (funciona também para bulge=0)
+        concavo = [a > 180.0 for a in internos_deg]      # se você quiser a flag de concavidade
+        logger.info("Ângulos internos: modo BULGE-AWARE (misto retas+arcos).")
+    else:
+        # compatibilidade com sua rotina antiga quando não há bulge algum
+        internos_deg, concavo = _internal_angles_and_concavity(pts, sentido_poligonal)
+        logger.info("Ângulos internos: modo LEGADO (somente retas).")
+
+    # 3) desenha arcos internos por dentro
+    _draw_internal_angles(msp, pts, internos_deg, sentido_poligonal, raio_frac=0.10)
+
+    # 4) desenho do AZ depende do modo
+    # ANGULO_AZ  → desenha Az, linha Az–V1, arco e rótulos
+    # ANGULO_P1_P2 → NÃO desenha Az/linha/arco (poligonal ABERTA já mostra amarração)
+    if modo == "ANGULO_AZ" and ponto_az is not None and v1 is not None:
+        dx = v1[0] - ponto_az[0]
+        dy = v1[1] - ponto_az[1]
+        dist = math.hypot(dx, dy)
+        if dist > 1e-6:
+            try:
+                _desenhar_referencia_az(msp, ponto_az, v1, azimute)
+            except Exception as e:
+                logger.error("Erro ao desenhar referência de Az: %s", e)
         else:
-            logger.info(f"Área da poligonal já no sentido horário: {abs(area):.4f} m²")
+            logger.warning("⚠️ Distância Az–V1 ≈ 0; desenho do Az suprimido.")
 
-    else:  # sentido_poligonal == 'anti_horario'
-        if area < 0:
-            ordered_points.reverse()
-            area = abs(area)
-            # Inverte o sentido dos arcos (bulges), se existirem
-            for ponto in ordered_points:
-                if 'bulge' in ponto and ponto['bulge'] != 0:
-                    ponto['bulge'] *= -1
-            logger.info(f"Área da poligonal invertida para sentido anti-horário com ajuste dos arcos: {area:.4f} m²")
-        else:
-            logger.info(f"Área da poligonal já no sentido anti-horário: {abs(area):.4f} m²")
-
-
-    distance_az_v1 = calculate_distance(ponto_az, ordered_points[0])
-
-    # Remove duplicação de ponto final
-    tolerancia = 0.001
-    if math.isclose(ordered_points[0][0], ordered_points[-1][0], abs_tol=tolerancia) and \
-       math.isclose(ordered_points[0][1], ordered_points[-1][1], abs_tol=tolerancia):
-        ordered_points.pop()
+    # 5) Excel (sem reler nada)
     try:
+        ordered_points_xy = [(p['x'], p['y']) for p in pts]
+        total_pontos = len(ordered_points_xy)
         data = []
-        total_pontos = len(ordered_points)
+
+        if ponto_az is not None:
+            ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",")
+            ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",")
+        else:
+            ponto_az_e = ""
+            ponto_az_n = ""
 
         for i in range(total_pontos):
-            p1 = ordered_points[i - 1] if i > 0 else ordered_points[-1]
-            p2 = ordered_points[i]
-            p3 = ordered_points[(i + 1) % total_pontos]
+            p2 = ordered_points_xy[i]
+            p3 = ordered_points_xy[(i + 1) % total_pontos]
 
-            internal_angle = calculate_internal_angle(p1, p2, p3)
-            internal_angle_dms = convert_to_dms(internal_angle)
-
-            description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
-            dx = p3[0] - p2[0]
-            dy = p3[1] - p2[1]
+            dx, dy = p3[0] - p2[0], p3[1] - p2[1]
             distance = math.hypot(dx, dy)
-            confrontante = confrontantes[i % len(confrontantes)]
+            description = f"V{i + 1}_V{(i + 2) if i + 1 < total_pontos else 1}"
+            confrontante = confrontantes[i % len(confrontantes)] if confrontantes else ""
+            ang_interno_dms = _convert_to_dms_safe(internos_deg[i])
 
-            ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
-            ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",") if i == 0 else ""
-            distancia_az_v1_str = f"{distance_az_v1:.2f}".replace(".", ",") if i == 0 else ""
-            azimute_az_v1_str = convert_to_dms(azimute_az_v1) if i == 0 else ""
-            giro_v1_str = giro_angular_v1_dms if i == 0 else ""
+            if i == 0:
+                distancia_az_v1_str = f"{float(distancia_az_v1):.2f}".replace(".", ",") if distancia_az_v1 is not None else ""
+                azimute_az_v1_str   = _convert_to_dms_safe(float(azimute)) if azimute is not None else ""
+                giro_v1_str         = giro_angular_v1_dms or ""
+                p_az_e, p_az_n      = ponto_az_e, ponto_az_n
+            else:
+                distancia_az_v1_str = ""
+                azimute_az_v1_str   = ""
+                giro_v1_str         = ""
+                p_az_e, p_az_n      = "", ""
 
             data.append({
                 "V": f"V{i + 1}",
@@ -962,99 +1375,124 @@ def create_memorial_descritivo(
                 "N": f"{p2[1]:,.3f}".replace(",", "").replace(".", ","),
                 "Z": "0,000",
                 "Divisa": description,
-                "Angulo Interno": internal_angle_dms,
+                "Angulo Interno": ang_interno_dms,
                 "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
                 "Confrontante": confrontante,
-                "ponto_AZ_E": ponto_az_e,
-                "ponto_AZ_N": ponto_az_n,
+                "ponto_AZ_E": p_az_e,
+                "ponto_AZ_N": p_az_n,
                 "distancia_Az_V1": distancia_az_v1_str,
                 "Azimute Az_V1": azimute_az_v1_str,
-                "Giro Angular Az_V1_V2": giro_v1_str
+                "Giro Angular Az_V1_V2": giro_v1_str,
+                # ── Novos campos do ANGULO_AZ ─────────────────────────────
+                "AZIMUTE_AZ_V1_GRAUS": metrica_az.get("az_az_v1_deg", ""),
+                "DISTANCIA_AZ_V1_M":   metrica_az.get("dist_az_v1_m", ""),
+                "GIRO_V1_GRAUS":       metrica_az.get("giro_v1_deg", "")
             })
 
-            if distance > 0.01:
-                add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
+            try:
+                if distance > 0.01 and 'add_label_and_distance' in globals():
+                    add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
+            except Exception as e:
+                _log_error(f"Falha ao rotular distância do lado V{i+1}: {e}")
 
-        #SALVANDO EM excel_file_path
-        df = pd.DataFrame(data)  # 👈 Você precisa desta linha
+        # escreve excel
+        df = pd.DataFrame(data)
+
+        # ── Garantir as colunas do ANGULO_AZ antes de salvar
+        cols_novas = ["AZIMUTE_AZ_V1_GRAUS", "DISTANCIA_AZ_V1_M", "GIRO_V1_GRAUS"]
+        for c in cols_novas:
+            if c not in df.columns:
+                df[c] = ""  # ou pd.NA se preferir manter como vazio
+
+        # Salva o DataFrame no Excel (sobrescrevendo o arquivo)
         df.to_excel(excel_file_path, index=False)
-        wb = openpyxl.load_workbook(excel_file_path)
-        # 🚩 IMPORTANTE! Essa linha é obrigatória:
-        ws = wb.active  
-        
-           
 
-        # Cabeçalho
+        # Formatação com openpyxl
+        wb = openpyxl.load_workbook(excel_file_path)
+        ws = wb.active
+
+        # Cabeçalho em negrito e centralizado
         for cell in ws[1]:
             cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
+        # Ajuste de larguras das colunas
         col_widths = {
             "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
             "F": 15, "G": 15, "H": 50, "I": 15,
             "J": 15, "K": 15, "L": 20, "M": 20
         }
-
         for col, width in col_widths.items():
             ws.column_dimensions[col].width = width
 
-        # Corpo
+        # Centralizar todo o conteúdo
         for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
             for cell in row:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
         wb.save(excel_file_path)
 
-        print(f"📊 Planilha Excel salva e formatada: {excel_file_path}")
+        _log_info(f"Arquivo Excel salvo em: {excel_file_path}")
 
-        # ➕ Ângulos internos a partir do Excel
-        angulos_excel = [item["Angulo Interno"] for item in data]
-        add_angle_visualization_to_dwg(msp, ordered_points, angulos_excel)
-
-        # ➕ Giro Angular
+        # extras DXF (opcionais e seguros)
         try:
-            v1 = ordered_points[0]
-            v2 = ordered_points[1]
-            add_giro_angular_arc_to_dxf(doc_dxf, v1, ponto_az, v2)
-            print("Giro horário Az-V1-V2 adicionado com sucesso.")
+            v1_pt = ordered_points_xy[0]
+            v2_pt = ordered_points_xy[1]
+            # se existir o helper e você quiser o giro no V1 com Az:
+            if 'add_giro_angular_arc_to_dxf' in globals() and ponto_az is not None:
+                # padronize este helper para (msp, v1_pt, ponto_az, v2_pt)
+                add_giro_angular_arc_to_dxf(msp, v1_pt, ponto_az, v2_pt)
+                _log_info("Giro horário Az–V1–V2 adicionado com sucesso.")
         except Exception as e:
-            print(f"Erro ao adicionar giro angular: {e}")
+            _log_error(f"Erro ao adicionar giro angular: {e}")
 
-        # ➕ Camada e rótulo de vértices
-        if "Vertices" not in msp.doc.layers:
-            msp.doc.layers.add("Vertices", dxfattribs={"color": 1})
-
-        for i, vertex in enumerate(ordered_points):
-            msp.add_circle(center=vertex, radius=0.5, dxfattribs={"layer": "Vertices"})
-            label_pos = (vertex[0] + 0.3, vertex[1] + 0.3)
-            msp.add_text(f"V{i + 1}", dxfattribs={
-                "height": 0.3,
-                "layer": "Vertices",
-                "insert": label_pos
-            })
-
-        # ➕ Adicionar arco e rótulo do Azimute
         try:
-            azimute = calculate_azimuth(ponto_az, v1)
-            add_azimuth_arc_to_dxf(msp, ponto_az, v1, azimute)
-            print("Arco do Azimute Az-V1 adicionado com sucesso.")
-        except Exception as e:
-            print(f"Erro ao adicionar arco do azimute: {e}")
+            if "Vertices" not in msp.doc.layers:
+                msp.doc.layers.add("Vertices")
+        except Exception:
+            pass
 
-        # ➕ Adicionar distância Az–V1
+        # garanta a camada
         try:
-            distancia_az_v1 = calculate_distance(ponto_az, v1)
-            add_label_and_distance(msp, ponto_az, v1, "", distancia_az_v1)
-            print(f"Distância Az-V1 ({distancia_az_v1:.2f} m) adicionada com sucesso.")
-        except Exception as e:
-            print(f"Erro ao adicionar distância entre Az e V1: {e}")
+            if "Vertices" not in msp.doc.layers:
+                msp.doc.layers.add("Vertices")
+        except Exception:
+            pass
 
-        # ➕ Salvar DXF
-        doc_dxf.saveas(dxf_output_path)
-        print(f"📁 Arquivo DXF final salvo em: {dxf_output_path}")
+        for i, (x, y) in enumerate(ordered_points_xy):
+            try:
+                msp.add_circle(center=(x, y), radius=0.5, dxfattribs={"layer": "Vertices"})
+                msp.add_text(
+                    f"V{i + 1}",
+                    dxfattribs={
+                        "height": 0.3,
+                        "layer": "Vertices",
+                        "insert": (x + 0.30, y + 0.30)  # <<< POSIÇÃO DO RÓTULO
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Falha rotulando V{i+1}: {e}")
+
+
+        # só desenhe o arco do azimute se realmente quiser no produto FECHADA
+        # e se houver amarração (Az) válida:
+        if modo == "ANGULO_AZ" and ponto_az is not None:
+            try:
+                azim = calculate_azimuth(ponto_az, v1_pt)
+                _desenhar_referencia_az(msp, ponto_az, v1_pt, azim)
+                _log_info("Arco do Azimute Az–V1 adicionado com sucesso.")
+            except Exception as e:
+                _log_error(f"Erro ao adicionar arco do azimute: {e}")
+
+        # 6) salvar DXF final
+        try:
+            doc.saveas(dxf_output_path)
+            logger.info("✅ DXF FECHADA salvo corretamente: %s", dxf_output_path)
+        except Exception as e:
+            logger.error("Erro ao salvar DXF FECHADA: %s", e)
 
     except Exception as e:
-        print(f"❌ Erro ao gerar o memorial descritivo: {e}")
+        _log_error(f"❌ Erro ao gerar o memorial descritivo: {e}")
         return None
 
     return excel_file_path
@@ -1389,175 +1827,213 @@ def sanitize_filename(filename):
         
 def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template, sentido_poligonal='horario'):
 
-     # 🔹 Leitura dos dados do Excel
-    df_excel = pd.read_excel(excel_path, sheet_name='Dados_do_Imóvel', header=None, engine='openpyxl')
-    dados_imovel = dict(zip(df_excel.iloc[:, 0], df_excel.iloc[:, 1]))
+    caminho_salvar = diretorio_concluido 
+    template_path = caminho_template 
+    # Carrega dados do imóvel
+    dados_imovel_excel_path = excel_path
+    dados_imovel_df = pd.read_excel(dados_imovel_excel_path, sheet_name='Dados_do_Imóvel', header=None)
+    dados_imovel = dict(zip(dados_imovel_df.iloc[:, 0], dados_imovel_df.iloc[:, 1]))
 
-    logger.info(f"🚩 [INÍCIO] main_poligonal_fechada com UUID: {uuid_str}")
-
-   
-
-    # adicione um logger para ver se está lendo corretamente os dados iniciais
-    
-    try:
-        logger.info(f"🚩 Dados do imóvel: {dados_imovel}")
-    except Exception as e:
-        logger.error(f"❌ ERRO ao ler dados do Excel inicial: {e}")
-        return
-
-
-    # 🔹 Extração dos campos
+    # Extrai informações
     proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
-    matricula = sanitize_filename(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip())
+    cpf = dados_imovel.get("CPF/CNPJ", "").strip()
+    matricula = sanitize_filename(str(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "")).strip())
+    matricula_texto = str(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "")).strip()
     descricao = dados_imovel.get("OBRA", "").strip()
-    uso_solo = dados_imovel.get("ZONA", "").strip()
-    area_imovel = dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").replace("\t", "").replace("\n", "").strip()
-    cidade = dados_imovel.get("CIDADE", "").strip()
+    area_total = dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").replace("\t", "").replace("\n", "").strip()
+    cidade = dados_imovel.get("CIDADE", "").strip().capitalize()
+    rgi= dados_imovel.get("RGI", "").strip().capitalize()
     rua = dados_imovel.get("LOCAL", "").strip()
-    comarca = dados_imovel.get("COMARCA", "").strip()
-    RI = dados_imovel.get("RI", "").strip()
     desc_ponto_Az = dados_imovel.get("AZ", "").strip()
 
-    caminho_salvar = diretorio_concluido
+    # Diretório para salvar resultados
+    
     os.makedirs(caminho_salvar, exist_ok=True)
 
-    # 🔍 Determina tipo do memorial a partir do nome do arquivo DXF
-    
+    # Identifica tipo (SER, REM, etc)
     dxf_filename = os.path.basename(dxf_path).upper()
     if "ETE" in dxf_filename:
         tipo = "ETE"
-        sheet_name = "ETE"
     elif "REM" in dxf_filename:
         tipo = "REM"
-        sheet_name = "Confrontantes_Remanescente"
     elif "SER" in dxf_filename:
         tipo = "SER"
-        sheet_name = "Confrontantes_Servidao"
     elif "ACE" in dxf_filename:
         tipo = "ACE"
-        sheet_name = "Confrontantes_Acesso"
     else:
-        logger.error("❌ Tipo de memorial (ETE, REM, SER ou ACE) não identificado no nome do DXF.")
+        logger.info("❌ Não foi possível determinar automaticamente o tipo (ETE, REM, SER ou ACE).")
         return
+
+    padrao_fechada = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}*.xlsx")
+
+    arquivos_encontrados = glob.glob(padrao_fechada)
+    if not arquivos_encontrados:
+        logger.info(f"❌ Arquivo de confrontantes não encontrado com o padrão: {padrao_fechada}")
+        return
+    confrontantes_df = pd.read_excel(arquivos_encontrados[0])
+    confrontantes = confrontantes_df.iloc[:, 1].dropna().tolist()
+
+    # DXF limpo
+    # ⚠️ Substitui a limpeza anterior por apenas conversão R2010
+    dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
+    dxf_file_path = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
+
+
+    # 🔍 Buscar planilha que COMEÇA com ABERTA_{TIPO} no diretório CONCLUIDO
+    padrao_aberta = os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}*.xlsx")
+    planilhas_aberta = glob.glob(padrao_aberta)
+
+    if not planilhas_aberta:
+        logger.info(f"❌ Nenhuma planilha encontrada começando com 'ABERTA_{tipo}' no diretório: {diretorio_concluido}")
+        return
+
+    planilha_aberta_saida = planilhas_aberta[0]
+    logger.info(f"📄 Planilha ABERTA localizada: {planilha_aberta_saida}")
 
    
-    logger.info(f"🚩 Antes da busca dos confrontantes: {os.path.join(diretorio_preparado, f'{uuid_str}_FECHADA_{tipo}.xlsx')}")
-
-       
-    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
-
-    arquivos_encontrados = glob.glob(padrao_busca)
-
-    if not arquivos_encontrados:
-        logger.error(f"❌ Planilha confrontantes FECHADA não encontrada: {padrao_busca}")
-        return None
-
-    excel_confrontantes = arquivos_encontrados[0]
-
-      
-    # 🔹 Limpa DXF
-    dxf_limpo_path = os.path.join(caminho_salvar, f"{uuid_str}_DXF_LIMPO_{matricula}.dxf")
-    dxf_file_path = limpar_dxf(dxf_path, dxf_limpo_path)
-
-    logger.info(f"🚩 DXF LIMPO gerado em: {dxf_file_path}")
-
-    # 🔍 Extrai geometria do DXF
-    doc, lines, perimeter_dxf, area_dxf, ponto_az, msp = get_document_info_from_dxf(dxf_file_path)
-
-    
-
-
-    if not doc or not ponto_az:
-        logger.error("❌ Erro ao extrair geometria ou encontrar o ponto Az.")
+    if not planilhas_aberta:
+        logger.info(f"❌ Nenhuma planilha encontrada contendo 'ABERTA' e '{tipo}' no nome dentro de: {diretorio_concluido}")
         return
 
-    # try:
-    #     doc_dxf = ezdxf.readfile(dxf_limpo_path)
-    #     msp = doc_dxf.modelspace()
-    # except Exception as e:
-    #     logger.error(f"❌ Erro ao abrir o DXF com ezdxf: {e}")
-    #     return
-    logger.info(f"🚩 Conteúdo de doc: {doc}")
-    logger.info(f"🚩 Conteúdo de lines: {lines}")
-    logger.info(f"🚩 Tamanho de lines: {len(lines) if lines else 'Nenhuma linha'}")
+    planilha_aberta_saida = planilhas_aberta[0]
+    logger.info(f"📄 Planilha ABERTA localizada: {planilha_aberta_saida}")
 
-    if doc and lines:
-        logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
-        v1 = lines[0][0]
-        v2 = lines[1][0]
-        azimute = calculate_azimuth(ponto_az, v1)
-        distancia_az_v1 = calculate_distance(ponto_az, v1)
-        giro_angular_v1 = calculate_angular_turn(ponto_az, v1, v2)
-        giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
-    
+
+    # 📁 Procurar CONCLUIDO dentro da cidade (REPESCAGEM_*/CONCLUIDO)
+    # O diretório CONCLUIDO já é passado corretamente
+    diretorio_concluido_real = diretorio_concluido
+
+   
+    # 🧭 Obter ponto de amarração anterior ao V1
+    try:
+        ponto_amarracao, codigo_amarracao = obter_ponto_amarracao_anterior_v1(planilha_aberta_saida)
+        logger.info(f"📌 Ponto de amarração identificado: {codigo_amarracao} com coordenadas {ponto_amarracao}")
+    except Exception as e:
+        logger.error(f"❌ Erro ao obter ponto de amarração: {e}")
+        return
+
+    # 🔍 Extrair geometria do DXF
+    # Extrair geometria FECHADA do DXF
+    doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
+
+    # Pare aqui se não houver geometria válida
+    if not (doc and lines):
+        logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento.")
+        pythoncom.CoUninitialize()
+        return
+
+    logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
+
+    # ── Identificar V1 e V2
+    v1 = lines[0][0]
+    v2 = lines[1][0]
+
+    # ── Validar Ponto_AZ vindo do DXF
+    if not ponto_az_dxf or len(ponto_az_dxf) != 2:
+        raise RuntimeError("Ponto_AZ não retornado pelo DXF. Verifique a camada/objeto no desenho.")
+
+    # ── Desenhar o Ponto_AZ e a ligação AZ → V1
+    ensure_layer(msp.doc, "Ponto_AZ", color=1)      # vermelho
+    ensure_layer(msp.doc, "Ligacoes_AZ", color=5)   # azul
+    msp.add_point(ponto_az_dxf, dxfattribs={"layer": "Ponto_AZ"})
+    msp.add_line(ponto_az_dxf, v1, dxfattribs={"layer": "Ligacoes_AZ"})
+
+    # ── Métricas com as SUAS funções já existentes
+    azimute = calculate_azimuth(ponto_az_dxf, v1)              # graus 0–360
+    distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)     # metros
+    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)  # graus
+    giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
+
     logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
 
-    
-    
-    # CORRETO (como deve ser ajustado)
-    excel_resultado_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
-    
-    #MODIFICADO O DIRETORIO PARA CONCLUIDO
+    # ── Pacote de métricas para exportação (Excel/DOCX)
+    metrica_az = {
+        "az_az_v1_deg": round(float(azimute), 2),
+        "dist_az_v1_m": round(float(distancia_az_v1), 2),
+        "giro_v1_deg":  round(float(giro_angular_v1), 2),
+    }
 
-    
-    # ✅ Geração do Excel e atualização do DXF
-    excel_resultado = create_memorial_descritivo(
-        uuid_str=uuid_str,
-        doc=doc,
-        msp=msp,
-        lines=lines,
-        proprietario=proprietario,
-        matricula=matricula,
-        caminho_salvar=caminho_salvar,
-        excel_confrontantes=excel_confrontantes, # 👈 EXISTENTE (PREPARADO)
-        excel_file_path=excel_resultado_path,         # 👈 SERÁ CRIADO (CONCLUIDO)
-        ponto_az=ponto_az,
-        distancia_az_v1=distancia_az_v1,
-        azimute_az_v1=azimute,
-        tipo=tipo,
-        giro_angular_v1_dms=giro_angular_v1_dms,
-        diretorio_concluido=caminho_salvar,
-        dxf_file_path=dxf_file_path,
-        sentido_poligonal=sentido_poligonal
-        
-        
+    # ── Rótulos no DXF
+    ensure_layer(msp.doc, "Rotulos_AZ", color=3)  # verde
+    off = 0.60
+    add_rotulo(
+        msp,
+        f"AZ(AZ→V1) = {metrica_az['az_az_v1_deg']:.2f}°",
+        ((ponto_az_dxf[0] + v1[0]) / 2 + off, (ponto_az_dxf[1] + v1[1]) / 2 + off),
+        0.32,
+        "Rotulos_AZ"
     )
-    
-    # ✅ Geração do DOCX
-    if excel_resultado:
-        output_docx_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
+    add_rotulo(
+        msp,
+        f"D(AZ,V1) = {metrica_az['dist_az_v1_m']:.2f} m",
+        ((ponto_az_dxf[0] + v1[0]) / 2 - off, (ponto_az_dxf[1] + v1[1]) / 2 + off),
+        0.32,
+        "Rotulos_AZ"
+    )
+    add_rotulo(
+        msp,
+        f"GIRO(V1) = {metrica_az['giro_v1_deg']:.2f}°",
+        (v1[0] + off, v1[1] + off),
+        0.35,
+        "Rotulos_AZ"
+    )
+
+
+    logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
+
+    # Caminho do Excel de saída
+    excel_file_path = os.path.join(
+        diretorio_concluido,
+        f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
+    )
+    logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
+
+    # 🛠 Criar memorial e Excel (passe modo e pts_bulge)
+    create_memorial_descritivo(
+        uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az_dxf,
+        dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
+        giro_angular_v1_dms, distancia_az_v1, sentido_poligonal=sentido_poligonal,
+        modo="ANGULO_AZ", points_bulge=pts_bulge, metrica_az=metrica_az
+    )
+
+    # 📄 Gerar DOCX (apenas uma vez)
+    if excel_file_path:
+        output_path_docx = os.path.join(
+            diretorio_concluido,
+            f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx"
+        )
+        logger.info(f"✅ DOCX FECHADA salvo corretamente: {output_path_docx}")
+
+        assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
+        desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"
 
         create_memorial_document(
             uuid_str=uuid_str,
             proprietario=proprietario,
             matricula=matricula,
-            descricao=descricao,
-            excel_file_path=excel_resultado,
-            template_path=caminho_template,
-            output_path=output_docx_path,
-            perimeter_dxf=perimeter_dxf,
-            area_dxf=area_dxf,
-            desc_ponto_Az=desc_ponto_Az,
-            Coorde_E_ponto_Az=ponto_az[0],
-            Coorde_N_ponto_Az=ponto_az[1],
-            azimuth=azimute,
-            distance=distancia_az_v1,
-            giro_angular_v1_dms=giro_angular_v1_dms,  # 👈 importante
-            uso_solo=uso_solo,
-            area_imovel=area_imovel,
-            cidade=cidade,
+            matricula_texto=matricula_texto,
+            area_total=area_total,
+            cpf=cpf,
+            rgi=rgi,
+            excel_file_path=excel_file_path,
+            template_path=template_path,
+            output_path=output_path_docx,
+            assinatura_path=assinatura_path,
+            ponto_amarracao=ponto_amarracao,
+            azimute=azimute,
+            distancia_amarracao_v1=distancia_az_v1,
             rua=rua,
-            comarca=comarca,
-            RI=RI,
-            caminho_salvar=caminho_salvar,
-            tipo=tipo
+            cidade=cidade,
+            confrontantes=confrontantes,
+            area_dxf=area_dxf,
+            desc_ponto_amarracao=desc_ponto_amarracao,
+            perimeter_dxf=perimeter_dxf,
+            giro_angular_v1_dms=giro_angular_v1_dms,
         )
-        logger.info("🔵 [main_poligonal_fechada] Processamento concluído com sucesso.")
-        print("Processamento concluído com sucesso.")
-
     else:
-        logger.error("❌ Falha ao gerar memorial descritivo.")
-        print("Erro ao processar o arquivo DXF.")
+        logger.info("excel_file_path não definido ou inválido.")
+
+    logger.info("Documento do AutoCAD fechado.")
 
 
 
