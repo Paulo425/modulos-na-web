@@ -847,6 +847,97 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentid
 
 #HELPERS ESPECIFICOS SOMENTE PARA O ANGULO_AZ
 
+# nomes de layers “típicas” onde você pode marcar o AZ
+_AZ_LAYER_HINTS = {"AZ", "PONTO_AZ", "AMARRACAO", "AMARRAÇÃO", "AZIMUTE", "AZ_POINT", "AZ_PONTO"}
+
+def _clean_mtext(text: str) -> str:
+    """Remove marcações comuns de MTEXT (\\P, \\~ etc.) e espaços."""
+    if text is None:
+        return ""
+    s = str(text)
+    # remove sequências de formatação básicas do MTEXT
+    s = re.sub(r"\\[A-Za-z]+", "", s)       # \P, \~ etc.
+    s = re.sub(r"{|}", "", s)               # chaves
+    s = s.replace("\n", " ").replace("\r", " ")
+    return s.strip()
+
+def _is_az_label(text: str) -> bool:
+    """Retorna True se o texto parecer um rótulo 'AZ'."""
+    if text is None:
+        return False
+    s = _clean_mtext(text).strip()
+    # aceita “AZ”, “Az”, “az” exatamente; e também com pequenos adornos (ex: 'AZ:', '(AZ)')
+    return bool(re.fullmatch(r"(?i)\s*\(?\s*AZ\s*[:]?\s*\)?\s*", s))
+
+def robust_find_ponto_az(msp, fallback=None):
+    """
+    Tenta descobrir o Ponto_AZ no DXF, nesta ordem:
+      1) TEXT/MTEXT cujo conteúdo seja 'AZ' (case-insensitive).
+      2) POINT/CIRCLE em layers sugestivas (AZ, PONTO_AZ, AMARRAÇÃO...).
+      3) INSERT de um bloco com nome sugestivo ('AZ', 'PONTO_AZ', etc.).
+      4) Fallback informado (ex.: V1) ou None.
+    Retorna (x, y) ou None.
+    """
+    doc = msp.doc
+    # 1) TEXT/MTEXT
+    try:
+        for e in msp.query("TEXT"):
+            try:
+                if _is_az_label(e.dxf.text):
+                    p = e.dxf.insert  # (x, y, z)
+                    return (float(p[0]), float(p[1]))
+            except Exception:
+                pass
+        for e in msp.query("MTEXT"):
+            try:
+                raw = e.text  # mtext content
+                if _is_az_label(raw):
+                    p = e.dxf.insert
+                    return (float(p[0]), float(p[1]))
+            except Exception:
+                pass
+    except Exception:
+        # se deu qualquer erro lendo textos, seguimos
+        pass
+
+    # 2) POINT/CIRCLE em layers sugestivas
+    try:
+        for e in msp.query("POINT"):
+            try:
+                layer = (e.dxf.layer or "").upper()
+                if layer in _AZ_LAYER_HINTS:
+                    p = e.dxf.location
+                    return (float(p[0]), float(p[1]))
+            except Exception:
+                pass
+        for e in msp.query("CIRCLE"):
+            try:
+                layer = (e.dxf.layer or "").upper()
+                if layer in _AZ_LAYER_HINTS:
+                    p = e.dxf.center
+                    return (float(p[0]), float(p[1]))
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # 3) INSERT de bloco com nome sugestivo
+    try:
+        for e in msp.query("INSERT"):
+            try:
+                name = (e.dxf.name or "").upper()
+                layer = (e.dxf.layer or "").upper()
+                if (name in _AZ_LAYER_HINTS) or (layer in _AZ_LAYER_HINTS):
+                    p = e.dxf.insert
+                    return (float(p[0]), float(p[1]))
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # 4) fallback (ex.: V1)
+    return fallback
+
 
 def azimute_graus_de_norte(dx: float, dy: float) -> float:
     """
@@ -1876,6 +1967,21 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # Extrair geometria FECHADA do DXF
     doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
 
+    # Fallback inteligente: se o get_document_info_from_dxf não trouxe o AZ, tenta achar por texto/entidade
+    if not ponto_az_dxf or len(ponto_az_dxf) != 2:
+        logger.warning("⚠️ Ponto Az não encontrado no retorno principal. Vou procurar por rótulos/entidades.")
+        # V1 como fallback final, só para não travar:
+        v1_tmp = lines[0][0] if (lines and len(lines) >= 1) else None
+        ponto_az_encontrado = robust_find_ponto_az(msp, fallback=v1_tmp)
+        if ponto_az_encontrado is None:
+            logger.warning("⚠️ Mesmo após varredura, Ponto_AZ não localizado. Usando V1 como fallback definitivo.")
+            ponto_az_dxf = v1_tmp
+        else:
+            ponto_az_dxf = ponto_az_encontrado
+            logger.info("✅ Ponto_AZ localizado via varredura: %s", ponto_az_dxf)
+
+
+
     logger.info(">>> [AZ] get_document_info_from_dxf: lines=%s area=%.6f pts_bulge=%s",
             len(lines) if lines else 0, area_dxf if area_dxf else -1, 
             len(pts_bulge) if pts_bulge else 0)
@@ -1890,6 +1996,15 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # ── Identificar V1 e V2
     v1 = lines[0][0]
     v2 = lines[1][0]
+
+    dx = v1[0] - ponto_az_dxf[0]
+    dy = v1[1] - ponto_az_dxf[1]
+    dist_az_v1 = math.hypot(dx, dy)
+
+    if dist_az_v1 > 1e-6:
+        # desenha linha, arco e rótulos “normais”
+    else:
+        logger.info("ℹ️ AZ coincide com V1 (fallback). Suprimindo arco de azimute e rótulo de distância.")
 
     # ── Validar Ponto_AZ vindo do DXF
     if not ponto_az_dxf or len(ponto_az_dxf) != 2:
