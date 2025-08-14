@@ -1827,6 +1827,10 @@ def sanitize_filename(filename):
         
 def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, diretorio_concluido, caminho_template, sentido_poligonal='horario'):
 
+    
+    logger.info(">>> [ANGULO_AZ] ENTROU em main_poligonal_fechada | uuid=%s | dxf=%s | excel=%s | prep=%s | concl=%s",
+            uuid_str, dxf_path, excel_path, diretorio_preparado, diretorio_concluido)
+
     caminho_salvar = diretorio_concluido 
     template_path = caminho_template 
     # Carrega dados do imóvel
@@ -1863,8 +1867,25 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     else:
         logger.info("❌ Não foi possível determinar automaticamente o tipo (ETE, REM, SER ou ACE).")
         return
+    logger.info(">>> [ANGULO_AZ] TIPO detectado: %s", tipo)
 
     padrao_fechada = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}*.xlsx")
+
+
+
+    try:
+        lista_prep = "\n".join(sorted(os.listdir(diretorio_preparado)))
+        logger.info("[LS] diretorio_preparado = %s\n%s", diretorio_preparado, lista_prep)
+    except Exception as e:
+        logger.warning("Falha ao listar %s: %s", diretorio_preparado, e)
+
+    try:
+        lista_conc = "\n".join(sorted(os.listdir(diretorio_concluido)))
+        logger.info("[LS] diretorio_concluido = %s\n%s", diretorio_concluido, lista_conc)
+    except Exception as e:
+        logger.warning("Falha ao listar %s: %s", diretorio_concluido, e)
+
+
 
     arquivos_encontrados = glob.glob(padrao_fechada)
     if not arquivos_encontrados:
@@ -1878,7 +1899,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
     dxf_file_path = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
 
-
+    
     # 🔍 Buscar planilha que COMEÇA com ABERTA_{TIPO} no diretório CONCLUIDO
     padrao_aberta = os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}*.xlsx")
     planilhas_aberta = glob.glob(padrao_aberta)
@@ -1891,12 +1912,12 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     logger.info(f"📄 Planilha ABERTA localizada: {planilha_aberta_saida}")
 
    
-    if not planilhas_aberta:
-        logger.info(f"❌ Nenhuma planilha encontrada contendo 'ABERTA' e '{tipo}' no nome dentro de: {diretorio_concluido}")
-        return
+    # if not planilhas_aberta:
+    #     logger.info(f"❌ Nenhuma planilha encontrada contendo 'ABERTA' e '{tipo}' no nome dentro de: {diretorio_concluido}")
+    #     return
 
-    planilha_aberta_saida = planilhas_aberta[0]
-    logger.info(f"📄 Planilha ABERTA localizada: {planilha_aberta_saida}")
+    # planilha_aberta_saida = planilhas_aberta[0]
+    # logger.info(f"📄 Planilha ABERTA localizada: {planilha_aberta_saida}")
 
 
     # 📁 Procurar CONCLUIDO dentro da cidade (REPESCAGEM_*/CONCLUIDO)
@@ -1997,7 +2018,20 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         modo="ANGULO_AZ", points_bulge=pts_bulge, metrica_az=metrica_az
     )
 
+    # Confirma artefatos
+    docx_esperado = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
+    dxf_esperado  = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
+
+    logger.info("Check arquivos: XLSX=%s DOCX=%s DXF=%s",
+                os.path.exists(excel_file_path),
+                os.path.exists(docx_esperado),
+                os.path.exists(dxf_esperado))
+    
+    
+    
+    
     # 📄 Gerar DOCX (apenas uma vez)
+    os.makedirs(diretorio_concluido, exist_ok=True)
     if excel_file_path:
         output_path_docx = os.path.join(
             diretorio_concluido,

@@ -17,45 +17,59 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(messa
 logger.addHandler(file_handler)
 
 def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
+    """
+    Procura trios coerentes {uuid}_FECHADA_{TIPO}_{MATRICULA}.(xlsx,docx,dxf)
+    e gera {uuid}_FECHADA_{TIPO}_{MATRICULA}.zip
+    """
     logger.info(f"Iniciando montagem dos pacotes ZIP em {diretorio}")
-    # Inclua esta linha temporariamente para debugar o problema
-    logger.info(f"[DEBUG ANGULO_AZ] Arquivos no diretório antes do ZIP: {os.listdir(diretorio)}")
+    try:
+        logger.info(f"[DEBUG ANGULO_AZ] Arquivos no diretório antes do ZIP: {os.listdir(diretorio)}")
+    except Exception as e:
+        logger.error(f"Falha ao listar diretório {diretorio}: {e}")
+        return
+
     tipos = ["ETE", "REM", "SER", "ACE"]
 
     for tipo in tipos:
-        logger.info(f"Buscando arquivos do tipo: {tipo}")
+        padrao_excel = os.path.join(diretorio, f"{uuid_str}_FECHADA_{tipo}_*.xlsx")
+        excels = sorted(glob.glob(padrao_excel), key=os.path.getmtime, reverse=True)
+        logger.info(f"[{tipo}] XLSX encontrados: {len(excels)} no padrão {padrao_excel}")
 
-        padrao_dxf = os.path.join(diretorio, f"{uuid_str}_*_{tipo}_*.dxf")
-        padrao_docx = os.path.join(diretorio, f"{uuid_str}_*_{tipo}_*.docx")
-        padrao_excel = os.path.join(diretorio, f"{uuid_str}_*_{tipo}_*.xlsx")
+        for excel_path in excels:
+            base = os.path.basename(excel_path)
+            prefixo = f"{uuid_str}_FECHADA_{tipo}_"
+            sufixo  = ".xlsx"
+            if not (base.startswith(prefixo) and base.endswith(sufixo)):
+                logger.warning(f"[{tipo}] Ignorando XLSX fora do padrão: {base}")
+                continue
+            matricula = base[len(prefixo):-len(sufixo)]
+            docx_path = os.path.join(diretorio, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
+            dxf_path  = os.path.join(diretorio, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
 
-        arquivo_dxf = glob.glob(padrao_dxf)
-        arquivo_docx = glob.glob(padrao_docx)
-        arquivo_excel = glob.glob(padrao_excel)
+            ok_xlsx = os.path.exists(excel_path)
+            ok_docx = os.path.exists(docx_path)
+            ok_dxf  = os.path.exists(dxf_path)
+            logger.info(f"[{tipo}/{matricula}] ok: XLSX={ok_xlsx} DOCX={ok_docx} DXF={ok_dxf}")
 
-        logger.info(
-            f"Encontrados: DXF={len(arquivo_dxf)}, DOCX={len(arquivo_docx)}, XLSX={len(arquivo_excel)}"
-        )
+            if not (ok_xlsx and ok_docx and ok_dxf):
+                logger.warning(f"Incompleto para {tipo}/{matricula}. Pulando…")
+                continue
 
-        if arquivo_dxf and arquivo_docx and arquivo_excel:
-            nome_zip = f"{uuid_str}_{cidade_formatada}_{tipo}.zip"
-            caminho_zip = os.path.join(diretorio, nome_zip)
+            zip_name = f"{uuid_str}_FECHADA_{tipo}_{matricula}.zip"
+            zip_path = os.path.join(diretorio, zip_name)
 
             try:
-                with zipfile.ZipFile(caminho_zip, 'w') as zipf:
-                    zipf.write(arquivo_dxf[0], os.path.basename(arquivo_dxf[0]))
-                    zipf.write(arquivo_docx[0], os.path.basename(arquivo_docx[0]))
-                    zipf.write(arquivo_excel[0], os.path.basename(arquivo_excel[0]))
-
-                logger.info(f"ZIP criado com sucesso: {caminho_zip}")
-
+                with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                    zf.write(dxf_path,  os.path.basename(dxf_path))
+                    zf.write(docx_path, os.path.basename(docx_path))
+                    zf.write(excel_path, os.path.basename(excel_path))
+                logger.info(f"✅ ZIP criado: {zip_path}")
             except Exception as e:
-                logger.error(f"Erro ao criar ZIP {caminho_zip}: {e}")
+                logger.error(f"Erro ao criar ZIP {zip_path}: {e}")
 
-        else:
-            logger.warning(
-                f"Incompleto: {tipo} - DXF={bool(arquivo_dxf)}, DOCX={bool(arquivo_docx)}, XLSX={bool(arquivo_excel)}"
-            )
+    logger.info("Compactação finalizada")
+
+
 
 def main_compactar_arquivos(diretorio_concluido, cidade, uuid_str):
     logger.info(f"Iniciando compactação no diretório: {diretorio_concluido}")

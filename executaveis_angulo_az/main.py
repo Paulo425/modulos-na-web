@@ -84,6 +84,18 @@ def main():
     )
 
     logger.info("✅ Processamento da poligonal fechada concluído.")
+    # Checkpoint: antes de compactar, confirme se existem artefatos para pelo menos um TIPO
+    tipos = ["ETE", "REM", "SER", "ACE"]
+    tem_algum = False
+    for _tipo in tipos:
+        pad_xlsx = os.path.join(variaveis["diretorio_concluido"], f"{uuid_str}_FECHADA_{_tipo}_*.xlsx")
+        if glob.glob(pad_xlsx):
+            tem_algum = True
+            break
+
+    if not tem_algum:
+        logger.error("❌ Nenhum XLSX FECHADA gerado em %s. Compactação não terá o que zipar.",
+                    variaveis["diretorio_concluido"])
 
     main_compactar_arquivos(variaveis["diretorio_concluido"], cidade_formatada, uuid_str)
 
