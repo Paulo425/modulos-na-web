@@ -1493,8 +1493,8 @@ def create_memorial_descritivo(
 
     except Exception as e:
         _log_error(f"❌ Erro ao gerar o memorial descritivo: {e}")
-        return None
-
+        raise
+        
     return excel_file_path
 
 
@@ -1936,7 +1936,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # 🔍 Extrair geometria do DXF
     # Extrair geometria FECHADA do DXF
     doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
-
+    logger.info(">>> [AZ] get_document_info_from_dxf: lines=%s area=%.6f pts_bulge=%s",
+            len(lines) if lines else 0, area_dxf if area_dxf else -1, 
+            len(pts_bulge) if pts_bulge else 0)
     # Pare aqui se não houver geometria válida
     if not (doc and lines):
         logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento.")
@@ -2010,22 +2012,36 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     )
     logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
 
-    # 🛠 Criar memorial e Excel (passe modo e pts_bulge)
-    create_memorial_descritivo(
-        uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az_dxf,
-        dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-        giro_angular_v1_dms, distancia_az_v1, sentido_poligonal=sentido_poligonal,
-        modo="ANGULO_AZ", points_bulge=pts_bulge, metrica_az=metrica_az
-    )
 
-    # Confirma artefatos
+
+    logger.info(">>> [AZ] Chamando create_memorial_descritivo... destino Excel: %s", os.path.abspath(excel_file_path))
+    ret_excel = None
+    try:
+        ret_excel = create_memorial_descritivo(
+            uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az_dxf,
+            dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
+            giro_angular_v1_dms, distancia_az_v1, sentido_poligonal=sentido_poligonal,
+            modo="ANGULO_AZ", points_bulge=pts_bulge, metrica_az=metrica_az
+        )
+        logger.info("<<< [AZ] Retorno do memorial: %s", ret_excel)
+    except Exception as e:
+        logger.exception("❌ [AZ] Exceção na create_memorial_descritivo: %s", e)
+
+    # Confirma existência logo após
     docx_esperado = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
     dxf_esperado  = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
 
-    logger.info("Check arquivos: XLSX=%s DOCX=%s DXF=%s",
+    logger.info("Check artefatos: XLSX=%s DOCX=%s DXF=%s",
                 os.path.exists(excel_file_path),
                 os.path.exists(docx_esperado),
                 os.path.exists(dxf_esperado))
+
+    # Lista o diretório concluído para ver o que tem de verdade
+    try:
+        lista_conc = "\n".join(sorted(os.listdir(diretorio_concluido)))
+        logger.info("[LS] %s:\n%s", diretorio_concluido, lista_conc)
+    except Exception as e:
+        logger.warning("Falha ao listar %s: %s", diretorio_concluido, e)
     
     
     
