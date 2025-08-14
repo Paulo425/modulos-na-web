@@ -598,8 +598,8 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
         txt = msp.add_text(
             giro_angular_dms,
             dxfattribs={'height': 0.3, 'layer': 'Labels'}
-        )
-        txt.set_pos(label_position)
+        
+        ).set_dxf_attrib('insert', label_position)
 
         print(f"Rótulo do giro angular ({giro_angular_dms}) adicionado com sucesso.")
 
@@ -1868,7 +1868,7 @@ def create_memorial_document(
 
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Matrícula Número: ").bold = True
-        p.add_run(f"{matricula} - {RGI}")
+        p.add_run(f"{matricula} - {rgi}")
 
         area_total_formatada = f"{area_dxf:.2f}".replace(".", ",")
         p = doc_word.add_paragraph(style='Normal')
