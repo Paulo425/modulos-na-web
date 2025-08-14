@@ -2314,13 +2314,6 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     logger.info("Documento do AutoCAD fechado.")
 
-def create_memorial_document(
-    uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
-    output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
-    azimuth, distance, giro_angular_v1_dms, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
-):
-
-
 
 #FINAL DO CODIGO
 
