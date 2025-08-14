@@ -1399,6 +1399,11 @@ def create_memorial_descritivo(
     # _internal_angles_and_concavity, _convert_to_dms_safe,
     # add_label_and_distance, add_angle_visualization_to_dwg
 
+    logger.info("[AZ] Entrou em create_memorial_descritivo")
+    logger.debug("[AZ] uuid=%s, tipo=%s, matricula=%s, modo=%s", uuid_str, tipo, matricula, modo)
+    logger.debug("[AZ] lines=%d, points_bulge=%s", len(lines) if lines else 0, 
+                len(points_bulge) if points_bulge else None)
+
     # 0) diretório de saída do DXF
     if diretorio_concluido is None:
         diretorio_concluido = caminho_salvar
@@ -1412,6 +1417,7 @@ def create_memorial_descritivo(
     if not lines or len(lines) < 3:
         print(f"[P1_P2] 'lines' ausente/insuficiente (len={0 if not lines else len(lines)}).")
         return None
+    logger.info("[AZ] Validação inicial: %d linhas na poligonal", len(lines))
 
     # 2) montar lista de vértices com/sem bulge
     EPS_BULGE = 1e-9
@@ -1426,6 +1432,8 @@ def create_memorial_descritivo(
         except Exception as e:
             print(f"[P1_P2] Falha ao derivar vértices de 'lines' no modo LEGADO: {e}")
             return None
+    logger.debug("[AZ] Modo bulge: %s", use_bulge)
+    logger.debug("[AZ] Primeiro ponto: %s", pts[0] if pts else None)
 
     # 3) normaliza sentido (horário/anti-horário)
     pts = _ensure_orientation(pts_raw, sentido_poligonal)
@@ -1438,6 +1446,9 @@ def create_memorial_descritivo(
         # concavo = [a > 180.0 for a in internos_deg]  # se precisar da flag
     else:
         internos_deg, _concavo = _internal_angles_and_concavity(pts, sentido_poligonal)
+
+    logger.info("[AZ] Ângulos internos calculados (n=%d)", len(internos_deg))
+
 
     # 5) prepara dados para o Excel
     try:
@@ -2285,6 +2296,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
         assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
         desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido sem ser da planilha da poligonal aberta"
+        distancia_amarracao_v1=distancia_az_v1
+        ponto_amarracao=ponto_az_dxf
+
 
         create_memorial_document(
             uuid_str,
