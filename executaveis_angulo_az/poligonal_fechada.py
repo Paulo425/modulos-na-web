@@ -32,12 +32,26 @@ log_file = os.path.join(LOG_DIR, f'poligonal_fechada_{datetime.now().strftime("%
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+fmt = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
 
-# Verificar se já não existem handlers para não duplicar
+# FileHandler (UTF-8)
+file_handler = logging.FileHandler(log_file, encoding='utf-8')
+file_handler.setFormatter(fmt)
+
+# StreamHandler → stdout (aparece no LOG RENDER)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(fmt)
+
+# Evitar handlers duplicados (em caso de reload/import)
 if not logger.handlers:
     logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+
+# (opcional) deixar propagar para o root também
+logger.propagate = True
+
+logger.info("[AZ] Log de poligonal_fechada gravando em: %s", log_file)
+
 
 getcontext().prec = 28  # Define a precisão para 28 casas decimais
 
@@ -1295,64 +1309,73 @@ def create_memorial_descritivo(
         diretorio_concluido,
         f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf"
     )
-     
-    # 0) valida base
-    if not lines or len(lines) < 3:
-        _log_error(f"[AZ] 'lines' ausente/insuficiente (type={type(lines)}, len={0 if not lines else len(lines)}).")
-        return None  # aqui sim não tem como seguir (poligonal inválida)
-    EPS_BULGE = 1e-9
-    # 1) montar pts em modo BULGE quando houver, ou LEGADO (retas) quando não houver
-    use_bulge = points_bulge is not None and len(points_bulge) >= 3
-    if use_bulge:
-        pts_raw = points_bulge
-    else:
-        _log_info("[AZ] Sem bulge suficiente — usando modo LEGADO somente retas.")
-        # Geramos a lista de vértices a partir de 'lines'.
-        # Observação: no seu código, v1 = lines[0][0], v2 = lines[1][0] → usamos o [i][0] como vértice ordenado.
-        try:
-            pts_raw = [{"x": float(lines[i][0][0]), "y": float(lines[i][0][1]), "bulge_next": 0.0}
-                    for i in range(len(lines))]
-        except Exception as e:
-            _log_error(f"[AZ] Falha ao derivar vértices de 'lines' no modo LEGADO: {e}")
-            return None
 
-    # 1.1) normaliza sentido
-    pts = _ensure_orientation(pts_raw, sentido_poligonal)
-    orient = _polygon_orientation(pts)
-    _log_info(f"Sentido normalizado: {'anti-horário' if orient == +1 else 'horário'}")
-
-    # 2) ângulos internos + concavidade (detecção BULGE vs LEGADO com base nos pts já normalizados)
-    
-    has_any_bulge = any(abs(float(p.get('bulge_next', 0.0))) > EPS_BULGE for p in pts)
-
-    if has_any_bulge:
-        internos_deg = _internal_angles_with_bulge(pts)  # usa tangentes reais (misto retas+arcos)
-        concavo = [a > 180.0 for a in internos_deg]
-        logger.info("Ângulos internos: modo BULGE-AWARE (misto retas+arcos).")
-    else:
-        internos_deg, concavo = _internal_angles_and_concavity(pts, sentido_poligonal)
-        logger.info("Ângulos internos: modo LEGADO (somente retas).")
-
-    # 3) desenha arcos internos por dentro
-    _draw_internal_angles(msp, pts, internos_deg, sentido_poligonal, raio_frac=0.10)
-
-    # 4) desenho do AZ depende do modo
-    # ANGULO_AZ  → desenha Az, linha Az–V1, arco e rótulos
-    # ANGULO_P1_P2 → NÃO desenha Az/linha/arco (poligonal ABERTA já mostra amarração)
-    if modo == "ANGULO_AZ" and ponto_az is not None and v1 is not None:
-        dx = v1[0] - ponto_az[0]
-        dy = v1[1] - ponto_az[1]
-        dist = math.hypot(dx, dy)
-        if dist > 1e-6:
-            try:
-                _desenhar_referencia_az(msp, ponto_az, v1, azimute)
-            except Exception as e:
-                logger.error("Erro ao desenhar referência de Az: %s", e)
-        else:
-            logger.warning("⚠️ Distância Az–V1 ≈ 0; desenho do Az suprimido.")
-
-    # 5) Excel (sem reler nada)
+    # ── CHECKPOINT 0: heartbeat XLSX (garante existência com o nome final)
     try:
+        os.makedirs(os.path.dirname(excel_file_path), exist_ok=True)
+        pd.DataFrame([{"checkpoint": "heartbeat"}]).to_excel(excel_file_path, index=False)
+        _log_info(f"[AZ] HEARTBEAT XLSX criado: {os.path.abspath(excel_file_path)}")
+    except Exception as e:
+        _log_error(f"[AZ] Falha no HEARTBEAT XLSX em {excel_file_path}: {e}")
+        raise
+     
+        # 0) valida base
+    try:
+        if not lines or len(lines) < 3:
+            _log_error(f"[AZ] 'lines' ausente/insuficiente (type={type(lines)}, len={0 if not lines else len(lines)}).")
+            # já existe um HEARTBEAT XLSX; levante exceção para a main logar
+            raise RuntimeError("Poligonal inválida: 'lines' < 3")
+
+        EPS_BULGE = 1e-9
+
+        # 1) montar pts ...
+        use_bulge = points_bulge is not None and len(points_bulge) >= 3
+        if use_bulge:
+            pts_raw = points_bulge
+        else:
+            _log_info("[AZ] Sem bulge suficiente — usando modo LEGADO somente retas.")
+            try:
+                pts_raw = [{"x": float(lines[i][0][0]), "y": float(lines[i][0][1]), "bulge_next": 0.0}
+                           for i in range(len(lines))]
+            except Exception as e:
+                _log_error(f"[AZ] Falha ao derivar vértices de 'lines' no modo LEGADO: {e}")
+                raise
+
+        # 1.1) normaliza sentido
+        pts = _ensure_orientation(pts_raw, sentido_poligonal)
+        orient = _polygon_orientation(pts)
+        _log_info(f"[AZ] Sentido normalizado: {'anti-horário' if orient == +1 else 'horário'}")
+
+        # 2) ângulos internos + concavidade
+        has_any_bulge = any(abs(float(p.get('bulge_next', 0.0))) > EPS_BULGE for p in pts)
+        _log_info(f"[AZ] has_any_bulge={has_any_bulge}")
+
+        if has_any_bulge:
+            internos_deg = _internal_angles_with_bulge(pts)
+            concavo = [a > 180.0 for a in internos_deg]
+            _log_info("[AZ] Ângulos internos: BULGE-AWARE.")
+        else:
+            internos_deg, concavo = _internal_angles_and_concavity(pts, sentido_poligonal)
+            _log_info("[AZ] Ângulos internos: LEGADO (retas).")
+
+        # 3) desenha arcos internos por dentro
+        _draw_internal_angles(msp, pts, internos_deg, sentido_poligonal, raio_frac=0.10)
+        _log_info("[AZ] Arcos internos desenhados.")
+
+        # 4) desenho do AZ depende do modo
+        if modo == "ANGULO_AZ" and ponto_az is not None and v1 is not None:
+            dx = v1[0] - ponto_az[0]; dy = v1[1] - ponto_az[1]
+            dist = math.hypot(dx, dy)
+            _log_info(f"[AZ] Dist(AZ,V1)={dist:.4f}")
+            if dist > 1e-6:
+                try:
+                    _desenhar_referencia_az(msp, ponto_az, v1, azimute)
+                    _log_info("[AZ] Referência AZ desenhada.")
+                except Exception as e:
+                    logger.error("Erro ao desenhar referência de Az: %s", e)
+                    # continua; não impedir Excel
+
+        # 5) Excel (sem reler nada)
         ordered_points_xy = [(p['x'], p['y']) for p in pts]
         total_pontos = len(ordered_points_xy)
         data = []
@@ -1361,8 +1384,7 @@ def create_memorial_descritivo(
             ponto_az_e = f"{ponto_az[0]:,.3f}".replace(",", "").replace(".", ",")
             ponto_az_n = f"{ponto_az[1]:,.3f}".replace(",", "").replace(".", ",")
         else:
-            ponto_az_e = ""
-            ponto_az_n = ""
+            ponto_az_e = ""; ponto_az_n = ""
 
         for i in range(total_pontos):
             p2 = ordered_points_xy[i]
@@ -1380,10 +1402,8 @@ def create_memorial_descritivo(
                 giro_v1_str         = giro_angular_v1_dms or ""
                 p_az_e, p_az_n      = ponto_az_e, ponto_az_n
             else:
-                distancia_az_v1_str = ""
-                azimute_az_v1_str   = ""
-                giro_v1_str         = ""
-                p_az_e, p_az_n      = "", ""
+                distancia_az_v1_str = azimute_az_v1_str = giro_v1_str = ""
+                p_az_e = p_az_n = ""
 
             data.append({
                 "V": f"V{i + 1}",
@@ -1399,34 +1419,22 @@ def create_memorial_descritivo(
                 "distancia_Az_V1": distancia_az_v1_str,
                 "Azimute Az_V1": azimute_az_v1_str,
                 "Giro Angular Az_V1_V2": giro_v1_str,
-                # ── Novos campos do ANGULO_AZ ─────────────────────────────
                 "AZIMUTE_AZ_V1_GRAUS": metrica_az.get("az_az_v1_deg", ""),
                 "DISTANCIA_AZ_V1_M":   metrica_az.get("dist_az_v1_m", ""),
                 "GIRO_V1_GRAUS":       metrica_az.get("giro_v1_deg", "")
             })
 
-            try:
-                if distance > 0.01 and 'add_label_and_distance' in globals():
-                    add_label_and_distance(msp, p2, p3, f"V{i + 1}", distance)
-            except Exception as e:
-                _log_error(f"Falha ao rotular distância do lado V{i+1}: {e}")
-
         df = pd.DataFrame(data)
 
         # ── Garantir as 3 colunas do ANGULO_AZ antes de salvar
-        cols_novas = ["AZIMUTE_AZ_V1_GRAUS", "DISTANCIA_AZ_V1_M", "GIRO_V1_GRAUS"]
-        for c in cols_novas:
+        for c in ["AZIMUTE_AZ_V1_GRAUS", "DISTANCIA_AZ_V1_M", "GIRO_V1_GRAUS"]:
             if c not in df.columns:
-                df[c] = ""  # ou pd.NA
+                df[c] = ""
 
-        # Garante diretório e salva
-        try:
-            os.makedirs(os.path.dirname(excel_file_path), exist_ok=True)
-            df.to_excel(excel_file_path, index=False)
-            _log_info(f"Excel escrito (primeira passagem): {os.path.abspath(excel_file_path)}")
-        except Exception as e:
-            _log_error(f"Falha ao salvar Excel na primeira passagem: {e}")
-            raise  # deixe a main ver o stacktrace
+        # ── CHECKPOINT 1: salvar Excel “de verdade” (sobrescreve heartbeat)
+        df.to_excel(excel_file_path, index=False)
+        _log_info(f"[AZ] Excel escrito (first pass): {os.path.abspath(excel_file_path)}")
+        assert os.path.exists(excel_file_path), "[AZ] to_excel não criou o arquivo!"
 
         # Formatação openpyxl
         try:
@@ -1450,68 +1458,17 @@ def create_memorial_descritivo(
                     cell.alignment = Alignment(horizontal="center", vertical="center")
 
             wb.save(excel_file_path)
-            _log_info(f"Excel salvo e formatado: {os.path.abspath(excel_file_path)}")
+            _log_info(f"[AZ] Excel salvo e formatado: {os.path.abspath(excel_file_path)}")
         except Exception as e:
-            _log_error(f"Falha ao formatar/salvar Excel com openpyxl: {e}")
-            raise
+            _log_error(f"[AZ] openpyxl falhou; mantendo Excel sem formatação: {e}")
 
         # Confirma existência
         if os.path.exists(excel_file_path):
-            _log_info(f"✅ Excel confirmado em disco: {os.path.abspath(excel_file_path)}")
+            _log_info(f"✅ [AZ] Excel confirmado em disco: {os.path.abspath(excel_file_path)}")
         else:
-            _log_error(f"❌ Excel NÃO encontrado após salvar: {os.path.abspath(excel_file_path)}")
+            raise RuntimeError("[AZ] Excel sumiu após salvar?")
 
-        # extras DXF (opcionais e seguros)
-        try:
-            v1_pt = ordered_points_xy[0]
-            v2_pt = ordered_points_xy[1]
-            # se existir o helper e você quiser o giro no V1 com Az:
-            if 'add_giro_angular_arc_to_dxf' in globals() and ponto_az is not None:
-                # padronize este helper para (msp, v1_pt, ponto_az, v2_pt)
-                add_giro_angular_arc_to_dxf(msp, v1_pt, ponto_az, v2_pt)
-                _log_info("Giro horário Az–V1–V2 adicionado com sucesso.")
-        except Exception as e:
-            _log_error(f"Erro ao adicionar giro angular: {e}")
-
-        try:
-            if "Vertices" not in msp.doc.layers:
-                msp.doc.layers.add("Vertices")
-        except Exception:
-            pass
-
-        # garanta a camada
-        try:
-            if "Vertices" not in msp.doc.layers:
-                msp.doc.layers.add("Vertices")
-        except Exception:
-            pass
-
-        for i, (x, y) in enumerate(ordered_points_xy):
-            try:
-                msp.add_circle(center=(x, y), radius=0.5, dxfattribs={"layer": "Vertices"})
-                msp.add_text(
-                    f"V{i + 1}",
-                    dxfattribs={
-                        "height": 0.3,
-                        "layer": "Vertices",
-                        "insert": (x + 0.30, y + 0.30)  # <<< POSIÇÃO DO RÓTULO
-                    }
-                )
-            except Exception as e:
-                logger.warning(f"Falha rotulando V{i+1}: {e}")
-
-
-        # só desenhe o arco do azimute se realmente quiser no produto FECHADA
-        # e se houver amarração (Az) válida:
-        if modo == "ANGULO_AZ" and ponto_az is not None:
-            try:
-                azim = calculate_azimuth(ponto_az, v1_pt)
-                _desenhar_referencia_az(msp, ponto_az, v1_pt, azim)
-                _log_info("Arco do Azimute Az–V1 adicionado com sucesso.")
-            except Exception as e:
-                _log_error(f"Erro ao adicionar arco do azimute: {e}")
-
-        # 6) salvar DXF final
+        # 6) salvar DXF final (não pode derrubar Excel)
         try:
             doc.saveas(dxf_output_path)
             logger.info("✅ DXF FECHADA salvo corretamente: %s", dxf_output_path)
@@ -1519,10 +1476,11 @@ def create_memorial_descritivo(
             logger.error("Erro ao salvar DXF FECHADA: %s", e)
 
     except Exception as e:
-        _log_error(f"❌ Erro ao gerar o memorial descritivo: {e}")
+        _log_error(f"❌ [AZ] Erro geral na create_memorial_descritivo: {e}")
         raise
-        
+
     return excel_file_path
+
 
 
 
