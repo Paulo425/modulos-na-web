@@ -1654,9 +1654,27 @@ def generate_final_text(df, rua, confrontantes):
 
 
 def create_memorial_document(
-    uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
-    output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
-    azimuth, distance, giro_angular_v1_dms, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
+    uuid_str,
+    proprietario,
+    matricula,
+    matricula_texto,
+    area_total,
+    cpf,
+    rgi,
+    excel_file_path,
+    template_path,
+    output_path,
+    assinatura_path,
+    ponto_amarracao,
+    azimute,
+    distancia_amarracao_v1,
+    rua,
+    cidade,
+    confrontantes,
+    area_dxf,
+    desc_ponto_amarracao,
+    perimeter_dxf,
+    giro_angular_v1_dms
 ):
 
     try:
@@ -2269,33 +2287,38 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido sem ser da planilha da poligonal aberta"
 
         create_memorial_document(
-            uuid_str=uuid_str,
-            proprietario=proprietario,
-            matricula=matricula,
-            area_total=area_total,
-            cpf=cpf,
-            rgi=rgi,
-            excel_file_path=excel_file_path,
-            template_path=template_path,
-            output_path=output_path_docx,
-            assinatura_path=assinatura_path,
-            ponto_amarracao=ponto_amarracao,
-            azimute=azimute,
-            distancia_amarracao_v1=distancia_az_v1,
-            rua=rua,
-            cidade=cidade,
-            confrontantes=confrontantes,
-            area_dxf=area_dxf,
-            desc_ponto_amarracao=desc_ponto_amarracao,
-            perimeter_dxf=perimeter_dxf,
-            giro_angular_v1_dms=giro_angular_v1_dms,
+            uuid_str,
+            proprietario,
+            matricula,
+            matricula_texto,
+            area_total,
+            cpf,
+            rgi,
+            excel_file_path,
+            template_path,
+            output_path,
+            assinatura_path,
+            ponto_amarracao,
+            azimute,
+            distancia_amarracao_v1,
+            rua,
+            cidade,
+            confrontantes,
+            area_dxf,
+            desc_ponto_amarracao,
+            perimeter_dxf,
+            giro_angular_v1_dms
         )
     else:
         logger.info("excel_file_path não definido ou inválido.")
 
     logger.info("Documento do AutoCAD fechado.")
 
-
+def create_memorial_document(
+    uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
+    output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
+    azimuth, distance, giro_angular_v1_dms, uso_solo, area_imovel, cidade, rua, comarca, RI, caminho_salvar, tipo
+):
 
 
 
