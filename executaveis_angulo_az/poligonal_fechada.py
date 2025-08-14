@@ -1932,7 +1932,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     desc_ponto_Az = dados_imovel.get("AZ", "").strip()
 
     # Diretório para salvar resultados
-    
+    matricula = matricula_texto
     os.makedirs(caminho_salvar, exist_ok=True)
 
     # Identifica tipo (SER, REM, etc)
