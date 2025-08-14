@@ -171,62 +171,24 @@ def get_document_info_from_dxf(dxf_file_path):
             return None, [], 0.0, 0.0, None, None, []
 
         # Ponto Az (TEXT → INSERT → POINT)
-        def _has_az(s: str | None) -> bool:
-            if not s:
-                return False
-            s2 = s.strip().lower()
-            return (
-                s2 == "az" or s2.startswith("az ") or s2.startswith("az:") or
-                " az " in f" {s2} " or "azimute" in s2 or "az." in s2
-            )
-
-        # 1) TEXT
-        if ponto_az is None:
-            for e in msp.query('TEXT'):
-                if _has_az(e.dxf.text):
-                    ins = e.dxf.insert
-                    ponto_az = (ins.x, ins.y, 0.0)
-                    break
-
-        # 2) MTEXT
-        if ponto_az is None:
-            for e in msp.query('MTEXT'):
-                if _has_az(e.text):
-                    ins = e.dxf.insert
-                    ponto_az = (ins.x, ins.y, 0.0)
-                    break
-
-        # 3) INSERT (nome do bloco e atributos)
-        if ponto_az is None:
-            for br in msp.query('INSERT'):
-                # pelo nome do bloco
-                if _has_az(br.dxf.name):
-                    ins = br.dxf.insert
-                    ponto_az = (ins.x, ins.y, 0.0)
-                    break
-                # pelos atributos do bloco
-                try:
-                    # algumas versões: 'attribs' é iterável, noutras é método; tratamos ambos
-                    iter_attribs = br.attribs if hasattr(br, "attribs") and not callable(br.attribs) else br.attribs()
-                    for att in iter_attribs:
-                        if _has_az(getattr(att.dxf, "text", None)):
-                            ins = br.dxf.insert
-                            ponto_az = (ins.x, ins.y, 0.0)
-                            raise StopIteration
-                except StopIteration:
-                    break
-                except Exception:
-                    pass
-
-        # 4) POINT (fallback antes do fallback final)
-        if ponto_az is None:
-            for e in msp.query('POINT'):
-                loc = e.dxf.location
-                ponto_az = (loc.x, loc.y, 0.0)
+        for entity in msp.query('TEXT'):
+            if "Az" in (entity.dxf.text or ""):
+                ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0.0)
                 break
 
-        # 5) Fallback final: primeiro vértice
         if ponto_az is None:
+            for entity in msp.query('INSERT'):
+                if "Az" in (entity.dxf.name or ""):
+                    ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0.0)
+                    break
+
+        if ponto_az is None:
+            for entity in msp.query('POINT'):
+                ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0.0)
+                break
+
+        if ponto_az is None:
+            # Fallback: primeiro vértice
             ponto_az = (ordered_points[0][0], ordered_points[0][1], 0.0)
             logger.warning("⚠️ Ponto Az não encontrado no DXF. Usando fallback (primeiro ponto).")
 
