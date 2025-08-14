@@ -1246,7 +1246,7 @@ def _internal_angles_with_bulge(points_bulge):
 def create_memorial_descritivo(
     uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
     dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-    giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario', modo="ANGULO_P1_P2",
+    giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario', modo="ANGULO_AZ",
     diretorio_concluido=None, points_bulge=None,
     metrica_az: dict | None = None    # ← NOVO (opcional)
 ):
@@ -1257,11 +1257,13 @@ def create_memorial_descritivo(
     - Só desenha AZ no modo ANGULO_AZ.
     - Gera Excel diretamente.
     """
+    
+   
+
     logger.info("[CMD] pontos_bulge recebidos: %s", len(points_bulge) if points_bulge else 0)
         # ── Normaliza metrica_az (deg e m). Se não vier, deriva do que temos.
     def _dms_to_deg(dms_texto: str) -> float | None:
         # Aceita formatos tipo "DDD°MM'SS\"" ou "DDD:MM:SS" etc.
-        import re, math
         if not dms_texto:
             return None
         s = str(dms_texto).strip().replace(" ", "")
@@ -1298,7 +1300,7 @@ def create_memorial_descritivo(
     if not lines or len(lines) < 3:
         _log_error(f"[AZ] 'lines' ausente/insuficiente (type={type(lines)}, len={0 if not lines else len(lines)}).")
         return None  # aqui sim não tem como seguir (poligonal inválida)
-
+    EPS_BULGE = 1e-9
     # 1) montar pts em modo BULGE quando houver, ou LEGADO (retas) quando não houver
     use_bulge = points_bulge is not None and len(points_bulge) >= 3
     if use_bulge:
