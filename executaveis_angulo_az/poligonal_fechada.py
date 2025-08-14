@@ -2043,38 +2043,18 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     dxf_file_path = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
 
 
-    # 🔍 Buscar planilha que COMEÇA com ABERTA_{TIPO} no diretório CONCLUIDO
-    padrao_aberta = os.path.join(diretorio_concluido, f"{uuid_str}_ABERTA_{tipo}*.xlsx")
-    planilhas_aberta = glob.glob(padrao_aberta)
-
-    if not planilhas_aberta:
-        logger.info(f"❌ Nenhuma planilha encontrada começando com 'ABERTA_{tipo}' no diretório: {diretorio_concluido}")
-        return
-
-    planilha_aberta_saida = planilhas_aberta[0]
-    logger.info(f"📄 Planilha ABERTA localizada: {planilha_aberta_saida}")
-
-   
-    if not planilhas_aberta:
-        logger.info(f"❌ Nenhuma planilha encontrada contendo 'ABERTA' e '{tipo}' no nome dentro de: {diretorio_concluido}")
-        return
-
-    planilha_aberta_saida = planilhas_aberta[0]
-    logger.info(f"📄 Planilha ABERTA localizada: {planilha_aberta_saida}")
-
-
     # 📁 Procurar CONCLUIDO dentro da cidade (REPESCAGEM_*/CONCLUIDO)
     # O diretório CONCLUIDO já é passado corretamente
     diretorio_concluido_real = diretorio_concluido
 
    
-    # 🧭 Obter ponto de amarração anterior ao V1
-    try:
-        ponto_amarracao, codigo_amarracao = obter_ponto_amarracao_anterior_v1(planilha_aberta_saida)
-        logger.info(f"📌 Ponto de amarração identificado: {codigo_amarracao} com coordenadas {ponto_amarracao}")
-    except Exception as e:
-        logger.error(f"❌ Erro ao obter ponto de amarração: {e}")
-        return
+    # # 🧭 Obter ponto de amarração anterior ao V1
+    # try:
+    #     ponto_amarracao, codigo_amarracao = obter_ponto_amarracao_anterior_v1(planilha_aberta_saida)
+    #     logger.info(f"📌 Ponto de amarração identificado: {codigo_amarracao} com coordenadas {ponto_amarracao}")
+    # except Exception as e:
+    #     logger.error(f"❌ Erro ao obter ponto de amarração: {e}")
+    #     return
 
     # 🔍 Extrair geometria do DXF
     # Extrair geometria FECHADA do DXF
