@@ -2002,9 +2002,24 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     dist_az_v1 = math.hypot(dx, dy)
 
     if dist_az_v1 > 1e-6:
-        # desenha linha, arco e rótulos “normais”
+        # Desenhar Ponto_AZ e ligação AZ→V1
+        ensure_layer(msp.doc, "Ponto_AZ", color=1)
+        ensure_layer(msp.doc, "Ligacoes_AZ", color=5)
+        msp.add_point(ponto_az_dxf, dxfattribs={"layer": "Ponto_AZ"})
+        msp.add_line(ponto_az_dxf, v1, dxfattribs={"layer": "Ligacoes_AZ"})
+
+        # Métricas
+        azimute = calculate_azimuth(ponto_az_dxf, v1)
+        giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)
+        giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
+
+        logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {dist_az_v1:.2f} m")
     else:
-        logger.info("ℹ️ AZ coincide com V1 (fallback). Suprimindo arco de azimute e rótulo de distância.")
+        logger.info("ℹ️ AZ coincide com V1 (fallback). Suprimindo arco/linha/rotulagem de AZ.")
+        # defina métricas “neutras” para não quebrar planilha:
+        azimute = 0.0
+        giro_angular_v1 = 0.0
+        giro_angular_v1_dms = "0°0'0\""
 
     # ── Validar Ponto_AZ vindo do DXF
     if not ponto_az_dxf or len(ponto_az_dxf) != 2:
