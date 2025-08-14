@@ -2103,7 +2103,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.info(f"✅ DOCX FECHADA salvo corretamente: {output_path_docx}")
 
         assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
-        desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"
+        #desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"
 
         create_memorial_document(
             uuid_str=uuid_str,
