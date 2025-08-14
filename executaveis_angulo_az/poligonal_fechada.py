@@ -2124,7 +2124,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             cidade=cidade,
             confrontantes=confrontantes,
             area_dxf=area_dxf,
-            desc_ponto_amarracao=desc_ponto_amarracao,
+            desc_ponto_amarracao=desc_ponto_Az,
             perimeter_dxf=perimeter_dxf,
             giro_angular_v1_dms=giro_angular_v1_dms,
         )
