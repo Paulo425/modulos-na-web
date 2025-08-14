@@ -1870,13 +1870,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     diretorio_concluido_real = diretorio_concluido
 
    
-    # 🧭 Obter ponto de amarração anterior ao V1
-    try:
-        ponto_amarracao, codigo_amarracao = ponto_az_dxf, "AZ"
-        logger.info(f"📌 Usando Ponto_AZ como amarração. Coord: {ponto_amarracao}")
-    except Exception as e:
-        logger.error(f"❌ Falha inesperada ao definir amarração por AZ: {e}")
-        return
+    
 
     # 🔍 Extrair geometria do DXF
     # Extrair geometria FECHADA do DXF
@@ -1900,6 +1894,14 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # ── Validar Ponto_AZ vindo do DXF
     if not ponto_az_dxf or len(ponto_az_dxf) != 2:
         raise RuntimeError("Ponto_AZ não retornado pelo DXF. Verifique a camada/objeto no desenho.")
+
+    # 🧭 Obter ponto de amarração anterior ao V1
+    try:
+        ponto_amarracao, codigo_amarracao = ponto_az_dxf, "AZ"
+        logger.info(f"📌 Usando Ponto_AZ como amarração. Coord: {ponto_amarracao}")
+    except Exception as e:
+        logger.error(f"❌ Falha inesperada ao definir amarração por AZ: {e}")
+        return
 
     # ── Desenhar o Ponto_AZ e a ligação AZ → V1
     ensure_layer(msp.doc, "Ponto_AZ", color=1)      # vermelho
@@ -2069,7 +2071,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.info(f"✅ DOCX FECHADA salvo corretamente: {output_path_docx}")
 
         assinatura_path = r"C:\Users\Paulo\Documents\CASSINHA\MEMORIAIS DESCRITIVOS\Assinatura.jpg"
-        desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido na planilha da poligonal aberta"
+        desc_ponto_amarracao = f"ponto {codigo_amarracao}, obtido sem ser da planilha da poligonal aberta"
 
         create_memorial_document(
             uuid_str=uuid_str,
