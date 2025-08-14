@@ -1922,8 +1922,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # Extrai informações
     proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
     cpf = dados_imovel.get("CPF/CNPJ", "").strip()
-    matricula = sanitize_filename(str(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "")).strip())
     matricula_texto = str(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "")).strip()
+    matricula = sanitize_filename(matricula_texto)
     descricao = dados_imovel.get("OBRA", "").strip()
     area_total = dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").replace("\t", "").replace("\n", "").strip()
     cidade = dados_imovel.get("CIDADE", "").strip().capitalize()
@@ -1932,7 +1932,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     desc_ponto_Az = dados_imovel.get("AZ", "").strip()
 
     # Diretório para salvar resultados
-    matricula = matricula_texto
+    
     os.makedirs(caminho_salvar, exist_ok=True)
 
     # Identifica tipo (SER, REM, etc)
