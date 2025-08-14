@@ -19,6 +19,7 @@ import logging
 EPS_BULGE = 1e-9  # pode ficar aqui mesmo, no topo dos helpers
 
 
+
 # Diretório para logs
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
@@ -1319,7 +1320,7 @@ def create_memorial_descritivo(
     _log_info(f"Sentido normalizado: {'anti-horário' if orient == +1 else 'horário'}")
 
     # 2) ângulos internos + concavidade (detecção BULGE vs LEGADO com base nos pts já normalizados)
-    EPS_BULGE = 1e-9
+    
     has_any_bulge = any(abs(float(p.get('bulge_next', 0.0))) > EPS_BULGE for p in pts)
 
     if has_any_bulge:
@@ -2034,9 +2035,17 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         diretorio_concluido,
         f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
     )
-    logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
 
-
+    # PROBE: testa se conseguimos escrever no caminho de saída
+    try:
+        os.makedirs(os.path.dirname(excel_file_path), exist_ok=True)
+        _probe_path = excel_file_path + ".probe.xlsx"
+        pd.DataFrame([{"ok": 1}]).to_excel(_probe_path, index=False)
+        os.remove(_probe_path)
+        logger.info(">>> [AZ] PROBE write OK em: %s", os.path.abspath(excel_file_path))
+    except Exception as e:
+        logger.error("❌ [AZ] PROBE write FALHOU em %s: %s", os.path.abspath(excel_file_path), e)
+        return
 
     logger.info(">>> [AZ] Chamando create_memorial_descritivo... destino Excel: %s", os.path.abspath(excel_file_path))
     ret_excel = None
