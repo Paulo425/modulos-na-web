@@ -1292,7 +1292,7 @@ def create_memorial_descritivo(
         diretorio_concluido,
         f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf"
     )
-
+     
     # 0) valida base
     if points_bulge is None or len(points_bulge) < 3:
         _log_error("points_bulge ausente ou insuficiente; verifique get_document_info_from_dxf.")
@@ -1980,7 +1980,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
 
     logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
-
+    # Garante que o diretório de saída do Excel existe
+    os.makedirs(diretorio_concluido, exist_ok=True)
     # Caminho do Excel de saída
     excel_file_path = os.path.join(
         diretorio_concluido,
