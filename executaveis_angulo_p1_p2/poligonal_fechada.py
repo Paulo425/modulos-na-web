@@ -1466,7 +1466,7 @@ def create_memorial_descritivo(
 
     # 0) valida base
     if points_bulge is None or len(points_bulge) < 3:
-        _log_error("points_bulge ausente ou insuficiente; verifique get_document_info_from_dxf.")
+        _log_error(f"[AZ] points_bulge ausente/insuficiente (type={type(points_bulge)}, len={0 if not points_bulge else len(points_bulge)}). Verifique get_document_info_from_dxf.")
         return None
 
     # 1) normaliza sentido
@@ -1562,31 +1562,58 @@ def create_memorial_descritivo(
             except Exception as e:
                 _log_error(f"Falha ao rotular distância do lado V{i+1}: {e}")
 
+        
         # escreve excel
         df = pd.DataFrame(data)
-        df.to_excel(excel_file_path, index=False)
 
-        wb = openpyxl.load_workbook(excel_file_path)
-        ws = wb.active
+        # ── Garantir as 3 colunas do ANGULO_AZ antes de salvar
+        cols_novas = ["AZIMUTE_AZ_V1_GRAUS", "DISTANCIA_AZ_V1_M", "GIRO_V1_GRAUS"]
+        for c in cols_novas:
+            if c not in df.columns:
+                df[c] = ""  # ou pd.NA
 
-        for cell in ws[1]:
-            cell.font = Font(bold=True)
-            cell.alignment = Alignment(horizontal="center", vertical="center")
+        # Garante diretório e salva
+        try:
+            os.makedirs(os.path.dirname(excel_file_path), exist_ok=True)
+            df.to_excel(excel_file_path, index=False)
+            _log_info(f"Excel escrito (primeira passagem): {os.path.abspath(excel_file_path)}")
+        except Exception as e:
+            _log_error(f"Falha ao salvar Excel na primeira passagem: {e}")
+            raise  # deixe a main ver o stacktrace
 
-        col_widths = {
-            "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
-            "F": 15, "G": 15, "H": 50, "I": 15,
-            "J": 15, "K": 15, "L": 20, "M": 20
-        }
-        for col, width in col_widths.items():
-            ws.column_dimensions[col].width = width
+        # Formatação openpyxl
+        try:
+            wb = openpyxl.load_workbook(excel_file_path)
+            ws = wb.active
 
-        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-            for cell in row:
+            for cell in ws[1]:
+                cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
-        wb.save(excel_file_path)
-        _log_info(f"Arquivo Excel salvo em: {excel_file_path}")
+            col_widths = {
+                "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
+                "F": 15, "G": 15, "H": 50, "I": 15,
+                "J": 15, "K": 15, "L": 20, "M": 20
+            }
+            for col, width in col_widths.items():
+                ws.column_dimensions[col].width = width
+
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+                for cell in row:
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            wb.save(excel_file_path)
+            _log_info(f"Excel salvo e formatado: {os.path.abspath(excel_file_path)}")
+        except Exception as e:
+            _log_error(f"Falha ao formatar/salvar Excel com openpyxl: {e}")
+            raise
+
+        # Confirma existência
+        if os.path.exists(excel_file_path):
+            _log_info(f"✅ Excel confirmado em disco: {os.path.abspath(excel_file_path)}")
+        else:
+            _log_error(f"❌ Excel NÃO encontrado após salvar: {os.path.abspath(excel_file_path)}")
+
 
         # extras DXF (opcionais e seguros)
         try:

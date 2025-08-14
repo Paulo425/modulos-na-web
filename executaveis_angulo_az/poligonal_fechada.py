@@ -1294,26 +1294,39 @@ def create_memorial_descritivo(
     )
      
     # 0) valida base
-    if points_bulge is None or len(points_bulge) < 3:
-        _log_error("points_bulge ausente ou insuficiente; verifique get_document_info_from_dxf.")
-        return None
+    if not lines or len(lines) < 3:
+        _log_error(f"[AZ] 'lines' ausente/insuficiente (type={type(lines)}, len={0 if not lines else len(lines)}).")
+        return None  # aqui sim não tem como seguir (poligonal inválida)
 
-    # 1) normaliza sentido
-    pts = _ensure_orientation(points_bulge, sentido_poligonal)
+    # 1) montar pts em modo BULGE quando houver, ou LEGADO (retas) quando não houver
+    use_bulge = points_bulge is not None and len(points_bulge) >= 3
+    if use_bulge:
+        pts_raw = points_bulge
+    else:
+        _log_info("[AZ] Sem bulge suficiente — usando modo LEGADO somente retas.")
+        # Geramos a lista de vértices a partir de 'lines'.
+        # Observação: no seu código, v1 = lines[0][0], v2 = lines[1][0] → usamos o [i][0] como vértice ordenado.
+        try:
+            pts_raw = [{"x": float(lines[i][0][0]), "y": float(lines[i][0][1]), "bulge_next": 0.0}
+                    for i in range(len(lines))]
+        except Exception as e:
+            _log_error(f"[AZ] Falha ao derivar vértices de 'lines' no modo LEGADO: {e}")
+            return None
+
+    # 1.1) normaliza sentido
+    pts = _ensure_orientation(pts_raw, sentido_poligonal)
     orient = _polygon_orientation(pts)
     _log_info(f"Sentido normalizado: {'anti-horário' if orient == +1 else 'horário'}")
 
-    # 2) ângulos internos + concavidade
+    # 2) ângulos internos + concavidade (detecção BULGE vs LEGADO com base nos pts já normalizados)
     EPS_BULGE = 1e-9
-
     has_any_bulge = any(abs(float(p.get('bulge_next', 0.0))) > EPS_BULGE for p in pts)
 
     if has_any_bulge:
-        internos_deg = _internal_angles_with_bulge(pts)  # usa tangentes reais (funciona também para bulge=0)
-        concavo = [a > 180.0 for a in internos_deg]      # se você quiser a flag de concavidade
+        internos_deg = _internal_angles_with_bulge(pts)  # usa tangentes reais (misto retas+arcos)
+        concavo = [a > 180.0 for a in internos_deg]
         logger.info("Ângulos internos: modo BULGE-AWARE (misto retas+arcos).")
     else:
-        # compatibilidade com sua rotina antiga quando não há bulge algum
         internos_deg, concavo = _internal_angles_and_concavity(pts, sentido_poligonal)
         logger.info("Ângulos internos: modo LEGADO (somente retas).")
 
@@ -1395,44 +1408,55 @@ def create_memorial_descritivo(
             except Exception as e:
                 _log_error(f"Falha ao rotular distância do lado V{i+1}: {e}")
 
-        # escreve excel
         df = pd.DataFrame(data)
 
-        # ── Garantir as colunas do ANGULO_AZ antes de salvar
+        # ── Garantir as 3 colunas do ANGULO_AZ antes de salvar
         cols_novas = ["AZIMUTE_AZ_V1_GRAUS", "DISTANCIA_AZ_V1_M", "GIRO_V1_GRAUS"]
         for c in cols_novas:
             if c not in df.columns:
-                df[c] = ""  # ou pd.NA se preferir manter como vazio
+                df[c] = ""  # ou pd.NA
 
-        # Salva o DataFrame no Excel (sobrescrevendo o arquivo)
-        df.to_excel(excel_file_path, index=False)
+        # Garante diretório e salva
+        try:
+            os.makedirs(os.path.dirname(excel_file_path), exist_ok=True)
+            df.to_excel(excel_file_path, index=False)
+            _log_info(f"Excel escrito (primeira passagem): {os.path.abspath(excel_file_path)}")
+        except Exception as e:
+            _log_error(f"Falha ao salvar Excel na primeira passagem: {e}")
+            raise  # deixe a main ver o stacktrace
 
-        # Formatação com openpyxl
-        wb = openpyxl.load_workbook(excel_file_path)
-        ws = wb.active
+        # Formatação openpyxl
+        try:
+            wb = openpyxl.load_workbook(excel_file_path)
+            ws = wb.active
 
-        # Cabeçalho em negrito e centralizado
-        for cell in ws[1]:
-            cell.font = Font(bold=True)
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-
-        # Ajuste de larguras das colunas
-        col_widths = {
-            "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
-            "F": 15, "G": 15, "H": 50, "I": 15,
-            "J": 15, "K": 15, "L": 20, "M": 20
-        }
-        for col, width in col_widths.items():
-            ws.column_dimensions[col].width = width
-
-        # Centralizar todo o conteúdo
-        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-            for cell in row:
+            for cell in ws[1]:
+                cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
-        wb.save(excel_file_path)
+            col_widths = {
+                "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
+                "F": 15, "G": 15, "H": 50, "I": 15,
+                "J": 15, "K": 15, "L": 20, "M": 20
+            }
+            for col, width in col_widths.items():
+                ws.column_dimensions[col].width = width
 
-        _log_info(f"Arquivo Excel salvo em: {excel_file_path}")
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+                for cell in row:
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            wb.save(excel_file_path)
+            _log_info(f"Excel salvo e formatado: {os.path.abspath(excel_file_path)}")
+        except Exception as e:
+            _log_error(f"Falha ao formatar/salvar Excel com openpyxl: {e}")
+            raise
+
+        # Confirma existência
+        if os.path.exists(excel_file_path):
+            _log_info(f"✅ Excel confirmado em disco: {os.path.abspath(excel_file_path)}")
+        else:
+            _log_error(f"❌ Excel NÃO encontrado após salvar: {os.path.abspath(excel_file_path)}")
 
         # extras DXF (opcionais e seguros)
         try:
