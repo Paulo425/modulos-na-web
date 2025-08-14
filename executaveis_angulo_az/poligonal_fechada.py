@@ -171,24 +171,59 @@ def get_document_info_from_dxf(dxf_file_path):
             return None, [], 0.0, 0.0, None, None, []
 
         # Ponto Az (TEXT → INSERT → POINT)
-        for entity in msp.query('TEXT'):
-            if "Az" in (entity.dxf.text or ""):
-                ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0.0)
-                break
+        def _has_az(s: str | None) -> bool:
+            if not s:
+                return False
+            s2 = s.strip().lower()
+            return (
+                s2 == "az" or s2.startswith("az ") or s2.startswith("az:") or
+                " az " in f" {s2} " or "azimute" in s2 or "az." in s2
+            )
 
+        # TEXT
         if ponto_az is None:
-            for entity in msp.query('INSERT'):
-                if "Az" in (entity.dxf.name or ""):
-                    ponto_az = (entity.dxf.insert.x, entity.dxf.insert.y, 0.0)
+            for e in msp.query('TEXT'):
+                if _has_az(e.dxf.text):
+                    ins = e.dxf.insert
+                    ponto_az = (ins.x, ins.y, 0.0)
                     break
 
+        # MTEXT
         if ponto_az is None:
-            for entity in msp.query('POINT'):
-                ponto_az = (entity.dxf.location.x, entity.dxf.location.y, 0.0)
+            for e in msp.query('MTEXT'):
+                if _has_az(e.text):
+                    ins = e.dxf.insert
+                    ponto_az = (ins.x, ins.y, 0.0)
+                    break
+
+        # INSERT (nome do bloco) + ATTRIBs
+        if ponto_az is None:
+            for br in msp.query('INSERT'):
+                if _has_az(br.dxf.name):
+                    ins = br.dxf.insert
+                    ponto_az = (ins.x, ins.y, 0.0)
+                    break
+                try:
+                    iter_attribs = br.attribs if hasattr(br, "attribs") and not callable(br.attribs) else br.attribs()
+                    for att in iter_attribs:
+                        if _has_az(getattr(att.dxf, "text", None)):
+                            ins = br.dxf.insert
+                            ponto_az = (ins.x, ins.y, 0.0)
+                            raise StopIteration
+                except StopIteration:
+                    break
+                except Exception:
+                    pass
+
+        # POINT
+        if ponto_az is None:
+            for e in msp.query('POINT'):
+                loc = e.dxf.location
+                ponto_az = (loc.x, loc.y, 0.0)
                 break
 
+        # Fallback final
         if ponto_az is None:
-            # Fallback: primeiro vértice
             ponto_az = (ordered_points[0][0], ordered_points[0][1], 0.0)
             logger.warning("⚠️ Ponto Az não encontrado no DXF. Usando fallback (primeiro ponto).")
 
@@ -1872,7 +1907,7 @@ def create_memorial_document(
         p.add_run("Matrícula Número: ").bold = True
         p.add_run(f"{matricula} - {rgi}")
 
-        area_total_formatada = f"{area_dxf:.2f}".replace(".", ",")
+        area_total_formatada = f"{float(str(area_dxf).replace(',', '.')):.2f}".replace(".", ",")
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área Total do Terreno: ").bold = True
         p.add_run(area_total_formatada)
@@ -1883,7 +1918,7 @@ def create_memorial_document(
 
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área de Servidão de Passagem: ").bold = True
-        p.add_run(f"{area_dxf:.2f}".replace(".", ",") + " m")
+        p.add_run(f"{float(str(area_dxf).replace(',', '.')):.2f}".replace(".", ",") + " m")
         sup = p.add_run("2")
         sup.font.superscript = True
         sup.font.size = Pt(12)
@@ -1895,7 +1930,7 @@ def create_memorial_document(
         #p.add_run("Descrição: ").bold = True
         p.add_run("Área com ").font.name = 'Arial'
 
-        run1 = p.add_run(f"{area_dxf:.2f}".replace(".", ",")+" m")
+        run1 = p.add_run(f"{float(str(area_dxf).replace(',', '.')):.2f}".replace(".", ",") + " m")
         run1.font.name = 'Arial'
         run1.font.size = Pt(12)
 
@@ -1911,12 +1946,11 @@ def create_memorial_document(
         doc_word.add_paragraph()
 
         # Coordenadas do ponto Az
-        ponto_az_1 = f"{Coorde_E_ponto_Az:.2f}".replace(".", ",")
-        ponto_az_2 = f"{Coorde_N_ponto_Az:.2f}".replace(".", ",")
-
+        ponto_az_1 = f"{float(str(Coorde_E_ponto_Az).replace(',', '.')):.2f}".replace(".", ",")
+        ponto_az_2 = f"{float(str(Coorde_N_ponto_Az).replace(',', '.')):.2f}".replace(".", ",")
 
         azimute_dms = convert_to_dms(azimuth)
-        distancia_str = f"{distance:.2f}".replace(".", ",")
+        distancia_str = f"{float(str(distancia_amarracao_v1).replace(',', '.')):.2f}".replace(".", ",")
 
         # Linha: ponto de amarração
         p = doc_word.add_paragraph(style='Normal')
@@ -1945,7 +1979,7 @@ def create_memorial_document(
         for i in range(len(df)):
             current = df.iloc[i]
             next_vertex = df.iloc[(i + 1) % len(df)]
-            distancia = f"{current['Distancia(m)']:.2f}".replace(".", ",")
+            distancia = f"{float(current['Distancia(m)']):.2f}".replace(".", ",")
             confrontante = current['Confrontante']
             giro_angular = current['Angulo Interno']
 
@@ -2217,7 +2251,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
             perimeter_dxf=perimeter_dxf,
             giro_angular_v1_dms=giro_angular_v1_dms,
             Coorde_E_ponto_Az = Coord_E_ponto_Az,
-            Coorde_N_ponto_Az = Coord_E_ponto_Az
+            Coorde_N_ponto_Az = Coord_N_ponto_Az
         )
     else:
         logger.info("excel_file_path não definido ou inválido.")
