@@ -2089,14 +2089,14 @@ def create_memorial_document(
         doc_word.add_paragraph()
 
         # Coordenadas do ponto Az
-        e_az_num = _to_float_safe(Coorde_E_ponto_Az)
-        n_az_num = _to_float_safe(Coorde_N_ponto_Az)
+        e_az_num = float(Coorde_E_ponto_Az)
+        n_az_num = float(Coorde_N_ponto_Az)
         def _fmt_coord_br(v):
             vnum = float(str(v).replace(",", "."))  # força número
             return f"{vnum:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-        ponto_az_1 = _fmt_coord_br(Coorde_E_ponto_Az)
-        ponto_az_2 = _fmt_coord_br(Coorde_N_ponto_Az)
+        ponto_az_1 = fmt_ptbr(e_az_num)  # "507.670,52"
+        ponto_az_2 = fmt_ptbr(n_az_num)
 
         azimute_dms = convert_to_dms(azimute)
         dist_v1_num = float(str(distancia_amarracao_v1).replace(",", "."))
@@ -2137,12 +2137,13 @@ def create_memorial_document(
         for i in range(len(df)):
             current = df.iloc[i]
             next_vertex = df.iloc[(i + 1) % len(df)]
-            dist_v1_num = float(str(distancia_amarracao_v1).replace(",", "."))
-            distancia_str = (
-                f"{dist_v1_num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            )
-            confrontante = current['Confrontante']
-            giro_angular = current['Angulo Interno']
+
+            # distância do SEGMENTO atual (já convertida para número antes)
+            dist_val   = float(current['Distancia(m)'])
+            distancia  = fmt_ptbr(dist_val)  # ex.: "47.456,98"
+
+            confrontante  = current['Confrontante']
+            giro_angular  = current['Angulo Interno']  # se vier numérico e você quiser DMS, converta aqui
 
             p = doc_word.add_paragraph(style='Normal')
             p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
@@ -2172,6 +2173,7 @@ def create_memorial_document(
             p.add_run(next_vertex['V']).bold = True
             p.add_run(";")
             doc_word.add_paragraph()
+
 
         # Parágrafos descritivos
         p = doc_word.add_paragraph(style='Normal')
@@ -2308,8 +2310,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         s = f"{v:,.2f}"           # 1,234,567.89
         return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
-    Coord_E_ponto_Az = _fmt_brl2(ponto_az_dxf[0])
-    Coord_N_ponto_Az = _fmt_brl2(ponto_az_dxf[1])
+    Coord_E_ponto_Az = float(ponto_az_dxf[0])
+    Coord_N_ponto_Az = float(ponto_az_dxf[1])
 
     # === 3) AGORA SIM: GERAR O DXF LIMPO (para uso dentro do create_memorial_descritivo) ===
     dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
