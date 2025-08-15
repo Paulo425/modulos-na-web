@@ -2051,12 +2051,13 @@ def create_memorial_document(
         p.add_run("Matrícula Número: ").bold = True
         p.add_run(f"{matricula} - {rgi}")
 
-        area_total_num = _to_float_safe(area_total)
-        area_total_formatada = fmt_ptbr(area_total_num)
+        
+        area_total_formatada = fmt_ptbr(area_total)  # aceita "1312000.00m²" ou 1312000.0
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área Total do Terreno: ").bold = True
         p.add_run(area_total_formatada)
         
+        area_dxf_num = _to_float_safe(area_dxf)
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área de Servidão de Passagem: ").bold = True
         p.add_run(fmt_ptbr(area_dxf_num))
@@ -2093,8 +2094,8 @@ def create_memorial_document(
         def fmt_coord_pt(v):
             return fmt_ptbr(_to_float_safe(v))
 
-        ponto_az_1 = fmt_coord_pt(Coorde_E_ponto_Az)
-        ponto_az_2 = fmt_coord_pt(Coorde_N_ponto_Az)
+        ponto_az_1 = fmt_ptbr(Coorde_E_ponto_Az)
+        ponto_az_2 = fmt_ptbr(Coorde_N_ponto_Az)
 
         azimute_dms = convert_to_dms(azimute)
         dist_v1_num = _to_float_safe(distancia_amarracao_v1)
