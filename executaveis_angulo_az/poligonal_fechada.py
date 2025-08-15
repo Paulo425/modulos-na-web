@@ -18,6 +18,8 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import logging
 EPS_BULGE = 1e-9  # pode ficar aqui mesmo, no topo dos helpers
 import sys
+from seu_modulo import add_az_marker_to_dxf
+
 
 # Diretório para logs
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -72,6 +74,113 @@ MESES_PT_BR = {
     'November': 'novembro',
     'December': 'dezembro'
 }
+
+
+def add_az_marker_to_dxf(
+    doc_dxf,
+    ponto_az,            # (x, y) ou (x, y, z)
+    v1,                  # (x, y) do V1
+    azimute_deg,         # float (0..360)
+    distancia_az_v1,     # float (em metros) -> novo
+    *,
+    layer="Az_Marker",
+    north_len=8.0,
+    text_height=0.6,
+    arc_radius=5.0,
+    draw_minor_arc=False
+):
+    """Rótulo 'Az', marcador Norte, arco do azimute + rótulo
+       e rótulo da distância sobre a reta Az→V1 (sem set_pos)."""
+
+    def to_dms_string(deg):
+        d = abs(deg)
+        g = int(d)
+        m = int((d - g) * 60)
+        s = (d - g - m/60) * 3600
+        sign = "-" if deg < 0 else ""
+        return f"{sign}{g}°{m}'{s:.2f}\""
+
+    msp = doc_dxf.modelspace()
+
+    # Garante a layer
+    try:
+        if layer not in doc_dxf.layers:
+            doc_dxf.layers.new(name=layer)
+    except Exception:
+        pass
+
+    ax, ay = ponto_az[0], ponto_az[1]
+    v1x, v1y = v1[0], v1[1]
+
+    # 1) Rótulo "Az"
+    az_text = msp.add_text("Az", dxfattribs={"height": text_height, "layer": layer})
+    az_text.dxf.insert = (ax, ay)
+
+    # 2) Marcador do Norte e rótulo "N"
+    msp.add_line((ax, ay), (ax, ay + north_len), dxfattribs={"layer": layer})
+    n_text = msp.add_text("N", dxfattribs={"height": text_height, "layer": layer})
+    n_text.dxf.insert = (ax, ay + north_len + text_height * 1.2)
+
+    # 3) Linha Az→V1 (referência)
+    msp.add_line((ax, ay), (v1x, v1y), dxfattribs={"layer": layer})
+
+    # 3.1) Rótulo da distância sobre a reta (NOVO)
+    dx, dy = (v1x - ax), (v1y - ay)
+    seg_len = math.hypot(dx, dy) or 1.0
+    ux, uy = dx / seg_len, dy / seg_len                  # unitário ao longo da reta
+    px, py = -uy, ux                                     # unitário perpendicular (esquerda)
+
+    # ponto médio + pequeno offset perpendicular (para não "sentar" na linha)
+    midx = (ax + v1x) / 2.0
+    midy = (ay + v1y) / 2.0
+    offset = text_height * 1.0                           # ajuste fino aqui se quiser
+    mid_shift = (midx + px * offset, midy + py * offset)
+
+    rot_deg = math.degrees(math.atan2(dy, dx)) % 360.0   # rotação do texto na direção da reta
+    dist_label = f"D = {distancia_az_v1:.2f} m"
+
+    dist_text = msp.add_text(
+        dist_label,
+        dxfattribs={
+            "height": text_height,
+            "layer": layer,
+            "rotation": rot_deg
+        }
+    )
+    dist_text.dxf.insert = mid_shift
+
+    # 4) Arco do azimute (de Norte até direção Az→V1) + rótulo
+    ang_auto = math.degrees(math.atan2(dy, dx)) % 360    # 0°=E, 90°=N, CCW
+    north_auto = 90.0
+
+    if draw_minor_arc:
+        delta_ccw = (ang_auto - north_auto) % 360
+        if delta_ccw <= 180:
+            start_ang, end_ang = north_auto, ang_auto
+        else:
+            start_ang, end_ang = ang_auto, north_auto
+    else:
+        # arco com extensão igual ao azimute (N→direção, sentido horário)
+        start_ang, end_ang = ang_auto, north_auto
+
+    msp.add_arc(
+        center=(ax, ay),
+        radius=arc_radius,
+        start_angle=start_ang,
+        end_angle=end_ang,
+        dxfattribs={"layer": layer}
+    )
+
+    arc_len_ccw = (end_ang - start_ang) % 360
+    mid_ang = (start_ang + arc_len_ccw / 2.0) % 360
+    mid_rad = math.radians(mid_ang)
+    label_r = arc_radius + text_height * 2.0
+    label_pos = (ax + label_r * math.cos(mid_rad), ay + label_r * math.sin(mid_rad))
+
+    az_label = f"Az = {to_dms_string(azimute_deg)}"
+    lbl = msp.add_text(az_label, dxfattribs={"height": text_height, "layer": layer})
+    lbl.dxf.insert = label_pos
+
 
 def calcular_area_poligonal(pontos):
     """Calcula a área da poligonal fechada usando a fórmula shoelace."""
@@ -1851,6 +1960,8 @@ def generate_final_text(df, rua, confrontantes):
     )
     return final_text
 
+def fmt_ptbr(v: float) -> str:
+    return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def create_memorial_document(
     uuid_str,
@@ -1927,7 +2038,7 @@ def create_memorial_document(
         p.add_run(f"{matricula} - {rgi}")
 
         area_dxf_num = _to_float_safe(area_dxf)
-        area_total_formatada = f"{area_dxf_num:.2f}".replace(".", ",")
+        area_total_formatada = f"{area_dxf_num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área Total do Terreno: ").bold = True
         p.add_run(area_total_formatada)
@@ -1938,9 +2049,9 @@ def create_memorial_document(
 
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área de Servidão de Passagem: ").bold = True
-        p.add_run(f"{area_dxf_num:.2f}".replace(".", ",") + " m")
-        run1 = p.add_run(f"{area_dxf_num:.2f}".replace(".", ",") + " m")
-        sup = p.add_run("2")
+        p.add_run(fmt_ptbr(area_dxf_num))        # ex.: 47.456,98
+        p.add_run(" m")
+        sup = p.add_run("2")                     # m²
         sup.font.superscript = True
         sup.font.size = Pt(12)
 
@@ -1987,7 +2098,7 @@ def create_memorial_document(
 
         p.add_run("O ponto ")
         p.add_run("Az").bold = True
-        p.add_run(f", ponto de amarração, está localizado na {ponto_amarracao} nas coordenadas E(X) {ponto_az_1} e N(Y) {ponto_az_2}.")
+        p.add_run(f", ponto de amarração, está localizado na {desc_ponto_amarracao} nas coordenadas E(X) {ponto_az_1} e N(Y) {ponto_az_2}.")
 
         p.paragraph_format.space_after = Pt(12)  # ⬅️ Força um espaçamento abaixo do parágrafo
 
@@ -2191,6 +2302,20 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         return
 
     logger.info(f"📐 Área da poligonal (limpa): {area_dxf:.6f} m²")
+
+    #AQUI É DESENHADO O ARCO DE AZIMUTE DO PONTO_AZ PARA O VERTICE V1 E MAIS DISTANCIA E TODOS OS ROTULOS
+    add_az_marker_to_dxf(
+    doc_dxf=doc,                  # DXF LIMPO (onde você quer desenhar)
+    ponto_az=ponto_az_dxf,        # do DXF ORIGINAL
+    v1=v1,                        # do ORIGINAL (já definido antes)
+    azimute_deg=azimute,          # do ORIGINAL
+    distancia_az_v1=distancia_az_v1,  # do ORIGINAL
+    layer="Az_Marker",
+    north_len=8.0,
+    text_height=0.6,
+    arc_radius=5.0,
+    draw_minor_arc=False          # True se quiser o arco menor entre N e a direção
+
     dxf_filename = os.path.basename(dxf_file_path)
 
      
