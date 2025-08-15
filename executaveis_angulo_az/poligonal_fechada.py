@@ -2087,43 +2087,6 @@ def find_excel_file(directory, keywords):
     return None
 
 
-
-#função não pode ser usada para LINUX       
-# def convert_docx_to_pdf(output_path, pdf_file_path):
-#     """
-#     Converte um arquivo DOCX para PDF usando a biblioteca comtypes.
-#     """
-#     try:
-#         # Verificar se o arquivo DOCX existe antes de abrir
-#         if not os.path.exists(output_path):
-#             raise FileNotFoundError(f"Arquivo DOCX não encontrado: {output_path}")
-        
-#         print(f"Tentando converter o arquivo DOCX: {output_path} para PDF: {pdf_file_path}")
-
-#         word = comtypes.client.CreateObject("Word.Application")
-#         word.Visible = False  # Ocultar a interface do Word
-#         doc = word.Documents.Open(output_path)
-        
-#         # Aguardar alguns segundos antes de salvar como PDF
-#         import time
-#         time.sleep(2)
-
-#         #doc.SaveAs(pdf_file_path, FileFormat=17)  # 17 corresponde ao formato PDF
-#         doc.Close()
-#         word.Quit()
-#         #print(f"Arquivo PDF salvo com sucesso em: {pdf_file_path}")
-#     except FileNotFoundError as fnf_error:
-#         print(f"Erro: {fnf_error}")
-#     except Exception as e:
-#         print(f"Erro ao converter DOCX para PDF: {e}")
-#     finally:
-#         try:
-#             word.Quit()
-#         except:
-#             pass  # Garantir que o Word seja fechado
-
-
-
 def sanitize_filename(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
@@ -2182,13 +2145,16 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_path)
 
     # Pare aqui se não houver geometria válida
-    if not (doc_orig and lines):
+    if not (doc and lines):
         logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento (original).")
         pythoncom.CoUninitialize()
         return
-
+    
     v1 = lines[0][0]
     v2 = lines[1][0]
+
+    if ponto_az_dxf and v1 and abs(ponto_az_dxf[0]-v1[0])<1e-6 and abs(ponto_az_dxf[1]-v1[1])<1e-6:
+        logger.warning("⚠️ Ponto Az parece ser fallback (igual ao V1). Verifique o DXF original.")
 
     # === 2) CALCULAR VARIÁVEIS DERIVADAS (a partir do ORIGINAL) ===
     azimute = calculate_azimuth(ponto_az_dxf, v1)
@@ -2197,7 +2163,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
     logger.info(f"📐 Área da poligonal (original): {area_dxf:.6f} m²")
-    logger.info(f"📐 Perímetro da poligonal (original): {perimeter_dxf:.6f} m²")
+    logger.info(f"📐 Perímetro da poligonal (original): {perimeter_dxf:.6f} m")
     logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
 
     def _fmt_brl2(v: float) -> str:
@@ -2211,18 +2177,23 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
     dxf_file_path  = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
 
-    # Reabrir o DXF LIMPO para passar às rotinas que editam/salvam o DXF
-    doc = ezdxf.readfile(dxf_file_path)
-    msp = doc.modelspace()
+    # Notar que aqui embaixo se refere ao dxf limpo com nome dxf_file_path o de cima é simplesmente o original dxf_path
+    doc, lines, perimeter_dxf, area_dxf, _ponto_az_ignorar, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
+    if not (doc and lines):
+        logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento (limpo).")
+        pythoncom.CoUninitialize()
+        return
+
+    logger.info(f"📐 Área da poligonal (limpa): {area_dxf:.6f} m²")
     dxf_filename = os.path.basename(dxf_file_path)
 
-   
+     
     # Caminho do Excel de saída
     excel_file_path = os.path.join(
         diretorio_concluido,
         f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx"
     )
-    logger.info(f"✅ Excel FECHADA salvo corretamente: {excel_file_path}")
+    logger.info(f"✅ Excel será gerada em: {excel_file_path}")
 
     # 🛠 Criar memorial e Excel (passe modo e pts_bulge)
     create_memorial_descritivo(
