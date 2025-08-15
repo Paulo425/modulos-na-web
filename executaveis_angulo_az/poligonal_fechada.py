@@ -18,7 +18,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import logging
 EPS_BULGE = 1e-9  # pode ficar aqui mesmo, no topo dos helpers
 import sys
-from seu_modulo import add_az_marker_to_dxf
+
 
 
 # Diretório para logs
