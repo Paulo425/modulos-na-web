@@ -1969,19 +1969,25 @@ def create_memorial_document(
         # Coordenadas do ponto Az
         e_az_num = _to_float_safe(Coorde_E_ponto_Az)
         n_az_num = _to_float_safe(Coorde_N_ponto_Az)
-        ponto_az_1 = f"{e_az_num:.2f}".replace(".", ",")
-        ponto_az_2 = f"{n_az_num:.2f}".replace(".", ",")
+        def fmt_coord_pt(v):
+            if isinstance(v, (int, float)):
+                return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            # já é string formatada (mantém)
+            return str(v)
 
-        azimute_dms = convert_to_dms(azimuth)
+        ponto_az_1 = fmt_coord_pt(Coorde_E_ponto_Az)
+        ponto_az_2 = fmt_coord_pt(Coorde_N_ponto_Az)
+
+        azimute_dms = convert_to_dms(azimute)
         dist_v1_num = _to_float_safe(distancia_amarracao_v1)
-        distancia_str = f"{dist_v1_num:.2f}".replace(".", ",")
+        distancia_str = f"{distancia_amarracao_v1:.2f}".replace(".", ",")
         # Linha: ponto de amarração
         p = doc_word.add_paragraph(style='Normal')
         p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
 
         p.add_run("O ponto ")
         p.add_run("Az").bold = True
-        p.add_run(f", ponto de amarração, está localizado na {desc_ponto_Az} nas coordenadas E(X) {ponto_az_1} e N(Y) {ponto_az_2}.")
+        p.add_run(f", ponto de amarração, está localizado na {ponto_amarracao} nas coordenadas E(X) {ponto_az_1} e N(Y) {ponto_az_2}.")
 
         p.paragraph_format.space_after = Pt(12)  # ⬅️ Força um espaçamento abaixo do parágrafo
 
