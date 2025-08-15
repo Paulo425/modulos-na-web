@@ -2051,29 +2051,29 @@ def create_memorial_document(
         p.add_run("Matrícula Número: ").bold = True
         p.add_run(f"{matricula} - {rgi}")
 
-        area_total_num = _to_float_safe(area_total)
-        area_total_formatada = fmt_ptbr(area_total_num)  # aceita "1312000.00m²" ou 1312000.0
+        area_total_formatada = str(area_total).replace(".", ",")  # igual ao ANGULO_P1_P2
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área Total do Terreno: ").bold = True
         p.add_run(area_total_formatada)
         
-        area_dxf_num = _to_float_safe(area_dxf)
+        # área do DXF pode vir float ou string com vírgula
+        area_dxf_num = float(str(area_dxf).replace(",", "."))  # força número
+        area_dxf_formatada = (
+            f"{area_dxf_num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        )
+
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área de Servidão de Passagem: ").bold = True
-        p.add_run(fmt_ptbr(area_dxf_num))
-        p.add_run(" m")
-        sup = p.add_run("2")
-        sup.font.superscript = True
-        sup.font.size = Pt(12)
+        run1 = p.add_run(f"{area_dxf_formatada} m"); run1.font.name = 'Arial'; run1.font.size = Pt(12)
+        run2 = p.add_run("2"); run2.font.name = 'Arial'; run2.font.size = Pt(12); run2.font.superscript = True
 
         doc_word.add_paragraph()
 
         p = doc_word.add_paragraph(style='Normal')
         p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        #p.add_run("Descrição: ").bold = True
         p.add_run("Área com ").font.name = 'Arial'
 
-        run1 = p.add_run(fmt_ptbr(area_dxf_num) + " m")
+        run1 = p.add_run(f"{area_dxf_formatada} m")
         run1.font.name = 'Arial'
         run1.font.size = Pt(12)
 
@@ -2091,15 +2091,19 @@ def create_memorial_document(
         # Coordenadas do ponto Az
         e_az_num = _to_float_safe(Coorde_E_ponto_Az)
         n_az_num = _to_float_safe(Coorde_N_ponto_Az)
-        def fmt_coord_pt(v):
-            return fmt_ptbr(_to_float_safe(v))
+        def _fmt_coord_br(v):
+            vnum = float(str(v).replace(",", "."))  # força número
+            return f"{vnum:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-        ponto_az_1 = fmt_ptbr(Coorde_E_ponto_Az)
-        ponto_az_2 = fmt_ptbr(Coorde_N_ponto_Az)
+        ponto_az_1 = _fmt_coord_br(Coorde_E_ponto_Az)
+        ponto_az_2 = _fmt_coord_br(Coorde_N_ponto_Az)
 
         azimute_dms = convert_to_dms(azimute)
-        dist_v1_num = _to_float_safe(distancia_amarracao_v1)   # já existe acima
-        distancia_str = fmt_ptbr(dist_v1_num) 
+        dist_v1_num = float(str(distancia_amarracao_v1).replace(",", "."))
+        distancia_str = (
+            f"{dist_v1_num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        )
+        
         # Linha: ponto de amarração
         p = doc_word.add_paragraph(style='Normal')
         p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
@@ -2133,7 +2137,10 @@ def create_memorial_document(
         for i in range(len(df)):
             current = df.iloc[i]
             next_vertex = df.iloc[(i + 1) % len(df)]
-            distancia = fmt_ptbr(_to_float_safe(current['Distancia(m)']))
+            dist_v1_num = float(str(distancia_amarracao_v1).replace(",", "."))
+            distancia_str = (
+                f"{dist_v1_num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
             confrontante = current['Confrontante']
             giro_angular = current['Angulo Interno']
 
