@@ -2051,8 +2051,8 @@ def create_memorial_document(
         p.add_run("Matrícula Número: ").bold = True
         p.add_run(f"{matricula} - {rgi}")
 
-        
-        area_total_formatada = fmt_ptbr(area_total)  # aceita "1312000.00m²" ou 1312000.0
+        area_total_num = _to_float_safe(area_total)
+        area_total_formatada = fmt_ptbr(area_total_num)  # aceita "1312000.00m²" ou 1312000.0
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área Total do Terreno: ").bold = True
         p.add_run(area_total_formatada)
@@ -2121,13 +2121,19 @@ def create_memorial_document(
         p.add_run(", origem da área descrição, alinhado com a rua " + rua + ".")
         p.paragraph_format.space_after = Pt(12)  # ⬅️ FORÇA espaçamento após esse parágrafo
 
+        print("DEBUG types:",
+            type(area_total), type(area_dxf),
+            type(Coorde_E_ponto_Az), type(Coorde_N_ponto_Az),
+            type(distancia_amarracao_v1))
+        print("DEBUG sample Distancia(m):", df['Distancia(m)'].head().tolist())
+
 
 
         # ➤ Percorrer vértices
         for i in range(len(df)):
             current = df.iloc[i]
             next_vertex = df.iloc[(i + 1) % len(df)]
-            distancia = f"{float(current['Distancia(m)']):.2f}".replace(".", ",")
+            distancia = fmt_ptbr(_to_float_safe(current['Distancia(m)']))
             confrontante = current['Confrontante']
             giro_angular = current['Angulo Interno']
 
