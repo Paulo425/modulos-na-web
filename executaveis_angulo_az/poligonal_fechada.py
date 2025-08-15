@@ -2051,21 +2051,17 @@ def create_memorial_document(
         p.add_run("Matrícula Número: ").bold = True
         p.add_run(f"{matricula} - {rgi}")
 
-        area_dxf_num = _to_float_safe(area_dxf)
-        area_total_formatada = f"{area_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        area_total_num = _to_float_safe(area_total)
+        area_total_formatada = fmt_ptbr(area_total_num)
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área Total do Terreno: ").bold = True
         p.add_run(area_total_formatada)
-
-        # p = doc_word.add_paragraph(style='Normal')
-        # p.add_run("Proprietário: ").bold = True
-        # p.add_run(f"{proprietario} - CPF/CNPJ: {cpf}")
-
+        
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área de Servidão de Passagem: ").bold = True
-        p.add_run(fmt_ptbr(area_dxf_num))        # ex.: 47.456,98
+        p.add_run(fmt_ptbr(area_dxf_num))
         p.add_run(" m")
-        sup = p.add_run("2")                     # m²
+        sup = p.add_run("2")
         sup.font.superscript = True
         sup.font.size = Pt(12)
 
@@ -2095,10 +2091,7 @@ def create_memorial_document(
         e_az_num = _to_float_safe(Coorde_E_ponto_Az)
         n_az_num = _to_float_safe(Coorde_N_ponto_Az)
         def fmt_coord_pt(v):
-            if isinstance(v, (int, float)):
-                return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            # já é string formatada (mantém)
-            return str(v)
+            return fmt_ptbr(_to_float_safe(v))
 
         ponto_az_1 = fmt_coord_pt(Coorde_E_ponto_Az)
         ponto_az_2 = fmt_coord_pt(Coorde_N_ponto_Az)
