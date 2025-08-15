@@ -137,7 +137,7 @@ def add_az_marker_to_dxf(
     mid_shift = (midx + px * offset, midy + py * offset)
 
     rot_deg = math.degrees(math.atan2(dy, dx)) % 360.0   # rotação do texto na direção da reta
-    dist_label = f"D = {distancia_az_v1:.2f} m"
+    dist_label = f"{distancia_az_v1:.2f} "
 
     dist_text = msp.add_text(
         dist_label,
@@ -177,7 +177,7 @@ def add_az_marker_to_dxf(
     label_r = arc_radius + text_height * 2.0
     label_pos = (ax + label_r * math.cos(mid_rad), ay + label_r * math.sin(mid_rad))
 
-    az_label = f"Az = {to_dms_string(azimute_deg)}"
+    az_label = f"Azimute = {to_dms_string(azimute_deg)}"
     lbl = msp.add_text(az_label, dxfattribs={"height": text_height, "layer": layer})
     lbl.dxf.insert = label_pos
 
@@ -745,11 +745,36 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
                     dxfattribs={"layer": "GiroAZ"})
         print("Arco do giro angular traçado com sucesso.")
 
-        # ── 8) rótulo no meio do setor (tratando wrap-around) ────────────────
-        label_offset   = 3.0
-        desloc_x, desloc_y = 3.0, -3.0
-        sweep_ccw = (angle_az - angle_v2) % 360
-        angle_middle = math.radians((angle_v2 + sweep_ccw / 2.0) % 360)
+    #     # ── 8) rótulo no meio do setor (tratando wrap-around) ────────────────
+    #     label_offset   = 3.0
+    #     desloc_x, desloc_y = 3.0, -3.0
+    #     sweep_ccw = (angle_az - angle_v2) % 360
+    #     angle_middle = math.radians((angle_v2 + sweep_ccw / 2.0) % 360)
+
+    #     label_position = (
+    #         v1[0] + (label_offset + desloc_x) * math.cos(angle_middle),
+    #         v1[1] + (label_offset + desloc_y) * math.sin(angle_middle),
+    #     )
+
+    #     giro_angular_dms = f"Giro Angular: {convert_to_dms(giro_angular)}"
+
+    #     txt = msp.add_text(
+    #         giro_angular_dms,
+    #         dxfattribs={'height': 0.3, 'layer': 'Labels'}
+        
+    #     ).set_dxf_attrib('insert', label_position)
+
+    #     print(f"Rótulo do giro angular ({giro_angular_dms}) adicionado com sucesso.")
+
+    # except Exception as e:
+    #     print(f"Erro ao adicionar o arco do giro angular ao DXF: {e}")
+
+
+    # ── 8) rótulo no meio do setor (tratando wrap-around) ────────────────
+        label_offset        = 3.0
+        desloc_x, desloc_y  = 3.0, -3.0
+        sweep_ccw           = (angle_az - angle_v2) % 360
+        angle_middle        = math.radians((angle_v2 + sweep_ccw / 2.0) % 360)
 
         label_position = (
             v1[0] + (label_offset + desloc_x) * math.cos(angle_middle),
@@ -760,14 +785,21 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
 
         txt = msp.add_text(
             giro_angular_dms,
-            dxfattribs={'height': 0.3, 'layer': 'Labels'}
-        
-        ).set_dxf_attrib('insert', label_position)
+            dxfattribs={'height': 0.2, 'layer': 'Labels'}
+        )
+        # posição e orientação horizontal
+        txt.dxf.insert    = label_position
+        txt.dxf.rotation  = 0  # <- HORIZONTAL
+
+        # (opcional) centralizar no ponto
+        try:
+            txt.dxf.halign      = 1  # CENTER
+            txt.dxf.valign      = 2  # MIDDLE
+            txt.dxf.align_point = label_position
+        except Exception:
+            pass
 
         print(f"Rótulo do giro angular ({giro_angular_dms}) adicionado com sucesso.")
-
-    except Exception as e:
-        print(f"Erro ao adicionar o arco do giro angular ao DXF: {e}")
 
 
 
@@ -2038,7 +2070,7 @@ def create_memorial_document(
         p.add_run(f"{matricula} - {rgi}")
 
         area_dxf_num = _to_float_safe(area_dxf)
-        area_total_formatada = f"{area_dxf_num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        area_total_formatada = f"{area_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área Total do Terreno: ").bold = True
         p.add_run(area_total_formatada)
