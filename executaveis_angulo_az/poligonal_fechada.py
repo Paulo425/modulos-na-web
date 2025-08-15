@@ -495,7 +495,26 @@ def create_arrow_block(doc, block_name="ARROW"):
     base2 = (base_half_length, -length)
 
     block.add_solid([base1, base2, tip])
-import math
+
+def _to_float_safe(val):
+    s = str(val).strip().replace(' ', '')
+    # Caso tenha vírgula e ponto: trate a ÚLTIMA ocorrência como decimal
+    if ',' in s and '.' in s:
+        if s.rfind(',') > s.rfind('.'):
+            # vírgula é decimal → remove todos os pontos (milhar) e troca vírgula por ponto
+            s = s.replace('.', '').replace(',', '.')
+        else:
+            # ponto é decimal → remove todas as vírgulas (milhar)
+            s = s.replace(',', '')
+    elif ',' in s:
+        # só vírgula → vírgula é decimal; remova pontos de milhar por segurança
+        s = s.replace('.', '').replace(',', '.')
+    elif s.count('.') > 1:
+        # só pontos e mais de um → mantenha o ÚLTIMO como decimal
+        i = s.rfind('.')
+        s = s[:i].replace('.', '') + '.' + s[i+1:]
+    return float(s)
+
 
 # def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=1.0):
 #     """
@@ -1866,9 +1885,9 @@ def create_memorial_document(
         confrontantes = df['Confrontante'].dropna().tolist()
 
         # Processa colunas numéricas
-        df['Distancia(m)'] = df['Distancia(m)'].str.replace(',', '.').astype(float)
-        df['E'] = df['E'].str.replace(',', '').astype(float)
-        df['N'] = df['N'].str.replace(',', '').astype(float)
+        df['Distancia(m)'] = df['Distancia(m)'].apply(_to_float_safe)
+        df['E'] = df['E'].apply(_to_float_safe)
+        df['N'] = df['N'].apply(_to_float_safe)
 
         # Calcular perímetro e área
         perimeter = df['Distancia(m)'].sum()
@@ -1907,7 +1926,8 @@ def create_memorial_document(
         p.add_run("Matrícula Número: ").bold = True
         p.add_run(f"{matricula} - {rgi}")
 
-        area_total_formatada = f"{float(str(area_dxf).replace(',', '.')):.2f}".replace(".", ",")
+        area_dxf_num = _to_float_safe(area_dxf)
+        area_total_formatada = f"{area_dxf_num:.2f}".replace(".", ",")
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área Total do Terreno: ").bold = True
         p.add_run(area_total_formatada)
@@ -1918,7 +1938,8 @@ def create_memorial_document(
 
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área de Servidão de Passagem: ").bold = True
-        p.add_run(f"{float(str(area_dxf).replace(',', '.')):.2f}".replace(".", ",") + " m")
+        p.add_run(f"{area_dxf_num:.2f}".replace(".", ",") + " m")
+        run1 = p.add_run(f"{area_dxf_num:.2f}".replace(".", ",") + " m")
         sup = p.add_run("2")
         sup.font.superscript = True
         sup.font.size = Pt(12)
@@ -1946,12 +1967,14 @@ def create_memorial_document(
         doc_word.add_paragraph()
 
         # Coordenadas do ponto Az
-        ponto_az_1 = f"{float(str(Coorde_E_ponto_Az).replace(',', '.')):.2f}".replace(".", ",")
-        ponto_az_2 = f"{float(str(Coorde_N_ponto_Az).replace(',', '.')):.2f}".replace(".", ",")
+        e_az_num = _to_float_safe(Coorde_E_ponto_Az)
+        n_az_num = _to_float_safe(Coorde_N_ponto_Az)
+        ponto_az_1 = f"{e_az_num:.2f}".replace(".", ",")
+        ponto_az_2 = f"{n_az_num:.2f}".replace(".", ",")
 
         azimute_dms = convert_to_dms(azimuth)
-        distancia_str = f"{float(str(distancia_amarracao_v1).replace(',', '.')):.2f}".replace(".", ",")
-
+        dist_v1_num = _to_float_safe(distancia_amarracao_v1)
+        distancia_str = f"{dist_v1_num:.2f}".replace(".", ",")
         # Linha: ponto de amarração
         p = doc_word.add_paragraph(style='Normal')
         p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
@@ -2153,28 +2176,29 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     confrontantes_df = pd.read_excel(arquivos_encontrados[0])
     confrontantes = confrontantes_df.iloc[:, 1].dropna().tolist()
 
-    # DXF limpo
-    # ⚠️ Substitui a limpeza anterior por apenas conversão R2010
-    dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
-    dxf_file_path = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
-
-
-    # 📁 Procurar CONCLUIDO dentro da cidade (REPESCAGEM_*/CONCLUIDO)
-    # O diretório CONCLUIDO já é passado corretamente
-    diretorio_concluido_real = diretorio_concluido
-
-   
-    # # 🧭 Obter ponto de amarração anterior ao V1
-    # try:
-    #     ponto_amarracao, codigo_amarracao = obter_ponto_amarracao_anterior_v1(planilha_aberta_saida)
-    #     logger.info(f"📌 Ponto de amarração identificado: {codigo_amarracao} com coordenadas {ponto_amarracao}")
-    # except Exception as e:
-    #     logger.error(f"❌ Erro ao obter ponto de amarração: {e}")
-    #     return
 
     # 🔍 Extrair geometria do DXF
     # Extrair geometria FECHADA do DXF
-    doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
+    doc, lines, perimeter_dxf, area_dxf, ponto_az_dxf, msp, pts_bulge = get_document_info_from_dxf(dxf_path)
+
+    # Pare aqui se não houver geometria válida
+    if not (doc_orig and lines):
+        logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento (original).")
+        pythoncom.CoUninitialize()
+        return
+
+    v1 = lines[0][0]
+    v2 = lines[1][0]
+
+    # === 2) CALCULAR VARIÁVEIS DERIVADAS (a partir do ORIGINAL) ===
+    azimute = calculate_azimuth(ponto_az_dxf, v1)
+    distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
+    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)
+    giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
+
+    logger.info(f"📐 Área da poligonal (original): {area_dxf:.6f} m²")
+    logger.info(f"📐 Perímetro da poligonal (original): {perimeter_dxf:.6f} m²")
+    logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
 
     def _fmt_brl2(v: float) -> str:
         s = f"{v:,.2f}"           # 1,234,567.89
@@ -2183,25 +2207,16 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     Coord_E_ponto_Az = _fmt_brl2(ponto_az_dxf[0])
     Coord_N_ponto_Az = _fmt_brl2(ponto_az_dxf[1])
 
-    # Pare aqui se não houver geometria válida
-    if not (doc and lines):
-        logger.info("Nenhuma linha foi encontrada ou não foi possível acessar o documento.")
-        pythoncom.CoUninitialize()
-        return
+    # === 3) AGORA SIM: GERAR O DXF LIMPO (para uso dentro do create_memorial_descritivo) ===
+    dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
+    dxf_file_path  = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
 
-    logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
+    # Reabrir o DXF LIMPO para passar às rotinas que editam/salvam o DXF
+    doc = ezdxf.readfile(dxf_file_path)
+    msp = doc.modelspace()
+    dxf_filename = os.path.basename(dxf_file_path)
 
-    v1 = lines[0][0]
-    v2 = lines[1][0]
-
-    # Use o ponto retornado pela função
-    azimute = calculate_azimuth(ponto_az_dxf, v1)
-    distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
-    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)
-    giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
-
-    logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
-
+   
     # Caminho do Excel de saída
     excel_file_path = os.path.join(
         diretorio_concluido,
