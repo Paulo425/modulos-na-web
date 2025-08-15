@@ -692,18 +692,17 @@ def _to_float_safe(val):
 
 
 
-
 def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
     """
     Adiciona um arco representando o giro angular (setor entre V1→V2 e V1→Az)
     no modelspace do DXF já aberto. Aceita tanto 'doc' quanto 'msp' como 1º parâmetro.
     """
     try:
-        # ── 1) normaliza msp/doc ─────────────────────────────────────────────
+        # 1) normaliza msp/doc
         msp = doc_dxf if hasattr(doc_dxf, "add_line") else doc_dxf.modelspace()
         doc = msp.doc
 
-        # ── 2) garante camadas (opcional) ────────────────────────────────────
+        # 2) garante camadas (opcional)
         try:
             if "GiroAZ" not in doc.layers:
                 doc.layers.new("GiroAZ")
@@ -712,11 +711,11 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
         except Exception:
             pass
 
-        # ── 3) reta V1–Az (debug/apoio) ──────────────────────────────────────
+        # 3) reta V1–Az (debug/apoio)
         msp.add_line(start=v1[:2], end=az[:2], dxfattribs={"layer": "GiroAZ"})
         print("Linha entre V1 e Az traçada com sucesso.")
 
-        # ── 4) helper de deslocamento com proteção ───────────────────────────
+        # 4) helper de deslocamento com proteção
         def calculate_displacement(point1, point2, distance):
             dx = point2[0] - point1[0]
             dy = point2[1] - point1[1]
@@ -728,11 +727,11 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
                 point1[1] + (dy / magnitude) * distance,
             )
 
-        # ── 5) pontos de apoio a partir de V1 ────────────────────────────────
+        # 5) pontos de apoio a partir de V1
         ponto_inicial = calculate_displacement(v1, v2, radius)  # na direção V1→V2
         ponto_final   = calculate_displacement(v1, az, radius)  # na direção V1→Az
 
-        # ── 6) ângulos (em graus) ────────────────────────────────────────────
+        # 6) ângulos (em graus)
         angle_v2 = math.degrees(math.atan2(ponto_inicial[1] - v1[1], ponto_inicial[0] - v1[0]))
         angle_az = math.degrees(math.atan2(ponto_final[1] - v1[1],   ponto_final[0] - v1[0]))
 
@@ -740,37 +739,17 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
         giro_angular = (angle_az - angle_v2) % 360
         print(f"Giro angular calculado corretamente: {giro_angular:.2f}°")
 
-        # ── 7) arco CCW de angle_v2 → angle_az ───────────────────────────────
-        msp.add_arc(center=v1[:2], radius=radius, start_angle=angle_v2, end_angle=angle_az,
-                    dxfattribs={"layer": "GiroAZ"})
+        # 7) arco CCW de angle_v2 → angle_az
+        msp.add_arc(
+            center=v1[:2],
+            radius=radius,
+            start_angle=angle_v2,
+            end_angle=angle_az,
+            dxfattribs={"layer": "GiroAZ"}
+        )
         print("Arco do giro angular traçado com sucesso.")
 
-    #     # ── 8) rótulo no meio do setor (tratando wrap-around) ────────────────
-    #     label_offset   = 3.0
-    #     desloc_x, desloc_y = 3.0, -3.0
-    #     sweep_ccw = (angle_az - angle_v2) % 360
-    #     angle_middle = math.radians((angle_v2 + sweep_ccw / 2.0) % 360)
-
-    #     label_position = (
-    #         v1[0] + (label_offset + desloc_x) * math.cos(angle_middle),
-    #         v1[1] + (label_offset + desloc_y) * math.sin(angle_middle),
-    #     )
-
-    #     giro_angular_dms = f"Giro Angular: {convert_to_dms(giro_angular)}"
-
-    #     txt = msp.add_text(
-    #         giro_angular_dms,
-    #         dxfattribs={'height': 0.3, 'layer': 'Labels'}
-        
-    #     ).set_dxf_attrib('insert', label_position)
-
-    #     print(f"Rótulo do giro angular ({giro_angular_dms}) adicionado com sucesso.")
-
-    # except Exception as e:
-    #     print(f"Erro ao adicionar o arco do giro angular ao DXF: {e}")
-
-
-    # ── 8) rótulo no meio do setor (tratando wrap-around) ────────────────
+        # 8) rótulo no meio do setor (tratando wrap-around) — HORIZONTAL
         label_offset        = 3.0
         desloc_x, desloc_y  = 3.0, -3.0
         sweep_ccw           = (angle_az - angle_v2) % 360
@@ -787,9 +766,8 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
             giro_angular_dms,
             dxfattribs={'height': 0.2, 'layer': 'Labels'}
         )
-        # posição e orientação horizontal
-        txt.dxf.insert    = label_position
-        txt.dxf.rotation  = 0  # <- HORIZONTAL
+        txt.dxf.insert   = label_position
+        txt.dxf.rotation = 0  # HORIZONTAL
 
         # (opcional) centralizar no ponto
         try:
@@ -800,6 +778,10 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
             pass
 
         print(f"Rótulo do giro angular ({giro_angular_dms}) adicionado com sucesso.")
+
+    except Exception as e:
+        print(f"Erro ao adicionar o arco do giro angular ao DXF: {e}")
+
 
 
 
