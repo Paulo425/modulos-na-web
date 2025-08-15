@@ -2073,7 +2073,7 @@ def create_memorial_document(
         #p.add_run("Descrição: ").bold = True
         p.add_run("Área com ").font.name = 'Arial'
 
-        run1 = p.add_run(f"{float(str(area_dxf).replace(',', '.')):.2f}".replace(".", ",") + " m")
+        run1 = p.add_run(fmt_ptbr(area_dxf_num) + " m")
         run1.font.name = 'Arial'
         run1.font.size = Pt(12)
 
@@ -2098,8 +2098,8 @@ def create_memorial_document(
         ponto_az_2 = fmt_ptbr(Coorde_N_ponto_Az)
 
         azimute_dms = convert_to_dms(azimute)
-        dist_v1_num = _to_float_safe(distancia_amarracao_v1)
-        distancia_str = f"{distancia_amarracao_v1:.2f}".replace(".", ",")
+        dist_v1_num = _to_float_safe(distancia_amarracao_v1)   # já existe acima
+        distancia_str = fmt_ptbr(dist_v1_num) 
         # Linha: ponto de amarração
         p = doc_word.add_paragraph(style='Normal')
         p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
