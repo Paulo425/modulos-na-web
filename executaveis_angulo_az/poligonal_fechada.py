@@ -2315,7 +2315,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     text_height=0.6,
     arc_radius=5.0,
     draw_minor_arc=False          # True se quiser o arco menor entre N e a direção
-
+    )
+    
     dxf_filename = os.path.basename(dxf_file_path)
 
      
