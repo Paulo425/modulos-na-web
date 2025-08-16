@@ -1114,24 +1114,35 @@ def _rebuild_lines_from_points(pts):
     n = len(pts)
     return [(pts[i], pts[(i+1) % n]) for i in range(n)]
 
-def rotate_polygon_start_at_v1(lines, pts_bulge, v1_target, tol=1e-6):
+def rotate_polygon_start_at_v1(lines, pts_bulge, v1_target, sentido_poligonal="", tol=1e-4):
     """
-    Reindexa para que o 1º ponto seja exatamente v1_target.
-    Retorna (lines_rot, pts_bulge_rot, idx)
+    Reordena 'lines' ([(p_i, p_{i+1})...]) e 'pts_bulge' para que o primeiro
+    vértice seja o mais próximo de v1_target. Se for anti-horário, dá 1 passo extra.
     """
-    pts = [seg[0] for seg in lines]  # p0..p(n-1)
-    idx = None
-    for i, p in enumerate(pts):
-        if _near_xy(p, v1_target, tol):
-            idx = i
-            break
-    if idx is None:
-        return lines, pts_bulge, None  # não achou: mantém
+    if not lines:
+        return lines, pts_bulge, None
 
-    pts_rot = _rotate_list(pts, idx)
-    lines_rot = _rebuild_lines_from_points(pts_rot)
-    pts_bulge_rot = _rotate_list(pts_bulge, idx) if pts_bulge else pts_bulge
-    return lines_rot, pts_bulge_rot, idx
+    import math
+    def dist2(a, b): 
+        return (a[0]-b[0])**2 + (a[1]-b[1])**2
+
+    # índice do vértice mais próximo de v1_target
+    verts = [seg[0] for seg in lines]
+    idx = min(range(len(verts)), key=lambda i: dist2(verts[i], v1_target))
+
+    # roda para começar em idx
+    lines = lines[idx:] + lines[:idx]
+    pts_bulge = pts_bulge[idx:] + pts_bulge[:idx]
+    rot_idx = idx
+
+    # se for anti-horário, ande uma casa no “sentido horário” desejado
+    if str(sentido_poligonal).lower().startswith("anti"):
+        lines = lines[1:] + lines[:1]
+        pts_bulge = pts_bulge[1:] + pts_bulge[:1]
+        rot_idx = (idx + 1) % len(verts)
+
+    return lines, pts_bulge, rot_idx
+
 
 
 # nomes de layers “típicas” onde você pode marcar o AZ
@@ -2368,11 +2379,14 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
 
     # >>> garanta que o vértice onde chega AZ (v1 do ORIGINAL) vire o V1 do LIMPO:
-    lines, pts_bulge, rot_idx = rotate_polygon_start_at_v1(lines, pts_bulge, v1)
+    # reindexa para que o V1 do LIMPO seja o vértice onde chega Az–V1 (do ORIGINAL)
+    lines, pts_bulge, rot_idx = rotate_polygon_start_at_v1(
+        lines, pts_bulge, v1, sentido_poligonal
+    )
     if rot_idx is not None:
-        logger.info(f"Reindexei a poligonal: o V1 agora é o vértice onde chega Az–V1 (idx {rot_idx}).")
+        logger.info(f"Reindexei a poligonal: V1 agora está no vértice de Az–V1 (idx {rot_idx}).")
     else:
-        logger.warning("Não consegui casar o V1 (original) com algum vértice do DXF limpo — mantendo ordem original.")
+        logger.warning("Não consegui reindexar; mantendo ordem original.")
 
 
 
