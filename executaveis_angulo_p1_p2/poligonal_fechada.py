@@ -2137,8 +2137,21 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
 
+    # v1 = lines[0][0]
+    # v2 = lines[1][0]
+
     v1 = lines[0][0]
-    v2 = lines[1][0]
+    v_next = lines[1][0]   # V2 (seguindo a ordem da polyline)
+    v_prev = lines[-1][0]  # V28 (vizinho “anterior”)
+
+    # Use o vizinho conforme o sentido escolhido na UI
+    if str(sentido_poligonal).lower().startswith("anti"):
+        v2_for_arc = v_prev     # anti-horário → vizinho “anterior” (V28)
+    else:
+        v2_for_arc = v_next     # horário → vizinho “seguinte” (V2)
+
+    if ponto_az_dxf and v1 and abs(ponto_az_dxf[0]-v1[0])<1e-6 and abs(ponto_az_dxf[1]-v1[1])<1e-6:
+        logger.warning("⚠️ Ponto Az parece ser fallback (igual ao V1). Verifique o DXF original.")
 
     # Use o ponto retornado pela função
     azimute = calculate_azimuth(ponto_az_dxf, v1)
