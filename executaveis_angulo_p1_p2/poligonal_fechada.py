@@ -2137,6 +2137,17 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     logger.info(f"📐 Área da poligonal: {area_dxf:.6f} m²")
 
+    # >>> Fixar V1 no vértice tocado pela poligonal aberta (usa ponto_amarracao)
+    def _dist2(a, b):
+        dx = a[0] - b[0]; dy = a[1] - b[1]
+        return dx*dx + dy*dy
+
+    cand1 = lines[0][0]      # V1 atual
+    cand2 = lines[-1][0]     # “V28” (vizinho anterior)
+    target_v1 = cand1 if _dist2(cand1, ponto_amarracao) <= _dist2(cand2, ponto_amarracao) else cand2
+
+    lines, pts_bulge, _ = rotate_polygon_start_at_v1(lines, pts_bulge, target_v1, sentido_poligonal)
+
     # v1 = lines[0][0]
     # v2 = lines[1][0]
 
