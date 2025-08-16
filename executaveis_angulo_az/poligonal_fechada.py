@@ -692,7 +692,7 @@ def _to_float_safe(val):
 
 
 
-def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
+def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2_for_arc, radius=2.0):
     """
     Adiciona um arco representando o giro angular (setor entre V1→V2 e V1→Az)
     no modelspace do DXF já aberto. Aceita tanto 'doc' quanto 'msp' como 1º parâmetro.
@@ -712,8 +712,8 @@ def add_giro_angular_arc_to_dxf(doc_dxf, v1, az, v2, radius=2.0):
             pass
 
         # 3) reta V1–Az (debug/apoio)
-        msp.add_line(start=v1[:2], end=az[:2], dxfattribs={"layer": "GiroAZ"})
-        print("Linha entre V1 e Az traçada com sucesso.")
+        # msp.add_line(start=v1[:2], end=az[:2], dxfattribs={"layer": "GiroAZ"})
+        # print("Linha entre V1 e Az traçada com sucesso.")
 
         # 4) helper de deslocamento com proteção
         def calculate_displacement(point1, point2, distance):

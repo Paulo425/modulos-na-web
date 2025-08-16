@@ -1081,7 +1081,7 @@ def _draw_internal_angles(msp, points, internos_deg, sentido_poligonal, raio_fra
                 'height': 0.7,
                 'layer': 'Labels',
                 'insert': pos,
-                'rotation': mid if mid <= 180 else mid - 180
+                'rotation': 0,              # ← força horizontal
             }
         )
 
