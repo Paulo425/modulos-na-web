@@ -187,8 +187,6 @@ def add_az_marker_to_dxf(
     # ===== 5) GIRO ANGULAR Az–V1–V2 (pivot em V1) =====
     # Requer v2 e sentido; desenha o arco certo independente da ordem dos vértices.
     if draw_giro and (v2 is not None):
-        import math
-
         v1x, v1y = float(v1[0]), float(v1[1])
         azx, azy  = float(ponto_az[0]), float(ponto_az[1])
         v2x, v2y  = float(v2[0]), float(v2[1])
