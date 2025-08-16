@@ -83,6 +83,9 @@ def add_az_marker_to_dxf(
     azimute_deg,         # float (0..360)
     distancia_az_v1,     # float (em metros) -> novo
     *,
+    v2=None,             # ⬅️ NOVO: (x, y) do V2 (vizinho correto)
+    sentido=None,        # ⬅️ NOVO: 'horario' | 'anti_horario'
+    draw_giro=True,      # ⬅️ NOVO: desenhar o arco do Giro Angular
     layer="Az_Marker",
     north_len=8.0,
     text_height=0.6,
@@ -180,6 +183,76 @@ def add_az_marker_to_dxf(
     az_label = f"Azimute = {to_dms_string(azimute_deg)}"
     lbl = msp.add_text(az_label, dxfattribs={"height": text_height, "layer": layer})
     lbl.dxf.insert = label_pos
+
+    # ===== 5) GIRO ANGULAR Az–V1–V2 (pivot em V1) =====
+    # Requer v2 e sentido; desenha o arco certo independente da ordem dos vértices.
+    if draw_giro and (v2 is not None):
+        import math
+
+        v1x, v1y = float(v1[0]), float(v1[1])
+        azx, azy  = float(ponto_az[0]), float(ponto_az[1])
+        v2x, v2y  = float(v2[0]), float(v2[1])
+
+        # ângulos (0..360) das direções a partir de V1
+        a_az = math.degrees(math.atan2(azy - v1y, azx - v1x)) % 360.0
+        a_v2 = math.degrees(math.atan2(v2y - v1y, v2x - v1x)) % 360.0
+
+        # medida CCW de V1→Az para V1→V2
+        delta_ccw = (a_v2 - a_az) % 360.0
+
+        sentido_s = (sentido or "").lower()
+        if sentido_s.startswith("anti"):  # Giro anti-horário
+            giro = delta_ccw
+            start = a_az
+            end   = (a_az + giro) % 360.0
+        else:  # Giro horário
+            giro = (360.0 - delta_ccw) % 360.0
+            # add_arc desenha CCW, então para representar um giro horário de "giro" graus,
+            # desenhamos CCW de (a_az - giro) → a_az
+            start = (a_az - giro) % 360.0
+            end   = a_az
+
+        # raio do arco do giro (use o mesmo arc_radius, ou ajuste se quiser)
+        giro_radius = arc_radius
+
+        # arco do giro em V1
+        msp.add_arc(
+            center=(v1x, v1y),
+            radius=giro_radius,
+            start_angle=start,
+            end_angle=end,
+            dxfattribs={"layer": layer}
+        )
+
+        # rótulo do giro — sempre horizontal
+        sweep = (end - start) % 360.0
+        mid   = (start + sweep/2.0) % 360.0
+        mid_r = math.radians(mid)
+        lbl_r = giro_radius + text_height*1.2
+        lbl_pt = (v1x + lbl_r*math.cos(mid_r), v1y + lbl_r*math.sin(mid_r))
+
+        # usa convert_to_dms se existir; senão, fallback no to_dms_string local
+        try:
+            giro_txt = f"Giro Angular: {convert_to_dms(giro)}"
+        except NameError:
+            giro_txt = f"Giro Angular: {to_dms_string(giro)}"
+
+        t = msp.add_text(
+            giro_txt,
+            dxfattribs={"height": text_height, "layer": layer}
+        )
+        t.dxf.insert   = lbl_pt
+        t.dxf.rotation = 0  # horizontal
+        try:
+            t.dxf.halign      = 1  # CENTER
+            t.dxf.valign      = 2  # MIDDLE
+            t.dxf.align_point = lbl_pt
+        except Exception:
+            pass
+
+
+
+
 
 
 def calcular_area_poligonal(pontos):
@@ -2395,6 +2468,8 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         v1=v1,
         azimute_deg=azimute,
         distancia_az_v1=distancia_az_v1,
+        v2=v2_for_arc,               # ⬅️ passe o vizinho correto já escolhido
+        sentido=sentido_poligonal,   # ⬅️ 'horario' | 'anti_horario'
         layer="Az_Marker",
         north_len=8.0,
         text_height=0.6,
@@ -2403,7 +2478,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     )
 
     # --- GIRO Az–V1–V2 (arco + rótulo), usando o vizinho correto
-    add_giro_angular_arc_to_dxf(msp, v1, ponto_az_dxf, v2_for_arc, radius=2.0)
+    #add_giro_angular_arc_to_dxf(msp, v1, ponto_az_dxf, v2_for_arc, radius=2.0)
 
     dxf_filename = os.path.basename(dxf_file_path)
 
