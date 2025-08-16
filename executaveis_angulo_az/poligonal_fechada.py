@@ -1104,6 +1104,36 @@ def add_angle_visualization_to_dwg(msp, ordered_points, angulos_decimais, sentid
 
 #HELPERS ESPECIFICOS SOMENTE PARA O ANGULO_AZ
 
+def _near_xy(a, b, tol=1e-6):
+    return abs(a[0]-b[0]) <= tol and abs(a[1]-b[1]) <= tol
+
+def _rotate_list(lst, i):
+    return lst[i:] + lst[:i]
+
+def _rebuild_lines_from_points(pts):
+    n = len(pts)
+    return [(pts[i], pts[(i+1) % n]) for i in range(n)]
+
+def rotate_polygon_start_at_v1(lines, pts_bulge, v1_target, tol=1e-6):
+    """
+    Reindexa para que o 1º ponto seja exatamente v1_target.
+    Retorna (lines_rot, pts_bulge_rot, idx)
+    """
+    pts = [seg[0] for seg in lines]  # p0..p(n-1)
+    idx = None
+    for i, p in enumerate(pts):
+        if _near_xy(p, v1_target, tol):
+            idx = i
+            break
+    if idx is None:
+        return lines, pts_bulge, None  # não achou: mantém
+
+    pts_rot = _rotate_list(pts, idx)
+    lines_rot = _rebuild_lines_from_points(pts_rot)
+    pts_bulge_rot = _rotate_list(pts_bulge, idx) if pts_bulge else pts_bulge
+    return lines_rot, pts_bulge_rot, idx
+
+
 # nomes de layers “típicas” onde você pode marcar o AZ
 _AZ_LAYER_HINTS = {"AZ", "PONTO_AZ", "AMARRACAO", "AMARRAÇÃO", "AZIMUTE", "AZ_POINT", "AZ_PONTO"}
 
@@ -2336,6 +2366,17 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     logger.info(f"📐 Área da poligonal (limpa): {area_dxf:.6f} m²")
 
+
+    # >>> garanta que o vértice onde chega AZ (v1 do ORIGINAL) vire o V1 do LIMPO:
+    lines, pts_bulge, rot_idx = rotate_polygon_start_at_v1(lines, pts_bulge, v1)
+    if rot_idx is not None:
+        logger.info(f"Reindexei a poligonal: o V1 agora é o vértice onde chega Az–V1 (idx {rot_idx}).")
+    else:
+        logger.warning("Não consegui casar o V1 (original) com algum vértice do DXF limpo — mantendo ordem original.")
+
+
+
+
     #AQUI É DESENHADO O ARCO DE AZIMUTE DO PONTO_AZ PARA O VERTICE V1 E MAIS DISTANCIA E TODOS OS ROTULOS
     add_az_marker_to_dxf(
     doc_dxf=doc,                  # DXF LIMPO (onde você quer desenhar)
@@ -2350,6 +2391,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     draw_minor_arc=False          # True se quiser o arco menor entre N e a direção
     )
     
+    # ➕ DESENHAR O GIRO Az–V1–V2 COM O VIZINHO CORRETO (NÃO DESENHAR LINHAS!)
+    add_giro_angular_arc_to_dxf(msp, v1, ponto_az_dxf, v2_for_arc, radius=2.0)
+
     dxf_filename = os.path.basename(dxf_file_path)
 
      
