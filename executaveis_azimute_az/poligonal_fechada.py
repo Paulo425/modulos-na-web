@@ -1383,7 +1383,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         caminho_salvar=caminho_salvar,
         excel_file_path=excel_saida,
         ponto_az=ponto_az_dxf,
-        distance_az_v1=distancia_az_v1,
+        distancia_az_v1=distancia_az_v1,
         azimute_az_v1=azimute_v1,
         tipo=tipo,
         sentido_poligonal=sentido_poligonal
