@@ -499,7 +499,7 @@ def gerar_memorial_azimute_az():
         try:
             comando = [
                 sys.executable,
-                os.path.join(BASE_DIR, "executaveis_azimute_p1_p2", "main.py"),
+                os.path.join(BASE_DIR, "executaveis_azimute_az", "main.py"),
                 cidade, caminho_excel, caminho_dxf, sentido_poligonal
             ]
 
