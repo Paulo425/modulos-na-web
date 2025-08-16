@@ -427,6 +427,28 @@ def calculate_polygon_area(points):
         area += x1 * y2 - x2 * y1
     return abs(area) / 2.0
 
+def _carregar_confrontantes(uuid_str, tipo, diretorio_preparado):
+    padrao = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+    matches = glob.glob(padrao)
+    if not matches:
+        logger.warning(f"Planilha FECHADA não encontrada: {padrao}")
+        return []
+    caminho = matches[0]
+    try:
+        df = pd.read_excel(caminho)
+    except Exception as e:
+        logger.error(f"Falha ao ler planilha FECHADA {caminho}: {e}")
+        return []
+
+    # tenta localizar a coluna confrontante de forma tolerante
+    cols = {str(c).strip().lower(): c for c in df.columns}
+    col_confrontante = cols.get('confrontante')
+    if not col_confrontante:
+        logger.warning("Coluna 'Confrontante' não encontrada; prosseguindo com lista vazia.")
+        return []
+
+    return df[col_confrontante].fillna('').astype(str).tolist()
+
 
 def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
     """
@@ -1322,16 +1344,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     if not arquivos_encontrados:
         logger.error(f"❌ Planilha confrontantes FECHADA não encontrada: {padrao_busca}")
         return
+    confrontantes = _carregar_confrontantes(uuid_str, tipo, diretorio_preparado)
 
-    # antes da chamada:
-    conf_df = pd.read_excel(excel_confrontantes)
-    if 'Confrontante' in conf_df.columns:
-        confrontantes = [str(x).strip() for x in conf_df['Confrontante'].fillna('')]
-    else:
-        logger.warning("Planilha FECHADA sem coluna 'Confrontante'; usando valores vazios.")
-        confrontantes = []
-
-   # 4) Ler geometria do DXF ORIGINAL
+    # 4) Ler geometria do DXF ORIGINAL
     doc0, lines0, perimeter0, area0, ponto_az_dxf, msp0, pts_bulge0 = get_document_info_from_dxf(dxf_path)
     if not (doc0 and lines0):
         logger.error("❌ Nenhuma polilinha fechada encontrada no DXF original.")
