@@ -1678,7 +1678,34 @@ def create_memorial_descritivo(
 
     return excel_file_path
 
+def rotate_polygon_start_at_v1(lines, pts_bulge, v1_target, sentido_poligonal="", tol=1e-4):
+    """
+    Reordena 'lines' ([(p_i, p_{i+1})...]) e 'pts_bulge' para que o primeiro
+    vértice seja o mais próximo de v1_target. Se for anti-horário, dá 1 passo extra.
+    """
+    if not lines:
+        return lines, pts_bulge, None
 
+    import math
+    def dist2(a, b): 
+        return (a[0]-b[0])**2 + (a[1]-b[1])**2
+
+    # índice do vértice mais próximo de v1_target
+    verts = [seg[0] for seg in lines]
+    idx = min(range(len(verts)), key=lambda i: dist2(verts[i], v1_target))
+
+    # roda para começar em idx
+    lines = lines[idx:] + lines[:idx]
+    pts_bulge = pts_bulge[idx:] + pts_bulge[:idx]
+    rot_idx = idx
+
+    # se for anti-horário, ande uma casa no “sentido horário” desejado
+    if str(sentido_poligonal).lower().startswith("anti"):
+        lines = lines[1:] + lines[:1]
+        pts_bulge = pts_bulge[1:] + pts_bulge[:1]
+        rot_idx = (idx + 1) % len(verts)
+
+    return lines, pts_bulge, rot_idx
 
 
 
