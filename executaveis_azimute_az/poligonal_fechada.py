@@ -916,4 +916,4 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         print("Erro ao processar o arquivo DXF.")
 
 
-
+#ATUALIZANDO
