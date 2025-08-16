@@ -2309,7 +2309,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # === 2) CALCULAR VARIÁVEIS DERIVADAS (a partir do ORIGINAL) ===
     azimute = calculate_azimuth(ponto_az_dxf, v1)
     distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
-    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2 for arc)
+    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2_for_arc)
     giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
     logger.info(f"📐 Área da poligonal (original): {area_dxf:.6f} m²")
