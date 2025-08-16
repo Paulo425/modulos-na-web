@@ -2388,25 +2388,31 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     else:
         logger.warning("Não consegui reindexar; mantendo ordem original.")
 
+    # RE-PEGAR V1 E O VIZINHO NO DXF LIMPO (após rotação)
+    v1_clean       = lines[0][0]
+    v_next_clean   = lines[1][0]
+    v_prev_clean   = lines[-1][0]
+    v2_for_arc_clean = v_prev_clean if str(sentido_poligonal).lower().startswith("anti") else v_next_clean
 
 
 
     #AQUI É DESENHADO O ARCO DE AZIMUTE DO PONTO_AZ PARA O VERTICE V1 E MAIS DISTANCIA E TODOS OS ROTULOS
     add_az_marker_to_dxf(
-    doc_dxf=doc,                  # DXF LIMPO (onde você quer desenhar)
-    ponto_az=ponto_az_dxf,        # do DXF ORIGINAL
-    v1=v1,                        # do ORIGINAL (já definido antes)
-    azimute_deg=azimute,          # do ORIGINAL
-    distancia_az_v1=distancia_az_v1,  # do ORIGINAL
-    layer="Az_Marker",
-    north_len=8.0,
-    text_height=0.6,
-    arc_radius=5.0,
-    draw_minor_arc=False          # True se quiser o arco menor entre N e a direção
+        doc_dxf=doc,
+        ponto_az=ponto_az_dxf,
+        v1=v1_clean,                 # <-- era v1
+        azimute_deg=azimute,
+        distancia_az_v1=distancia_az_v1,
+        layer="Az_Marker",
+        north_len=8.0,
+        text_height=0.6,
+        arc_radius=5.0,
+        draw_minor_arc=False
     )
-    
-    # ➕ DESENHAR O GIRO Az–V1–V2 COM O VIZINHO CORRETO (NÃO DESENHAR LINHAS!)
-    add_giro_angular_arc_to_dxf(msp, v1, ponto_az_dxf, v2_for_arc, radius=2.0)
+
+    add_giro_angular_arc_to_dxf(
+        msp, v1_clean, ponto_az_dxf, v2_for_arc_clean, radius=2.0   # <-- era v1, v2_for_arc
+    )
 
     dxf_filename = os.path.basename(dxf_file_path)
 
