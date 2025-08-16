@@ -195,20 +195,10 @@ def add_az_marker_to_dxf(
         a_az = math.degrees(math.atan2(azy - v1y, azx - v1x)) % 360.0
         a_v2 = math.degrees(math.atan2(v2y - v1y, v2x - v1x)) % 360.0
 
-        # medida CCW de V1→Az para V1→V2
-        delta_ccw = (a_v2 - a_az) % 360.0
-
-        sentido_s = (sentido or "").lower()
-        if sentido_s.startswith("anti"):  # Giro anti-horário
-            giro = delta_ccw
-            start = a_az
-            end   = (a_az + giro) % 360.0
-        else:  # Giro horário
-            giro = (360.0 - delta_ccw) % 360.0
-            # add_arc desenha CCW, então para representar um giro horário de "giro" graus,
-            # desenhamos CCW de (a_az - giro) → a_az
-            start = (a_az - giro) % 360.0
-            end   = a_az
+        # Giro HORÁRIO SEMPRE: de V1→Az para V1→V2
+        giro  = (a_az - a_v2) % 360.0          # valor do giro em graus (horário)
+        start = (a_az - giro) % 360.0          # add_arc é CCW ⇒ desenhe de (Az - giro) → Az
+        end   = a_az
 
         # raio do arco do giro (use o mesmo arc_radius, ou ajuste se quiser)
         giro_radius = arc_radius
