@@ -1488,7 +1488,7 @@ def _draw_internal_angles(msp, points, internos_deg, sentido_poligonal, raio_fra
                 'height': 0.7,
                 'layer': 'Labels',
                 'insert': pos,
-                'rotation': mid if mid <= 180 else mid - 180
+                'rotation': 0,              # ← força horizontal
             }
         )
 
@@ -2290,8 +2290,18 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         pythoncom.CoUninitialize()
         return
     
+    # v1 = lines[0][0]
+    # v2 = lines[1][0]
+
     v1 = lines[0][0]
-    v2 = lines[1][0]
+    v_next = lines[1][0]   # V2 (seguindo a ordem da polyline)
+    v_prev = lines[-1][0]  # V28 (vizinho “anterior”)
+
+    # Use o vizinho conforme o sentido escolhido na UI
+    if str(sentido_poligonal).lower().startswith("anti"):
+        v2_for_arc = v_prev     # anti-horário → vizinho “anterior” (V28)
+    else:
+        v2_for_arc = v_next     # horário → vizinho “seguinte” (V2)
 
     if ponto_az_dxf and v1 and abs(ponto_az_dxf[0]-v1[0])<1e-6 and abs(ponto_az_dxf[1]-v1[1])<1e-6:
         logger.warning("⚠️ Ponto Az parece ser fallback (igual ao V1). Verifique o DXF original.")
@@ -2299,7 +2309,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # === 2) CALCULAR VARIÁVEIS DERIVADAS (a partir do ORIGINAL) ===
     azimute = calculate_azimuth(ponto_az_dxf, v1)
     distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
-    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2)
+    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2 for arc)
     giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
     logger.info(f"📐 Área da poligonal (original): {area_dxf:.6f} m²")
