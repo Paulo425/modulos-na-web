@@ -904,11 +904,32 @@ def add_az_marker_to_dxf(
 #     return excel_output_path
 
 def create_memorial_descritivo(
-    uuid_str, doc, lines, proprietario, matricula, caminho_salvar, confrontantes, ponto_az,
-    dxf_file_path, area_dxf, azimute, v1, msp, dxf_filename, excel_file_path, tipo,
-    giro_angular_v1_dms, distancia_az_v1, sentido_poligonal='horario', modo="ANGULO_P1_P2",
+    uuid_str,
+    doc,
+    lines,
+    proprietario,
+    matricula,
+    caminho_salvar,
+    confrontantes,          # lista de strings (ou [])
+    ponto_az,               # tupla (x, y) ou None
+    dxf_file_path,
+    area_dxf,
+    azimute,                # float (graus decimais Az→V1)
+    v1,                     # tupla (x, y)
+    msp,
+    dxf_filename,
+    excel_file_path,        # caminho do XLSX de SAÍDA
+    tipo,
+    giro_angular_v1_dms,    # string DMS ou None
+    distancia_az_v1,        # float ou None
+    *,
+    sentido_poligonal="horario",
+    modo="AZIMUTE_AZ",
+    points_bulge=None,      # lista de pontos com bulge (do parser)
     diretorio_concluido=None,
-    points_bulge=None
+    # aliases aceitos (para chamadas antigas):
+    azimute_az_v1=None,
+    distance_az_v1=None,
 ):
     """
     DXF já vem tratado do pipeline (sem reler aqui):
@@ -1302,7 +1323,13 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         logger.error(f"❌ Planilha confrontantes FECHADA não encontrada: {padrao_busca}")
         return
 
-    excel_confrontantes = arquivos_encontrados[0]
+    # antes da chamada:
+    conf_df = pd.read_excel(excel_confrontantes)
+    if 'Confrontante' in conf_df.columns:
+        confrontantes = [str(x).strip() for x in conf_df['Confrontante'].fillna('')]
+    else:
+        logger.warning("Planilha FECHADA sem coluna 'Confrontante'; usando valores vazios.")
+        confrontantes = []
 
    # 4) Ler geometria do DXF ORIGINAL
     doc0, lines0, perimeter0, area0, ponto_az_dxf, msp0, pts_bulge0 = get_document_info_from_dxf(dxf_path)
@@ -1334,9 +1361,9 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     # 5) Gerar DXF LIMPO R2010 e reler
     dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
-    dxf_limpo_path = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
+    dxf_file_path = limpar_dxf_e_converter_r2010(dxf_path, dxf_limpo_path)
 
-    doc, lines, perimeter_dxf, area_dxf, ponto_az_limpo, msp, pts_bulge = get_document_info_from_dxf(dxf_limpo_path)
+    doc, lines, perimeter_dxf, area_dxf, ponto_az, msp, pts_bulge = get_document_info_from_dxf(dxf_file_path)
     if not (doc and lines):
         logger.error("❌ Nenhuma polilinha fechada encontrada no DXF limpo.")
         return
@@ -1376,17 +1403,25 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     excel_resultado = create_memorial_descritivo(
         uuid_str=uuid_str,
         doc=doc,
-        msp=msp,
         lines=lines,
         proprietario=proprietario,
         matricula=matricula,
         caminho_salvar=caminho_salvar,
-        excel_file_path=excel_saida,
+        confrontantes=confrontantes,           # ✅ agora vai
         ponto_az=ponto_az_dxf,
-        distancia_az_v1=distancia_az_v1,
-        azimute=azimute_v1,
+        dxf_file_path=dxf_file_path,           # ✅ passe o LIMPO
+        area_dxf=area_dxf,
+        azimute=azimute_v1,                    # (graus decimais Az→V1)
+        v1=v1,
+        msp=msp,
+        dxf_filename=dxf_filename,
+        excel_file_path=excel_saida,           # arquivo de SAÍDA, não a planilha de entrada
         tipo=tipo,
-        sentido_poligonal=sentido_poligonal
+        giro_angular_v1_dms=giro_angular_v1_dms,
+        distancia_az_v1=distancia_az_v1,
+        sentido_poligonal=sentido_poligonal,
+        modo="AZIMUTE_AZ",
+        points_bulge=pts_bulge
     )
     if not excel_resultado:
         logger.error("❌ Falha ao gerar memorial descritivo (planilha).")
