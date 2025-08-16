@@ -60,24 +60,26 @@ def limpar_dxf(original_path, saida_path):
         doc_novo = ezdxf.new(dxfversion='R2010')
         msp_novo = doc_novo.modelspace()
 
+        # 🔒 garanta layers usadas
+        for lname, color in [("DIVISA_PROJETADA", 7), ("PONTO_AZ", 3), ("Azimute", 1),
+                             ("LAYOUT_AZIMUTES", 5), ("LAYOUT_VERTICES", 2), ("LAYOUT_DISTANCIAS", 4)]:
+            if lname not in doc_novo.layers:
+                doc_novo.layers.new(name=lname, dxfattribs={'color': int(color)})
+
         pontos_polilinha = None
 
         # Copiar polilinha fechada
         for entity in msp_antigo.query('LWPOLYLINE'):
             if entity.closed:
                 pontos_polilinha = [point[:2] for point in entity.get_points('xy')]
-                
-                # Remover pontos duplicados consecutivos
-                pontos_unicos = []
-                tolerancia = 1e-6
+                # dedup consecutivo
+                pontos_unicos, tolerancia = [], 1e-6
                 for pt in pontos_polilinha:
-                    if not pontos_unicos or math.hypot(pt[0] - pontos_unicos[-1][0], pt[1] - pontos_unicos[-1][1]) > tolerancia:
+                    if not pontos_unicos or math.hypot(pt[0]-pontos_unicos[-1][0], pt[1]-pontos_unicos[-1][1]) > tolerancia:
                         pontos_unicos.append(pt)
-
-                if math.hypot(pontos_unicos[0][0] - pontos_unicos[-1][0], pontos_unicos[0][1] - pontos_unicos[-1][1]) < tolerancia:
+                if math.hypot(pontos_unicos[0][0]-pontos_unicos[-1][0], pontos_unicos[0][1]-pontos_unicos[-1][1]) < tolerancia:
                     pontos_unicos.pop()
 
-                # Inserir polilinha limpa no DXF
                 msp_novo.add_lwpolyline(
                     pontos_unicos,
                     close=True,
@@ -85,39 +87,46 @@ def limpar_dxf(original_path, saida_path):
                 )
                 break
 
-        # Copiar Ponto Az do arquivo original (TEXT, INSERT ou POINT)
+        # Copiar Ponto Az (TEXT/INSERT/POINT)
         ponto_az_copiado = False
 
-        # Copiar TEXT
+        # TEXT contendo "Az"
         for entity in msp_antigo.query('TEXT'):
-            if "Az" in entity.dxf.text:
+            txt = getattr(entity.dxf, "text", "")
+            if isinstance(txt, str) and "Az" in txt:
+                ins = entity.dxf.insert
                 msp_novo.add_text(
-                    entity.dxf.text,
+                    txt,
                     dxfattribs={
-                        'insert': (entity.dxf.insert.x, entity.dxf.insert.y),
-                        'height': entity.dxf.height,
-                        'rotation': entity.dxf.rotation,
-                        'layer': entity.dxf.layer
+                        'insert': (ins.x, ins.y),
+                        'height': float(entity.dxf.height),
+                        'rotation': float(getattr(entity.dxf, "rotation", 0.0)),
+                        'layer': 'PONTO_AZ',
                     }
                 )
                 ponto_az_copiado = True
 
-        # Copiar INSERT (blocos com nome contendo Az)
+        # INSERT com nome contendo "Az" → substituir por marcador "Az"
         for entity in msp_antigo.query('INSERT'):
-            if "Az" in entity.dxf.name:
-                msp_novo.add_blockref(
-                    entity.dxf.name,
-                    insert=(entity.dxf.insert.x, entity.dxf.insert.y),
-                    dxfattribs={'layer': entity.dxf.layer}
-                )
-                ponto_az_copiado = True
+            try:
+                if "Az" in str(entity.dxf.name):
+                    ins = entity.dxf.insert
+                    msp_novo.add_text(
+                        "Az",
+                        dxfattribs={
+                            'insert': (ins.x, ins.y),
+                            'height': 1.0,
+                            'layer': 'PONTO_AZ',
+                        }
+                    )
+                    ponto_az_copiado = True
+            except Exception as e:
+                logger.error(f"Falha ao substituir INSERT por marcador 'Az': {e}")
 
-        # Copiar POINT (ponto simples chamado Az)
+        # POINT (pega o ponto em si; mantenho layer consistente)
         for entity in msp_antigo.query('POINT'):
-            msp_novo.add_point(
-                (entity.dxf.location.x, entity.dxf.location.y),
-                dxfattribs={'layer': entity.dxf.layer}
-            )
+            loc = entity.dxf.location
+            msp_novo.add_point((loc.x, loc.y), dxfattribs={'layer': 'PONTO_AZ'})
             ponto_az_copiado = True
 
         if not ponto_az_copiado:
@@ -130,6 +139,7 @@ def limpar_dxf(original_path, saida_path):
     except Exception as e:
         print(f"❌ Erro ao limpar DXF: {e}")
         return original_path
+
 
 
 
