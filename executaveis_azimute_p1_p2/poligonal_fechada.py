@@ -1118,12 +1118,8 @@ def create_memorial_descritivo(
                 "Divisa": description,
                 "Azimute": az_seg_dms,
                 "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
-                "Confrontante": confrontante,
-                "ponto_AZ_E": p_az_e,
-                "ponto_AZ_N": p_az_n,
-                "distancia_Az_V1": distancia_az_v1_str,
-                "Azimute Az_V1": azimute_az_v1_str,
-                "Giro Angular Az_V1_V2": giro_v1_str
+                "Confrontante": confrontante
+            
             })
 
             try:
@@ -1156,8 +1152,7 @@ def create_memorial_descritivo(
 
             col_widths = {
                 "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
-                "F": 15, "G": 15, "H": 50, "I": 15,
-                "J": 15, "K": 15, "L": 20, "M": 20
+                "F": 15, "G": 15, "H": 50
             }
             for col, width in col_widths.items():
                 ws.column_dimensions[col].width = width
@@ -1466,6 +1461,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # 🔹 Extrai variáveis necessárias
     proprietario = dados_imovel.get("NOME DO PROPRIETÁRIO", "").strip()
     matricula = sanitize_filename(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip())
+    matricula_texto = str(dados_imovel.get("DOCUMENTAÇÃO DO IMÓVEL", "")).strip()
     descricao = dados_imovel.get("OBRA", "").strip()
     uso_solo = dados_imovel.get("ZONA", "").strip()
     area_imovel = dados_imovel.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").replace("\t", "").replace("\n", "").strip()
