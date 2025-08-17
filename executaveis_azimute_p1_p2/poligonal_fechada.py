@@ -1334,7 +1334,6 @@ def create_memorial_document(
     matricula,
     matricula_texto,
     area_total,
-    cpf,
     rgi,
     excel_file_path,
     template_path,
@@ -1380,7 +1379,7 @@ def create_memorial_document(
 
         doc_word.add_paragraph(f"Matrícula Número: {matricula_texto} - {rgi}", style='Normal')
         doc_word.add_paragraph(f"Área Total do Terreno: {str(area_total).replace('.', ',')}", style='Normal')
-        doc_word.add_paragraph(f"Proprietário: {proprietario} - CPF/CNPJ: {cpf}", style='Normal')
+        doc_word.add_paragraph(f"Proprietário: {proprietario} ", style='Normal')
 
         p = doc_word.add_paragraph(style='Normal')
         p.add_run("Área de Servidão de Passagem: ").bold = True
@@ -1599,7 +1598,6 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
                 matricula=matricula,
                 matricula_texto=matricula_texto,
                 area_total=area_imovel,
-                cpf=cpf,
                 rgi=rgi,
                 excel_file_path=excel_file_path,
                 template_path=template_path,
