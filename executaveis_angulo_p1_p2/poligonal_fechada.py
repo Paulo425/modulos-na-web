@@ -1030,22 +1030,8 @@ def _internal_angles_and_concavity(pts_xyb, sentido_poligonal):
 
 #AQUI EMBAIXO É SO PARA COLOCAR O GIRO ANGULAR NA CHEGADA DO VERTICE V1 NA VERSAO ANGULO_P1_P2
 
-def add_az_marker_to_dxf(
-    doc_dxf,
-    ponto_az,            # (x, y) ou (x, y, z)
-    v1,                  # (x, y) do V1
-    azimute_deg,         # float (0..360)
-    distancia_az_v1,     # float (em metros) -> novo
-    *,
-    v2=None,             # ⬅️ NOVO: (x, y) do V2 (vizinho correto)
-    sentido=None,        # ⬅️ NOVO: 'horario' | 'anti_horario'
-    draw_giro=True,      # ⬅️ NOVO: desenhar o arco do Giro Angular
-    layer="Az_Marker",
-    north_len=8.0,
-    text_height=0.6,
-    arc_radius=5.0,
-    draw_minor_arc=False
-):
+def add_az_marker_to_dxf(doc_dxf=doc, ponto_az=ponto_az_dxf, v1=v1, v2=v2_for_arc,
+                     layer="Az_Marker", text_height=0.6, arc_radius=5.0)
     """Rótulo 'Az', marcador Norte, arco do azimute + rótulo
        e rótulo da distância sobre a reta Az→V1 (sem set_pos)."""
 
@@ -2359,26 +2345,14 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     azimute = calculate_azimuth(ponto_az_dxf, v1)
     distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
     giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2_for_arc)
-    giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
+    giro_angular_v1_dms = convert_to_dms(giro_angular_v1)
 
     logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
 
      # 7) Desenhar elementos de Az no DXF limpo MAS NESSE CASO DO ANGULO_P1_P2 SÓ O GIRO ANGULAR NA CHEGADA DE V1 O RESTANTE NA FUNÇAO ESTÁ COMENTADO
     try:
-        add_az_marker_to_dxf(
-            doc_dxf=doc,
-            ponto_az=ponto_az_dxf,
-            v1=v1,
-            azimute_deg=azimute_v1,
-            distancia_az_v1=distancia_az_v1,
-            v2=v2_for_arc,
-            sentido=sentido_poligonal,
-            layer="Az_Marker",
-            north_len=8.0,
-            text_height=0.6,
-            arc_radius=5.0,
-            draw_minor_arc=False,
-        )
+        add_az_marker_to_dxf(doc_dxf=doc, ponto_az=ponto_az_dxf, v1=v1, v2=v2_for_arc,
+                     layer="Az_Marker", text_height=0.6, arc_radius=5.0)
     except Exception as e:
         logger.exception(f"Erro ao desenhar marcador de Az: {e}")
 
