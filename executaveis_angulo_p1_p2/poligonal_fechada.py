@@ -1028,6 +1028,170 @@ def _internal_angles_and_concavity(pts_xyb, sentido_poligonal):
 
     return internos_deg, concavo
 
+#AQUI EMBAIXO É SO PARA COLOCAR O GIRO ANGULAR NA CHEGADA DO VERTICE V1 NA VERSAO ANGULO_P1_P2
+
+def add_az_marker_to_dxf(
+    doc_dxf,
+    ponto_az,            # (x, y) ou (x, y, z)
+    v1,                  # (x, y) do V1
+    azimute_deg,         # float (0..360)
+    distancia_az_v1,     # float (em metros) -> novo
+    *,
+    v2=None,             # ⬅️ NOVO: (x, y) do V2 (vizinho correto)
+    sentido=None,        # ⬅️ NOVO: 'horario' | 'anti_horario'
+    draw_giro=True,      # ⬅️ NOVO: desenhar o arco do Giro Angular
+    layer="Az_Marker",
+    north_len=8.0,
+    text_height=0.6,
+    arc_radius=5.0,
+    draw_minor_arc=False
+):
+    """Rótulo 'Az', marcador Norte, arco do azimute + rótulo
+       e rótulo da distância sobre a reta Az→V1 (sem set_pos)."""
+
+    def to_dms_string(deg):
+        d = abs(deg)
+        g = int(d)
+        m = int((d - g) * 60)
+        s = (d - g - m/60) * 3600
+        sign = "-" if deg < 0 else ""
+        return f"{sign}{g}°{m}'{s:.2f}\""
+
+    msp = doc_dxf.modelspace()
+
+    # Garante a layer
+    try:
+        if layer not in doc_dxf.layers:
+            doc_dxf.layers.new(name=layer)
+    except Exception:
+        pass
+
+    ax, ay = ponto_az[0], ponto_az[1]
+    v1x, v1y = v1[0], v1[1]
+
+    # # 1) Rótulo "Az"
+    # az_text = msp.add_text("Az", dxfattribs={"height": text_height, "layer": layer})
+    # az_text.dxf.insert = (ax, ay)
+
+    # # 2) Marcador do Norte e rótulo "N"
+    # msp.add_line((ax, ay), (ax, ay + north_len), dxfattribs={"layer": layer})
+    # n_text = msp.add_text("N", dxfattribs={"height": text_height, "layer": layer})
+    # n_text.dxf.insert = (ax, ay + north_len + text_height * 1.2)
+
+    # # 3) Linha Az→V1 (referência)
+    # msp.add_line((ax, ay), (v1x, v1y), dxfattribs={"layer": layer})
+
+    # # 3.1) Rótulo da distância sobre a reta (NOVO)
+    # dx, dy = (v1x - ax), (v1y - ay)
+    # seg_len = math.hypot(dx, dy) or 1.0
+    # ux, uy = dx / seg_len, dy / seg_len                  # unitário ao longo da reta
+    # px, py = -uy, ux                                     # unitário perpendicular (esquerda)
+
+    # # ponto médio + pequeno offset perpendicular (para não "sentar" na linha)
+    # midx = (ax + v1x) / 2.0
+    # midy = (ay + v1y) / 2.0
+    # offset = text_height * 1.0                           # ajuste fino aqui se quiser
+    # mid_shift = (midx + px * offset, midy + py * offset)
+
+    # rot_deg = math.degrees(math.atan2(dy, dx)) % 360.0   # rotação do texto na direção da reta
+    # dist_label = f"{distancia_az_v1:.2f} "
+
+    # dist_text = msp.add_text(
+    #     dist_label,
+    #     dxfattribs={
+    #         "height": text_height,
+    #         "layer": layer,
+    #         "rotation": rot_deg
+    #     }
+    # )
+    # dist_text.dxf.insert = mid_shift
+
+    # # 4) Arco do azimute (de Norte até direção Az→V1) + rótulo
+    # ang_auto = math.degrees(math.atan2(dy, dx)) % 360    # 0°=E, 90°=N, CCW
+    # north_auto = 90.0
+
+    # if draw_minor_arc:
+    #     delta_ccw = (ang_auto - north_auto) % 360
+    #     if delta_ccw <= 180:
+    #         start_ang, end_ang = north_auto, ang_auto
+    #     else:
+    #         start_ang, end_ang = ang_auto, north_auto
+    # else:
+    #     # arco com extensão igual ao azimute (N→direção, sentido horário)
+    #     start_ang, end_ang = ang_auto, north_auto
+
+    # msp.add_arc(
+    #     center=(ax, ay),
+    #     radius=arc_radius,
+    #     start_angle=start_ang,
+    #     end_angle=end_ang,
+    #     dxfattribs={"layer": layer}
+    # )
+
+    # arc_len_ccw = (end_ang - start_ang) % 360
+    # mid_ang = (start_ang + arc_len_ccw / 2.0) % 360
+    # mid_rad = math.radians(mid_ang)
+    # label_r = arc_radius + text_height * 2.0
+    # label_pos = (ax + label_r * math.cos(mid_rad), ay + label_r * math.sin(mid_rad))
+
+    # az_label = f"Azimute = {to_dms_string(azimute_deg)}"
+    # lbl = msp.add_text(az_label, dxfattribs={"height": text_height, "layer": layer})
+    # lbl.dxf.insert = label_pos
+
+    # ===== 5) GIRO ANGULAR Az–V1–V2 (pivot em V1) =====
+    # Requer v2 e sentido; desenha o arco certo independente da ordem dos vértices.
+    if draw_giro and (v2 is not None):
+        v1x, v1y = float(v1[0]), float(v1[1])
+        azx, azy  = float(ponto_az[0]), float(ponto_az[1])
+        v2x, v2y  = float(v2[0]), float(v2[1])
+
+        # ângulos (0..360) das direções a partir de V1
+        a_az = math.degrees(math.atan2(azy - v1y, azx - v1x)) % 360.0
+        a_v2 = math.degrees(math.atan2(v2y - v1y, v2x - v1x)) % 360.0
+
+        # Giro HORÁRIO SEMPRE: de V1→Az para V1→V2
+        giro  = (a_az - a_v2) % 360.0          # valor do giro em graus (horário)
+        start = (a_az - giro) % 360.0          # add_arc é CCW ⇒ desenhe de (Az - giro) → Az
+        end   = a_az
+
+        # raio do arco do giro (use o mesmo arc_radius, ou ajuste se quiser)
+        giro_radius = arc_radius
+
+        # arco do giro em V1
+        msp.add_arc(
+            center=(v1x, v1y),
+            radius=giro_radius,
+            start_angle=start,
+            end_angle=end,
+            dxfattribs={"layer": layer}
+        )
+
+        # rótulo do giro — sempre horizontal
+        sweep = (end - start) % 360.0
+        mid   = (start + sweep/2.0) % 360.0
+        mid_r = math.radians(mid)
+        lbl_r = giro_radius + text_height*1.2
+        lbl_pt = (v1x + lbl_r*math.cos(mid_r), v1y + lbl_r*math.sin(mid_r))
+
+        # usa convert_to_dms se existir; senão, fallback no to_dms_string local
+        try:
+            giro_txt = f"Giro Angular: {convert_to_dms(giro)}"
+        except NameError:
+            giro_txt = f"Giro Angular: {to_dms_string(giro)}"
+
+        t = msp.add_text(
+            giro_txt,
+            dxfattribs={"height": text_height, "layer": layer}
+        )
+        t.dxf.insert   = lbl_pt
+        t.dxf.rotation = 0  # horizontal
+        try:
+            t.dxf.halign      = 1  # CENTER
+            t.dxf.valign      = 2  # MIDDLE
+            t.dxf.align_point = lbl_pt
+        except Exception:
+            pass      
+
 def _draw_internal_angles(msp, points, internos_deg, sentido_poligonal, raio_frac=0.10):
     n = len(points)
     for i in range(n):
@@ -2198,6 +2362,27 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     giro_angular_v1_dms = convert_to_dms(360 - giro_angular_v1)
 
     logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
+
+     # 7) Desenhar elementos de Az no DXF limpo MAS NESSE CASO DO ANGULO_P1_P2 SÓ O GIRO ANGULAR NA CHEGADA DE V1 O RESTANTE NA FUNÇAO ESTÁ COMENTADO
+    try:
+        add_az_marker_to_dxf(
+            doc_dxf=doc,
+            ponto_az=ponto_az_dxf,
+            v1=v1,
+            azimute_deg=azimute_v1,
+            distancia_az_v1=distancia_az_v1,
+            v2=v2_for_arc,
+            sentido=sentido_poligonal,
+            layer="Az_Marker",
+            north_len=8.0,
+            text_height=0.6,
+            arc_radius=5.0,
+            draw_minor_arc=False,
+        )
+    except Exception as e:
+        logger.exception(f"Erro ao desenhar marcador de Az: {e}")
+
+
 
     # Caminho do Excel de saída
     excel_file_path = os.path.join(
