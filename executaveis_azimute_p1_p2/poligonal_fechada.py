@@ -1589,24 +1589,24 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     else:
         logger.warning("Não foi possível reindexar a poligonal; mantendo ordem do DXF limpo.")
 
-    # 7) Desenhar elementos de Az no DXF limpo
-    try:
-        add_az_marker_to_dxf(
-            doc_dxf=doc,
-            ponto_az=ponto_az_dxf,
-            v1=v1,
-            azimute_deg=azimute_v1,
-            distancia_az_v1=distancia_az_v1,
-            v2=v2_for_arc,
-            sentido=sentido_poligonal,
-            layer="Az_Marker",
-            north_len=8.0,
-            text_height=0.6,
-            arc_radius=5.0,
-            draw_minor_arc=False,
-        )
-    except Exception as e:
-        logger.exception(f"Erro ao desenhar marcador de Az: {e}")
+    # # 7) Desenhar elementos de Az no DXF limpo
+    # try:
+    #     add_az_marker_to_dxf(
+    #         doc_dxf=doc,
+    #         ponto_az=ponto_az_dxf,
+    #         v1=v1,
+    #         azimute_deg=azimute_v1,
+    #         distancia_az_v1=distancia_az_v1,
+    #         v2=v2_for_arc,
+    #         sentido=sentido_poligonal,
+    #         layer="Az_Marker",
+    #         north_len=8.0,
+    #         text_height=0.6,
+    #         arc_radius=5.0,
+    #         draw_minor_arc=False,
+    #     )
+    # except Exception as e:
+    #     logger.exception(f"Erro ao desenhar marcador de Az: {e}")
 
 
 
