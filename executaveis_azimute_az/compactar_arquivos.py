@@ -84,5 +84,6 @@ if __name__ == "__main__":
     parser.add_argument('--cidade', required=True, help="Nome formatado da cidade.")
     parser.add_argument('--uuid', required=True, help="UUID da execução atual.")
     args = parser.parse_args()
+    logger.info(f"[DEBUG] Conteúdo de {diretorio_concluido}: {os.listdir(diretorio_concluido)}")
 
     main_compactar_arquivos(args.diretorio, args.cidade, args.uuid)
