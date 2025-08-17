@@ -763,6 +763,85 @@ def add_az_marker_to_dxf(
         except Exception:
             pass      
 
+# ==== HELPERs necessários para AZIMUTE_AZ (portados de ANGULO_AZ) ====
+
+def _log_info(msg: str):
+    try:
+        logger.info(msg)
+    except Exception:
+        print(msg)
+
+def _log_error(msg: str):
+    try:
+        logger.error(msg)
+    except Exception:
+        print(msg)
+
+def _convert_to_dms_safe(deg):
+    """Converte graus decimais em DMS de forma tolerante; retorna '' se inválido."""
+    try:
+        d = float(deg)
+    except (TypeError, ValueError):
+        return ""
+    sign = "-" if d < 0 else ""
+    d = abs(d)
+    g = int(d)
+    m = int((d - g) * 60)
+    s = (d - g - m/60) * 3600
+    return f"{sign}{g}° {m}' {s:.2f}\""
+
+def _azimuth_deg(p, q):
+    """Azimute (0..360) de p->q com 0°=Norte, sentido horário."""
+    x1, y1 = float(p[0]), float(p[1])
+    x2, y2 = float(q[0]), float(q[1])
+    a = math.degrees(math.atan2(x2 - x1, y2 - y1))  # nota: atan2(dx, dy) p/ azimute
+    if a < 0:
+        a += 360.0
+    return a
+
+def _ring_area_xy(pts):
+    """Área assinada do anel (lista de dicts com chaves 'x','y'). CCW > 0."""
+    if not pts:
+        return 0.0
+    area = 0.0
+    n = len(pts)
+    for i in range(n):
+        x1, y1 = float(pts[i]['x']), float(pts[i]['y'])
+        x2, y2 = float(pts[(i + 1) % n]['x']), float(pts[(i + 1) % n]['y'])
+        area += x1 * y2 - x2 * y1
+    return area / 2.0
+
+def _polygon_orientation(pts):
+    """+1 = anti-horário (CCW), -1 = horário (CW), 0 = degenerado."""
+    a = _ring_area_xy(pts)
+    if a > 0:
+        return +1
+    if a < 0:
+        return -1
+    return 0
+
+def _ensure_orientation(pts, sentido_poligonal):
+    """
+    Garante o sentido do polígono conforme 'horario' ou 'anti_horario'.
+    Se inverter, inverte também o sinal de 'bulge_next' se existir (não reindexa).
+    """
+    if not pts:
+        return []
+    want_ccw = str(sentido_poligonal).lower().startswith("anti")
+    ori = _polygon_orientation(pts)
+    is_ccw = (ori == +1)
+    if want_ccw == is_ccw:
+        return pts
+    rev = list(reversed(pts))
+    # como não usamos bulge adiante para ângulos internos, basta flip de sinal
+    for p in rev:
+        if 'bulge_next' in p and p['bulge_next'] is not None:
+            try:
+                p['bulge_next'] = -float(p['bulge_next'])
+            except Exception:
+                pass
+    return rev
+# ==== FIM dos HELPERs ====
 
 # Função para criar memorial descritivo
 # def create_memorial_descritivo(
