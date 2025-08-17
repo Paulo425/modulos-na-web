@@ -450,7 +450,9 @@ def _carregar_confrontantes(uuid_str, tipo, diretorio_preparado):
     return df[col_confrontante].fillna('').astype(str).tolist()
 
 
-def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
+def add_label_and_distance(doc, msp, start_point, end_point, label, distance,
+                           *, draw_vertex=False, vertex_layer="LAYOUT_VERTICES",
+                           vertex_radius=0.5, vertex_text_height=0.2):
     """
     Adiciona um rótulo no vértice e a distância corretamente alinhada à linha no arquivo DXF.
     
@@ -464,24 +466,28 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
     try:
         msp = doc.modelspace()
 
-        # Criar camadas necessárias (sem alterar as que não precisam)
+        # garantir camadas (DISTÂNCIAS, AZIMUTES, etc.)
         for layer_name, color in [
-            ("LAYOUT_VERTICES", 2),  # Vermelho para vértices
-            ("LAYOUT_DISTANCIAS", 4),  # Azul para distâncias
-            ("LAYOUT_AZIMUTES", 5)  # Magenta para azimutes
+            ("LAYOUT_VERTICES", 2),
+            ("LAYOUT_DISTANCIAS", 4),
+            ("LAYOUT_AZIMUTES", 5),
         ]:
             if layer_name not in doc.layers:
                 doc.layers.new(name=layer_name, dxfattribs={"color": color})
 
-        # 🔹 Adicionar círculo no ponto inicial (Vértices)
-        msp.add_circle(center=start_point[:2], radius=1.0, dxfattribs={'layer': 'LAYOUT_VERTICES'})
-
-        # 🔹 Adicionar rótulo do vértice
-        text_point = (start_point[0] + 1, start_point[1])  # Posição deslocada
-        msp.add_text(
-            label,
-            dxfattribs={'height': 0.5, 'layer': 'LAYOUT_VERTICES', 'insert': text_point}
-        )
+        # ⬇️ desenhar vértice apenas se solicitado
+        if draw_vertex:
+            msp.add_circle(center=start_point[:2], radius=vertex_radius,
+                        dxfattribs={'layer': vertex_layer})
+            msp.add_text(
+                label,
+                dxfattribs={
+                    'height': vertex_text_height,
+                    'layer': vertex_layer,
+                    'insert': (start_point[0] + vertex_radius*0.6,
+                            start_point[1] + vertex_radius*0.6)
+                }
+            )
 
         # 🔹 Calcular o ponto médio da linha
         mid_x = (start_point[0] + end_point[0]) / 2
@@ -533,24 +539,18 @@ def azimuth_deg(p1, p2):
     ang = math.degrees(math.atan2(dx, dy))  # 0° = Norte, cresce no sentido horário
     return ang + 360 if ang < 0 else ang
 
-def calculate_angular_turn(p1, p2, p3):
-    """
-    Calcula o giro angular no ponto `p2` entre os segmentos `p1-p2` e `p2-p3` no sentido horário.
-    Retorna o ângulo em graus.
-    """
-    import math
-    
-    dx1, dy1 = p1[0] - p2[0], p1[1] - p2[1]  # Vetor do segmento p1-p2
-    dx2, dy2 = p3[0] - p2[0], p3[1] - p2[1]  # Vetor do segmento p2-p3
+def calculate_angular_turn(ponto_az, v1, v2, menor=False):
+    # ângulos com 0°=E, CCW positivo (padrão atan2)
+    a_az = math.degrees(math.atan2(ponto_az[1] - v1[1], ponto_az[0] - v1[0])) % 360.0
+    a_v2 = math.degrees(math.atan2(       v2[1] - v1[1],        v2[0] - v1[0])) % 360.0
 
-    angle1 = math.atan2(dy1, dx1)
-    angle2 = math.atan2(dy2, dx2)
+    # giro HORÁRIO de V1→Az para V1→V2
+    giro = (a_az - a_v2) % 360.0
 
-    # Calcula o ângulo horário
-    angular_turn = (angle2 - angle1) % (2 * math.pi)
-    angular_turn_degrees = math.degrees(angular_turn)
-
-    return angular_turn_degrees
+    # se algum dia quiser o menor entre os dois, habilite:
+    if menor and giro > 180.0:
+        giro = 360.0 - giro
+    return giro
 
 
 #     return confrontantes
@@ -1070,23 +1070,6 @@ def create_memorial_descritivo(
         ang = math.degrees(math.atan2(dx, dy))
         return ang + 360.0 if ang < 0.0 else ang
 
-    
-
-    # # 4) desenho do AZ depende do modo
-    # # ANGULO_AZ  → desenha Az, linha Az–V1, arco e rótulos
-    # # ANGULO_P1_P2 → NÃO desenha Az/linha/arco (poligonal ABERTA já mostra amarração)
-    # if modo == "ANGULO_AZ" and ponto_az is not None and v1 is not None:
-    #     dx = v1[0] - ponto_az[0]
-    #     dy = v1[1] - ponto_az[1]
-    #     dist = math.hypot(dx, dy)
-    #     if dist > 1e-6:
-    #         try:
-    #             _desenhar_referencia_az(msp, ponto_az, v1, azimute)
-    #         except Exception as e:
-    #             logger.error("Erro ao desenhar referência de Az: %s", e)
-    #     else:
-    #         logger.warning("⚠️ Distância Az–V1 ≈ 0; desenho do Az suprimido.")
-
     # 5) Excel (sem reler nada)
     try:
         ordered_points_xy = [(p['x'], p['y']) for p in pts]
@@ -1111,6 +1094,10 @@ def create_memorial_descritivo(
             #ang_interno_dms = _convert_to_dms_safe(internos_deg[i])
             az_seg_deg = _azimuth_deg(p2, p3)
             az_seg_dms = _convert_to_dms_safe(az_seg_deg)
+
+            #aqui desenha o circulo( se draw estiver como True) e a distancia nos vertices
+            add_label_and_distance(doc, msp, p2, p3, f"V{i + 1}", distance, draw_vertex=True)
+
 
             if i == 0:
                 distancia_az_v1_str = f"{float(distancia_az_v1):.2f}".replace(".", ",") if distancia_az_v1 is not None else ""
@@ -1148,12 +1135,6 @@ def create_memorial_descritivo(
         
         # escreve excel
         df = pd.DataFrame(data)
-
-        # ── Garantir as 3 colunas do ANGULO_AZ antes de salvar
-        #cols_novas = ["AZIMUTE_AZ_V1_GRAUS", "DISTANCIA_AZ_V1_M", "GIRO_V1_GRAUS"]
-        # for c in cols_novas:
-        #     if c not in df.columns:
-        #         df[c] = ""  # ou pd.NA
 
         # Garante diretório e salva
         try:
@@ -1198,55 +1179,29 @@ def create_memorial_descritivo(
             _log_error(f"❌ Excel NÃO encontrado após salvar: {os.path.abspath(excel_file_path)}")
 
 
-        # # extras DXF (opcionais e seguros)
-        # try:
-        #     v1_pt = ordered_points_xy[0]
-        #     v2_pt = ordered_points_xy[1]
-            # se existir o helper e você quiser o giro no V1 com Az:
-        #    if 'add_giro_angular_arc_to_dxf' in globals() and ponto_az is not None:
-                # padronize este helper para (msp, v1_pt, ponto_az, v2_pt)
-                #add_giro_angular_arc_to_dxf(msp, v1_pt, ponto_az, v2_pt)
-                #_log_info("Giro horário Az–V1–V2 adicionado com sucesso.")
-        # except Exception as e:
-        #     _log_error(f"Erro ao adicionar giro angular: {e}")
-
+        # Garanta a layer "Vertices" uma única vez
         try:
-            if "Vertices" not in msp.doc.layers:
-                msp.doc.layers.new(name="Vertices")
-        except Exception:
-            pass
+            layers = msp.doc.layers
+            if "Vertices" not in layers:
+                layers.new(name="Vertices", dxfattribs={"color": 2})  # cor opcional
+        except Exception as e:
+            logger.warning(f"Não foi possível garantir a layer 'Vertices': {e}")
 
-        # garanta a camada
-        try:
-            if "Vertices" not in msp.doc.layers:
-                msp.doc.layers.new(name="Vertices")
-        except Exception:
-            pass
-
-        for i, (x, y) in enumerate(ordered_points_xy):
-            try:
-                msp.add_circle(center=(x, y), radius=0.5, dxfattribs={"layer": "Vertices"})
-                msp.add_text(
-                    f"V{i + 1}",
-                    dxfattribs={
-                        "height": 0.3,
-                        "layer": "Vertices",
-                        "insert": (x + 0.30, y + 0.30)  # <<< POSIÇÃO DO RÓTULO
-                    }
-                )
-            except Exception as e:
-                logger.warning(f"Falha rotulando V{i+1}: {e}")
-
-
-        # # só desenhe o arco do azimute se realmente quiser no produto FECHADA
-        # # e se houver amarração (Az) válida:
-        # if modo == "ANGULO_AZ" and ponto_az is not None:
+        # desenha circulo e distancia nos vertices
+        # for i, (x, y) in enumerate(ordered_points_xy):
         #     try:
-        #         azim = calculate_azimuth(ponto_az, v1_pt)
-        #         _desenhar_referencia_az(msp, ponto_az, v1_pt, azim)
-        #         _log_info("Arco do Azimute Az–V1 adicionado com sucesso.")
+        #         msp.add_circle(center=(x, y), radius=0.5, dxfattribs={"layer": "Vertices"})
+        #         msp.add_text(
+        #             f"V{i + 1}",
+        #             dxfattribs={
+        #                 "height": 0.3,
+        #                 "layer": "Vertices",
+        #                 "insert": (x + 0.30, y + 0.30)  # <<< POSIÇÃO DO RÓTULO
+        #             }
+        #         )
         #     except Exception as e:
-        #         _log_error(f"Erro ao adicionar arco do azimute: {e}")
+        #         logger.warning(f"Falha rotulando V{i+1}: {e}")
+
 
         # 6) salvar DXF final
         try:
@@ -1609,7 +1564,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
     azimute_v1 = azimuth_deg(ponto_az_dxf, v1)
     distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
-    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2_for_arc)
+    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2_for_arc, menor=False)  # igual ao desenho
     giro_angular_v1_dms = convert_to_dms(giro_angular_v1)
 
     logger.info(f"📐 Área (orig): {area0:.6f} m² | Perímetro (orig): {perimeter0:.6f} m")
