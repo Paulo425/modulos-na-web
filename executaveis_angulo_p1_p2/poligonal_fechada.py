@@ -1707,11 +1707,7 @@ def create_memorial_descritivo(
                 "Angulo Interno": ang_interno_dms,
                 "Distancia(m)": f"{distance:,.2f}".replace(",", "").replace(".", ","),
                 "Confrontante": confrontante,
-                "ponto_AZ_E": p_az_e,
-                "ponto_AZ_N": p_az_n,
-                "distancia_Az_V1": distancia_az_v1_str,
-                "Azimute Az_V1": azimute_az_v1_str,
-                "Giro Angular Az_V1_V2": giro_v1_str
+                
             })
 
             try:
@@ -1750,8 +1746,7 @@ def create_memorial_descritivo(
 
             col_widths = {
                 "A": 8, "B": 15, "C": 15, "D": 0, "E": 15,
-                "F": 15, "G": 15, "H": 50, "I": 15,
-                "J": 15, "K": 15, "L": 20, "M": 20
+                "F": 15, "G": 15, "H": 50
             }
             for col, width in col_widths.items():
                 ws.column_dimensions[col].width = width
@@ -1996,7 +1991,9 @@ def create_memorial_document(
         ponto_amarracao_2 = f"{ponto_amarracao[1]:.3f}".replace(".", ",")
         distancia_str = f"{distancia_amarracao_v1:.2f}".replace(".", ",")
         azimute_dms = convert_to_dms(azimute)
-
+        az_v1_v2 = (math.degrees(math.atan2(df.iloc[1]['E'] - df.iloc[0]['E'],
+                                    df.iloc[1]['N'] - df.iloc[0]['N'])) + 360.0) % 360.0
+        az_v1_v2_dms = convert_to_dms(az_v1_v2)
 
         
         
@@ -2094,7 +2091,7 @@ def create_memorial_document(
                 p.add_run("Do vértice ").bold = False
                 p.add_run(f"{current['V']}").bold = True
                 p.add_run(
-                    f", com giro angular horário de {giro_angular_v1_dms} e distância de {distancia} metros, "
+                    f", com Azimute de {az_v1_v2_dms} e distância de {distancia} metros, "
                     f"confrontando com área pertencente à {confrontante}, chega-se ao vértice "
                 )
                 p.add_run(f"{next_vertex['V']}").bold = True
