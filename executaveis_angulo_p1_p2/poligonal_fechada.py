@@ -835,24 +835,18 @@ def add_label_and_distance(msp, start_point, end_point, label, distance):
     except Exception as e:
         logger.error(f"Erro ao adicionar rótulo de distância: {e}")
 
-def calculate_angular_turn(p1, p2, p3):
-    """
-    Calcula o giro angular no ponto `p2` entre os segmentos `p1-p2` e `p2-p3` no sentido horário.
-    Retorna o ângulo em graus.
-    """
-    import math
-    
-    dx1, dy1 = p1[0] - p2[0], p1[1] - p2[1]  # Vetor do segmento p1-p2
-    dx2, dy2 = p3[0] - p2[0], p3[1] - p2[1]  # Vetor do segmento p2-p3
+def calculate_angular_turn(ponto_az, v1, v2, menor=False):
+    # ângulos com 0°=E, CCW positivo (padrão atan2)
+    a_az = math.degrees(math.atan2(ponto_az[1] - v1[1], ponto_az[0] - v1[0])) % 360.0
+    a_v2 = math.degrees(math.atan2(       v2[1] - v1[1],        v2[0] - v1[0])) % 360.0
 
-    angle1 = math.atan2(dy1, dx1)
-    angle2 = math.atan2(dy2, dx2)
+    # giro HORÁRIO de V1→Az para V1→V2
+    giro = (a_az - a_v2) % 360.0
 
-    # Calcula o ângulo horário
-    angular_turn = (angle2 - angle1) % (2 * math.pi)
-    angular_turn_degrees = math.degrees(angular_turn)
-
-    return angular_turn_degrees
+    # se algum dia quiser o menor entre os dois, habilite:
+    if menor and giro > 180.0:
+        giro = 360.0 - giro
+    return giro
 
 # ==== HELPERS_ANGULOS_DXF_BEGIN ====
 def _log_info(msg):
@@ -2358,7 +2352,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # Use o ponto retornado pela função
     azimute = calculate_azimuth(ponto_az_dxf, v1)
     distancia_az_v1 = calculate_distance(ponto_az_dxf, v1)
-    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2_for_arc)
+    giro_angular_v1 = calculate_angular_turn(ponto_az_dxf, v1, v2_for_arc, menor=False)  # igual ao desenho
     giro_angular_v1_dms = convert_to_dms(giro_angular_v1)
 
     logger.info(f"📌 Azimute Az→V1: {azimute:.4f}°, Distância: {distancia_az_v1:.2f} m")
