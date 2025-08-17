@@ -1030,8 +1030,22 @@ def _internal_angles_and_concavity(pts_xyb, sentido_poligonal):
 
 #AQUI EMBAIXO É SO PARA COLOCAR O GIRO ANGULAR NA CHEGADA DO VERTICE V1 NA VERSAO ANGULO_P1_P2
 
-def add_az_marker_to_dxf(doc_dxf=doc, ponto_az=ponto_az_dxf, v1=v1, v2=v2_for_arc,
-                     layer="Az_Marker", text_height=0.6, arc_radius=5.0):
+def add_az_marker_to_dxf(
+    doc_dxf,
+    ponto_az,
+    v1,
+    azimute_deg=None,
+    distancia_az_v1=None,
+    *,
+    v2=None,
+    sentido=None,
+    draw_giro=True,
+    layer="Az_Marker",
+    north_len=8.0,
+    text_height=0.6,
+    arc_radius=5.0,
+    draw_minor_arc=False,
+):
     """Rótulo 'Az', marcador Norte, arco do azimute + rótulo
        e rótulo da distância sobre a reta Az→V1 (sem set_pos)."""
 
@@ -2351,8 +2365,20 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
      # 7) Desenhar elementos de Az no DXF limpo MAS NESSE CASO DO ANGULO_P1_P2 SÓ O GIRO ANGULAR NA CHEGADA DE V1 O RESTANTE NA FUNÇAO ESTÁ COMENTADO
     try:
-        add_az_marker_to_dxf(doc_dxf=doc, ponto_az=ponto_az_dxf, v1=v1, v2=v2_for_arc,
-                     layer="Az_Marker", text_height=0.6, arc_radius=5.0)
+        add_az_marker_to_dxf(
+            doc_dxf=doc,
+            ponto_az=ponto_az_dxf,
+            v1=v1,
+            azimute_deg=azimute_v1,
+            distancia_az_v1=distancia_az_v1,
+            v2=v2_for_arc,
+            sentido=sentido_poligonal,
+            layer="Az_Marker",
+            north_len=8.0,
+            text_height=0.6,
+            arc_radius=5.0,
+            draw_minor_arc=False,
+        )
     except Exception as e:
         logger.exception(f"Erro ao desenhar marcador de Az: {e}")
 
