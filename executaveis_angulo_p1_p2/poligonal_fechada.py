@@ -1031,7 +1031,7 @@ def _internal_angles_and_concavity(pts_xyb, sentido_poligonal):
 #AQUI EMBAIXO É SO PARA COLOCAR O GIRO ANGULAR NA CHEGADA DO VERTICE V1 NA VERSAO ANGULO_P1_P2
 
 def add_az_marker_to_dxf(doc_dxf=doc, ponto_az=ponto_az_dxf, v1=v1, v2=v2_for_arc,
-                     layer="Az_Marker", text_height=0.6, arc_radius=5.0)
+                     layer="Az_Marker", text_height=0.6, arc_radius=5.0):
     """Rótulo 'Az', marcador Norte, arco do azimute + rótulo
        e rótulo da distância sobre a reta Az→V1 (sem set_pos)."""
 
