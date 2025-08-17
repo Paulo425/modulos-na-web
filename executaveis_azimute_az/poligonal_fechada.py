@@ -1398,7 +1398,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     cidade = dados_imovel.get("CIDADE", "").strip()
     rua = dados_imovel.get("LOCAL", "").strip()
     comarca = dados_imovel.get("COMARCA", "").strip()
-    RI = dados_imovel.get("RI", "").strip()
+    rgi = dados_imovel.get("RI", "").strip()
     desc_ponto_Az = dados_imovel.get("AZ", "").strip()
 
     # 🔹 Define tipo pela nomenclatura do DXF
