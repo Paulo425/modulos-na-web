@@ -1370,7 +1370,7 @@ def create_memorial_document(
         doc_word.add_paragraph(f"\nPorto Alegre, RS, {data_atual}.", style='Normal')
         doc_word.add_paragraph("\n\n")
 
-        output_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
+        output_path = os.path.join(diretori_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
         doc_word.save(output_path)
         logger.info(f"✅ Memorial descritivo salvo em: {output_path}")
 
@@ -1490,7 +1490,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
 
 
 
-    excel_saida = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
+    excel_saida = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.xlsx")
 
 
     # 8) Gerar a planilha FECHADA de AZIMUTE+DISTÂNCIA
@@ -1522,7 +1522,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         return
 
     # 9) Gerar DOCX
-    output_docx_path = os.path.join(caminho_salvar, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
+    output_docx_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
     create_memorial_document(
         uuid_str=uuid_str,
         proprietario=proprietario,
