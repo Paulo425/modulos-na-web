@@ -1334,168 +1334,122 @@ def create_memorial_descritivo(
 
 
 def create_memorial_document(
-    uuid_str, proprietario, matricula, descricao, excel_file_path, template_path, 
-    output_path, perimeter_dxf, area_dxf, desc_ponto_Az, Coorde_E_ponto_Az, Coorde_N_ponto_Az,
-    azimuth, distance, uso_solo, area_imovel, cidade, rua, comarca, rgi, caminho_salvar, tipo
+    uuid_str,
+    proprietario,
+    matricula,
+    matricula_texto,
+    area_total,
+    cpf,
+    rgi,
+    excel_file_path,
+    template_path,
+    output_path,
+    assinatura_path,
+    ponto_amarracao,
+    azimute,
+    distancia_amarracao_v1,
+    rua,
+    cidade,
+    confrontantes,
+    area_dxf,
+    desc_ponto_amarracao,
+    perimeter_dxf,
+    giro_angular_v1_dms
 ):
     try:
-        # ── Sanidade de caminhos ───────────────────────────────────────────────
-        try:
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        except Exception as e:
-            logger.warning(f"[DOCX] Falha ao garantir diretório de saída {os.path.dirname(output_path)}: {e}")
+        df = pd.read_excel(excel_file_path, engine='openpyxl', dtype=str)
+        df['Distancia(m)'] = df['Distancia(m)'].str.replace(',', '.').astype(float)
+        df['E'] = df['E'].str.replace(',', '').astype(float)
+        df['N'] = df['N'].str.replace(',', '').astype(float)
 
-        if not os.path.exists(template_path):
-            logger.warning(f"[DOCX] Template não encontrado: {template_path}")
-
-        if not os.path.exists(excel_file_path):
-            logger.warning(f"[DOCX] XLSX base não encontrado: {excel_file_path}")
-
-        # ── Ler Excel e garantir colunas numéricas ─────────────────────────────
-        df = pd.read_excel(excel_file_path)
-        for col in ("N", "E", "Distancia(m)"):
-            if col not in df.columns:
-                logger.warning(f"[DOCX] Coluna '{col}' ausente no XLSX ({excel_file_path}).")
-
-        if "N" in df.columns:
-            df["N"] = pd.to_numeric(df["N"].astype(str).str.replace(",", "."), errors="coerce")
-        if "E" in df.columns:
-            df["E"] = pd.to_numeric(df["E"].astype(str).str.replace(",", "."), errors="coerce")
-        if "Distancia(m)" in df.columns:
-            df["Distancia(m)"] = pd.to_numeric(df["Distancia(m)"].astype(str).str.replace(",", "."), errors="coerce")
-
-        # ── Criar documento Word a partir do template ──────────────────────────
         doc_word = Document(template_path)
+        while doc_word.paragraphs and not doc_word.paragraphs[0].text.strip():
+            p_element = doc_word.paragraphs[0]._element
+            p_element.getparent().remove(p_element)
+
         set_default_font(doc_word)
 
-        p1 = doc_word.add_paragraph("MEMORIAL DESCRITIVO", style="Normal")
-        p1.runs[0].bold = True
-        p1.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        doc_word.add_paragraph()
-
-        texto_tipo = {
-            "ETE": f"Área da matrícula {matricula} destinada a {descricao} - SES de {cidade}",
-            "REM": f"Área remanescente da matrícula {matricula} destinada a {descricao}",
-            "SER": f"Área da matrícula {matricula} destinada à SERVIDÃO ADMINISTRATIVA DE ACESSO À {descricao}",
-            "ACE": f"Área da matrícula {matricula} destinada ao ACESSO DA SERVIDÃO ADMINISTRATIVA DA {descricao}",
-        }.get(tipo, "Tipo não especificado")
-
-        p = doc_word.add_paragraph(style="Normal")
-        p.add_run("Imóvel: ")
-        p.add_run(texto_tipo).bold = True
-
-        # ⚠️ Usar 'rgi' (parâmetro), não 'RI'
-        doc_word.add_paragraph(f"Matrícula: Número - {matricula} do {rgi} de {comarca}", style="Normal")
-        doc_word.add_paragraph(f"Proprietário: {proprietario}", style="Normal")
-        doc_word.add_paragraph(f"Local: {rua} - {cidade}", style="Normal")
-        doc_word.add_paragraph(f"Área: {area_dxf:,.2f} m²".replace(",", "X").replace(".", ",").replace("X", "."), style="Normal")
-        doc_word.add_paragraph(f"Perímetro: {perimeter_dxf:,.2f} m".replace(",", "X").replace(".", ",").replace("X", "."), style="Normal")
-        doc_word.add_paragraph()
-
         area_dxf_formatada = f"{area_dxf:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        texto_paragrafo = (
-            f"Área {uso_solo} com {area_dxf_formatada} m², parte de um todo maior da Matrícula Nº {matricula} com {area_imovel} "
-            f"do {rgi} de {comarca}, localizada na {rua}, na cidade de {cidade}, definida através do seguinte levantamento "
-            "topográfico, onde os ângulos foram medidos no sentido horário."
-        )
-        p = doc_word.add_paragraph(texto_paragrafo, style="Normal")
-        p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+        ponto_amarracao_1 = f"{ponto_amarracao[0]:.3f}".replace(".", ",")
+        ponto_amarracao_2 = f"{ponto_amarracao[1]:.3f}".replace(".", ",")
+        distancia_str = f"{distancia_amarracao_v1:.2f}".replace(".", ",")
+        azimute_dms = convert_to_dms(azimute)
+
+        doc_word.add_paragraph(style='Normal').add_run("MEMORIAL DESCRITIVO").bold = True
+
         doc_word.add_paragraph()
+        p = doc_word.add_paragraph(style='Normal')
+        p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+        p.add_run("Objetivo: ").bold = True
+        p.add_run(f"Área destinada à servidão de passagem para execução de coletor de fundo pertencente à rede coletora de esgoto de {cidade}/RS.")
 
-        coord_E_ponto_Az = f"{Coorde_E_ponto_Az:.3f}".replace(".", ",")
-        coord_N_ponto_Az = f"{Coorde_N_ponto_Az:.3f}".replace(".", ",")
-        doc_word.add_paragraph(
-            f"O Ponto Az, ponto de amarração, está localizado na {desc_ponto_Az} nas coordenadas "
-            f"E(X) {coord_E_ponto_Az} e N(Y) {coord_N_ponto_Az}.", style="Normal"
-        ).alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+        doc_word.add_paragraph(f"Matrícula Número: {matricula_texto} - {rgi}", style='Normal')
+        doc_word.add_paragraph(f"Área Total do Terreno: {str(area_total).replace('.', ',')}", style='Normal')
+        doc_word.add_paragraph(f"Proprietário: {proprietario} - CPF/CNPJ: {cpf}", style='Normal')
+
+        p = doc_word.add_paragraph(style='Normal')
+        p.add_run("Área de Servidão de Passagem: ").bold = True
+        run1 = p.add_run(f"{area_dxf_formatada} m"); run1.font.name = 'Arial'; run1.font.size = Pt(12)
+        run2 = p.add_run("2"); run2.font.name = 'Arial'; run2.font.size = Pt(12); run2.font.superscript = True
+
         doc_word.add_paragraph()
+        p = doc_word.add_paragraph(style='Normal')
+        p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+        p.add_run(f"Área com {area_dxf_formatada} m² localizada na {rua}, município de {cidade}, com a finalidade de servidão de passagem com a seguinte descrição e confrontações, onde os azimutes foram medidos no sentido horário.").font.name = 'Arial'
 
-        distance_formatada = f"{distance:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        p = doc_word.add_paragraph(style="Normal")
-        p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        p.add_run(f"Daí, com Azimute de {convert_to_dms(azimuth)} e distância de {distance_formatada} m, chega-se ao Vértice ")
-        p.add_run("V1").bold = True
-        p.add_run(", origem da descrição desta área.")
         doc_word.add_paragraph()
+        doc_word.add_paragraph("Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000.", style='Normal')
 
-        # Início da descrição pelo primeiro vértice
-        if not df.empty:
-            initial = df.iloc[0]
-            try:
-                coord_N_inicial = f"{initial['N']:.3f}".replace(".", ",")
-                coord_E_inicial = f"{initial['E']:.3f}".replace(".", ",")
-            except Exception:
-                coord_N_inicial = coord_E_inicial = "--"
+        for i in range(len(df)):
+            current = df.iloc[i]
+            next_vertex = df.iloc[(i + 1) % len(df)]
 
-            doc_word.add_paragraph("Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000.", style="Normal")
-            doc_word.add_paragraph()
+            distancia = f"{current['Distancia(m)']:.2f}".replace(".", ",")
+            confrontante = current['Confrontante']
+            azimute_valor = current['Azimute']
 
-            p2 = doc_word.add_paragraph(style="Normal")
-            p2.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-            p2.add_run("Inicia-se a descrição deste perímetro no vértice ")
-            p2.add_run(f"{initial.get('V', 'V1')}").bold = True
-            p2.add_run(f", de coordenadas N(Y) {coord_N_inicial} e E(X) {coord_E_inicial}, situado no limite com {initial.get('Confrontante','')}.")
-            doc_word.add_paragraph()
-
-            # Trechos
-            for i in range(len(df)):
-                current = df.iloc[i]
-                next_point = df.iloc[(i + 1) % len(df)]
-
-                try:
-                    distancia_formatada = f"{float(current['Distancia(m)']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                except Exception:
-                    distancia_formatada = "--"
-
-                try:
-                    coord_N_formatada = f"{float(next_point['N']):.3f}".replace(".", ",")
-                    coord_E_formatada = f"{float(next_point['E']):.3f}".replace(".", ",")
-                except Exception:
-                    coord_N_formatada = coord_E_formatada = "--"
-
-                complemento = ", origem desta descrição," if next_point.get("V", "") == "V1" else ""
-
-                p = doc_word.add_paragraph(style="Normal")
-                p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-                p.add_run(
-                    f"Deste, segue com azimute de {current.get('Azimute','')} e distância de {distancia_formatada} m, "
-                    f"confrontando neste trecho com área pertencente à {current.get('Confrontante','')}, até o vértice "
-                )
-                p.add_run(f"{next_point.get('V','')}").bold = True
-                p.add_run(f"{complemento} de coordenadas N(Y) {coord_N_formatada} e E(X) {coord_E_formatada};")
+            if i == 0:
+                p = doc_word.add_paragraph(style='Normal')
+                p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                p.add_run("Do vértice ").bold = False
+                p.add_run(f"{current['V']}").bold = True
+                p.add_run(f", com azimute de {azimute_valor} e distância de {distancia} metros, confrontando com área pertencente à {confrontante}, chega-se ao vértice ")
+                p.add_run(f"{next_vertex['V']}").bold = True
+                p.add_run(";")
                 doc_word.add_paragraph()
 
-        # Data em PT-BR
+            elif next_vertex['V'] == "V1" and i == len(df) - 1:
+                p = doc_word.add_paragraph(style='Normal')
+                p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                p.add_run("Do vértice ").bold = False
+                p.add_run(f"{current['V']}").bold = True
+                p.add_run(f", com azimute de {azimute_valor} e distância de {distancia} metros, confrontando com área pertencente à {confrontante}, chega-se ao vértice ")
+                p.add_run(f"{next_vertex['V']}").bold = True
+                p.add_run(", origem da presente descrição.")
+                doc_word.add_paragraph()
+            else:
+                p = doc_word.add_paragraph(style='Normal')
+                p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                p.add_run("Do vértice ").bold = False
+                p.add_run(f"{current['V']}").bold = True
+                p.add_run(f", com azimute de {azimute_valor} e distância de {distancia} metros, confrontando com área pertencente à {confrontante}, chega-se ao vértice ")
+                p.add_run(f"{next_vertex['V']}").bold = True
+                p.add_run(";")
+                doc_word.add_paragraph()
+
         data_atual = datetime.now().strftime("%d de %B de %Y")
+        # converte mês para português
         for ingles, portugues in MESES_PT_BR.items():
             if ingles in data_atual:
                 data_atual = data_atual.replace(ingles, portugues)
                 break
-        doc_word.add_paragraph(f"\nPorto Alegre, RS, {data_atual}.", style="Normal")
+        doc_word.add_paragraph(f"\nPorto Alegre, RS, {data_atual}.", style='Normal')
         doc_word.add_paragraph("\n\n")
-
-        # ── Salvar no caminho recebido (não reconstruir) ───────────────────────
         doc_word.save(output_path)
-        logger.info(f"✅ Memorial descritivo salvo em: {output_path}")
-
-        # ── Sanidade pós-salvamento ───────────────────────────────────────────
-        try:
-            exists = os.path.exists(output_path)
-            logger.info(f"[SANITY DOCX] Existe? {exists} -> {output_path}")
-            try:
-                listing = os.listdir(os.path.dirname(output_path))
-                logger.info(f"[SANITY DOCX] Conteúdo do diretório (parcial): {listing[:20]}")
-            except Exception as e:
-                logger.warning(f"[SANITY DOCX] Falha ao listar diretório destino: {e}")
-        except Exception as e:
-            logger.warning(f"[SANITY DOCX] Falha na checagem de existência: {e}")
-
-        return output_path
+        logger.info(f"Memorial descritivo salvo em: {output_path}")
 
     except Exception as e:
-        logger.error(f"❌ Erro ao criar memorial descritivo: {e}")
-        return None
-
+        logger.error(f"Erro ao criar o documento memorial: {e}")
 
 
         
@@ -1644,29 +1598,28 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # 9) Gerar DOCX
     output_docx_path = os.path.join(diretorio_concluido, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
     create_memorial_document(
-        uuid_str=uuid_str,
-        proprietario=proprietario,
-        matricula=matricula,
-        descricao=descricao,
-        excel_file_path=excel_resultado,
-        template_path=caminho_template,
-        output_path=output_docx_path,
-        perimeter_dxf=perimeter_dxf,
-        area_dxf=area_dxf,
-        desc_ponto_Az=desc_ponto_Az,
-        Coorde_E_ponto_Az=Coord_E_ponto_Az,
-        Coorde_N_ponto_Az=Coord_N_ponto_Az,
-        azimuth=azimute_v1,
-        distance=distancia_az_v1,
-        uso_solo=uso_solo,
-        area_imovel=area_imovel,
-        cidade=cidade,
-        rua=rua,
-        comarca=comarca,
-        rgi=rgi,
-        caminho_salvar=caminho_salvar,
-        tipo=tipo
-    )
+                uuid_str=uuid_str,
+                proprietario=proprietario,
+                matricula=matricula,
+                matricula_texto=matricula_texto,
+                area_total=area_total,
+                cpf=cpf,
+                rgi=rgi,
+                excel_file_path=excel_file_path,
+                template_path=template_path,
+                output_path=output_path_docx,
+                assinatura_path=assinatura_path,
+                ponto_amarracao=ponto_az,
+                azimute=azimute,
+                distancia_amarracao_v1=distancia_az_v1,
+                rua=rua,
+                cidade=cidade,
+                confrontantes=confrontantes,
+                area_dxf=area_dxf,
+                desc_ponto_amarracao=desc_ponto_Az,
+                perimeter_dxf=perimeter_dxf,
+                giro_angular_v1_dms=giro_angular_v1_dms
+            )
 
     logger.info("🔵 [main_poligonal_fechada] Processamento concluído com sucesso.")
     print("Processamento concluído com sucesso.")
