@@ -276,29 +276,6 @@ def excluir_usuario():
     usuarios = listar_usuarios_mysql()
     return render_template('excluir_usuario.html', usuarios=usuarios, mensagem=mensagem, erro=erro)
 
-# aqui as duas rotas abaixo é para o ZIP e LOG EXECUCAO sairem por uuid
-from flask import send_file, abort
-from pathlib import Path
-
-BASE_TMP = Path("/opt/render/project/src/tmp")
-
-@app.get("/download/log/<uuid>")
-def download_log(uuid):
-    path = BASE_TMP / uuid / "CONCLUIDO" / f"exec_{uuid}.log"
-    if not path.exists():
-        abort(404, "Log não encontrado")
-    return send_file(path, as_attachment=True,
-                     download_name=f"log_{uuid}.txt",
-                     mimetype="text/plain; charset=utf-8")
-
-@app.get("/download/zip/<uuid>/<fname>")
-def download_zip(uuid, fname):
-    p = BASE_TMP / uuid / "CONCLUIDO" / fname
-    if not p.exists() or not str(p.name).endswith(".zip"):
-        abort(404, "ZIP não encontrado")
-    return send_file(p, as_attachment=True, download_name=p.name)
-#FINAL DO BLOCO QUE BAIXA O ZIP E LOG EXECUCAO POR UUID
-
 @app.route('/memoriais-descritivos', methods=['GET', 'POST'])
 def memoriais_descritivos():
     if 'usuario' not in session:
