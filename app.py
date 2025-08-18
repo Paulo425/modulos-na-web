@@ -362,20 +362,22 @@ def memoriais_descritivos():
                     if len(log_lines) < 100:
                         log_lines.append(linha)
                 # opcional: print no console
-                #     print("🖨️", linha.strip())
-
+                # print("🖨️", linha.strip())
 
             processo.wait()
             proc_ok = (processo.returncode == 0)
+
             # Descobrir ZIP(s) gerados nesta execução (em /tmp/<uuid>/CONCLUIDO)
             zip_files = sorted([f for f in os.listdir(diretorio) if f.lower().endswith(".zip")])
             zip_download = zip_files[0] if zip_files else None
 
-            # URLs para download via rotas helper (veja item 6)
+            # URLs para download via rotas helper
             zip_urls = [url_for("download_zip_decopa", uuid=id_execucao, fname=f) for f in zip_files]
-            zip_url  = zip_urls[0] if zip_urls else None
-            success  = bool(zip_url)
+            zip_url = zip_urls[0] if zip_urls else None
+            success = bool(zip_url)
+
             app.logger.info(f"[DECOPA] run={id_execucao} success={success} zip_files={zip_files} zip_url={zip_url}")
+
             if not proc_ok:
                 erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
             elif success:
@@ -387,7 +389,14 @@ def memoriais_descritivos():
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
         finally:
-            
+            for p in (caminho_excel, caminho_dxf):
+                try:
+                    if p and os.path.exists(p):
+                        os.remove(p)
+                except Exception:
+                    pass
+
+        # URL para baixar o log desta execução
         log_relativo = url_for("download_log_decopa", uuid=id_execucao)
 
 
