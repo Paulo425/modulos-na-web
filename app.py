@@ -375,22 +375,19 @@ def memoriais_descritivos():
             zip_urls = [url_for("download_zip_decopa", uuid=id_execucao, fname=f) for f in zip_files]
             zip_url  = zip_urls[0] if zip_urls else None
             success  = bool(zip_url)
+            app.logger.info(f"[DECOPA] run={id_execucao} success={success} zip_files={zip_files} zip_url={zip_url}")
             if not proc_ok:
                 erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
-            elif proc_ok and not success:
-                erro_execucao = "⚠️ Processamento terminou, mas nenhum ZIP foi gerado. Baixe o log da execução para detalhes."
-            else:
+            elif success:
                 resultado = "✅ Processamento concluído com sucesso!"
+            else:
+                erro_execucao = "⚠️ Processamento terminou, mas nenhum ZIP foi gerado. Baixe o log da execução para detalhes."
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
         finally:
-            for _p in (caminho_excel, caminho_dxf):
-                try:
-                    os.remove(_p)
-                except Exception:
-                    pass
+            
         log_relativo = url_for("download_log_decopa", uuid=id_execucao)
 
 
