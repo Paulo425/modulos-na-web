@@ -3,10 +3,21 @@ import sys
 import logging
 import shutil
 import uuid
+import json
 from datetime import datetime
 from preparar_arquivos import preparar_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
+
+RUN_UUID = os.environ.get("RUN_UUID") or uuid.uuid4().hex[:8]
+
+# Pastas desta execução (onde o Flask vai procurar)
+DIR_TMP  = os.path.join(BASE_DIR, 'tmp', RUN_UUID)
+DIR_REC  = os.path.join(DIR_TMP, 'RECEBIDO')
+DIR_CONC = os.path.join(DIR_TMP, 'CONCLUIDO')
+for d in (DIR_REC, DIR_CONC):
+    os.makedirs(d, exist_ok=True)
+
 
 # ✅ 1. Caminho base
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -16,9 +27,10 @@ CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
 os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
 
 # ✅ 3. Pasta de logs
-LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
+# ✅ 3. Pasta de logs (no mesmo local que o Flask serve)
+LOG_DIR = DIR_CONC
 os.makedirs(LOG_DIR, exist_ok=True)
-log_path = os.path.join(LOG_DIR, f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+log_path = os.path.join(LOG_DIR, f"worker_{RUN_UUID}.log")  # não conflita com exec_<uuid>.log do Flask
 
 # Configuração do logger
 logger = logging.getLogger(__name__)
@@ -114,8 +126,8 @@ def main():
     # 🔎 Verificação final - ZIP mais recente
     try:
         arquivos_zip = [
-            f for f in os.listdir(pasta_destino)
-            if f.lower().endswith('.zip') and uuid_str in f
+            f for f in os.listdir(DIR_CONC)
+            if f.lower().endswith('.zip') and RUN_UUID in f
         ]
         if arquivos_zip:
             arquivos_zip.sort(
@@ -128,6 +140,19 @@ def main():
             logger.warning("⚠️ Nenhum ZIP disponível para download.")
     except Exception as e:
         logger.error(f"⚠️ Não foi possível determinar o nome do ZIP: {e}")
+
+if zip_path:
+    _dst = os.path.join(DIR_CONC, os.path.basename(zip_path))
+    if os.path.abspath(zip_path) != os.path.abspath(_dst):
+        shutil.copy2(zip_path, _dst)
+    zip_name = os.path.basename(_dst)  # garante nome consistente no CONCLUIDO
+
+
+if zip_name:
+    with open(os.path.join(DIR_CONC, "RUN.json"), "w", encoding="utf-8") as f:
+        json.dump({"zip_files": [os.path.basename(zip_name)]}, f, ensure_ascii=False)
+else:
+    logger.warning("Nenhum ZIP para registrar no RUN.json")
 
 if __name__ == "__main__":
     main()
