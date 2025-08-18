@@ -316,6 +316,10 @@ def memoriais_descritivos():
 
     resultado = erro_execucao = zip_download = log_relativo = None
     success = False
+    zip_url = None
+    zip_urls = []
+    id_execucao = None
+
 
 
     if request.method == 'POST':
@@ -347,7 +351,7 @@ def memoriais_descritivos():
                 "--excel", caminho_excel,
                 "--dxf", caminho_dxf],
                 stdout=PIPE,
-                stderr=subprocess.STDOUT,
+                stderr=STDOUT,
                 text=True
             )
 
@@ -362,31 +366,31 @@ def memoriais_descritivos():
 
 
             processo.wait()
-            success = (processo.returncode == 0)
+            proc_ok = (processo.returncode == 0)
+            # Descobrir ZIP(s) gerados nesta execução (em /tmp/<uuid>/CONCLUIDO)
+            zip_files = sorted([f for f in os.listdir(diretorio) if f.lower().endswith(".zip")])
+            zip_download = zip_files[0] if zip_files else None
 
-            if processo.returncode == 0:
-                resultado = "✅ Processamento concluído com sucesso!"
-            else:
+            # URLs para download via rotas helper (veja item 6)
+            zip_urls = [url_for("download_zip_decopa", uuid=id_execucao, fname=f) for f in zip_files]
+            zip_url  = zip_urls[0] if zip_urls else None
+            success  = bool(zip_url)
+            if not proc_ok:
                 erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+            elif proc_ok and not success:
+                erro_execucao = "⚠️ Processamento terminou, mas nenhum ZIP foi gerado. Baixe o log da execução para detalhes."
+            else:
+                resultado = "✅ Processamento concluído com sucesso!"
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
         finally:
-            os.remove(caminho_excel)
-            os.remove(caminho_dxf)
-
-        # Verifica ZIP e copia para static/arquivos
-        # Descobrir ZIP(s) gerados nesta execução (em /tmp/<uuid>/CONCLUIDO)
-        zip_files = sorted([f for f in os.listdir(diretorio) if f.lower().endswith(".zip")])
-        zip_download = zip_files[0] if zip_files else None
-
-        # URLs para download via rotas helper (veja item 6)
-        zip_urls = [url_for("download_zip_decopa", uuid=id_execucao, fname=f) for f in zip_files]
-        zip_url  = zip_urls[0] if zip_urls else None
-        success  = bool(zip_url)
-
-        # URL para baixar o log desta execução
+            for _p in (caminho_excel, caminho_dxf):
+                try:
+                    os.remove(_p)
+                except Exception:
+                    pass
         log_relativo = url_for("download_log_decopa", uuid=id_execucao)
 
 
@@ -802,9 +806,8 @@ def gerar_memorial_angulo_az():
             arquivos_zip = [f for f in os.listdir(static_zip_dir)
                 if f.lower().endswith('.zip') and f.startswith(f"{id_execucao}_")]
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(zip_dir, x)), reverse=True)
+                arquivos_zip = [f for f in os.listdir(static_zip_dir) if f.lower().endswith('.zip')]
                 zip_download = arquivos_zip[0]
-                success = True
                 print(f"✅ ZIP disponível para download: {zip_download}")
             else:
                 print("⚠️ Nenhum ZIP encontrado no diretório público.")
