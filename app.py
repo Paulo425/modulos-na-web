@@ -550,6 +550,7 @@ def gerar_memorial_azimute_az():
             try:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                 zip_files = manifest.get("zip_files", [])
+                zip_files = [Path(z).name for z in zip_files if z]  # <- mudou aqui só para mudar usando só o nome do arquivo
             except Exception as e:
                 logger.warning(f"RUN.json inválido: {e}")
 
@@ -583,6 +584,7 @@ def gerar_memorial_azimute_az():
         erro_execucao = None if success else (
             "Houve um erro durante a execução. Baixe o log para verificar os detalhes (ponto de amarração ausente, DXF inválido, etc.)."
         )
+        logger.info(f"[AZIMUTE_AZ] run={run_uuid} success={success} zip_url={zip_url} zip_files={zip_files}")
 
         return render_template(
             "formulario_AZIMUTE_AZ.html",
