@@ -5,7 +5,8 @@ import re
 import logging
 from datetime import datetime
 import shutil
-from shutil import copyfile
+import json
+
 
 # Defina BASE_DIR de forma segura para execução local
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -23,6 +24,10 @@ def montar_pacote_zip(diretorio, cidade):
     print("\n📦 [compactar] Iniciando montagem dos pacotes ZIP")
     logger.info("Iniciando montagem dos pacotes ZIP")
 
+    created_zips = []  # nomes (base) dos zips gerados nesta execução (em diretorio)
+    uuid_prefix = os.path.basename(diretorio)  # ex.: '8824d080'
+
+
     tipos = ["ETE", "REM", "SER", "ACE"]
 
     print("\n📁 [DEBUG] Listando todos os arquivos no diretório:")
@@ -33,7 +38,6 @@ def montar_pacote_zip(diretorio, cidade):
         print(f"\n🔍 Buscando arquivos do tipo: {tipo}")
         logger.info(f"Buscando arquivos do tipo: {tipo}")
 
-        uuid_prefix = os.path.basename(diretorio)
         print(f"[DEBUG compactar] UUID identificado: {uuid_prefix}")
 
 
@@ -81,7 +85,8 @@ def montar_pacote_zip(diretorio, cidade):
                 
                 STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'arquivos')
                 os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
-                caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, os.path.basename(nome_zip))
+                caminho_debug_zip = os.path.join(STATIC_ZIP_DIR, f"{uuid_prefix}_{os.path.basename(nome_zip)}")
+
 
                 try:
                     with zipfile.ZipFile(nome_zip, 'w') as zipf:
@@ -89,12 +94,24 @@ def montar_pacote_zip(diretorio, cidade):
                         zipf.write(arq_dxf[0], arcname=os.path.basename(arq_dxf[0]))
                         zipf.write(arq_excel[0], arcname=os.path.basename(arq_excel[0]))
                     shutil.copy2(nome_zip, caminho_debug_zip)
+                    # registra o zip gerado (nome base dentro do CONCLUIDO)
+                    created_zips.append(os.path.basename(nome_zip))
+
 
                     print(f"✅ ZIP criado com sucesso: {nome_zip}")
                     logger.info(f"ZIP criado: {nome_zip} e copiado para: {caminho_debug_zip}")
                 except Exception as e:
                     logger.exception(f"Erro ao criar ZIP {nome_zip}")
                     print(f"❌ Erro ao criar ZIP: {e}")
+    # Escreve manifesto com os zips desta execução no CONCLUIDO
+    try:
+        run_json = os.path.join(diretorio, "RUN.json")
+        with open(run_json, "w", encoding="utf-8") as f:
+            json.dump({"zip_files": created_zips}, f, ensure_ascii=False)
+        logger.info(f"[RUN] Manifesto salvo: {run_json} | zip_files={created_zips}")
+    except Exception as e:
+        logger.warning(f"[RUN] Falha ao salvar RUN.json: {e}")
+
 
 def main_compactar_arquivos(diretorio_concluido, cidade_formatada):
     print(f"\n📦 Iniciando compactação no diretório: {diretorio_concluido}")

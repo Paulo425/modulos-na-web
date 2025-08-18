@@ -9,9 +9,24 @@ from preparar_arquivos import main_preparo_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
 import uuid
+import json
+
 
 # ✅ 1. Caminho base
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# 👉 Cada execução em diretórios próprios
+RUN_UUID = os.environ.get("RUN_UUID") or uuid.uuid4().hex[:8]
+DIR_RUN  = os.path.join(BASE_DIR, 'tmp', RUN_UUID)
+DIR_REC  = os.path.join(DIR_RUN, 'RECEBIDO')
+DIR_PREP = os.path.join(DIR_RUN, 'PREPARADO')
+DIR_CONC = os.path.join(DIR_RUN, 'CONCLUIDO')
+for d in (DIR_REC, DIR_PREP, DIR_CONC):
+    os.makedirs(d, exist_ok=True)
+
+# log desta execução dentro do CONCLUIDO (onde o Flask procura)
+log_path = os.path.join(DIR_CONC, f"exec_{RUN_UUID}.log")
+
 
 # ✅ 2. Pastas públicas
 CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
@@ -22,13 +37,18 @@ LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
 log_path = os.path.join(LOG_DIR, f"exec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 
-# ✅ 4. Configura logger
-logging.basicConfig(
-    filename=log_path,
-    filemode='w',
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-)
+# ✅ Logger raiz aponta para o log da execução + console
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+for h in list(root.handlers):
+    root.removeHandler(h)
+
+fh = logging.FileHandler(log_path, encoding='utf-8')
+sh = logging.StreamHandler(sys.stdout)
+fmt = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+fh.setFormatter(fmt); sh.setFormatter(fmt)
+root.addHandler(fh); root.addHandler(sh)
+
 
 # ✅ 5. Habilita UTF-8 no console (com fallback para ambientes sem suporte)
 try:
@@ -80,32 +100,21 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     print(f"\n📦 [main.py] Chamando compactação no diretório: {diretorio_concluido}")
     logging.info(f"📦 Chamando compactação no diretório: {diretorio_concluido}")
 
-    main_compactar_arquivos(diretorio_saida, cidade)
+    main_compactar_arquivos(diretorio_concluido, cidade)
+
 
 
     print("✅ [main.py] Compactação finalizada com sucesso!")
     logging.info("✅ Compactação finalizada com sucesso!")
 
-    print("\n📤 Copiando arquivos finais para a pasta pública")
-    logging.info("📤 Copiando arquivos finais para a pasta pública")
-
-    # Cria pasta pública se necessário
-    os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
-    zip_download = None
-    for fname in os.listdir(diretorio_concluido):
-        origem = os.path.join(diretorio_concluido, fname)
-        if os.path.isfile(origem):
-            nome_com_uuid = f"{id_execucao}_{fname}"
-            destino = os.path.join(BASE_DIR, 'static', 'arquivos', nome_com_uuid)
-            try:
-                shutil.copy2(origem, destino)
-                print(f"🗂️ Arquivo copiado: {destino}")
-                logging.info(f"🗂️ Arquivo copiado: {destino}")
-                if fname.endswith(".zip"):
-                    zip_download = nome_com_uuid
-            except Exception as e:
-                print(f"❌ Falha ao copiar {fname}: {e}")
-                logging.error(f"❌ Erro ao copiar {fname}: {e}")
+    
+    try:
+        zip_files = [f for f in os.listdir(diretorio_concluido) if f.lower().endswith('.zip')]
+        with open(os.path.join(diretorio_concluido, "RUN.json"), "w", encoding="utf-8") as f:
+            json.dump({"zip_files": zip_files}, f, ensure_ascii=False)
+        logging.info(f"[RUN.json] registrado: {zip_files}")
+    except Exception as e:
+        logging.exception(f"Falha ao escrever RUN.json: {e}")
 
 
     print("✅ [main.py] Processo geral concluído com sucesso!")
@@ -125,14 +134,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    diretorio = args.diretorio
-    cidade = args.cidade
-    excel = args.excel
-    dxf = args.dxf
-    print(f"[DEBUG main.py] UUID da execução: {os.path.basename(diretorio)}")
+    # Ignoramos --diretorio aqui para padronizar por execução
+    diretorio = DIR_CONC
+    print(f"[DEBUG main.py] RUN_UUID: {RUN_UUID}")
 
-    if not diretorio or 'C:\\' in diretorio or 'OneDrive' in diretorio:
-        id_execucao = str(uuid.uuid4())[:8]
-        diretorio= os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
 
     executar_programa(diretorio, cidade, excel, dxf)

@@ -8,6 +8,7 @@ from datetime import datetime
 
 # Diretórios e logger
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
 LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -43,21 +44,24 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
             print(f"⚠️ Planilha '{sheet_name}' não encontrada.")
 
 # ✅ Função principal usada pelo main.py
-def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
-    TMP_DIR = os.path.join(BASE_DIR, 'tmp')
-    RECEBIDO = os.path.join(TMP_DIR, 'RECEBIDO')
-    PREPARADO = os.path.join(TMP_DIR, 'PREPARADO')
-    CONCLUIDO = diretorio_base  # já vem com UUID do main.py
+def main_preparo_arquivos(diretorio_saida, cidade, caminho_excel, caminho_dxf):
 
+    # Pastas desta execução (isoladas por UUID)
+    DIR_CONC = os.path.abspath(diretorio_saida)             # .../tmp/<UUID>/CONCLUIDO
+    DIR_RUN  = os.path.dirname(DIR_CONC)                     # .../tmp/<UUID>
+    DIR_REC  = os.path.join(DIR_RUN, 'RECEBIDO')             # .../tmp/<UUID>/RECEBIDO
+    DIR_PREP = os.path.join(DIR_RUN, 'PREPARADO')            # .../tmp/<UUID>/PREPARADO
+    for d in (DIR_REC, DIR_PREP, DIR_CONC):
+        os.makedirs(d, exist_ok=True)
 
-    for pasta in [RECEBIDO, PREPARADO, CONCLUIDO]:
-        os.makedirs(pasta, exist_ok=True)
+ 
 
     nome_excel = os.path.basename(caminho_excel)
     nome_dxf = os.path.basename(caminho_dxf)
 
-    destino_excel = os.path.join(RECEBIDO, nome_excel)
-    destino_dxf = os.path.join(RECEBIDO, nome_dxf)
+    destino_excel = os.path.join(DIR_REC, nome_excel)
+    destino_dxf   = os.path.join(DIR_REC, nome_dxf)
+
 
     try:
         shutil.copy(caminho_excel, destino_excel)
@@ -79,7 +83,7 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
 
     # ✅ Gera planilhas abertas/fechadas (ponto-chave que estava faltando)
     try:
-        preparar_planilhas(destino_excel, PREPARADO)
+        preparar_planilhas(destino_excel, DIR_PREP)
     except Exception as e:
         print(f"⚠️ Erro ao preparar planilhas: {e}")
         logger.error(f"Erro ao preparar planilhas: {e}")
@@ -89,7 +93,7 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
         df = pd.read_excel(destino_excel, sheet_name=None)
         for nome_aba, tabela in df.items():
             nome_arquivo = f"{nome_aba}_PREPARADO.xlsx"
-            caminho_saida = os.path.join(PREPARADO, nome_arquivo)
+            caminho_saida = os.path.join(DIR_PREP, nome_arquivo)
             tabela.to_excel(caminho_saida, index=False)
             print(f"✅ Planilha '{nome_aba}' salva em: {caminho_saida}")
             logger.info(f"Planilha '{nome_aba}' salva em: {caminho_saida}")
@@ -98,20 +102,19 @@ def main_preparo_arquivos(diretorio_base, cidade, caminho_excel, caminho_dxf):
         logger.error(f"Erro ao salvar planilhas completas: {e}")
         return None
 
-    print("🟢 [main_preparo_arquivos] Tudo pronto, retornando variáveis:")
-    print("  TMP_DIR:", TMP_DIR)
-    print("  PREPARADO:", PREPARADO)
-    print("  CONCLUIDO:", CONCLUIDO)
+    print("  RUN_DIR:", DIR_RUN)
+    print("  PREPARADO:", DIR_PREP)
+    print("  CONCLUIDO:", DIR_CONC)
     print("  Excel:", destino_excel)
     print("  DXF:", destino_dxf)
+
     print("  Template:", os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx'))
     logger.info("Preparo concluído com sucesso")
 
     return {
-        "diretorio_final": TMP_DIR,
-        "diretorio_preparado": PREPARADO,
-        "diretorio_concluido": CONCLUIDO,
+        "diretorio_preparado": DIR_PREP,
+        "diretorio_concluido": DIR_CONC,
         "arquivo_excel_recebido": destino_excel,
         "arquivo_dxf_recebido": destino_dxf,
-        "caminho_template": os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
+        "caminho_template": os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx'),
     }

@@ -588,7 +588,7 @@ def sanitize_filename(filename):
 # Função para criar memorial descritivo
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, ponto_inicial_real=None,tipo=None, uuid_prefix=None, encoding='ISO-8859-1'):
+                               azimute_az_v1=None, ponto_inicial_real=None,tipo=None, uuid_prefix=None):
 
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
@@ -633,12 +633,14 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         for i, elemento in enumerate(elementos):
             tipo_segmento, dados = elemento
             start_point, end_point = dados[0], dados[1]
-            if ponto_atual == start_point:
+            def _eq_pt(a, b, tol=1e-6):
+                return abs(a[0]-b[0]) < tol and abs(a[1]-b[1]) < tol
+            if _eq_pt(ponto_atual, start_point):
                 sequencia_completa.append(elemento)
                 ponto_atual = end_point
                 elementos.pop(i)
                 break
-            elif ponto_atual == end_point:
+            elif _eq_pt(ponto_atual, end_point):
                 # Inverte a direção do segmento para manter continuidade
                 if tipo_segmento == 'line':
                     elementos[i] = ('line', (end_point, start_point))
@@ -713,6 +715,21 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
+    # Deriva o UUID do caminho de saída se não vier preenchido
+    try:
+        _uuid_from_path = os.path.basename(os.path.dirname(caminho_salvar))
+        if not uuid_prefix or len(_uuid_from_path) == 8:
+            uuid_prefix = _uuid_from_path
+    except Exception:
+        pass
+
+    # Tenta deduzir o tipo (ETE/REM/SER/ACE) se não vier
+    if not tipo:
+        base_x = os.path.basename(excel_file_path).upper() if excel_file_path else ""
+        for _t in ("ETE", "REM", "SER", "ACE"):
+            if _t in base_x:
+                tipo = _t
+                break
 
 
     df = pd.DataFrame(data, dtype=str)
@@ -992,7 +1009,13 @@ def create_memorial_document(
 def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_concluido, caminho_template):
     print("\n🔹 Carregando dados do imóvel")
     logger.info("Iniciando processamento da poligonal fechada")
-    uuid_prefix = os.path.basename(pasta_concluido)
+    if os.path.basename(os.path.dirname(pasta_preparado)) != uuid_prefix:
+        logger.warning(
+            f"pasta_preparado não pertence ao mesmo UUID ({os.path.basename(os.path.dirname(pasta_preparado))} != {uuid_prefix}). "
+            "Verifique preparar_arquivos() para usar /tmp/<UUID>/PREPARADO."
+        )
+
+    uuid_prefix = os.path.basename(os.path.dirname(pasta_concluido))
     print(f"[DEBUG poligonal_fechada] UUID recebido: {uuid_prefix}")
 
     try:
@@ -1105,12 +1128,7 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
             print(f"📄 Memorial gerado com sucesso: {output_docx}")
             logger.info(f"Memorial gerado com sucesso: {output_docx}")
 
-            print("🔍 Conteúdo completo da pasta de saída (walk):")
-            for root, dirs, files in os.walk(pasta_concluido):
-                for file in files:
-                    caminho_completo = os.path.join(root, file)
-                    print("🗂️", caminho_completo)
-                    logger.info(f"🗂️ Arquivo gerado: {caminho_completo}")
+            
         else:
             msg = "❌ Falha ao gerar o memorial descritivo."
             print(msg)

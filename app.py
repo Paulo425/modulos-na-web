@@ -276,6 +276,38 @@ def excluir_usuario():
     usuarios = listar_usuarios_mysql()
     return render_template('excluir_usuario.html', usuarios=usuarios, mensagem=mensagem, erro=erro)
 
+import re
+
+@app.get("/download/decopa/log/<uuid>")
+def download_log_decopa(uuid):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    if not dir_conc.exists():
+        abort(404, "Execução não encontrada.")
+    pref = dir_conc / f"exec_{uuid}.log"
+    if pref.exists():
+        path = pref
+    else:
+        logs = sorted(dir_conc.glob("*.log"), key=os.path.getmtime, reverse=True)
+        if not logs:
+            abort(404, "Log não encontrado.")
+        path = logs[0]
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="text/plain; charset=utf-8")
+
+@app.get("/download/decopa/zip/<uuid>/<fname>")
+def download_zip_decopa(uuid, fname):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    if Path(fname).name != fname:
+        abort(400, "Nome de arquivo inválido")
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    path = dir_conc / fname
+    if (not path.exists()) or (not path.name.lower().endswith(".zip")):
+        abort(404, "ZIP não encontrado.")
+    return send_file(path, as_attachment=True, download_name=path.name)
+
+
 @app.route('/memoriais-descritivos', methods=['GET', 'POST'])
 def memoriais_descritivos():
     if 'usuario' not in session:
@@ -284,11 +316,13 @@ def memoriais_descritivos():
     resultado = erro_execucao = zip_download = log_relativo = None
 
     if request.method == 'POST':
-        import uuid
+        
 
-        id_execucao = str(uuid.uuid4())[:8]
-        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
+        id_execucao = uuid.uuid4().hex[:8]
+        base_exec = os.path.join(BASE_DIR, 'tmp', id_execucao)
+        diretorio = os.path.join(base_exec, 'CONCLUIDO')
         os.makedirs(diretorio, exist_ok=True)
+
 
         cidade = request.form['cidade']
         arquivo_excel = request.files['excel']
@@ -298,32 +332,31 @@ def memoriais_descritivos():
         caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
 
         # Log
-        log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.log")
-        log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
-        os.makedirs(log_dir_absoluto, exist_ok=True)
-        log_path = os.path.join(log_dir_absoluto, log_filename)
-        log_relativo = f"static/logs/{log_filename}"
-        print(f"🧾 Salvando LOG em: {log_path}")
+        # Log por execução dentro do CONCLUIDO
+        exec_log_path = os.path.join(diretorio, f"exec_{id_execucao}.log")
+
 
         try:
             processo = Popen(
-                ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
-                 "--diretorio", diretorio,
-                 "--cidade", cidade,
-                 "--excel", caminho_excel,
-                 "--dxf", caminho_dxf],
+                [sys.executable, os.path.join(BASE_DIR, "executaveis", "main.py"),
+                "--diretorio", diretorio,
+                "--cidade", cidade,
+                "--excel", caminho_excel,
+                "--dxf", caminho_dxf],
                 stdout=PIPE,
                 stderr=subprocess.STDOUT,
                 text=True
             )
 
             log_lines = []
-            with open(log_path, 'w', encoding='utf-8') as log_file:
+            with open(exec_log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
                     log_file.write(linha)
                     if len(log_lines) < 100:
                         log_lines.append(linha)
-                    print("🖨️", linha.strip())
+                # opcional: print no console
+                #     print("🖨️", linha.strip())
+
 
             processo.wait()
 
@@ -340,27 +373,30 @@ def memoriais_descritivos():
             os.remove(caminho_dxf)
 
         # Verifica ZIP e copia para static/arquivos
-        try:
-            static_zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(static_zip_dir) if f.lower().endswith('.zip')]
+        # Descobrir ZIP(s) gerados nesta execução (em /tmp/<uuid>/CONCLUIDO)
+        zip_files = sorted([f for f in os.listdir(diretorio) if f.lower().endswith(".zip")])
+        zip_download = zip_files[0] if zip_files else None
 
-            print("🧪 ZIPs encontrados:", arquivos_zip)
-            logging.info(f"🧪 ZIPs encontrados: {arquivos_zip}")
+        # URLs para download via rotas helper (veja item 6)
+        zip_urls = [url_for("download_zip_decopa", uuid=id_execucao, fname=f) for f in zip_files]
+        zip_url  = zip_urls[0] if zip_urls else None
+        success  = bool(zip_url)
 
-            if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(static_zip_dir, x)), reverse=True)
-                zip_download = arquivos_zip[0]
-                print(f"✅ ZIP para download: {zip_download}")
-                logging.info(f"✅ ZIP para download: {zip_download}")
-        except Exception as e:
-            print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
-            logging.error(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
+        # URL para baixar o log desta execução
+        log_relativo = url_for("download_log_decopa", uuid=id_execucao)
 
-    return render_template("formulario_DECOPA.html",
-                           resultado=resultado,
-                           erro=erro_execucao,
-                           zip_download=zip_download,
-                           log_path=log_relativo)
+
+    return render_template(
+        "formulario_DECOPA.html",
+        resultado=resultado,
+        erro=erro_execucao,
+        success=success,
+        zip_url=zip_url,
+        zip_urls=zip_urls,
+        zip_download=zip_download,  # compat se seu HTML antigo usa
+        log_path=log_relativo,
+        run_uuid=id_execucao
+    )
 #ATUALIZADO
 
 
