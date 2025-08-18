@@ -458,11 +458,11 @@ def alterar_senha():
     return render_template('alterar_senha.html', mensagem=mensagem, erro=erro)
 
 
-@app.route("/downloads")
-def listar_arquivos():
-    os.makedirs(arquivos_dir, exist_ok=True)
-    arquivos = os.listdir(arquivos_dir)
-    return render_template("listar_arquivos.html", arquivos=arquivos)
+# @app.route("/downloads")
+# def listar_arquivos():
+#     os.makedirs(arquivos_dir, exist_ok=True)
+#     arquivos = os.listdir(arquivos_dir)
+#     return render_template("listar_arquivos.html", arquivos=arquivos)
 
 @app.get("/download/azimute_az/log/<uuid>")
 def download_log_azimute_az(uuid):
@@ -835,9 +835,6 @@ def gerar_memorial_angulo_p1_p2():
 
         except Exception as e:
             logger.error(f"Erro fatal ao executar subprocess: {e}")
-
-
-
 
         finally:
             os.remove(caminho_excel)
