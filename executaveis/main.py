@@ -134,6 +134,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    diretorio = args.diretorio
+    cidade    = args.cidade
+    excel     = args.excel
+    dxf       = args.dxf
+    
+
+
     # Ignoramos --diretorio aqui para padronizar por execução
     diretorio = DIR_CONC
     print(f"[DEBUG main.py] RUN_UUID: {RUN_UUID}")
