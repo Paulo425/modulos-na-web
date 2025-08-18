@@ -1,36 +1,49 @@
-import os, sys, logging, json, shutil, uuid, glob
+import os
+import sys
+import logging
 from datetime import datetime
-from pathlib import Path
-
-# ========= RUN CONTEXT =========
-RUN_UUID = os.environ.get("RUN_UUID") or uuid.uuid4().hex[:8]
-os.environ["RUN_UUID"] = RUN_UUID
-RUN_BASE = Path(os.environ.get("RUN_BASE", "/opt/render/project/src/tmp"))
-RUN_DIR = RUN_BASE / RUN_UUID
-CONCLUIDO_DIR = RUN_DIR / "CONCLUIDO"
-CONCLUIDO_DIR.mkdir(parents=True, exist_ok=True)
-
-# Log único desta execução: /tmp/<uuid>/CONCLUIDO/exec_<uuid>.log
-LOG_FILE = CONCLUIDO_DIR / f"exec_{RUN_UUID}.log"
-logger = logging.getLogger("memorial")
-logger.setLevel(logging.INFO)
-if not any(isinstance(h, logging.FileHandler) and getattr(h, "_run_uuid", None) == RUN_UUID for h in logger.handlers):
-    fh = logging.FileHandler(LOG_FILE, encoding="utf-8")
-    fh._run_uuid = RUN_UUID
-    fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-    logger.addHandler(fh)
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-    logger.addHandler(sh)
-# ===============================
-
 from preparar_arquivos import preparar_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
+import shutil
+import uuid
+import glob  # ← FALTAVA
 
-BASE_DIR = Path(__file__).resolve().parents[1]
-CAMINHO_PUBLICO = BASE_DIR / 'static' / 'arquivos'
-CAMINHO_PUBLICO.mkdir(parents=True, exist_ok=True)
+
+# ✅ 1. Caminho base
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+
+# ✅ 2. Pastas públicas
+CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
+os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
+
+# ✅ 3. Pasta de logs
+LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+log_path = os.path.join(LOG_DIR, f"log_ANGULOAZ_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+
+
+# ✅ 4. Configura logger
+# Configuração do logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+file_handler = logging.FileHandler(log_path, encoding='utf-8')
+console_handler = logging.StreamHandler(sys.stdout)
+
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+
+# ✅ 5. Habilita UTF-8 no console
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass  # Em alguns ambientes, reconfigure não está disponível
 
 def main():
     if len(sys.argv) < 4 or len(sys.argv) > 5:
@@ -38,26 +51,29 @@ def main():
         sys.exit(1)
 
     cidade = sys.argv[1]
-    uuid_str = RUN_UUID  # 🔴 use o MESMO UUID da execução em TODO o pipeline
+    uuid_str = str(uuid.uuid4())[:8]
     cidade_formatada = cidade.replace(" ", "_")
     caminho_excel = sys.argv[2]
-    caminho_dxf   = sys.argv[3]
+    caminho_dxf = sys.argv[3]
     sentido_poligonal = sys.argv[4] if len(sys.argv) == 5 else 'horario'
-    logger.info(f"RUN_UUID={RUN_UUID} | Sentido={sentido_poligonal}")
+    logger.info(f"Sentido poligonal recebido no main.py: {sentido_poligonal}")
+    caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
 
-    caminho_template = str(BASE_DIR / "templates_doc" / "Memorial_modelo_padrao.docx")
+
+
     if not os.path.exists(caminho_template):
         logger.error(f"Template não encontrado em '{caminho_template}'.")
-        _write_manifest(success=False, zip_files=[])
         sys.exit(1)
 
-    variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, str(BASE_DIR), uuid_str)
+    variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, BASE_DIR, uuid_str)
+
     if not variaveis:
         logger.error("Erro ao preparar arquivos. Encerrando execução.")
-        _write_manifest(success=False, zip_files=[])
         sys.exit(1)
 
     logger.info("✅ Preparação dos arquivos concluída.")
+
+
 
     main_poligonal_fechada(
         uuid_str,
@@ -67,53 +83,71 @@ def main():
         variaveis["diretorio_concluido"],
         caminho_template,
         sentido_poligonal
+  
     )
-    logger.info("✅ Processamento da poligonal fechada concluído.")
 
-    # Sinalização: existe algo para zipar?
-    tem_algum = any(glob.glob(os.path.join(variaveis["diretorio_concluido"], f"{uuid_str}_FECHADA_{t}_*.xlsx"))
-                    for t in ("ETE","REM","SER","ACE"))
+    logger.info("✅ Processamento da poligonal fechada concluído.")
+    # Checkpoint: antes de compactar, confirme se existem artefatos para pelo menos um TIPO
+    tipos = ["ETE", "REM", "SER", "ACE"]
+    tem_algum = False
+    for _tipo in tipos:
+        pad_xlsx = os.path.join(variaveis["diretorio_concluido"], f"{uuid_str}_FECHADA_{_tipo}_*.xlsx")
+        if glob.glob(pad_xlsx):
+            tem_algum = True
+            break
+
     if not tem_algum:
-        logger.error("❌ Nenhum XLSX FECHADA gerado em %s. Compactação pode não gerar ZIP.",
-                     variaveis["diretorio_concluido"])
+        logger.error("❌ Nenhum XLSX FECHADA gerado em %s. Compactação não terá o que zipar.",
+                    variaveis["diretorio_concluido"])
 
     main_compactar_arquivos(variaveis["diretorio_concluido"], cidade_formatada, uuid_str)
-    logger.info("✅ Compactação concluída.")
 
-    # (Opcional) Copiar ZIPs para static/arquivos — o front novo não precisa disso, mas mantive
+    logger.info("✅ Compactação concluída com sucesso.")
+
+
+    # 🔁 Copiar ZIPs para static/arquivos e exibir debug
+    # ✅ Copiar todos os ZIPs que realmente existem
+    # 🔁 Copiar ZIPs para static/arquivos
     try:
-        zips = list(Path(variaveis["diretorio_concluido"]).glob("*.zip"))
-        for p in zips:
-            shutil.copy2(p, CAMINHO_PUBLICO / p.name)
-            logger.info(f"📦 ZIP copiado: {p.name}")
-        if not zips:
+        zips_copiados = 0
+        pasta_origem = variaveis["diretorio_concluido"]
+        pasta_destino = CAMINHO_PUBLICO
+        os.makedirs(pasta_destino, exist_ok=True)
+
+        for arquivo in os.listdir(pasta_origem):
+            if arquivo.lower().endswith(".zip"):
+                origem = os.path.join(pasta_origem, arquivo)
+                destino = os.path.join(pasta_destino, arquivo)
+                shutil.copy2(origem, destino)
+                logger.info(f"📦 ZIP copiado: {arquivo}")
+                zips_copiados += 1
+
+        if zips_copiados == 0:
             logger.warning("⚠️ Nenhum ZIP encontrado para copiar.")
     except Exception as e:
         logger.error(f"❌ Erro ao copiar ZIPs: {e}")
 
-    # Manifesto da execução (AGORA sim, depois de tudo pronto)
-    zip_files = [p.name for p in Path(variaveis["diretorio_concluido"]).glob("*.zip")]
-    _write_manifest(success=bool(zip_files), zip_files=zip_files)
-
-def _write_manifest(success: bool, zip_files):
+    # 🔎 Verificação final - ZIP mais recente
     try:
-        data = {
-            "uuid": RUN_UUID,
-            "success": bool(success),
-            "log": LOG_FILE.name,
-            "zip_files": list(zip_files),
-            "finished_at": datetime.now().isoformat(timespec="seconds"),
-        }
-        (CONCLUIDO_DIR / "RUN.json").write_text(json.dumps(data, ensure_ascii=False, indent=2),
-                                                encoding="utf-8")
-        logger.info(f"[RUN] Manifesto salvo: {CONCLUIDO_DIR/'RUN.json'}")
-    finally:
-        # garante que o log está escrito em disco antes do Flask servir o download
-        for h in list(logging.getLogger("memorial").handlers):
-            try:
-                h.flush()
-            except Exception:
-                pass
+        arquivos_zip = [
+            f for f in os.listdir(pasta_destino)
+            if f.lower().endswith('.zip') and uuid_str in f
+        ]
+        if arquivos_zip:
+            arquivos_zip.sort(
+                key=lambda x: os.path.getmtime(os.path.join(pasta_destino, x)),
+                reverse=True
+            )
+            zip_download = arquivos_zip[0]
+            logger.info(f"🔗 ZIP disponível para download: {zip_download}")
+        else:
+            logger.warning("⚠️ Nenhum ZIP disponível para download.")
+    except Exception as e:
+        logger.error(f"⚠️ Não foi possível determinar o nome do ZIP: {e}")
+
+
+
+
 
 if __name__ == "__main__":
     main()

@@ -6,6 +6,11 @@
         <h2 class="text-primary">Gerar Memorial AZIMUTE AZ</h2>
         <div class="d-flex gap-2 align-items-center">
             <span class="text-muted me-2">👤 {{ session['usuario'] }}</span>
+            {% if log_path %}
+            <a href="/{{ log_path }}" class="btn btn-outline-secondary" download>
+                🧾 Baixar Log da Execução
+            </a>
+            {% endif %}
             <a href="/logout" class="btn btn-outline-danger">🔒 Logout</a>
         </div>
     </div>
@@ -109,25 +114,10 @@
 
     {% if zip_download %}
     <div class="mt-4 text-center">
-        {% if success and zip_url %}
-            <a class="btn btn-success btn-lg" href="{{ zip_url }}">📦 Baixar ZIP</a>
-        {% elif success and zip_urls %}
-            <div class="d-flex flex-wrap gap-2 justify-content-center">
-            {% for z in zip_urls %}
-                <a class="btn btn-success" href="{{ z }}">📦 {{ z.split('/')[-1] }}</a>
-            {% endfor %}
-            </div>
-        {% elif erro %}
-            <div class="alert alert-warning">{{ erro }}</div>
-        {% endif %}
-
-        {% if log_path %}
-            <a class="btn btn-outline-secondary ms-2" href="/{{ log_path }}" download>
-            🧾 Baixar Log da Execução
-            </a>
-        {% endif %}
+        <a href="{{ url_for('download_zip', filename=zip_download) }}" class="btn btn-success btn-lg">
+            📦 Baixar ZIP Gerado
+        </a>
     </div>
-
 {% endif %}  {# ✅ FECHANDO corretamente o bloco IF #}
 </div>
 {% endblock %}
