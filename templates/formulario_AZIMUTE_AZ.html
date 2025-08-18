@@ -122,11 +122,12 @@
         {% endif %}
 
         {% if log_path %}
-            <a class="btn btn-outline-secondary ms-2" href="/{{ log_path }}" download>
-            🧾 Baixar Log da Execução
+            <a class="btn btn-outline-secondary ms-2" href="{{ log_path }}">
+                🧾 Baixar Log da Execução
             </a>
         {% endif %}
     </div>
+
 
 {% endif %}  {# ✅ FECHANDO corretamente o bloco IF #}
 </div>
