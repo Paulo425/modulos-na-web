@@ -34,6 +34,7 @@ from executaveis_avaliacao.utils_json import carregar_entrada_corrente_json, sal
 
 
 
+
 # 🔧 Configuração do logger DEFINITIVA (completa e segura)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -314,6 +315,8 @@ def memoriais_descritivos():
         return redirect(url_for('login'))
 
     resultado = erro_execucao = zip_download = log_relativo = None
+    success = False
+
 
     if request.method == 'POST':
         
@@ -359,6 +362,7 @@ def memoriais_descritivos():
 
 
             processo.wait()
+            success = (processo.returncode == 0)
 
             if processo.returncode == 0:
                 resultado = "✅ Processamento concluído com sucesso!"
@@ -795,16 +799,19 @@ def gerar_memorial_angulo_az():
         # 🔍 Verificação do ZIP após o processamento
         try:
             zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(zip_dir) if f.lower().endswith('.zip')]
+            arquivos_zip = [f for f in os.listdir(static_zip_dir)
+                if f.lower().endswith('.zip') and f.startswith(f"{id_execucao}_")]
             if arquivos_zip:
                 arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(zip_dir, x)), reverse=True)
                 zip_download = arquivos_zip[0]
+                success = True
                 print(f"✅ ZIP disponível para download: {zip_download}")
             else:
                 print("⚠️ Nenhum ZIP encontrado no diretório público.")
         except Exception as e:
             print(f"❌ Erro ao verificar ZIP: {e}")
             zip_download = None
+            success = False
     return render_template("formulario_ANGULO_AZ.html",
                            resultado=resultado,
                            erro=erro_execucao,
