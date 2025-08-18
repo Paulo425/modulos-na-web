@@ -1009,6 +1009,8 @@ def create_memorial_document(
 def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_concluido, caminho_template):
     print("\n🔹 Carregando dados do imóvel")
     logger.info("Iniciando processamento da poligonal fechada")
+    uuid_prefix = os.path.basename(os.path.normpath(pasta_concluido))
+
     if os.path.basename(os.path.dirname(pasta_preparado)) != uuid_prefix:
         logger.warning(
             f"pasta_preparado não pertence ao mesmo UUID ({os.path.basename(os.path.dirname(pasta_preparado))} != {uuid_prefix}). "
