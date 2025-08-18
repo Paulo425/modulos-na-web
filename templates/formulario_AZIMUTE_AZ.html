@@ -95,11 +95,10 @@
         </p>
     {% endif %}
     #}
-    {% if erro %}
-    <div class="alert alert-danger mt-4">
-        {{ erro | safe }}
-    </div>
+    {% if erro and not success %}
+        <div class="alert alert-danger mt-4 text-center">{{ erro|safe }}</div>
     {% endif %}
+
 
     {#	
     <p class="text-center text-primary">

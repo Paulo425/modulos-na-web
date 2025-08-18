@@ -543,6 +543,7 @@ def gerar_memorial_azimute_az():
 
         # 🎯 Validação de saída desta execução (somente dentro do /tmp/<uuid>/CONCLUIDO)
         # Tente usar manifesto (se o main escrever RUN.json); senão procure *.zip diretamente.
+        # --- ler ZIPs dentro do CONCLUIDO (padrão) ---
         manifest_path = dir_concluido / "RUN.json"
         zip_files = []
         if manifest_path.exists():
@@ -553,34 +554,48 @@ def gerar_memorial_azimute_az():
                 logger.warning(f"RUN.json inválido: {e}")
 
         if not zip_files:
-            # fallback: procure ZIPs gerados nesta execução
             zip_files = sorted([p.name for p in dir_concluido.glob("*.zip")])
 
-        success = bool(zip_files)
+        zip_urls = []
+        zip_url = None
+        zip_download = None
 
-        # Monte URLs de download apontando para ESTE UUID
+        if zip_files:
+            # ZIPs gerados dentro do tmp/<uuid>/CONCLUIDO (rota nova)
+            zip_urls = [url_for("download_zip_azimute_az", uuid=run_uuid, fname=f) for f in zip_files]
+            zip_url = zip_urls[0]
+            zip_download = zip_files[0]
+        else:
+            # --- FALLBACK: procurar no diretório público static/arquivos pelo prefixo do UUID ---
+            public_dir = Path(BASE_DIR) / "static" / "arquivos"
+            public_candidates = sorted(public_dir.glob(f"{run_uuid}_*.zip"), key=os.path.getmtime, reverse=True)
+            if public_candidates:
+                zip_urls = [url_for("download_zip", filename=p.name) for p in public_candidates]  # rota LEGADA /download/<filename>
+                zip_url = zip_urls[0]
+                zip_download = public_candidates[0].name
+
+        success = bool(zip_url)
+
         log_url = url_for("download_log_azimute_az", uuid=run_uuid)
-        zip_urls = [url_for("download_zip_azimute_az", uuid=run_uuid, fname=f) for f in zip_files]
-        zip_url = zip_urls[0] if zip_urls else None
-        zip_download = zip_files[0] if zip_files else None  # compat com template antigo
 
-        if not success:
-            erro_execucao = (
-                "Houve um erro durante a execução. "
-                "Baixe o log para verificar os detalhes (ponto de amarração ausente, DXF inválido, etc.)."
-            )
+        # mensagem amigável
+        resultado = "✅ Processamento concluído com sucesso!" if success else None
+        erro_execucao = None if success else (
+            "Houve um erro durante a execução. Baixe o log para verificar os detalhes (ponto de amarração ausente, DXF inválido, etc.)."
+        )
 
-        # Renderize passando as novas variáveis
         return render_template(
             "formulario_AZIMUTE_AZ.html",
             resultado=resultado,
             erro=erro_execucao,
-            zip_download=zip_download,  # se seu template monta a URL manualmente
-            zip_url=zip_url,            # URL pronto (recomendado usar este no href)
-            log_path=log_url,           # passe a URL do log
             success=success,
-            run_uuid=run_uuid
+            zip_url=zip_url,
+            zip_urls=zip_urls,      # <— passe a lista também
+            zip_download=zip_download,
+            log_path=log_url,
+            run_uuid=run_uuid,
         )
+
 
     # GET
     return render_template(
