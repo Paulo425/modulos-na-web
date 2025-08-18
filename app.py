@@ -616,7 +616,7 @@ def gerar_memorial_azimute_az():
         success=False,
         run_uuid=None
     )
-
+#ATUALIZADO
 
 
 
