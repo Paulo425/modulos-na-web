@@ -25,7 +25,7 @@ def montar_pacote_zip(diretorio, cidade):
     logger.info("Iniciando montagem dos pacotes ZIP")
 
     created_zips = []  # nomes (base) dos zips gerados nesta execução (em diretorio)
-    uuid_prefix = os.path.basename(diretorio)  # ex.: '8824d080'
+    uuid_prefix = os.path.basename(os.path.dirname(os.path.normpath(diretorio)))
 
 
     tipos = ["ETE", "REM", "SER", "ACE"]
@@ -93,7 +93,7 @@ def montar_pacote_zip(diretorio, cidade):
                         zipf.write(arq_docx[0], arcname=os.path.basename(arq_docx[0]))
                         zipf.write(arq_dxf[0], arcname=os.path.basename(arq_dxf[0]))
                         zipf.write(arq_excel[0], arcname=os.path.basename(arq_excel[0]))
-                    shutil.copy2(nome_zip, caminho_debug_zip)
+                    
                     # registra o zip gerado (nome base dentro do CONCLUIDO)
                     created_zips.append(os.path.basename(nome_zip))
 

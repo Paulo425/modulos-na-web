@@ -1009,15 +1009,20 @@ def create_memorial_document(
 def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_concluido, caminho_template):
     print("\n🔹 Carregando dados do imóvel")
     logger.info("Iniciando processamento da poligonal fechada")
-    uuid_prefix = os.path.basename(os.path.normpath(pasta_concluido))
+    uuid_prefix = os.path.basename(os.path.dirname(os.path.normpath(pasta_concluido)))
 
-    if os.path.basename(os.path.dirname(pasta_preparado)) != uuid_prefix:
+    uu_from_preparado = os.path.basename(os.path.dirname(os.path.normpath(pasta_preparado)))
+    uu_from_concluido = os.path.basename(os.path.dirname(os.path.normpath(pasta_concluido)))
+    if uu_from_preparado != uu_from_concluido:
+        logger.warning(f"pasta_preparado e pasta_concluido com UUIDs distintos: {uu_from_preparado} != {uu_from_concluido}")
+
+    if uu_from_preparado != uuid_prefix:
         logger.warning(
-            f"pasta_preparado não pertence ao mesmo UUID ({os.path.basename(os.path.dirname(pasta_preparado))} != {uuid_prefix}). "
+            f"pasta_preparado não pertence ao mesmo UUID ({uu_from_preparado} != {uuid_prefix}). "
             "Verifique preparar_arquivos() para usar /tmp/<UUID>/PREPARADO."
         )
 
-    uuid_prefix = os.path.basename(os.path.dirname(pasta_concluido))
+    
     print(f"[DEBUG poligonal_fechada] UUID recebido: {uuid_prefix}")
 
     try:
@@ -1136,12 +1141,7 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
             print(msg)
             logger.error(msg)
 
-        print("🔍 DEBUG: Explorando todas as subpastas do projeto com os.walk:")
-        for root, dirs, files in os.walk("/opt/render/project/src"):
-            for file in files:
-                print("🧾 Arquivo encontrado:", os.path.join(root, file))
-                logger.debug(f"🧾 Arquivo encontrado: {os.path.join(root, file)}")
-
+        
     except Exception as e:
         logger.exception("Erro inesperado durante a execução da poligonal fechada")
 
