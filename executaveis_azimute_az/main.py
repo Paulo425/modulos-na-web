@@ -11,6 +11,10 @@ from compactar_arquivos import main_compactar_arquivos
 
 RUN_UUID = os.environ.get("RUN_UUID") or uuid.uuid4().hex[:8]
 
+# ✅ 1. Caminho base
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+
 # Pastas desta execução (onde o Flask vai procurar)
 DIR_TMP  = os.path.join(BASE_DIR, 'tmp', RUN_UUID)
 DIR_REC  = os.path.join(DIR_TMP, 'RECEBIDO')
@@ -18,19 +22,9 @@ DIR_CONC = os.path.join(DIR_TMP, 'CONCLUIDO')
 for d in (DIR_REC, DIR_CONC):
     os.makedirs(d, exist_ok=True)
 
+# log por execução dentro do CONCLUIDO (é o que o Flask baixa)
+log_path = os.path.join(DIR_CONC, f"exec_{RUN_UUID}.log")
 
-# ✅ 1. Caminho base
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
-# ✅ 2. Pastas públicas
-CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
-os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
-
-# ✅ 3. Pasta de logs
-# ✅ 3. Pasta de logs (no mesmo local que o Flask serve)
-LOG_DIR = DIR_CONC
-os.makedirs(LOG_DIR, exist_ok=True)
-log_path = os.path.join(LOG_DIR, f"worker_{RUN_UUID}.log")  # não conflita com exec_<uuid>.log do Flask
 
 # Configuração do logger
 logger = logging.getLogger(__name__)
