@@ -5,6 +5,7 @@ import shutil
 import logging
 import pandas as pd
 from datetime import datetime
+import sys
 
 # Integração com o contexto único da execução
 EXEC_DIR = os.path.dirname(os.path.abspath(__file__))
