@@ -16,7 +16,7 @@ import json
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # 👉 Cada execução em diretórios próprios
-RUN_UUID = os.environ.get("RUN_UUID") or uuid.uuid4().hex[:8]
+#RUN_UUID = os.environ.get("RUN_UUID") or uuid.uuid4().hex[:8]
 DIR_RUN  = os.path.join(BASE_DIR, 'tmp', RUN_UUID)
 DIR_REC  = os.path.join(DIR_RUN, 'RECEBIDO')
 DIR_PREP = os.path.join(DIR_RUN, 'PREPARADO')
