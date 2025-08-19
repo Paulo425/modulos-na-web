@@ -7,6 +7,10 @@ import pandas as pd
 from datetime import datetime
 
 # Integração com o contexto único da execução
+EXEC_DIR = os.path.dirname(os.path.abspath(__file__))
+if EXEC_DIR not in sys.path:
+    sys.path.insert(0, EXEC_DIR)
+
 from exec_ctx import ID_EXECUCAO, DIR_RUN, DIR_REC, DIR_PREP, DIR_CONC
 
 # ----------------------------------------------------------------------

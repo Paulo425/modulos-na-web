@@ -7,6 +7,9 @@ from datetime import datetime
 import json
 import time
 
+EXEC_DIR = os.path.dirname(os.path.abspath(__file__))
+if EXEC_DIR not in sys.path:
+    sys.path.insert(0, EXEC_DIR)
 # ----------------------------------------------------------------------
 # Base do projeto (um nível acima de executaveis) e repasse ao exec_ctx
 # ----------------------------------------------------------------------
