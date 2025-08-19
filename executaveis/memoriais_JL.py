@@ -35,6 +35,7 @@ except locale.Error:
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
 
+
 def obter_data_em_portugues():
     meses_pt = {
         "January": "janeiro", "February": "fevereiro", "March": "março",
@@ -52,6 +53,7 @@ import ezdxf
 import math
 
 def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
+    log = _ensure_log(log)
     doc = ezdxf.readfile(dxf_original)
     msp = doc.modelspace()
 
@@ -91,6 +93,7 @@ def calculate_signed_area(points):
     return area / 2
 
 def get_document_info_from_dxf(dxf_file_path, log=None):
+    log = _ensure_log(log)
     try:
         if log is None:
             class DummyLog:
@@ -395,6 +398,7 @@ def set_default_font(doc):
     font.size = Pt(12)
 
 def add_arc_labels(doc, msp, start_point, end_point, radius, length, label, log=None):
+    log = _ensure_log(log)
 
     if log is None:
         class DummyLog:
@@ -499,6 +503,7 @@ def calculate_azimuth_and_distance(start_point, end_point):
 
 
 def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth, log=None):
+    log = _ensure_log(log)
     """
     Adiciona o arco do azimute no ModelSpace.
     """
@@ -554,6 +559,7 @@ def calculate_polygon_area(points):
 
 
 def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log=None):
+    log = _ensure_log(log)
     if log is None:
         class DummyLog:
             def write(self, msg): pass
@@ -671,6 +677,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
+    log = _ensure_log(log)
     if log is None:
         class DummyLog:
             def write(self, msg): pass
@@ -981,6 +988,7 @@ def create_memorial_document(
     perimeter_dxf=None, area_dxf=None, desc_ponto_Az=None, Coorde_E_ponto_Az=None, Coorde_N_ponto_Az=None,
     azimuth=None, distance=None, log=None
 ):
+    log = _ensure_log(log)
     if log is None:
         class DummyLog:
             def write(self, msg): pass
