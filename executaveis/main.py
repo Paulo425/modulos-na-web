@@ -16,16 +16,13 @@ import json
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # 👉 Cada execução em diretórios próprios
-#RUN_UUID = os.environ.get("RUN_UUID") or uuid.uuid4().hex[:8]
-DIR_RUN  = os.path.join(BASE_DIR, 'tmp', RUN_UUID)
+
 DIR_REC  = os.path.join(DIR_RUN, 'RECEBIDO')
 DIR_PREP = os.path.join(DIR_RUN, 'PREPARADO')
 DIR_CONC = os.path.join(DIR_RUN, 'CONCLUIDO')
 for d in (DIR_REC, DIR_PREP, DIR_CONC):
     os.makedirs(d, exist_ok=True)
 
-# log desta execução dentro do CONCLUIDO (onde o Flask procura)
-log_path = os.path.join(DIR_CONC, f"exec_{RUN_UUID}.log")
 
 
 # ✅ 2. Pastas públicas
@@ -138,12 +135,9 @@ if __name__ == "__main__":
     cidade    = args.cidade
     excel     = args.excel
     dxf       = args.dxf
-    
-
-
-    # Ignoramos --diretorio aqui para padronizar por execução
-    diretorio = DIR_CONC
-    print(f"[DEBUG main.py] RUN_UUID: {RUN_UUID}")
+    if not diretorio:
+        _id = uuid.uuid4().hex[:8]
+        diretorio = os.path.join(BASE_DIR, 'tmp', _id, 'CONCLUIDO')  
 
 
     executar_programa(diretorio, cidade, excel, dxf)
