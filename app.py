@@ -26,10 +26,7 @@ from executaveis_avaliacao.main import homogeneizar_amostras
 import numpy as np
 import math
 from executaveis_avaliacao.utils_json import carregar_entrada_corrente_json, salvar_entrada_corrente_json
-
-
-
-
+import time
 
 
 
@@ -277,36 +274,55 @@ def excluir_usuario():
     usuarios = listar_usuarios_mysql()
     return render_template('excluir_usuario.html', usuarios=usuarios, mensagem=mensagem, erro=erro)
 
-import re
+
 
 @app.get("/download/decopa/log/<uuid>")
 def download_log_decopa(uuid):
     if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
         abort(400, "UUID inválido")
+
     dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
     if not dir_conc.exists():
         abort(404, "Execução não encontrada.")
+
     pref = dir_conc / f"exec_{uuid}.log"
     if pref.exists():
         path = pref
     else:
-        logs = sorted(dir_conc.glob("*.log"), key=os.path.getmtime, reverse=True)
+        logs = sorted(dir_conc.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
         if not logs:
             abort(404, "Log não encontrado.")
         path = logs[0]
+
     return send_file(path, as_attachment=True, download_name=path.name, mimetype="text/plain; charset=utf-8")
+
+
+
 
 @app.get("/download/decopa/zip/<uuid>/<fname>")
 def download_zip_decopa(uuid, fname):
     if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
         abort(400, "UUID inválido")
+    # evita path traversal
     if Path(fname).name != fname:
         abort(400, "Nome de arquivo inválido")
+
     dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
     path = dir_conc / fname
-    if (not path.exists()) or (not path.name.lower().endswith(".zip")):
+
+    if (not path.exists()) or (not path.is_file()) or (not path.name.lower().endswith(".zip")):
         abort(404, "ZIP não encontrado.")
-    return send_file(path, as_attachment=True, download_name=path.name)
+
+    return send_file(
+        path,
+        as_attachment=True,
+        download_name=path.name,
+        mimetype="application/zip",
+        conditional=True,
+    )
+
+
+
 
 
 @app.route('/memoriais-descritivos', methods=['GET', 'POST'])
@@ -320,17 +336,22 @@ def memoriais_descritivos():
     zip_urls = []
     id_execucao = None
 
-
-
     if request.method == 'POST':
-        
-
+        # -------------------------------
+        # 1) Gerar UMA vez o ID da execução
+        # -------------------------------
         id_execucao = uuid.uuid4().hex[:8]
+
+        # -------------------------------
+        # 2) Estrutura /tmp/<id>/CONCLUIDO
+        # -------------------------------
         base_exec = os.path.join(BASE_DIR, 'tmp', id_execucao)
         diretorio = os.path.join(base_exec, 'CONCLUIDO')
         os.makedirs(diretorio, exist_ok=True)
 
-
+        # -------------------------------
+        # 3) Receber entradas do formulário
+        # -------------------------------
         cidade = request.form['cidade']
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
@@ -338,45 +359,51 @@ def memoriais_descritivos():
         caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
         caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
 
-        # Log
-        # Log por execução dentro do CONCLUIDO
+        # -------------------------------
+        # 4) Log desta execução (dentro do CONCLUIDO)
+        # -------------------------------
         exec_log_path = os.path.join(diretorio, f"exec_{id_execucao}.log")
 
-
         try:
-            processo = Popen(
-                [sys.executable, os.path.join(BASE_DIR, "executaveis", "main.py"),
+            # -------------------------------
+            # 5) Chamar main.py propagando o ID por ENV e CLI
+            # -------------------------------
+            env = os.environ.copy()
+            env["ID_EXECUCAO"] = id_execucao  # <- fonte da verdade para exec_ctx/main
+
+            cmd = [
+                sys.executable,
+                os.path.join(BASE_DIR, "executaveis", "main.py"),
+                "--id-execucao", id_execucao,     # redundância segura
                 "--diretorio", diretorio,
                 "--cidade", cidade,
                 "--excel", caminho_excel,
-                "--dxf", caminho_dxf],
-                stdout=PIPE,
-                stderr=STDOUT,
-                text=True
-            )
+                "--dxf", caminho_dxf,
+            ]
 
+            processo = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
+
+            # Captura de log streaming para o arquivo da execução
             log_lines = []
             with open(exec_log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
                     log_file.write(linha)
                     if len(log_lines) < 100:
                         log_lines.append(linha)
-                # opcional: print no console
-                # print("🖨️", linha.strip())
 
             processo.wait()
             proc_ok = (processo.returncode == 0)
 
             app.logger.info(f"[DECOPA] listdir({diretorio}) -> {os.listdir(diretorio)}")
 
-
-            # Descobrir ZIP(s) gerados nesta execução (em /tmp/<uuid>/CONCLUIDO)
-            # Preferir RUN.json (gerado pelo main) e, se não existir/for inválido, listar *.zip
-            # --- DETECÇÃO DE ZIPs GERADOS NESTA EXECUÇÃO ---
+            # -------------------------------
+            # 6) Descobrir ZIP(s) gerados
+            #    Preferir RUN.json; fallback: listar *.zip
+            # -------------------------------
             manifest_path = os.path.join(diretorio, "RUN.json")
             zip_files = []
 
-            # pequena espera (até 1s) para evitar condição de corrida na escrita do RUN.json
+            # pequena espera (até 1s) para evitar corrida na escrita do RUN.json
             for _ in range(10):
                 if os.path.exists(manifest_path):
                     break
@@ -391,7 +418,6 @@ def memoriais_descritivos():
             except Exception as e:
                 app.logger.warning(f"[DECOPA] RUN.json inválido: {e}")
 
-            # fallback: listar *.zip no CONCLUIDO
             if not zip_files:
                 try:
                     contents = os.listdir(diretorio)
@@ -408,10 +434,6 @@ def memoriais_descritivos():
 
             app.logger.info(f"[DECOPA] run={id_execucao} success={success} zip_files={zip_files} zip_url={zip_url}")
 
-
-
-            app.logger.info(f"[DECOPA] run={id_execucao} success={success} zip_files={zip_files} zip_url={zip_url}")
-
             if not proc_ok:
                 erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
             elif success:
@@ -421,8 +443,8 @@ def memoriais_descritivos():
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
-
         finally:
+            # Remover uploads temporários
             for p in (caminho_excel, caminho_dxf):
                 try:
                     if p and os.path.exists(p):
@@ -430,9 +452,8 @@ def memoriais_descritivos():
                 except Exception:
                     pass
 
-        # URL para baixar o log desta execução
+        # URL de download do log desta execução
         log_relativo = url_for("download_log_decopa", uuid=id_execucao)
-
 
     return render_template(
         "formulario_DECOPA.html",
@@ -441,10 +462,11 @@ def memoriais_descritivos():
         success=success,
         zip_url=zip_url,
         zip_urls=zip_urls,
-        zip_download=zip_download,  # compat se seu HTML antigo usa
+        zip_download=zip_download,  # compat
         log_path=log_relativo,
-        run_uuid=id_execucao
+        run_uuid=id_execucao,
     )
+
 #ATUALIZADO
 
 

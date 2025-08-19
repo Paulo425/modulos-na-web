@@ -25,8 +25,6 @@ import uuid
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-
-
 try:
     from ezdxf.math import Vec3 as Vector
 except ImportError:
@@ -50,12 +48,11 @@ data_atual = datetime.now().strftime("%d de %B de %Y")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-fh = logging.FileHandler(os.path.join(BASE_DIR, 'static', 'logs', f'poligonal_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'))
+fh = logging.FileHandler(os.path.join(BASE_DIR, 'static', 'logs', f'poligonal_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'), encoding="utf-8")
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
 fh.setFormatter(formatter)
 logger.addHandler(fh)
-
 
 
 def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
@@ -67,6 +64,7 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
 
         pontos_polilinha = None
         bulges_polilinha = None
+        ponto_inicial_real = None
 
         for entity in msp_antigo.query('LWPOLYLINE'):
             if entity.closed:
@@ -141,15 +139,9 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
         
         return saida_path, ponto_az, ponto_inicial_real
 
-
     except Exception as e:
         print(f"❌ Erro ao limpar DXF: {e}")
         return original_path, None, None
-
-
-
-
-
 
 
 def calculate_signed_area(points):
@@ -164,14 +156,7 @@ def calculate_signed_area(points):
 def calculate_area_with_arcs(points, arcs):
     """
     Calcula a área de uma poligonal que inclui segmentos de linha reta e arcos.
-
-    :param points: Lista de tuplas (x, y) representando os vértices dos segmentos de linha reta.
-    :param arcs: Lista de dicionários, cada um contendo informações sobre um arco:
-                 {'start_point': (x1, y1), 'end_point': (x2, y2), 'center': (xc, yc),
-                  'radius': r, 'start_angle': a1, 'end_angle': a2, 'length': l}
-    :return: Área total da poligonal.
     """
-    # Calcular a área usando a fórmula do polígono (Shoelace) para os segmentos de linha reta
     num_points = len(points)
     area_linear = 0.0
     for i in range(num_points):
@@ -180,52 +165,34 @@ def calculate_area_with_arcs(points, arcs):
         area_linear += x1 * y2 - x2 * y1
     area_linear = abs(area_linear) / 2.0
 
-    # Calcular a área dos arcos
     area_arcs = 0.0
     for arc in arcs:
-#         start_point = Vec2(arc['start_point'])
-#         end_point = Vec2(arc['end_point'])
-#         center = Vec2(arc['center'])
-       
         start_point = (float(arc['start_point'][0]), float(arc['start_point'][1]))
         end_point = (float(arc['end_point'][0]), float(arc['end_point'][1]))
         center = (float(arc['center'][0]), float(arc['center'][1]))
-
         radius = arc['radius']
         start_angle = math.radians(arc['start_angle'])
         end_angle = math.radians(arc['end_angle'])
 
-        # Determinar a variação do ângulo
         delta_angle = end_angle - start_angle
         if delta_angle <= 0:
             delta_angle += 2 * math.pi
 
-        # Área do setor circular
         sector_area = 0.5 * radius**2 * delta_angle
-
-        # Área do triângulo formado pelo centro e os pontos inicial e final do arco
-#         triangle_area = 0.5 * abs((start_point.x - center.x) * (end_point.y - center.y) -
-#                                   (end_point.x - center.x) * (start_point.y - center.y))
         triangle_area = 0.5 * abs((start_point[0] - center[0]) * (end_point[1] - center[1]) -
                                   (end_point[0] - center[0]) * (start_point[1] - center[1]))
-
-        # Área do segmento circular
         segment_area = sector_area - triangle_area
 
-        # Determinar a orientação do arco para adicionar ou subtrair a área
-        # Aqui assumimos que a orientação positiva indica um arco no sentido anti-horário
-        # e negativa para o sentido horário. Isso pode precisar de ajustes conforme a definição dos dados.
         if delta_angle > math.pi:
-            area_arcs -= segment_area  # Arco no sentido horário
+            area_arcs -= segment_area
         else:
-            area_arcs += segment_area  # Arco no sentido anti-horário
+            area_arcs += segment_area
 
-    # Área total
     area_total = area_linear + area_arcs
     return area_total
 
+
 def bulge_to_arc_length(start_point, end_point, bulge):
-    #chord_length = (end_point - start_point).magnitude
     dx = end_point[0] - start_point[0]
     dy = end_point[1] - start_point[1]
     chord_length = math.hypot(dx, dy)
@@ -236,6 +203,7 @@ def bulge_to_arc_length(start_point, end_point, bulge):
     arc_length = radius * angle
     return arc_length, radius, angle
 
+
 def get_document_info_from_dxf(dxf_file_path):
     try:
         doc = ezdxf.readfile(dxf_file_path)
@@ -244,10 +212,10 @@ def get_document_info_from_dxf(dxf_file_path):
         lines = []
         arcs = []
         perimeter_dxf = 0
-        ponto_az = None
+        area_dxf = 0.0
 
         for entity in msp.query('LWPOLYLINE'):
-            if entity.is_closed:
+            if entity.closed:  # ✅ correção (era is_closed)
                 polyline_points = entity.get_points('xyseb')
                 num_points = len(polyline_points)
 
@@ -257,15 +225,10 @@ def get_document_info_from_dxf(dxf_file_path):
                     x_start, y_start, _, _, bulge = polyline_points[i]
                     x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
 
-                    #start_point = Vec2(float(x_start), float(y_start))
                     start_point = (float(x_start), float(y_start))
-
-                    #end_point = Vec2(float(x_end), float(y_end))
                     end_point = (float(x_end), float(y_end))
 
                     if bulge != 0:
-                        # Trata-se de arco
-                       # chord_length = (end_point - start_point).magnitude
                         dx = end_point[0] - start_point[0]
                         dy = end_point[1] - start_point[1]
                         chord_length = math.hypot(dx, dy)
@@ -274,35 +237,25 @@ def get_document_info_from_dxf(dxf_file_path):
                         angle_span_rad = 4 * math.atan(abs(bulge))
                         arc_length = radius * angle_span_rad
 
-                        #chord_midpoint = (start_point + end_point) / 2
                         mid_x = (start_point[0] + end_point[0]) / 2
                         mid_y = (start_point[1] + end_point[1]) / 2
                         chord_midpoint = (mid_x, mid_y)
 
                         offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
-#                         dx = end_point[0] - start_point[0]
-#                         dy = end_point[1] - start_point[1]
                         dx = float(end_point[0]) - float(start_point[0])
                         dy = float(end_point[1]) - float(start_point[1])
 
-                        #perp_vector = Vec2(-dy, dx).normalize()
                         length = math.hypot(dx, dy)
                         perp_vector = (-dy / length, dx / length)
 
                         if bulge < 0:
-                            #perp_vector = -perp_vector
                             perp_vector = (-perp_vector[0], -perp_vector[1])
 
-
-                        #center = chord_midpoint + perp_vector * offset_dist
                         center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
                         center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
                         center = (center_x, center_y)
 
-
-                        #start_angle = math.atan2(start_point.y - center.y, start_point[0] - center[0])
                         start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
-
                         end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
 
                         arcs.append({
@@ -315,8 +268,7 @@ def get_document_info_from_dxf(dxf_file_path):
                             'length': arc_length
                         })
 
-                        # Pontos intermediários no arco (para precisão da área)
-                        num_arc_points = 100  # mais pontos para maior precisão
+                        num_arc_points = 100
                         for t in range(num_arc_points):
                             angle = start_angle + (end_angle - start_angle) * t / num_arc_points
                             arc_x = center[0] + radius * math.cos(angle)
@@ -326,40 +278,32 @@ def get_document_info_from_dxf(dxf_file_path):
                         segment_length = arc_length
                         perimeter_dxf += segment_length
                     else:
-                        # Linha reta
                         lines.append((start_point, end_point))
                         boundary_points.append((start_point[0], start_point[1]))
-                       # segment_length = (end_point - start_point).magnitude
                         dx = end_point[0] - start_point[0]
                         dy = end_point[1] - start_point[1]
                         segment_length = math.hypot(dx, dy)
-
                         perimeter_dxf += segment_length
 
-                # Após loop, calcular a área com Shapely
                 polygon = Polygon(boundary_points)
                 area_dxf = polygon.area  # área exata do desenho
-
                 break
 
         if not lines and not arcs:
             print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
-            return None, [], [], 0, 0, None
+            return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
 
         print(f"Linhas processadas: {len(lines)}")
         print(f"Arcos processados: {len(arcs)}")
         print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
         print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
-#         print(f"Ponto Az: {ponto_az}")
 
         return doc, lines, arcs, perimeter_dxf, area_dxf
 
     except Exception as e:
         print(f"Erro ao obter informações do documento: {e}")
         traceback.print_exc()
-        return None, [], [], 0, 0, None
-
-
+        return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
 
 
 # 🔹 Função para definir a fonte padrão
@@ -369,9 +313,9 @@ def set_default_font(doc):
     font.name = 'Arial'
     font.size = Pt(11)
 
+
 def add_arc_labels(doc, msp, start_point, end_point, radius, length, label):
     try:
-        #mid_point = Vec2((start_point[0] + end_point[0])/2, (start_point[1] + end_point[1])/2)
         mid_point = ((float(start_point[0]) + float(end_point[0]))/2, (float(start_point[1]) + float(end_point[1]))/2)
 
         label_radius = f"R={radius:.2f}".replace('.', ',')
@@ -402,15 +346,8 @@ def add_arc_labels(doc, msp, start_point, end_point, radius, length, label):
 
 
 def calculate_point_on_line(start, end, distance):
-    """
-    Calcula um ponto a uma determinada distância sobre uma linha entre dois pontos.
-    :param start: Coordenadas do ponto inicial (x, y).
-    :param end: Coordenadas do ponto final (x, y).
-    :param distance: Distância do ponto inicial ao longo da linha.
-    :return: Coordenadas do ponto calculado (x, y).
-    """
     dx, dy = end[0] - start[0], end[1] - start[1]
-    length = math.hypot(dx, dy)  # Calcula o comprimento da linha
+    length = math.hypot(dx, dy)
     if length == 0:
         raise ValueError("Ponto inicial e final são iguais, não é possível calcular um ponto na linha.")
     return (
@@ -420,40 +357,21 @@ def calculate_point_on_line(start, end, distance):
 
 
 def calculate_azimuth(p1, p2):
-    """
-    Calcula o azimute entre dois pontos em graus.
-    Azimute é o ângulo medido no sentido horário a partir do Norte.
-    """
-    delta_x = p2[0] - p1[0]  # Diferença em X (Leste/Oeste)
-    delta_y = p2[1] - p1[1]  # Diferença em Y (Norte/Sul)
-
-    # Calcular o ângulo em radianos
+    delta_x = p2[0] - p1[0]
+    delta_y = p2[1] - p1[1]
     azimuth_rad = math.atan2(delta_x, delta_y)
-
-    # Converter para graus
     azimuth_deg = math.degrees(azimuth_rad)
-
-    # Garantir que o azimute esteja no intervalo [0, 360)
     if azimuth_deg < 0:
         azimuth_deg += 360
-
     return azimuth_deg
 
+
 def calculate_distance(point1, point2):
-    """
-    Calcula a distância entre dois pontos em um plano 2D.
-    :param point1: Tupla (x1, y1) representando o primeiro ponto.
-    :param point2: Tupla (x2, y2) representando o segundo ponto.
-    :return: Distância entre os pontos.
-    """
     dx = point2[0] - point1[0]
     dy = point2[1] - point1[1]
     return math.sqrt(dx**2 + dy**2)
 
 
-
-
-# Função para calcular azimute e distância
 def calculate_azimuth_and_distance(start_point, end_point):
     dx = end_point[0] - start_point[0]
     dy = end_point[1] - start_point[1]
@@ -465,17 +383,12 @@ def calculate_azimuth_and_distance(start_point, end_point):
 
 
 def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth):
-    """
-    Adiciona o arco do azimute no ModelSpace.
-    """
     try:
         if 'LAYOUT_AZIMUTES' not in doc.layers:
             doc.layers.new(name='LAYOUT_AZIMUTES', dxfattribs={'color': 5})
 
-        # Traçar segmento entre Az e V1
         msp.add_line(start=ponto_az, end=v1, dxfattribs={'layer': 'LAYOUT_AZIMUTES'})
 
-        # Adicionar rótulo do azimute
         azimuth_label = f"Azimute = {convert_to_dms(azimuth)}"
         label_position = (
             ponto_az[0] + 1.5 * math.cos(math.radians(azimuth / 2)),
@@ -492,14 +405,13 @@ def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth):
         print(f"Erro ao adicionar arco do azimute: {e}")
 
 
-# Função para converter graus decimais para DMS
 def convert_to_dms(decimal_degrees):
     degrees = int(decimal_degrees)
     minutes = int(abs(decimal_degrees - degrees) * 60)
     seconds = abs((decimal_degrees - degrees - minutes / 60) * 3600)
     return f"{degrees}° {minutes}' {seconds:.2f}\""
 
-# Função para calcular a área de uma poligonal
+
 def calculate_polygon_area(points):
     n = len(points)
     area = 0.0
@@ -512,11 +424,9 @@ def calculate_polygon_area(points):
 
 def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
     try:
-        # Garantir pontos como tuplas de float
         start_point = (float(start_point[0]), float(start_point[1]))
         end_point = (float(end_point[0]), float(end_point[1]))
 
-        # Criar camadas se ainda não existirem
         layers = [
             ("LAYOUT_VERTICES", 2),   # Amarelo
             ("LAYOUT_DISTANCIAS", 4)  # Azul
@@ -525,10 +435,8 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
             if layer_name not in doc.layers:
                 doc.layers.new(name=layer_name, dxfattribs={"color": color})
 
-        # Adicionar círculo no ponto inicial
         msp.add_circle(center=start_point, radius=0.3, dxfattribs={'layer': 'LAYOUT_VERTICES'})
 
-        # Adicionar rótulo do vértice (ex: V1, V2...)
         msp.add_text(
             label,
             dxfattribs={
@@ -538,7 +446,6 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
             }
         )
 
-        # Calcular ponto médio e vetor do segmento
         mid_x = (start_point[0] + end_point[0]) / 2
         mid_y = (start_point[1] + end_point[1]) / 2
         dx = end_point[0] - start_point[0]
@@ -546,25 +453,20 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
         length = (dx ** 2 + dy ** 2) ** 0.5
 
         if length == 0:
-            return  # evita divisão por zero
+            return
 
-        # Cálculo do ângulo em graus
         angle = math.degrees(math.atan2(dy, dx))
 
-        # Corrige para manter a leitura em pé
         if angle < -90 or angle > 90:
             angle += 180
 
-        # Deslocar o rótulo perpendicularmente ao segmento
-        offset = 0.3  # pode ajustar para mais ou menos afastamento
+        offset = 0.3
         perp_x = -dy / length * offset
         perp_y = dx / length * offset
         mid_point_displaced = (mid_x + perp_x, mid_y + perp_y)
 
-        # Formatar distância
         distancia_formatada = f"{distance:.2f} ".replace('.', ',')
 
-        # Inserir texto da distância rotacionado
         msp.add_text(
             distancia_formatada,
             dxfattribs={
@@ -580,24 +482,25 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
     except Exception as e:
         print(f"❌ ERRO GRAVE ao adicionar rótulo '{label}' e distância: {e}")
 
+
 def sanitize_filename(filename):
-    # Substitui os caracteres inválidos por um caractere válido (ex: espaço ou underline)
-    sanitized_filename = re.sub(r'[\\/*?:"<>|]', "_", filename)  # Substitui caracteres inválidos por "_"
+    sanitized_filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
     return sanitized_filename
 
-# Função para criar memorial descritivo
+
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, ponto_inicial_real=None,tipo=None, uuid_prefix=None):
-
+                               azimute_az_v1=None, ponto_inicial_real=None, tipo=None, uuid_prefix=None):
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
-
     if excel_file_path:
         try:
             confrontantes_df = pd.read_excel(excel_file_path)
-            confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
+            if "Código" in confrontantes_df.columns and "Confrontante" in confrontantes_df.columns:
+                confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
+            else:
+                confrontantes_dict = {}
         except Exception as e:
             print(f"Erro ao carregar arquivo de confrontantes: {e}")
             confrontantes_dict = {}
@@ -608,9 +511,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         print("Nenhuma linha disponível para criar o memorial descritivo.")
         return None
 
-    # Dentro da função create_memorial_descritivo logo após criação de combined_segments
-
-   # Criar uma única lista sequencial de pontos ordenados (linhas e arcos)
+    # Criar uma única lista sequencial de pontos ordenados (linhas e arcos)
     elementos = []
     for line in lines:
         elementos.append(('line', (line[0], line[1])))
@@ -633,8 +534,10 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         for i, elemento in enumerate(elementos):
             tipo_segmento, dados = elemento
             start_point, end_point = dados[0], dados[1]
+
             def _eq_pt(a, b, tol=1e-6):
                 return abs(a[0]-b[0]) < tol and abs(a[1]-b[1]) < tol
+
             if _eq_pt(ponto_atual, start_point):
                 sequencia_completa.append(elemento)
                 ponto_atual = end_point
@@ -651,33 +554,28 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 elementos.pop(i)
                 break
         else:
-            # Caso não encontre ponto coincidente, força o início com próximo segmento
             if elementos:
                 ponto_atual = elementos[0][1][0]
-
 
     # Lista de pontos sequenciais simples para área (garante polígono fechado)
     pontos_para_area = [seg[1][0] for seg in sequencia_completa]
     pontos_para_area.append(sequencia_completa[-1][1][1])  # Fecha o polígono
 
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
-    area = calculate_signed_area(simple_ordered_points)
+    area_tmp = calculate_signed_area(simple_ordered_points)
 
-    # Agora inverter o sentido corretamente
-    if area > 0:  # Troque < por > aqui para mudar o sentido desejado
+    # Ajuste de sentido (mantém área positiva para debug)
+    if area_tmp > 0:
         sequencia_completa.reverse()
-        # Inverter pontos inicial e final de cada segmento após inversão
         for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
             start, end = dados[0], dados[1]
             if tipo_segmento == 'line':
                 sequencia_completa[idx] = ('line', (end, start))
             else:
                 sequencia_completa[idx] = ('arc', (end, start, dados[2], dados[3]))
-        area = abs(area)
+        area_tmp = abs(area_tmp)
 
-    print(f"Área da poligonal ajustada: {area:.4f} m²")
-
-
+    print(f"Área da poligonal ajustada: {abs(area_tmp):.4f} m²")
 
     # Continuação após inverter corretamente
     data = []
@@ -700,9 +598,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         label = f"V{idx + 1}"
         add_label_and_distance(doc, msp, start_point, end_point, label, distance)
 
-       # confrontante = confrontantes_dict.get(f"P{idx + 1}_P{(idx + 2) if (idx + 1) < num_vertices else 1}", "Desconhecido")
         confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
-
         divisa = f"V{idx + 1}_V{idx + 2}" if idx + 1 < num_vertices else f"V{idx + 1}_V1"
 
         data.append({
@@ -715,6 +611,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
+
     # Deriva o UUID do caminho de saída se não vier preenchido
     try:
         _uuid_from_path = os.path.basename(os.path.dirname(caminho_salvar))
@@ -724,21 +621,21 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         pass
 
     # Tenta deduzir o tipo (ETE/REM/SER/ACE) se não vier
-    if not tipo:
-        base_x = os.path.basename(excel_file_path).upper() if excel_file_path else ""
+    if not tipo and excel_file_path:
+        base_x = os.path.basename(excel_file_path).upper()
         for _t in ("ETE", "REM", "SER", "ACE"):
             if _t in base_x:
                 tipo = _t
                 break
 
-
     df = pd.DataFrame(data, dtype=str)
-    excel_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula}.xlsx")
+
+    matricula_sanit = sanitize_filename(matricula) if isinstance(matricula, str) else str(matricula)
+    excel_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.xlsx")
     df.to_excel(excel_output_path, index=False)
 
     wb = openpyxl.load_workbook(excel_output_path)
     ws = wb.active
-
 
     for cell in ws[1]:
         cell.font = Font(bold=True)
@@ -758,9 +655,8 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     wb.save(excel_output_path)
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
 
-
     try:
-        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula}.dxf")
+        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.dxf")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
     except Exception as e:
@@ -768,119 +664,83 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     return excel_output_path
 
+
 def create_memorial_document(
     proprietario, matricula, descricao, area_terreno, excel_file_path=None, template_path=None, output_path=None,
     perimeter_dxf=None, area_dxf=None, desc_ponto_Az=None, Coorde_E_ponto_Az=None, Coorde_N_ponto_Az=None,
-    azimuth=None, distance=None, comarca=None, RI=None, rua=None,uuid_prefix=None
+    azimuth=None, distance=None, comarca=None, RI=None, rua=None, uuid_prefix=None
 ):
-
     try:
-        # Função para pular linhas
         def pular_linhas(doc, n_linhas):
             for _ in range(n_linhas):
                 doc.add_paragraph("")
 
-        # Ler o arquivo Excel se for informado
         if excel_file_path:
             df = pd.read_excel(excel_file_path)
         else:
             df = None
 
-        # Criar o documento Word carregando o template
-        #doc_word = Document(template_path)
-        #set_default_font(doc_word)  # Fonte Arial 12
-        # Criar o documento Word carregando o template
-        #doc_word = Document(template_path)
-        #set_default_font(doc_word)  # Fonte Arial 12
-
-        #template_path = os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx')
-
         doc_word = Document(template_path)
         set_default_font(doc_word)
 
-
-        # Adiciona o preâmbulo centralizado com texto em negrito
         p1 = doc_word.add_paragraph(style='Normal')
         run = p1.add_run("MEMORIAL DESCRITIVO INDIVIDUAL")
         run.bold = True
         p1.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-        doc_word.add_paragraph("")  # Espaço em branco
+        doc_word.add_paragraph("")
 
-      
-        # Adicionar dados do proprietário
-        # NOME PROPRIETÁRIO / OCUPANTE
         p = doc_word.add_paragraph(style='Normal')
         run = p.add_run("NOME PROPRIETÁRIO / OCUPANTE: ")
         run.bold = True
         p.add_run(f"{proprietario}")
-        
-        # DESCRIÇÃO
+
         p = doc_word.add_paragraph(style='Normal')
         run = p.add_run("DESCRIÇÃO: ")
         run.bold = True
         p.add_run(f"{descricao}")
-        
-        # DOCUMENTAÇÃO
+
         p = doc_word.add_paragraph(style='Normal')
         run = p.add_run("DOCUMENTAÇÃO: ")
         run.bold = True
         p.add_run(f"{matricula} do {RI} da Comarca de  {comarca}")
-        
-        # ENDEREÇO
+
         p = doc_word.add_paragraph(style='Normal')
         run = p.add_run("ENDEREÇO: ")
         run.bold = True
         p.add_run(f"{rua}")
-        
-        # ÁREA LEVANTAMENTO
+
         p = doc_word.add_paragraph(style='Normal')
         run = p.add_run("ÁREA LEVANTAMENTO: ")
         run.bold = True
         area_dxf_formatada = f"{round(area_dxf, 2):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         p.add_run(f"{area_dxf_formatada} metros quadrados")
-        
-        # PERÍMETRO LEVANTAMENTO
+
         p = doc_word.add_paragraph(style='Normal')
         run = p.add_run("PERÍMETRO LEVANTAMENTO: ")
         run.bold = True
         perimeter_dxf_formatado = f"{round(perimeter_dxf, 2):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         p.add_run(f"{perimeter_dxf_formatado} metros")
 
-        doc_word.add_paragraph("")  # Uma linha em branco para separar
+        doc_word.add_paragraph("")
 
-        # Descrição do perímetro, somente se o arquivo Excel foi fornecido
-        if df is not None:
+        if df is not None and len(df) > 0:
             initial = df.iloc[0]
             p = doc_word.add_paragraph(
                 "Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – ZONA 22S – Meridiano 51ºW, georreferenciadas ao Sistema Geodésico Brasileiro – SIRGAS 2000.",
                 style='Normal'
             )
-            p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY  
-            
-            # Pula uma linha
-            #doc_word.add_paragraph()
-            
-            # Próximo parágrafo
-            # Cria o parágrafo vazio inicialmente
+            p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+
             p2 = doc_word.add_paragraph(style='Normal')
             p2.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-            
-            # Texto inicial sem negrito até "vértice"
             p2.add_run("Inicia-se a descrição deste perímetro no vértice ")
-            
-            # Insere o vértice inicial em negrito
             run_v_inicial = p2.add_run(f"{initial['V']}")
-            run_v_inicial.bold = True  # Define o negrito para o vértice inicial
-            
-            # Continua o restante do texto sem negrito
+            run_v_inicial.bold = True
             p2.add_run(
                 f", de coordenadas N(Y) {initial['N']} e E(X) {initial['E']}, "
                 f"situado no limite com {initial['Confrontante']}."
             )
-
-
-
 
             num_points = len(df)
             for i in range(num_points):
@@ -895,7 +755,7 @@ def create_memorial_document(
                 coord_n = next_point['N']
                 coord_e = next_point['E']
 
-                if azimute.startswith("R=") and distancia.startswith("C="):
+                if isinstance(azimute, str) and azimute.startswith("R=") and isinstance(distancia, str) and distancia.startswith("C="):
                     texto_paragrafo = (
                         f"Deste, segue com raio de {azimute[2:]}m e distância de {distancia[2:]}m, "
                         f"confrontando neste trecho com {confrontante}, até o vértice "
@@ -906,29 +766,20 @@ def create_memorial_document(
                         f"Deste, segue com azimute de {azimute} e distância de {distancia} m, "
                         f"confrontando neste trecho com {confrontante}, até o vértice "
                     )
-                    
-                    # Adicione esta condição para verificar se o vértice seguinte é o ponto inicial
                     if next_index == 0:
                         restante_texto = f", origem desta descrição de coordenadas N(Y) {coord_n} e E(X) {coord_e};"
                     else:
                         restante_texto = f", de coordenadas N(Y) {coord_n} e E(X) {coord_e};"
 
-                # Adicionar o texto antes do vértice sem negrito
                 p = doc_word.add_paragraph(style='Normal')
                 p.add_run(texto_paragrafo)
-
-                # Adicionar o vértice em negrito
                 run_v = p.add_run(destino)
                 run_v.bold = True
-
-                # Continuar com o restante do texto sem negrito
                 p.add_run(restante_texto)
-
         else:
-            # Caso não haja Excel, pode deixar espaço para preenchimento manual
             doc_word.add_paragraph("\nDescrição do perímetro não incluída neste memorial.", style='Normal')
             pular_linhas(doc_word, 8)
-        # Adicionar o fechamento do perímetro e área
+
         paragrafo_fechamento = doc_word.add_paragraph(
             f"Fechando-se assim o perímetro com {str(round(perimeter_dxf, 2)).replace('.', ',')} m "
             f"e a área com {str(round(area_dxf, 2)).replace('.', ',')} m².",
@@ -937,24 +788,13 @@ def create_memorial_document(
         paragrafo_fechamento.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
         doc_word.add_paragraph("")
         doc_word.add_paragraph("")
-        # Adicionar data
+
         data_atual = datetime.now().strftime("%d de %B de %Y")
-        
-       # Centralizar data
         paragrafo_data = doc_word.add_paragraph(f"Porto Alegre,RS, {data_atual}.", style='Normal')
         paragrafo_data.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-        doc_word.add_paragraph("")  # Espaço em branco
-        doc_word.add_paragraph("")  # Espaço em branco
+        doc_word.add_paragraph("")
+        doc_word.add_paragraph("")
 
-
-        
-        # # Adicionar a imagem da assinatura centralizada
-        # assinatura = doc_word.add_paragraph()
-        # assinatura.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        # run = assinatura.add_run()
-        # run.add_picture(r"C:\\Users\\Paulo\\Documents\\JL_ADICIONAIS\\TEMPLATE_MEMORIAL\\assinatura_engenheiro.jpg", width=Inches(2.0))
-
-        # Adicionar informações do engenheiro centralizadas
         infos_engenheiro = [
             "____________________",
             "Rodrigo Luis Schmitz",
@@ -966,43 +806,11 @@ def create_memorial_document(
             paragrafo = doc_word.add_paragraph(info, style='Normal')
             paragrafo.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-
-        # Salvar o documento
         doc_word.save(output_path)
         print(f"Memorial descritivo salvo em: {output_path}")
 
     except Exception as e:
         print(f"Erro ao criar o documento memorial: {e}")
-
-
-        
-#def convert_docx_to_pdf(output_path, pdf_file_path):
-#    """
-#    Converte um arquivo DOCX para PDF usando a biblioteca comtypes.
-#    """
-#    try:
-#        # Verificar se o arquivo DOCX existe antes de abrir
-#       if not os.path.exists(output_path):
-#           raise FileNotFoundError(f"Arquivo DOCX não encontrado: {output_path}")
-           
-        
-#       word = comtypes.client.CreateObject("Word.Application")
-#        word.Visible = False  # Ocultar a interface do Word
-#        doc = word.Documents.Open(output_path)
-#        doc.SaveAs(pdf_file_path, FileFormat=17)  # 17 corresponde ao formato PDF
-#        doc.Close()
-#        word.Quit()
-#        print(f"Arquivo PDF salvo em: {pdf_file_path}")
-#    except FileNotFoundError as fnf_error:
-#        print(f"Erro: {fnf_error}")
-#    except Exception as e:
-#       print(f"Erro ao converter DOCX para PDF: {e}")
-#    finally:
-#        try:
-#           word.Quit()
-#        except:
-#            pass  # Garantir que o Word seja fechado
-
 
 
 # Função principal
@@ -1022,20 +830,19 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
             "Verifique preparar_arquivos() para usar /tmp/<UUID>/PREPARADO."
         )
 
-    
     print(f"[DEBUG poligonal_fechada] UUID recebido: {uuid_prefix}")
 
     try:
         dados_df = pd.read_excel(caminho_excel, sheet_name='Dados_do_Imóvel', header=None)
         dados_dict = dict(zip(dados_df.iloc[:, 0], dados_df.iloc[:, 1]))
 
-        proprietario = dados_dict.get("NOME DO PROPRIETÁRIO", "").strip()
-        matricula = dados_dict.get("DOCUMENTAÇÃO DO IMÓVEL", "").strip()
-        descricao = dados_dict.get("DESCRIÇÃO", "").strip()
-        area_terreno = dados_dict.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "").strip()
-        comarca = dados_dict.get("COMARCA", "").strip()
-        RI = dados_dict.get("CRI", "").strip()
-        rua = dados_dict.get("ENDEREÇO/LOCAL", "").strip()
+        proprietario = str(dados_dict.get("NOME DO PROPRIETÁRIO", "")).strip()
+        matricula = str(dados_dict.get("DOCUMENTAÇÃO DO IMÓVEL", "")).strip()
+        descricao = str(dados_dict.get("DESCRIÇÃO", "")).strip()
+        area_terreno = str(dados_dict.get("ÁREA TOTAL DO TERRENO DOCUMENTADA", "")).strip()
+        comarca = str(dados_dict.get("COMARCA", "")).strip()
+        RI = str(dados_dict.get("CRI", "")).strip()
+        rua = str(dados_dict.get("ENDEREÇO/LOCAL", "")).strip()
 
         nome_dxf = os.path.basename(caminho_dxf).upper()
         tipo = next((t for t in ["ETE", "REM", "SER", "ACE"] if t in nome_dxf), None)
@@ -1062,8 +869,7 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
         print(f"✅ Confrontante carregado: {excel_confrontantes}")
         logger.info(f"Planilha de confrontantes usada: {excel_confrontantes}")
 
-
-        nome_limpo_dxf = f"DXF_LIMPO_{matricula}.dxf"
+        nome_limpo_dxf = f"DXF_LIMPO_{sanitize_filename(matricula)}.dxf"
         caminho_dxf_limpo = os.path.join(pasta_concluido, nome_limpo_dxf)
 
         dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(caminho_dxf, caminho_dxf_limpo)
@@ -1110,7 +916,7 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
         )
 
         if excel_output:
-            output_docx = os.path.join(pasta_concluido, f"{uuid_prefix}_{tipo}_{matricula}.docx")
+            output_docx = os.path.join(pasta_concluido, f"{uuid_prefix}_{tipo}_{sanitize_filename(matricula)}.docx")
             create_memorial_document(
                 proprietario=proprietario,
                 matricula=matricula,
@@ -1134,16 +940,10 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
 
             print(f"📄 Memorial gerado com sucesso: {output_docx}")
             logger.info(f"Memorial gerado com sucesso: {output_docx}")
-
-            
         else:
             msg = "❌ Falha ao gerar o memorial descritivo."
             print(msg)
             logger.error(msg)
 
-        
     except Exception as e:
         logger.exception("Erro inesperado durante a execução da poligonal fechada")
-
-
-
