@@ -522,149 +522,174 @@ def alterar_senha():
     return render_template('alterar_senha.html', mensagem=mensagem, erro=erro)
 
 
-# @app.route("/downloads")
-# def listar_arquivos():
-#     os.makedirs(arquivos_dir, exist_ok=True)
-#     arquivos = os.listdir(arquivos_dir)
-#     return render_template("listar_arquivos.html", arquivos=arquivos)
+@app.get("/download/azimute-az/log/<uuid>")
+def download_log_azimute_az(uuid):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    if not dir_conc.exists():
+        abort(404, "Execução não encontrada.")
+    pref = dir_conc / f"exec_{uuid}.log"
+    if pref.exists():
+        path = pref
+    else:
+        logs = sorted(dir_conc.glob("*.log"), key=os.path.getmtime, reverse=True)
+        if not logs:
+            abort(404, "Log não encontrado.")
+        path = logs[0]
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="text/plain; charset=utf-8")
 
-# @app.route("/download/<nome_arquivo>")
-# def download_arquivo(nome_arquivo):
-#     return send_from_directory(arquivos_dir, nome_arquivo, as_attachment=True)
+
+@app.get("/download/azimute-az/zip/<uuid>/<fname>")
+def download_zip_azimute_az(uuid, fname):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    if Path(fname).name != fname:
+        abort(400, "Nome de arquivo inválido")
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    path = dir_conc / fname
+    if (not path.exists()) or (not path.name.lower().endswith(".zip")):
+        abort(404, "ZIP não encontrado.")
+    return send_file(path, as_attachment=True, download_name=path.name)
+
 
 @app.route('/memorial_azimute_az', methods=['GET', 'POST'])
 def gerar_memorial_azimute_az():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    resultado = erro_execucao = log_relativo = None
+    resultado = erro_execucao = None
+    success = False
+    zip_url = None
+    zip_urls = []
     zip_download = None
+    run_uuid = None
+    log_url = None
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
+        # Mantém o mesmo nome e semântica que você tinha:
         sentido_poligonal = 'anti_horario' if 'sentidoPoligonal' in request.form else 'horario'
 
-        id_execucao = str(uuid.uuid4())[:8]
-        diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
-        os.makedirs(diretorio_tmp, exist_ok=True)
+        # Pastas isoladas por execução
+        run_uuid = uuid.uuid4().hex[:8]
+        base_exec = os.path.join(BASE_DIR, 'tmp', run_uuid)
+        dir_concluido = os.path.join(base_exec, 'CONCLUIDO')
+        os.makedirs(dir_concluido, exist_ok=True)
 
+        # Uploads salvos com nome único e depois copiados/consumidos pelo pipeline
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
         caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
-        caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
+        caminho_dxf   = salvar_com_nome_unico(arquivo_dxf,   app.config['UPLOAD_FOLDER'])
 
-
-        log_filename = datetime.now().strftime("log_AZIMUTEAZ_%Y%m%d_%H%M%S.log")
-        log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
-        os.makedirs(log_dir_absoluto, exist_ok=True)
-        log_path = os.path.join(log_dir_absoluto, log_filename)
-        log_relativo = f"static/logs/{log_filename}"
-
-        # try:
-        #     processo = Popen(
-        #         ["python", os.path.join(BASE_DIR, "executaveis_azimute_az", "main.py"),
-        #          cidade, caminho_excel, caminho_dxf],
-        #         stdout=PIPE, stderr=subprocess.STDOUT, text=True
-        #     )
-
-        #     log_lines = []
-        #     with open(log_path, 'w', encoding='utf-8') as log_file:
-        #         for linha in processo.stdout:
-        #             log_file.write(linha)
-        #             if len(log_lines) < 500:
-        #                 log_lines.append(linha)
-        #             print("🖨️", linha.strip())
-
-        #     processo.wait()
-
-        #     if processo.returncode == 0:
-        #         resultado = "✅ Processamento concluído com sucesso!"
-        #     else:
-        #         erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
-
-        # except Exception as e:
-        #     erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+        # Log desta execução dentro do CONCLUIDO
+        exec_log_path = Path(dir_concluido) / f"exec_{run_uuid}.log"
 
         try:
-            comando = [
+            # Preferimos o padrão DECOPA: passar ID_EXECUCAO por env e parâmetros nomeados
+            env = os.environ.copy()
+            env["ID_EXECUCAO"] = run_uuid
+
+            cmd = [
                 sys.executable,
                 os.path.join(BASE_DIR, "executaveis_azimute_az", "main.py"),
-                cidade, caminho_excel, caminho_dxf, sentido_poligonal
+                "--id-execucao", run_uuid,
+                "--diretorio", dir_concluido,
+                "--cidade", cidade,
+                "--excel", caminho_excel,
+                "--dxf", caminho_dxf,
+                "--sentido", sentido_poligonal,  # o main deve aceitar; se não aceitar, ajuste lá
             ]
-
-            logger.info(f"Comando enviado ao subprocess: {comando}")
+            app.logger.info(f"[AZIMUTE_AZ] CMD: {cmd}")
 
             proc = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
-            try:
-                saida, _ = proc.communicate(timeout=300)
-            except TimeoutExpired:
-                proc.kill()
-                saida, _ = proc.communicate()
-                logger.error("Subprocess atingiu timeout.")
 
-            # Grave SEMPRE o output capturado no log da execução
-            exec_log_path.write_text(saida or "", encoding="utf-8", errors="ignore")
-            logger.info(f"Saída do subprocess gravada em: {exec_log_path}")
+            # Stream para arquivo de log + manter primeiras linhas para erro amigável
+            log_lines = []
+            with exec_log_path.open('w', encoding='utf-8') as lf:
+                t0 = time.time()
+                # 5 minutos para o processo (ajuste se precisar)
+                timeout_s = 300
+                while True:
+                    if proc.poll() is not None:
+                        # terminou; drena qualquer resto da stdout
+                        remainder = proc.stdout.read() if proc.stdout else ""
+                        if remainder:
+                            lf.write(remainder)
+                            if len(log_lines) < 100:
+                                log_lines.append(remainder)
+                        break
+                    # leitura "não bloqueante" básica
+                    line = proc.stdout.readline()
+                    if line:
+                        lf.write(line)
+                        if len(log_lines) < 100:
+                            log_lines.append(line)
+                    if time.time() - t0 > timeout_s:
+                        proc.kill()
+                        lf.write("\n[TIMEOUT] Processo encerrado por tempo excedido.\n")
+                        break
+
+            proc_ok = (proc.returncode == 0)
+            app.logger.info(f"[AZIMUTE_AZ] returncode={proc.returncode}")
+
+            # Descobrir ZIP(s) desta execução
+            manifest_path = Path(dir_concluido) / "RUN.json"
+            zip_files = []
+
+            # Pequena espera para evitar condição de corrida na escrita do RUN.json
+            for _ in range(10):
+                if manifest_path.exists():
+                    break
+                time.sleep(0.1)
+
+            # Preferir manifest
+            try:
+                if manifest_path.exists():
+                    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+                    zip_files = [os.path.basename(z) for z in manifest.get("zip_files", []) if z]
+                    app.logger.info(f"[AZIMUTE_AZ] RUN.json: {zip_files}")
+            except Exception as e:
+                app.logger.warning(f"[AZIMUTE_AZ] RUN.json inválido: {e}")
+
+            # Fallback: listar *.zip em CONCLUIDO
+            if not zip_files:
+                zip_files = sorted([p.name for p in Path(dir_concluido).glob("*.zip")])
+
+            # Montar URLs seguras (com UUID)
+            if zip_files:
+                zip_urls = [url_for("download_zip_azimute_az", uuid=run_uuid, fname=f) for f in zip_files]
+                zip_url = zip_urls[0]
+                zip_download = zip_files[0]
+                success = True
+
+            if not proc_ok and not success:
+                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+            elif success:
+                resultado = "✅ Processamento concluído com sucesso!"
+            else:
+                erro_execucao = "⚠️ Processamento terminou, mas nenhum ZIP foi gerado. Baixe o log da execução para detalhes."
 
         except Exception as e:
-            logger.exception(f"Erro fatal ao executar subprocess: {e}")
-            # registre algo no log da execução para o usuário baixar
+            app.logger.exception("[AZIMUTE_AZ] Falha ao executar pipeline")
+            # registra erro no log de execução para o usuário baixar
             try:
-                exec_log_path.write_text(f"Erro fatal: {e}", encoding="utf-8")
+                exec_log_path.write_text(f"Erro fatal: {type(e).__name__}: {e}", encoding="utf-8")
+            except Exception:
+                pass
+            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+
+        # Limpeza dos uploads temporários (equivalente ao finally)
+        for p in (caminho_excel, caminho_dxf):
+            try:
+                if p and os.path.exists(p):
+                    os.remove(p)
             except Exception:
                 pass
 
-        finally:
-            # limpe os uploads temporários
-            try: os.remove(caminho_excel)
-            except Exception: pass
-            try: os.remove(caminho_dxf)
-            except Exception: pass
-
-        # 🎯 Validação de saída desta execução (somente dentro do /tmp/<uuid>/CONCLUIDO)
-        # Tente usar manifesto (se o main escrever RUN.json); senão procure *.zip diretamente.
-        # --- ler ZIPs dentro do CONCLUIDO (padrão) ---
-        manifest_path = dir_concluido / "RUN.json"
-        zip_files = []
-        if manifest_path.exists():
-            try:
-                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                zip_files = manifest.get("zip_files", [])
-                zip_files = [Path(z).name for z in zip_files if z]  # <- mudou aqui só para mudar usando só o nome do arquivo
-            except Exception as e:
-                logger.warning(f"RUN.json inválido: {e}")
-
-        if not zip_files:
-            zip_files = sorted([p.name for p in dir_concluido.glob("*.zip")])
-
-        zip_urls = []
-        zip_url = None
-        zip_download = None
-
-        if zip_files:
-            # ZIPs gerados dentro do tmp/<uuid>/CONCLUIDO (rota nova)
-            zip_urls = [url_for("download_zip_azimute_az", uuid=run_uuid, fname=f) for f in zip_files]
-            zip_url = zip_urls[0]
-            zip_download = zip_files[0]
-        else:
-            # --- FALLBACK: procurar no diretório público static/arquivos pelo prefixo do UUID ---
-            public_dir = Path(BASE_DIR) / "static" / "arquivos"
-            public_candidates = sorted(public_dir.glob(f"{run_uuid}_*.zip"), key=os.path.getmtime, reverse=True)
-            if public_candidates:
-                zip_urls = [url_for("download_zip", filename=p.name) for p in public_candidates]  # rota LEGADA /download/<filename>
-                zip_url = zip_urls[0]
-                zip_download = public_candidates[0].name
-
-        success = bool(zip_url)
-
+        # Link para baixar o log desta execução
         log_url = url_for("download_log_azimute_az", uuid=run_uuid)
-
-        # mensagem amigável
-        resultado = "✅ Processamento concluído com sucesso!" if success else None
-        erro_execucao = None if success else (
-            "Houve um erro durante a execução. Baixe o log para verificar os detalhes (ponto de amarração ausente, DXF inválido, etc.)."
-        )
-        logger.info(f"[AZIMUTE_AZ] run={run_uuid} success={success} zip_url={zip_url} zip_files={zip_files}")
 
         return render_template(
             "formulario_AZIMUTE_AZ.html",
@@ -672,59 +697,25 @@ def gerar_memorial_azimute_az():
             erro=erro_execucao,
             success=success,
             zip_url=zip_url,
-            zip_urls=zip_urls,      # <— passe a lista também
+            zip_urls=zip_urls,
             zip_download=zip_download,
             log_path=log_url,
             run_uuid=run_uuid,
         )
-
 
     # GET
     return render_template(
         "formulario_AZIMUTE_AZ.html",
         resultado=None,
         erro=None,
-        zip_download=None,
-        zip_url=None,
-        log_path=None,
         success=False,
-        run_uuid=None
+        zip_url=None,
+        zip_urls=[],
+        zip_download=None,
+        log_path=None,
+        run_uuid=None,
     )
-#ATUALIZADO
 
-        finally:
-            os.remove(caminho_excel)
-            os.remove(caminho_dxf)
-
-        # 🔍 Verificação do ZIP após o processamento
-        try:
-            #parent_dir = os.path.dirname(diretorio)  # sobe de tmp/CONCLUIDO/uuid para tmp/CONCLUIDO
-            # Verifica ZIP na pasta correta (static/arquivos)
-            static_zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(static_zip_dir) if f.lower().endswith('.zip')]
-
-
-            print("🧪 ZIPs disponíveis:", arquivos_zip)
-            logging.info(f"🧪 ZIPs disponíveis: {arquivos_zip}")
-
-            if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(static_zip_dir, x)), reverse=True)
-                zip_download = arquivos_zip[0]
-                print(f"✅ ZIP disponível para download: {zip_download}")
-                logging.info(f"✅ ZIP disponível para download: {zip_download}")
-
-        except Exception as e:
-            print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
-            logging.error(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
-
-    print("DEBUG FLASK - zip_download final:", zip_download)
-    
-
-    return render_template("formulario_AZIMUTE_AZ.html",
-                           resultado=resultado,
-                           erro=erro_execucao,
-                           zip_download=zip_download,
-                           log_path=log_relativo)
 
 @app.route('/download/<filename>')
 def download_zip(filename):
