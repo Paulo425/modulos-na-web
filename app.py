@@ -297,29 +297,48 @@ def download_log_decopa(uuid):
     return send_file(path, as_attachment=True, download_name=path.name, mimetype="text/plain; charset=utf-8")
 
 
-
-
 @app.get("/download/decopa/zip/<uuid>/<fname>")
 def download_zip_decopa(uuid, fname):
+    # validação básica
     if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
         abort(400, "UUID inválido")
     # evita path traversal
     if Path(fname).name != fname:
         abort(400, "Nome de arquivo inválido")
+    if not fname.lower().endswith(".zip"):
+        abort(400, "Arquivo não é ZIP")
 
-    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
-    path = dir_conc / fname
+    base = Path(BASE_DIR)
 
-    if (not path.exists()) or (not path.is_file()) or (not path.name.lower().endswith(".zip")):
-        abort(404, "ZIP não encontrado.")
+    # 1) ZIP na pasta da execução (/tmp/<uuid>/CONCLUIDO)
+    dir_conc = base / "tmp" / uuid / "CONCLUIDO"
+    path1 = dir_conc / fname
+    if path1.is_file():
+        return send_from_directory(
+            directory=str(dir_conc),
+            path=fname,
+            as_attachment=True,
+            download_name=fname,
+            mimetype="application/zip",
+            conditional=True,
+        )
 
-    return send_file(
-        path,
-        as_attachment=True,
-        download_name=path.name,
-        mimetype="application/zip",
-        conditional=True,
-    )
+    # 2) Fallback: cópia pública feita pelo compactador (/static/arquivos/<uuid>_<fname>)
+    public_dir = base / "static" / "arquivos"
+    public_name = f"{uuid}_{fname}"
+    path2 = public_dir / public_name
+    if path2.is_file():
+        return send_from_directory(
+            directory=str(public_dir),
+            path=public_name,
+            as_attachment=True,
+            download_name=fname,  # baixa com o nome original
+            mimetype="application/zip",
+            conditional=True,
+        )
+
+    abort(404, "ZIP não encontrado.")
+
 
 
 
