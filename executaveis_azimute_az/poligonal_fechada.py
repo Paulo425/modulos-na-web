@@ -1539,9 +1539,10 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # 🔹 Busca planilha FECHADA correta com uuid_str
     # ✅ Busca planilha FECHADA correta no padrão NOVO: FECHADA_*_{tipo}.xlsx
    
-    padrao_fechada = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}*.xlsx")
+    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}*.xlsx")
     
     arquivos_encontrados = sorted(glob.glob(padrao_busca), key=os.path.getmtime, reverse=True)
+
     if not arquivos_encontrados:
         logger.error(f"❌ Planilha confrontantes FECHADA não encontrada (padrão): {padrao_busca}")
         return
