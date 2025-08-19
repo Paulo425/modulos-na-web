@@ -20,6 +20,21 @@ if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", Non
     file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
     logger.addHandler(file_handler)
 
+# cidade segura (sem espaços, barras, acentos etc.)
+def _safe_city(s):
+    s = (s or "CIDADE")
+    s = re.sub(r'[^A-Za-z0-9_.-]+', '_', s)  # troca qualquer coisa não segura por _
+    s = s.strip('._-')
+    return s or "CIDADE"
+
+# matrícula segura (remove lixo e pontuação final duplicada)
+def _safe_mat(s):
+    s = (s or "").strip()
+    s = s.replace(" ", "").replace(",", ".").replace("__", "_")
+    s = re.sub(r'[^0-9A-Za-z._-]+', '', s)   # mantém só [0-9A-Za-z._-]
+    s = s.strip('._-')                        # tira pontuação nas pontas
+    return s
+
 def montar_pacote_zip(diretorio, cidade):
     print("\n📦 [compactar] Iniciando montagem dos pacotes ZIP")
     logger.info("Iniciando montagem dos pacotes ZIP")
@@ -82,8 +97,12 @@ def montar_pacote_zip(diretorio, cidade):
             arq_excel = [a for a in arquivos_excel if matricula in a]
 
             if arq_dxf and arq_docx and arq_excel:
-                cidade_sanitizada = (cidade or "CIDADE").replace(" ", "_")
-                nome_zip = os.path.join(diretorio, f"{cidade_sanitizada}_{tipo}_{matricula}.zip")
+                cidade_sanitizada = _safe_city(cidade)
+                matricula_sanit   = _safe_mat(matricula)
+                #cidade_sanitizada = (cidade or "CIDADE").replace(" ", "_")
+                zip_base = f"{cidade_sanitizada}_{tipo}_{matricula_sanit}.zip"
+                nome_zip = os.path.join(diretorio, zip_base)
+                logger.info(f"[ZIP] nome_zip={zip_base} (cidade='{cidade}', matricula='{matricula}')")
 
                 STATIC_ZIP_DIR = os.path.join(BASE_DIR, 'static', 'arquivos')
                 os.makedirs(STATIC_ZIP_DIR, exist_ok=True)
