@@ -129,4 +129,73 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf, senti
 
     # 5) Compactar (gera <uuid>_FECHADA_{TIPO}_{MATR}.zip em CONCLUIDO)
     logger.info("📦 Compactação: %s", dir_conc)
-    main_compactar_arquivos(dir_conc, cidade_fmt, ID_E_
+    main_compactar_arquivos(dir_conc, cidade_fmt, ID_EXECUCAO)
+    logger.info("✅ Compactação concluída.")
+
+    # 6) RUN.json (redundância segura)
+    try:
+        created = [f for f in os.listdir(dir_conc) if f.lower().endswith(".zip")]
+        run_json = os.path.join(dir_conc, "RUN.json")
+        with open(run_json, "w", encoding="utf-8") as f:
+            json.dump({"zip_files": created, "id_execucao": ID_EXECUCAO}, f, ensure_ascii=False)
+        logger.info("[RUN.json] %s", created)
+    except Exception as e:
+        logger.exception("Falha RUN.json: %s", e)
+
+    logger.info("✅ Processo geral concluído com sucesso!")
+    return 0
+
+
+def _parse_args():
+    """
+    Suporta:
+    - Modo novo (nomeado): --id-execucao --diretorio --cidade --excel --dxf --sentido
+    - Modo legado (posicional): main.py <cidade> <excel> <dxf> [sentido]
+    """
+    argv = sys.argv[1:]
+    has_flags = any(a.startswith("--") for a in argv)
+    if not has_flags and len(argv) in (3, 4):
+        cidade, excel, dxf = argv[0], argv[1], argv[2]
+        sentido = argv[3] if len(argv) == 4 else "horario"
+        return argparse.Namespace(
+            diretorio=DIR_CONC, cidade=cidade, excel=excel, dxf=dxf, sentido=sentido, id_execucao=os.environ.get("ID_EXECUCAO")
+        )
+
+    parser = argparse.ArgumentParser(description="Executar ANGULO_P1_P2 com contexto de execução único.")
+    parser.add_argument('--diretorio', help='Diretório CONCLUIDO (padrão: DIR_CONC do exec_ctx).')
+    parser.add_argument('--cidade', required=True, help='Cidade do memorial.')
+    parser.add_argument('--excel', required=True, help='Caminho do arquivo Excel.')
+    parser.add_argument('--dxf', required=True, help='Caminho do arquivo DXF.')
+    parser.add_argument('--sentido', choices=['horario', 'anti_horario'], default='horario', help='Sentido da poligonal.')
+    parser.add_argument('--id-execucao', help='ID único da execução (propagado pelo Flask).')
+    return parser.parse_args()
+
+
+def main():
+    args = _parse_args()
+
+    # Compat: se passou --id-execucao, reforça no env (exec_ctx usa)
+    if getattr(args, "id_execucao", None):
+        os.environ["ID_EXECUCAO"] = args.id_execucao
+
+    diretorio = args.diretorio or DIR_CONC
+    cidade    = args.cidade
+    excel     = args.excel
+    dxf       = args.dxf
+    sentido   = args.sentido
+
+    # Validação mínima
+    missing = []
+    if not cidade: missing.append("--cidade")
+    if not excel:  missing.append("--excel")
+    if not dxf:    missing.append("--dxf")
+    if missing:
+        print("Uso incorreto. Faltando:", ", ".join(missing))
+        return 2
+
+    rc = executar_programa(diretorio, cidade, excel, dxf, sentido)
+    sys.exit(rc)
+
+
+if __name__ == "__main__":
+    main()
