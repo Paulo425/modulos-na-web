@@ -835,6 +835,35 @@ def memorial_azimute_jl():
                            log_path=log_relativo)
 
 
+@app.get("/download/angulo-az/log/<uuid>")
+def download_log_angulo_az(uuid):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    if not dir_conc.exists():
+        abort(404, "Execução não encontrada.")
+    pref = dir_conc / f"exec_{uuid}.log"
+    if pref.exists():
+        path = pref
+    else:
+        logs = sorted(dir_conc.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if not logs:
+            abort(404, "Log não encontrado.")
+        path = logs[0]
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="text/plain; charset=utf-8")
+
+
+@app.get("/download/angulo-az/zip/<uuid>/<fname>")
+def download_zip_angulo_az(uuid, fname):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    if Path(fname).name != fname:
+        abort(400, "Nome de arquivo inválido")
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    path = dir_conc / fname
+    if (not path.exists()) or (not path.is_file()) or (not path.name.lower().endswith(".zip")):
+        abort(404, "ZIP não encontrado.")
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="application/zip", conditional=True)
 
 
 @app.route('/memorial_angulo_az', methods=['GET', 'POST'])
@@ -842,82 +871,159 @@ def gerar_memorial_angulo_az():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    resultado = erro_execucao = log_relativo = None
+    resultado = erro_execucao = None
+    success = False
+    zip_url = None
+    zip_urls = []
     zip_download = None
+    run_uuid = None
+    log_url = None
 
     if request.method == 'POST':
         cidade = request.form['cidade'].strip()
+        # mesmo padrão do AZIMUTE_AZ
         sentido_poligonal = 'anti_horario' if 'sentidoPoligonal' in request.form else 'horario'
-        logger.info(f"Valor recebido do checkbox (sentidoPoligonal): {request.form.get('sentidoPoligonal')}")
-        logger.info(f"Sentido poligonal interpretado no Flask: {sentido_poligonal}")
+        app.logger.info(f"[ANGULO_AZ] sentidoPoligonal={request.form.get('sentidoPoligonal')} -> {sentido_poligonal}")
 
+        # Pastas isoladas por execução
+        run_uuid = uuid.uuid4().hex[:8]
+        base_exec = os.path.join(BASE_DIR, 'tmp', run_uuid)
+        dir_concluido = os.path.join(base_exec, 'CONCLUIDO')
+        os.makedirs(dir_concluido, exist_ok=True)
 
-        id_execucao = str(uuid.uuid4())[:8]
-        diretorio_tmp = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
-
-        os.makedirs(diretorio_tmp, exist_ok=True)
-
+        # Uploads salvos com nome único
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
         caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
-        caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
+        caminho_dxf   = salvar_com_nome_unico(arquivo_dxf,   app.config['UPLOAD_FOLDER'])
 
-
-        log_filename = datetime.now().strftime("log_ANGULOAZ_%Y%m%d_%H%M%S.log")
-        log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
-        os.makedirs(log_dir_absoluto, exist_ok=True)
-        log_path = os.path.join(log_dir_absoluto, log_filename)
-        log_relativo = f"static/logs/{log_filename}"
+        # Log desta execução dentro do CONCLUIDO
+        exec_log_path = Path(dir_concluido) / f"exec_{run_uuid}.log"
 
         try:
-            comando = [
+            # Propaga ID_EXECUCAO por ENV e CLI
+            env = os.environ.copy()
+            env["ID_EXECUCAO"] = run_uuid
+
+            cmd = [
                 sys.executable,
                 os.path.join(BASE_DIR, "executaveis_angulo_az", "main.py"),
-                cidade, caminho_excel, caminho_dxf, sentido_poligonal
+                "--id-execucao", run_uuid,
+                "--diretorio", dir_concluido,
+                "--cidade", cidade,
+                "--excel", caminho_excel,
+                "--dxf", caminho_dxf,
+                "--sentido", sentido_poligonal,
             ]
+            app.logger.info(f"[ANGULO_AZ] CMD: {cmd}")
 
-            logger.info(f"Comando enviado ao subprocess: {comando}")
+            proc = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
 
-            processo = Popen(
-                comando,
-                stdout=PIPE, stderr=STDOUT, text=True
-            )
+            # Stream do log + primeiras linhas para diagnóstico
+            log_lines = []
+            with exec_log_path.open('w', encoding='utf-8') as lf:
+                t0 = time.time()
+                timeout_s = 300
+                while True:
+                    if proc.poll() is not None:
+                        remainder = proc.stdout.read() if proc.stdout else ""
+                        if remainder:
+                            lf.write(remainder)
+                            if len(log_lines) < 100:
+                                log_lines.append(remainder)
+                        break
+                    line = proc.stdout.readline()
+                    if line:
+                        lf.write(line)
+                        if len(log_lines) < 100:
+                            log_lines.append(line)
+                    if time.time() - t0 > timeout_s:
+                        proc.kill()
+                        lf.write("\n[TIMEOUT] Processo encerrado por tempo excedido.\n")
+                        break
+
+            proc_ok = (proc.returncode == 0)
+            app.logger.info(f"[ANGULO_AZ] returncode={proc.returncode}")
+
+            # Descobrir ZIP(s) desta execução
+            manifest_path = Path(dir_concluido) / "RUN.json"
+            zip_files = []
+
+            # pequena espera para evitar corrida na escrita do RUN.json
+            for _ in range(10):
+                if manifest_path.exists():
+                    break
+                time.sleep(0.1)
 
             try:
-                saida, _ = processo.communicate(timeout=300)
-                logger.info(f"Saída do subprocess:\n{saida}")
-            except TimeoutExpired:
-                processo.kill()
-                saida, _ = processo.communicate()
-                logger.error(f"Subprocess atingiu timeout. Saída parcial:\n{saida}")
+                if manifest_path.exists():
+                    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+                    zip_files = [os.path.basename(z) for z in manifest.get("zip_files", []) if z]
+                    app.logger.info(f"[ANGULO_AZ] RUN.json: {zip_files}")
+            except Exception as e:
+                app.logger.warning(f"[ANGULO_AZ] RUN.json inválido: {e}")
 
-        except Exception as e:
-            logger.error(f"Erro fatal ao executar subprocess: {e}")
+            # Fallback: listar *.zip no CONCLUIDO
+            if not zip_files:
+                zip_files = sorted([p.name for p in Path(dir_concluido).glob("*.zip")])
 
-        finally:
-            os.remove(caminho_excel)
-            os.remove(caminho_dxf)
+            if zip_files:
+                zip_urls = [url_for("download_zip_angulo_az", uuid=run_uuid, fname=f) for f in zip_files]
+                zip_url = zip_urls[0]
+                zip_download = zip_files[0]
+                success = True
 
-        # 🔍 Verificação do ZIP após o processamento
-        try:
-            zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(static_zip_dir)
-                if f.lower().endswith('.zip') and f.startswith(f"{id_execucao}_")]
-            if arquivos_zip:
-                arquivos_zip = [f for f in os.listdir(static_zip_dir) if f.lower().endswith('.zip')]
-                zip_download = arquivos_zip[0]
-                print(f"✅ ZIP disponível para download: {zip_download}")
+            if not proc_ok and not success:
+                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+            elif success:
+                resultado = "✅ Processamento concluído com sucesso!"
             else:
-                print("⚠️ Nenhum ZIP encontrado no diretório público.")
+                erro_execucao = "⚠️ Processamento terminou, mas nenhum ZIP foi gerado. Baixe o log da execução para detalhes."
+
         except Exception as e:
-            print(f"❌ Erro ao verificar ZIP: {e}")
-            zip_download = None
-            success = False
-    return render_template("formulario_ANGULO_AZ.html",
-                           resultado=resultado,
-                           erro=erro_execucao,
-                           zip_download=zip_download,
-                           log_path=log_relativo)
+            app.logger.exception("[ANGULO_AZ] Falha ao executar pipeline")
+            try:
+                exec_log_path.write_text(f"Erro fatal: {type(e).__name__}: {e}", encoding="utf-8")
+            except Exception:
+                pass
+            erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+
+        # Limpeza dos uploads temporários
+        for p in (caminho_excel, caminho_dxf):
+            try:
+                if p and os.path.exists(p):
+                    os.remove(p)
+            except Exception:
+                pass
+
+        # Link para baixar o log desta execução
+        log_url = url_for("download_log_angulo_az", uuid=run_uuid)
+
+        return render_template(
+            "formulario_ANGULO_AZ.html",
+            resultado=resultado,
+            erro=erro_execucao,
+            success=success,
+            zip_url=zip_url,
+            zip_urls=zip_urls,
+            zip_download=zip_download,
+            log_path=log_url,
+            run_uuid=run_uuid,
+        )
+
+    # GET
+    return render_template(
+        "formulario_ANGULO_AZ.html",
+        resultado=None,
+        erro=None,
+        success=False,
+        zip_url=None,
+        zip_urls=[],
+        zip_download=None,
+        log_path=None,
+        run_uuid=None,
+    )
+
 
 
 
