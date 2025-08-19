@@ -6,11 +6,6 @@
         <h2 class="text-primary">Gerar Memorial AZIMUTE AZ</h2>
         <div class="d-flex gap-2 align-items-center">
             <span class="text-muted me-2">👤 {{ session['usuario'] }}</span>
-            {% if log_path %}
-            <a href="/{{ log_path }}" class="btn btn-outline-secondary" download>
-                🧾 Baixar Log da Execução
-            </a>
-            {% endif %}
             <a href="/logout" class="btn btn-outline-danger">🔒 Logout</a>
         </div>
     </div>
