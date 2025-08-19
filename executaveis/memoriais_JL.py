@@ -822,9 +822,9 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
         
-            log.write("Boundary points com bulge (final para DXF):\n")
-            for idx, pt in enumerate(boundary_points_com_bulge, 1):
-                log.write(f"{idx}: Coordenadas={pt[:2]}, Bulge={pt[2]}\n")
+        log.write("Boundary points com bulge (final para DXF):\n")
+        for idx, pt in enumerate(boundary_points_com_bulge, 1):
+            log.write(f"{idx}: Coordenadas={pt[:2]}, Bulge={pt[2]}\n")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
         
