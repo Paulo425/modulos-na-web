@@ -101,6 +101,7 @@ def montar_pacote_zip(diretorio, cidade):
                     # cópia para a área pública (download)
                     try:
                         shutil.copy2(nome_zip, caminho_debug_zip)
+                     
                         print(f"🪣 ZIP também copiado para: {caminho_debug_zip}")
                     except Exception as e_copy:
                         logger.warning(f"Falha ao copiar ZIP para público: {e_copy}")
