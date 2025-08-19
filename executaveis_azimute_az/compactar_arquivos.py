@@ -1,7 +1,10 @@
 import os
 import glob
 import zipfile
+import re
 import logging
+import json
+import shutil
 from datetime import datetime
 
 # Configuração inicial do diretório e log
@@ -12,63 +15,97 @@ os.makedirs(LOG_DIR, exist_ok=True)
 log_file = os.path.join(LOG_DIR, f"zip_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
-logger.addHandler(file_handler)
+if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == log_file for h in logger.handlers):
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+    logger.addHandler(file_handler)
+
 
 def montar_pacote_zip(diretorio, cidade_formatada, uuid_str):
     """
-    Procura trios coerentes {uuid}_FECHADA_{TIPO}_{MATRICULA}.(xlsx,docx,dxf)
-    e gera {uuid}_FECHADA_{TIPO}_{MATRICULA}.zip
+    Procura trios coerentes {TIPO}_{MATRICULA}.(xlsx/docx/dxf) e gera {CIDADE}_{TIPO}_{MATRICULA}.zip.
+    Copia para static/arquivos com prefixo do UUID: {uuid}_{CIDADE}_{TIPO}_{MATRICULA}.zip
+    e grava RUN.json em CONCLUIDO.
     """
     logger.info(f"Iniciando montagem dos pacotes ZIP em {diretorio}")
     try:
-        logger.info(f"[DEBUG ANGULO_AZ] Arquivos no diretório antes do ZIP: {os.listdir(diretorio)}")
+        lista = os.listdir(diretorio)
+        logger.info(f"[DEBUG AZIMUTE_AZ] Arquivos no diretório antes do ZIP: {lista}")
     except Exception as e:
         logger.error(f"Falha ao listar diretório {diretorio}: {e}")
         return
 
+    created_zips = []
     tipos = ["ETE", "REM", "SER", "ACE"]
 
     for tipo in tipos:
-        padrao_excel = os.path.join(diretorio, f"{uuid_str}_FECHADA_{tipo}_*.xlsx")
-        excels = sorted(glob.glob(padrao_excel), key=os.path.getmtime, reverse=True)
-        logger.info(f"[{tipo}] XLSX encontrados: {len(excels)} no padrão {padrao_excel}")
+        padrao_dxf = os.path.join(diretorio, f"*{tipo}*.dxf")
+        padrao_docx = os.path.join(diretorio, f"*{tipo}*.docx")
+        padrao_excel = os.path.join(diretorio, f"*{tipo}*.xlsx")
 
-        for excel_path in excels:
-            base = os.path.basename(excel_path)
-            prefixo = f"{uuid_str}_FECHADA_{tipo}_"
-            sufixo  = ".xlsx"
-            if not (base.startswith(prefixo) and base.endswith(sufixo)):
-                logger.warning(f"[{tipo}] Ignorando XLSX fora do padrão: {base}")
-                continue
-            matricula = base[len(prefixo):-len(sufixo)]
-            docx_path = os.path.join(diretorio, f"{uuid_str}_FECHADA_{tipo}_{matricula}.docx")
-            dxf_path  = os.path.join(diretorio, f"{uuid_str}_FECHADA_{tipo}_{matricula}.dxf")
+        arquivos_dxf = glob.glob(padrao_dxf)
+        arquivos_docx = glob.glob(padrao_docx)
+        arquivos_excel = glob.glob(padrao_excel)
 
-            ok_xlsx = os.path.exists(excel_path)
-            ok_docx = os.path.exists(docx_path)
-            ok_dxf  = os.path.exists(dxf_path)
-            logger.info(f"[{tipo}/{matricula}] ok: XLSX={ok_xlsx} DOCX={ok_docx} DXF={ok_dxf}")
+        logger.info(f"[{tipo}] DXF={len(arquivos_dxf)} DOCX={len(arquivos_docx)} XLSX={len(arquivos_excel)}")
 
-            if not (ok_xlsx and ok_docx and ok_dxf):
-                logger.warning(f"Incompleto para {tipo}/{matricula}. Pulando…")
-                continue
+        # Extrai matrículas observadas nos nomes de arquivo
+        matriculas = set()
+        for arq in arquivos_docx + arquivos_dxf + arquivos_excel:
+            nome = os.path.basename(arq)
+            m = re.search(rf"{tipo}.*?(\d{{2,6}}[.,_]?\d{{0,3}})", nome, re.IGNORECASE)
+            if m:
+                mat = m.group(1).replace(",", ".").replace(" ", "")
+                if "." not in mat and len(mat) > 3:
+                    mat = f"{mat[:-3]}.{mat[-3:]}"
+                matriculas.add(mat)
 
-            zip_name = f"{uuid_str}_FECHADA_{tipo}_{matricula}.zip"
-            zip_path = os.path.join(diretorio, zip_name)
+        for matricula in matriculas:
+            arq_dxf = [a for a in arquivos_dxf if matricula in a]
+            arq_docx = [a for a in arquivos_docx if matricula in a]
+            arq_excel = [a for a in arquivos_excel if matricula in a]
 
-            try:
-                with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-                    zf.write(dxf_path,  os.path.basename(dxf_path))
-                    zf.write(docx_path, os.path.basename(docx_path))
-                    zf.write(excel_path, os.path.basename(excel_path))
-                logger.info(f"✅ ZIP criado: {zip_path}")
-            except Exception as e:
-                logger.error(f"Erro ao criar ZIP {zip_path}: {e}")
+            if arq_dxf and arq_docx and arq_excel:
+                cidade_sanit = (cidade_formatada or "CIDADE").replace(" ", "_")
+                zip_name = f"{cidade_sanit}_{tipo}_{matricula}.zip"
+                zip_path = os.path.join(diretorio, zip_name)
+
+                try:
+                    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                        zf.write(arq_docx[0], os.path.basename(arq_docx[0]))
+                        zf.write(arq_dxf[0],  os.path.basename(arq_dxf[0]))
+                        zf.write(arq_excel[0], os.path.basename(arq_excel[0]))
+                    logger.info(f"✅ ZIP criado: {zip_path}")
+                    created_zips.append(zip_name)
+
+                    # cópia pública com UUID no nome (anti-sobreposição)
+                    try:
+                        static_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
+                        os.makedirs(static_dir, exist_ok=True)
+                        public_name = f"{uuid_str}_{zip_name}"
+                        tmp_pub = os.path.join(static_dir, public_name + ".tmp")
+                        shutil.copy2(zip_path, tmp_pub)
+                        os.replace(tmp_pub, os.path.join(static_dir, public_name))
+                        logger.info(f"🪣 ZIP também copiado (público): {public_name}")
+                    except Exception as e_copy:
+                        logger.warning(f"Falha ao copiar ZIP para público: {e_copy}")
+
+                except Exception as e:
+                    logger.exception(f"Erro ao criar ZIP {zip_path}: {e}")
+            else:
+                logger.info(f"[{tipo}/{matricula}] Arquivos insuficientes: "
+                            f"DXF={len(arq_dxf)} DOCX={len(arq_docx)} XLSX={len(arq_excel)}")
+
+    # Manifesto com os zips desta execução no CONCLUIDO
+    try:
+        run_json = os.path.join(diretorio, "RUN.json")
+        with open(run_json, "w", encoding="utf-8") as f:
+            json.dump({"zip_files": created_zips, "id_execucao": uuid_str}, f, ensure_ascii=False)
+        logger.info(f"[RUN] Manifesto salvo: {run_json} | zip_files={created_zips}")
+    except Exception as e:
+        logger.warning(f"[RUN] Falha ao salvar RUN.json: {e}")
 
     logger.info("Compactação finalizada")
-
 
 
 def main_compactar_arquivos(diretorio_concluido, cidade, uuid_str):
@@ -76,14 +113,18 @@ def main_compactar_arquivos(diretorio_concluido, cidade, uuid_str):
     montar_pacote_zip(diretorio_concluido, cidade, uuid_str)
     logger.info("Compactação finalizada")
 
+
 if __name__ == "__main__":
     import argparse
-
-    parser = argparse.ArgumentParser(description="Compacta arquivos gerados.")
+    parser = argparse.ArgumentParser(description="Compacta arquivos gerados (AZIMUTE_AZ).")
     parser.add_argument('--diretorio', required=True, help="Diretório dos arquivos concluídos.")
     parser.add_argument('--cidade', required=True, help="Nome formatado da cidade.")
     parser.add_argument('--uuid', required=True, help="UUID da execução atual.")
     args = parser.parse_args()
-    logger.info(f"[DEBUG] Conteúdo de {diretorio_concluido}: {os.listdir(diretorio_concluido)}")
+
+    try:
+        logger.info(f"[DEBUG] Conteúdo de {args.diretorio}: {os.listdir(args.diretorio)}")
+    except Exception as e:
+        logger.warning(f"Não foi possível listar {args.diretorio}: {e}")
 
     main_compactar_arquivos(args.diretorio, args.cidade, args.uuid)
