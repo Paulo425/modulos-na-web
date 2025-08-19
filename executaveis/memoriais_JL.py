@@ -73,14 +73,14 @@ def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
                 close=True,
                 dxfattribs={'layer': 'LAYOUT_MEMORIAL'}
             )
-            ""
-                log.write("✅ Polilinha original preservada com bulges.\n")
-                log.write(f"✅ Ponto inicial capturado: {ponto_inicial_real}\n")
+            
+            log.write("✅ Polilinha original preservada com bulges.\n")
+            log.write(f"✅ Ponto inicial capturado: {ponto_inicial_real}\n")
             break
 
     novo_doc.saveas(dxf_saida)
-    ""
-        log.write(f"✅ DXF salvo: {dxf_saida}\n")
+    
+    log.write(f"✅ DXF salvo: {dxf_saida}\n")
 
     return dxf_saida, ponto_inicial_real, ponto_inicial_real
 
@@ -176,8 +176,8 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
 
     except Exception as e:
-        ""
-            log.write(f"Erro ao obter informações do DXF: {e}\n")
+        
+        log.write(f"Erro ao obter informações do DXF: {e}\n")
         traceback.print_exc()
         return None, [], [], 0.0, 0.0, None
 
@@ -299,13 +299,13 @@ def add_arc_labels(doc, msp, start_point, end_point, radius, length, label, log=
         )
 
         print(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.")
-        ""
-            log.write(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.\n")
+        
+        log.write(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.\n")
 
     except Exception as e:
         print(f"❌ Erro ao adicionar rótulos dos arcos: {e}")
-        ""
-            log.write(f"❌ Erro ao adicionar rótulos dos arcos: {e}\n")
+        
+        log.write(f"❌ Erro ao adicionar rótulos dos arcos: {e}\n")
 
 
 def calculate_point_on_line(start, end, distance):
@@ -397,13 +397,13 @@ def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth, log=None):
         )
 
         print(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}")
-        ""
-            log.write(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}\n")
+        
+        log.write(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}\n")
 
     except Exception as e:
         print(f"Erro ao adicionar arco do azimute: {e}")
-        ""
-            log.write(f"Erro ao adicionar arco do azimute: {e}\n")
+        
+        log.write(f"Erro ao adicionar arco do azimute: {e}\n")
 
 
 # Função para converter graus decimais para DMS
@@ -505,8 +505,8 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log
         )
 
         print(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°")
-        ""
-            log.write(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°\n")
+        
+        log.write(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°\n")
 
     except Exception as e:
         print(f"❌ ERRO GRAVE ao adicionar rótulo '{label}' e distância: {e}")
@@ -549,16 +549,16 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
         except Exception as e:
             print(f"Erro ao carregar arquivo de confrontantes: {e}")
-            ""
-                log.write(f"Erro ao carregar arquivo de confrontantes: {e}\n")
+            
+            log.write(f"Erro ao carregar arquivo de confrontantes: {e}\n")
             confrontantes_dict = {}
     else:
         confrontantes_dict = {}
 
     if not lines:
         print("Nenhuma linha disponível para criar o memorial descritivo.")
-        ""
-            log.write("Nenhuma linha disponível para criar o memorial descritivo.\n")
+        
+        log.write("Nenhuma linha disponível para criar o memorial descritivo.\n")
         return None
 
     
@@ -698,20 +698,20 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         if area > 0:
             sequencia_completa = _reverse_seq(sequencia_completa)
             area = -abs(area)
-            "" log.write(f"[JL] Invertida para HORÁRIO. área={area:.4f}\n")
+            log.write(f"[JL] Invertida para HORÁRIO. área={area:.4f}\n")
         else:
-            "" log.write(f"[JL] Já estava em HORÁRIO. área={area:.4f}\n")
+            log.write(f"[JL] Já estava em HORÁRIO. área={area:.4f}\n")
     else:  # anti_horario
         if area < 0:
             sequencia_completa = _reverse_seq(sequencia_completa)
             area = abs(area)
-            "" log.write(f"[JL] Invertida para ANTI-HORÁRIO. área={area:.4f}\n")
+            log.write(f"[JL] Invertida para ANTI-HORÁRIO. área={area:.4f}\n")
         else:
-            "" log.write(f"[JL] Já estava em ANTI-HORÁRIO. área={area:.4f}\n")
+            log.write(f"[JL] Já estava em ANTI-HORÁRIO. área={area:.4f}\n")
 
     print(f"Área da poligonal ajustada: {abs(area):.4f} m²")
-    ""
-        log.write(f"Área da poligonal ajustada: {abs(area):.4f} m²\n")
+    
+    log.write(f"Área da poligonal ajustada: {abs(area):.4f} m²\n")
     # === fim do bloco direto ===
 
 
@@ -814,26 +814,26 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     wb.save(excel_output_path)
 
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
-    ""
-        log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
+    
+    log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
 
     # Agora salva o arquivo DXF final com os dados atualizados
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
-        ""
+        
             log.write("Boundary points com bulge (final para DXF):\n")
             for idx, pt in enumerate(boundary_points_com_bulge, 1):
                 log.write(f"{idx}: Coordenadas={pt[:2]}, Bulge={pt[2]}\n")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
-        ""
-            log.write(f"Arquivo DXF salvo em: {dxf_output_path}\n")
+        
+        log.write(f"Arquivo DXF salvo em: {dxf_output_path}\n")
     except Exception as e:
         erro_msg = f"Erro ao salvar DXF: {e}"
         print(erro_msg)
-        ""
-            log.write(erro_msg + "\n")
+        
+        log.write(erro_msg + "\n")
 
     return excel_output_path
 
@@ -853,16 +853,16 @@ def create_memorial_document(
     try:
         # 🔍 Verificação do template
         print(f"🔎 Caminho do template: {template_path}")
-        ""
-            log.write(f"🔎 Template path: {template_path}\n")
+        
+        log.write(f"🔎 Template path: {template_path}\n")
         if not os.path.exists(template_path):
             raise FileNotFoundError(f"❌ Template não encontrado: {template_path}")
 
         # 🔍 Verificação do diretório de saída
         output_dir = os.path.dirname(output_path)
         print(f"📁 Caminho de saída do DOCX: {output_path}")
-        ""
-            log.write(f"📁 Output DOCX path: {output_path}\n")
+        
+        log.write(f"📁 Output DOCX path: {output_path}\n")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
 
@@ -1044,13 +1044,13 @@ def create_memorial_document(
         # Salvar o documento
         doc_word.save(output_path)
         print(f"Memorial descritivo salvo em: {output_path}")
-        ""
-            log.write(f"Memorial descritivo salvo em: {output_path}\n")
+        
+        log.write(f"Memorial descritivo salvo em: {output_path}\n")
 
     except Exception as e:
         print(f"Erro ao criar o documento memorial: {e}")
-        ""
-            log.write(f"Erro ao criar o documento memorial: {e}\n")
+        
+        log.write(f"Erro ao criar o documento memorial: {e}\n")
 
 
         
