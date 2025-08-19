@@ -1,3 +1,6 @@
+# ⚠️ Atenção:
+# A partir de agosto/2025, o módulo `memorial_azimute_jl.py` foi suprimido.
+# Todas as funcionalidades de geração de memorial foram consolidadas em `memoriais_JL.py`.
 import os
 import math
 import traceback
@@ -48,9 +51,6 @@ def obter_data_em_portugues():
     mes_pt = meses_pt.get(mes_en, mes_en)
     return f"{data.day:02d} de {mes_pt} de {data.year}"
 
-
-import ezdxf
-import math
 
 def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
     log = _ensure_log(log)
