@@ -368,13 +368,37 @@ def memoriais_descritivos():
             proc_ok = (processo.returncode == 0)
 
             # Descobrir ZIP(s) gerados nesta execução (em /tmp/<uuid>/CONCLUIDO)
-            zip_files = sorted([f for f in os.listdir(diretorio) if f.lower().endswith(".zip")])
+            # Preferir RUN.json (gerado pelo main) e, se não existir/for inválido, listar *.zip
+            manifest_path = os.path.join(diretorio, "RUN.json")
+            zip_files = []
+
+            try:
+                if os.path.exists(manifest_path):
+                    with open(manifest_path, "r", encoding="utf-8") as f:
+                        manifest = json.load(f)
+                    # garanta apenas nomes (sem caminhos)
+                    zip_files = [os.path.basename(z) for z in manifest.get("zip_files", []) if z]
+            except Exception as e:
+                app.logger.warning(f"[DECOPA] RUN.json inválido: {e}")
+
+            if not zip_files:
+                try:
+                    contents = os.listdir(diretorio)
+                    app.logger.info(f"[DECOPA] listdir({diretorio}) -> {contents}")
+                    zip_files = sorted([f for f in contents if f.lower().endswith(".zip")])
+                except Exception as e:
+                    app.logger.error(f"[DECOPA] Falha ao listar {diretorio}: {e}")
+                    zip_files = []
+
             zip_download = zip_files[0] if zip_files else None
 
             # URLs para download via rotas helper
-            zip_urls = [url_for("download_zip_decopa", uuid=id_execucao, fname=f) for f in zip_files]
-            zip_url = zip_urls[0] if zip_urls else None
-            success = bool(zip_url)
+            zip_urls = [url_for("download_zip_decopa", uuid=id_execucao, fname=f) for f in zip_files] if zip_files else []
+            zip_url  = zip_urls[0] if zip_urls else None
+            success  = bool(zip_url)
+
+            app.logger.info(f"[DECOPA] run={id_execucao} success={success} zip_files={zip_files} zip_url={zip_url}")
+
 
             app.logger.info(f"[DECOPA] run={id_execucao} success={success} zip_files={zip_files} zip_url={zip_url}")
 
