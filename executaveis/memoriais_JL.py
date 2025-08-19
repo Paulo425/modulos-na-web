@@ -73,13 +73,13 @@ def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
                 close=True,
                 dxfattribs={'layer': 'LAYOUT_MEMORIAL'}
             )
-            if log:
+            ""
                 log.write("✅ Polilinha original preservada com bulges.\n")
                 log.write(f"✅ Ponto inicial capturado: {ponto_inicial_real}\n")
             break
 
     novo_doc.saveas(dxf_saida)
-    if log:
+    ""
         log.write(f"✅ DXF salvo: {dxf_saida}\n")
 
     return dxf_saida, ponto_inicial_real, ponto_inicial_real
@@ -95,10 +95,7 @@ def calculate_signed_area(points):
 def get_document_info_from_dxf(dxf_file_path, log=None):
     log = _ensure_log(log)
     try:
-        if log is None:
-            class DummyLog:
-                def write(self, msg): pass
-            log = DummyLog()
+       
 
         doc = ezdxf.readfile(dxf_file_path)
         msp = doc.modelspace()
@@ -179,7 +176,7 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
         return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
 
     except Exception as e:
-        if log:
+        ""
             log.write(f"Erro ao obter informações do DXF: {e}\n")
         traceback.print_exc()
         return None, [], [], 0.0, 0.0, None
@@ -263,132 +260,7 @@ def bulge_to_arc_length(start_point, end_point, bulge):
 import math
 from shapely.geometry import Polygon
 
-# def get_document_info_from_dxf(dxf_file_path, log=None):
-#     try:
-#         if log is None:
-#             class DummyLog:
-#                 def write(self, msg): pass
-#             log = DummyLog()
-            
-#         doc = ezdxf.readfile(dxf_file_path)
-#         msp = doc.modelspace()
 
-#         lines = []
-#         arcs = []
-#         perimeter_dxf = 0
-#         ponto_az = None
-
-#         for entity in msp.query('LWPOLYLINE'):
-#             if entity.is_closed:
-#                 polyline_points = entity.get_points('xyseb')
-#                 num_points = len(polyline_points)
-
-#                 boundary_points = []
-
-#                 for i in range(num_points):
-#                     x_start, y_start, _, _, bulge = polyline_points[i]
-#                     x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
-
-#                     #start_point = Vec2(float(x_start), float(y_start))
-#                     start_point = (float(x_start), float(y_start))
-
-#                     #end_point = Vec2(float(x_end), float(y_end))
-#                     end_point = (float(x_end), float(y_end))
-
-#                     if bulge != 0:
-#                         # Trata-se de arco
-#                        # chord_length = (end_point - start_point).magnitude
-#                         dx = end_point[0] - start_point[0]
-#                         dy = end_point[1] - start_point[1]
-#                         chord_length = math.hypot(dx, dy)
-#                         sagitta = (bulge * chord_length) / 2
-#                         radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-#                         angle_span_rad = 4 * math.atan(abs(bulge))
-#                         arc_length = radius * angle_span_rad
-
-#                         #chord_midpoint = (start_point + end_point) / 2
-#                         mid_x = (start_point[0] + end_point[0]) / 2
-#                         mid_y = (start_point[1] + end_point[1]) / 2
-#                         chord_midpoint = (mid_x, mid_y)
-
-#                         offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
-# #                         dx = end_point[0] - start_point[0]
-# #                         dy = end_point[1] - start_point[1]
-#                         dx = float(end_point[0]) - float(start_point[0])
-#                         dy = float(end_point[1]) - float(start_point[1])
-
-#                         #perp_vector = Vec2(-dy, dx).normalize()
-#                         length = math.hypot(dx, dy)
-#                         perp_vector = (-dy / length, dx / length)
-
-#                         if bulge < 0:
-#                             #perp_vector = -perp_vector
-#                             perp_vector = (-perp_vector[0], -perp_vector[1])
-
-
-#                         #center = chord_midpoint + perp_vector * offset_dist
-#                         center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
-#                         center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
-#                         center = (center_x, center_y)
-
-
-#                         #start_angle = math.atan2(start_point.y - center.y, start_point[0] - center[0])
-#                         start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
-
-#                         end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
-
-#                         arcs.append({
-#                             'start_point': (start_point[0], start_point[1]),
-#                             'end_point': (end_point[0], end_point[1]),
-#                             'start_angle': math.degrees(start_angle),
-#                             'end_angle': math.degrees(end_angle),
-#                             'length': arc_length,
-#                             'bulge': bulge
-#                         })
-
-#                         # Pontos intermediários no arco (para precisão da área)
-#                         num_arc_points = 100  # mais pontos para maior precisão
-#                         for t in range(num_arc_points):
-#                             angle = start_angle + (end_angle - start_angle) * t / num_arc_points
-#                             arc_x = center[0] + radius * math.cos(angle)
-#                             arc_y = center[1] + radius * math.sin(angle)
-#                             boundary_points.append((arc_x, arc_y))
-
-#                         segment_length = arc_length
-#                         perimeter_dxf += segment_length
-#                     else:
-#                         # Linha reta
-#                         lines.append((start_point, end_point))
-#                         boundary_points.append((start_point[0], start_point[1]))
-#                        # segment_length = (end_point - start_point).magnitude
-#                         dx = end_point[0] - start_point[0]
-#                         dy = end_point[1] - start_point[1]
-#                         segment_length = math.hypot(dx, dy)
-
-#                         perimeter_dxf += segment_length
-
-#                 # Após loop, calcular a área com Shapely
-#                 polygon = Polygon(boundary_points)
-#                 area_dxf = polygon.area  # área exata do desenho
-
-#                 break
-
-#         if not lines and not arcs:
-#             print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
-#             return None, [], [], 0, 0, None
-
-#         print(f"Linhas processadas: {len(lines)}")
-#         print(f"Arcos processados: {len(arcs)}")
-#         print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
-#         print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
-# #         print(f"Ponto Az: {ponto_az}")
-
-#         return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
-
-#     except Exception as e:
-#         print(f"Erro ao obter informações do documento: {e}")
-#         traceback.print_exc()
-#         return None, [], [], 0, 0, None
 
 # 🔹 Função para definir a fonte padrão
 def set_default_font(doc):
@@ -400,10 +272,7 @@ def set_default_font(doc):
 def add_arc_labels(doc, msp, start_point, end_point, radius, length, label, log=None):
     log = _ensure_log(log)
 
-    if log is None:
-        class DummyLog:
-            def write(self, msg): pass
-        log = DummyLog()
+    
     try:
         #mid_point = Vec2((start_point[0] + end_point[0])/2, (start_point[1] + end_point[1])/2)
         mid_point = ((float(start_point[0]) + float(end_point[0]))/2, (float(start_point[1]) + float(end_point[1]))/2)
@@ -430,12 +299,12 @@ def add_arc_labels(doc, msp, start_point, end_point, radius, length, label, log=
         )
 
         print(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.")
-        if log:
+        ""
             log.write(f"✅ Rótulos {label_radius} e {label_length} adicionados corretamente no DXF.\n")
 
     except Exception as e:
         print(f"❌ Erro ao adicionar rótulos dos arcos: {e}")
-        if log:
+        ""
             log.write(f"❌ Erro ao adicionar rótulos dos arcos: {e}\n")
 
 
@@ -507,10 +376,7 @@ def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth, log=None):
     """
     Adiciona o arco do azimute no ModelSpace.
     """
-    if log is None:
-        class DummyLog:
-            def write(self, msg): pass
-        log = DummyLog()
+    
 
     try:
         if 'LAYOUT_AZIMUTES' not in doc.layers:
@@ -531,12 +397,12 @@ def add_azimuth_arc(doc, msp, ponto_az, v1, azimuth, log=None):
         )
 
         print(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}")
-        if log:
+        ""
             log.write(f"Rótulo do azimute ({azimuth_label}) adicionado com sucesso em {label_position}\n")
 
     except Exception as e:
         print(f"Erro ao adicionar arco do azimute: {e}")
-        if log:
+        ""
             log.write(f"Erro ao adicionar arco do azimute: {e}\n")
 
 
@@ -560,10 +426,7 @@ def calculate_polygon_area(points):
 
 def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log=None):
     log = _ensure_log(log)
-    if log is None:
-        class DummyLog:
-            def write(self, msg): pass
-        log = DummyLog()
+    
 
     try:
         # Garantir pontos como tuplas de float
@@ -642,7 +505,7 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log
         )
 
         print(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°")
-        if log:
+        ""
             log.write(f"✅ DEBUG: '{label}' e distância '{distancia_formatada}' inseridos em {start_point} e {mid_point_displaced} com ângulo {angle:.2f}°\n")
 
     except Exception as e:
@@ -678,10 +541,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
     log = _ensure_log(log)
-    if log is None:
-        class DummyLog:
-            def write(self, msg): pass
-        log = DummyLog()
+    
 
     if excel_file_path:
         try:
@@ -689,7 +549,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
         except Exception as e:
             print(f"Erro ao carregar arquivo de confrontantes: {e}")
-            if log:
+            ""
                 log.write(f"Erro ao carregar arquivo de confrontantes: {e}\n")
             confrontantes_dict = {}
     else:
@@ -697,7 +557,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     if not lines:
         print("Nenhuma linha disponível para criar o memorial descritivo.")
-        if log:
+        ""
             log.write("Nenhuma linha disponível para criar o memorial descritivo.\n")
         return None
 
@@ -838,19 +698,19 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         if area > 0:
             sequencia_completa = _reverse_seq(sequencia_completa)
             area = -abs(area)
-            if log: log.write(f"[JL] Invertida para HORÁRIO. área={area:.4f}\n")
+            "" log.write(f"[JL] Invertida para HORÁRIO. área={area:.4f}\n")
         else:
-            if log: log.write(f"[JL] Já estava em HORÁRIO. área={area:.4f}\n")
+            "" log.write(f"[JL] Já estava em HORÁRIO. área={area:.4f}\n")
     else:  # anti_horario
         if area < 0:
             sequencia_completa = _reverse_seq(sequencia_completa)
             area = abs(area)
-            if log: log.write(f"[JL] Invertida para ANTI-HORÁRIO. área={area:.4f}\n")
+            "" log.write(f"[JL] Invertida para ANTI-HORÁRIO. área={area:.4f}\n")
         else:
-            if log: log.write(f"[JL] Já estava em ANTI-HORÁRIO. área={area:.4f}\n")
+            "" log.write(f"[JL] Já estava em ANTI-HORÁRIO. área={area:.4f}\n")
 
     print(f"Área da poligonal ajustada: {abs(area):.4f} m²")
-    if log:
+    ""
         log.write(f"Área da poligonal ajustada: {abs(area):.4f} m²\n")
     # === fim do bloco direto ===
 
@@ -954,25 +814,25 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     wb.save(excel_output_path)
 
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
-    if log:
+    ""
         log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
 
     # Agora salva o arquivo DXF final com os dados atualizados
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
-        if log:
+        ""
             log.write("Boundary points com bulge (final para DXF):\n")
             for idx, pt in enumerate(boundary_points_com_bulge, 1):
                 log.write(f"{idx}: Coordenadas={pt[:2]}, Bulge={pt[2]}\n")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
-        if log:
+        ""
             log.write(f"Arquivo DXF salvo em: {dxf_output_path}\n")
     except Exception as e:
         erro_msg = f"Erro ao salvar DXF: {e}"
         print(erro_msg)
-        if log:
+        ""
             log.write(erro_msg + "\n")
 
     return excel_output_path
@@ -989,15 +849,11 @@ def create_memorial_document(
     azimuth=None, distance=None, log=None
 ):
     log = _ensure_log(log)
-    if log is None:
-        class DummyLog:
-            def write(self, msg): pass
-        log = DummyLog()
-
+    
     try:
         # 🔍 Verificação do template
         print(f"🔎 Caminho do template: {template_path}")
-        if log:
+        ""
             log.write(f"🔎 Template path: {template_path}\n")
         if not os.path.exists(template_path):
             raise FileNotFoundError(f"❌ Template não encontrado: {template_path}")
@@ -1005,7 +861,7 @@ def create_memorial_document(
         # 🔍 Verificação do diretório de saída
         output_dir = os.path.dirname(output_path)
         print(f"📁 Caminho de saída do DOCX: {output_path}")
-        if log:
+        ""
             log.write(f"📁 Output DOCX path: {output_path}\n")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
@@ -1188,12 +1044,12 @@ def create_memorial_document(
         # Salvar o documento
         doc_word.save(output_path)
         print(f"Memorial descritivo salvo em: {output_path}")
-        if log:
+        ""
             log.write(f"Memorial descritivo salvo em: {output_path}\n")
 
     except Exception as e:
         print(f"Erro ao criar o documento memorial: {e}")
-        if log:
+        ""
             log.write(f"Erro ao criar o documento memorial: {e}\n")
 
 
