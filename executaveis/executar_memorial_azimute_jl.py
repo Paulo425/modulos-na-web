@@ -14,7 +14,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
             create_memorial_document,
         )
     except Exception:
-        from executaveis.memoria_azimute_jl import (
+        from executaveis.memorial_azimute_jl import (
             limpar_dxf_preservando_original,
             get_document_info_from_dxf,
             create_memorial_descritivo,
