@@ -1,5 +1,6 @@
 # executaveis/executar_memorial_azimute_jl.py
-def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf_path, excel_path, log_path):
+def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf_path, excel_path, log_path, sentido_poligonal="horario"):
+
     import os, math, traceback
     from pathlib import Path
     from datetime import datetime
@@ -70,6 +71,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
                     ponto_inicial_real=ponto_inicial_real,
                     boundary_points=boundary_points,
                     log=log,
+                    sentido_poligonal=sentido_poligonal,
                 )
 
                 # 4) DOCX final em CONCLUIDO, com template ABSOLUTO

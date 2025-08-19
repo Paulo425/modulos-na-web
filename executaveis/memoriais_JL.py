@@ -665,7 +665,8 @@ def sanitize_filename(filename):
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
                                azimute_az_v1=None, ponto_inicial_real=None,  # ✅ Adicionado aqui
-                               encoding='ISO-8859-1', boundary_points=None, log=None):
+                               encoding='ISO-8859-1', boundary_points=None, log=None,
+                               sentido_poligonal="horario"):
 
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
@@ -807,10 +808,34 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
     area = calculate_signed_area(simple_ordered_points)
 
-    # Agora inverter o sentido APENAS se necessário
-    if area > 0:
-        sequencia_completa.reverse()
-        sequencia_corrigida = []
+    def _flip_sequence(seq):
+        seq.reverse()
+        corr = []
+        for tipo, dados in seq:
+            s, e = dados['start_point'], dados['end_point']
+            if tipo == 'arc':
+                corr.append(('arc', {
+                    'start_point': e,
+                    'end_point': s,
+                    # alguns trechos não carregam center; mantenha só o que existe
+                    **{k: v for k, v in dados.items() if k not in ('start_point','end_point','bulge')},
+                    'bulge': -dados.get('bulge', 0)
+                }))
+            else:
+                corr.append(('line', {'start_point': e, 'end_point': s}))
+        return corr
+
+    if sentido_poligonal == "horario":
+        if area > 0:
+            sequencia_completa = _flip_sequence(sequencia_completa)
+            area = abs(area)
+            if log: log.write(f"[JL] Invertido para horário. Área={area:.4f}\n")
+    else:  # anti_horario
+        if area < 0:
+            sequencia_completa = _flip_sequence(sequencia_completa)
+            area = abs(area)
+            if log: log.write(f"[JL] Invertido para anti-horário. Área={area:.4f}\n")
+
 
         for tipo, dados in sequencia_completa:
             start, end = dados['start_point'], dados['end_point']  # ✅ Correção aqui!

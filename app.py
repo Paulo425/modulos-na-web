@@ -811,6 +811,11 @@ def memorial_azimute_jl():
         try:
             # 1) Inputs
             proprietario = request.form['proprietario'].strip()
+            sentido_poligonal = 'anti_horario' if 'sentidoPoligonal' in request.form else 'horario'
+            logger.info(f"Valor recebido do checkbox (sentidoPoligonal): {request.form.get('sentidoPoligonal')}")
+            logger.info(f"Sentido poligonal interpretado no Flask: {sentido_poligonal}")
+
+
             matricula    = request.form['matricula'].strip()
             descricao    = request.form['descricao'].strip()
             excel_file   = request.files['excel_file']
