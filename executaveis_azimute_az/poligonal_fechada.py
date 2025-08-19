@@ -1539,16 +1539,27 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     # 🔹 Busca planilha FECHADA correta com uuid_str
     # ✅ Busca planilha FECHADA correta no padrão NOVO: FECHADA_*_{tipo}.xlsx
    
-    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}*.xlsx")
-    
-    arquivos_encontrados = sorted(glob.glob(padrao_busca), key=os.path.getmtime, reverse=True)
+    # 1º tenta o padrão com UUID (ANGULO_AZ)
+    candidato_uuid = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
+    if os.path.exists(candidato_uuid):
+        fechada_path = candidato_uuid
+    else:
+        # fallback: padrão antigo FECHADA_*_{tipo}.xlsx
+        padrao_busca = os.path.join(diretorio_preparado, f"FECHADA_*_{tipo}.xlsx")
+        arquivos_encontrados = sorted(glob.glob(padrao_busca), key=os.path.getmtime, reverse=True)
+        if not arquivos_encontrados:
+            logger.error(f"❌ Planilha FECHADA não encontrada: {candidato_uuid} nem {padrao_busca}")
+            return
+        fechada_path = arquivos_encontrados[0]
 
-    if not arquivos_encontrados:
-        logger.error(f"❌ Planilha confrontantes FECHADA não encontrada (padrão): {padrao_busca}")
-        return
-    fechada_path = arquivos_encontrados[0]
-    
-    confrontantes = _carregar_confrontantes(uuid_str, tipo, diretorio_preparado)
+    # Carrega confrontantes diretamente da planilha FECHADA encontrada (tolerante)
+    try:
+        df_conf = pd.read_excel(fechada_path)
+        confrontantes = df_conf["Confrontante"].fillna("").astype(str).tolist() if "Confrontante" in df_conf.columns else []
+    except Exception as e:
+        logger.warning(f"Não foi possível ler confrontantes de {fechada_path}: {e}")
+        confrontantes = []
+
 
     # 4) Ler geometria do DXF ORIGINAL
     doc0, lines0, perimeter0, area0, ponto_az_dxf, msp0, pts_bulge0 = get_document_info_from_dxf(dxf_path)
