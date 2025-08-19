@@ -1,154 +1,179 @@
+# executaveis_angulo_az/main.py
+
 import os
 import sys
+import argparse
 import logging
+import json
 from datetime import datetime
+
+# ---------------------------------------------------------
+# Garante import local e BASE_DIR
+# ---------------------------------------------------------
+EXEC_DIR = os.path.dirname(os.path.abspath(__file__))
+if EXEC_DIR not in sys.path:
+    sys.path.insert(0, EXEC_DIR)
+BASE_DIR = os.path.abspath(os.path.join(EXEC_DIR, '..'))
+os.environ.setdefault("BASE_DIR", BASE_DIR)
+
+# ---------------------------------------------------------
+# Pré-pega --id-execucao/--diretorio antes do exec_ctx
+# (para o exec_ctx resolver ID_EXECUCAO e DIR_* na importação)
+# ---------------------------------------------------------
+def _prefetch_id_from_cli():
+    argv = sys.argv[1:]
+    id_arg = None
+    dir_arg = None
+    for i, a in enumerate(argv):
+        if a.startswith("--id-execucao="):
+            id_arg = a.split("=", 1)[1].strip()
+        elif a == "--id-execucao" and i + 1 < len(argv):
+            id_arg = argv[i + 1].strip()
+        elif a.startswith("--diretorio="):
+            dir_arg = a.split("=", 1)[1].strip()
+        elif a == "--diretorio" and i + 1 < len(argv):
+            dir_arg = argv[i + 1].strip()
+    if not os.environ.get("ID_EXECUCAO"):
+        if id_arg:
+            os.environ["ID_EXECUCAO"] = id_arg
+        elif dir_arg:
+            try:
+                parent = os.path.dirname(dir_arg.rstrip(os.sep))
+                cand = os.path.basename(parent)
+                if cand:
+                    os.environ["ID_EXECUCAO"] = cand
+            except Exception:
+                pass
+
+_prefetch_id_from_cli()
+
+# ---------------------------------------------------------
+# Contexto único da execução
+# ---------------------------------------------------------
+from exec_ctx import ID_EXECUCAO, DIR_RUN, DIR_REC, DIR_PREP, DIR_CONC, setup_logger
+
+# Pipeline ANGULO_AZ
 from preparar_arquivos import preparar_arquivos
 from poligonal_fechada import main_poligonal_fechada
 from compactar_arquivos import main_compactar_arquivos
-import shutil
-import uuid
-import glob  # ← FALTAVA
 
+# Logger unificado (arquivo: CONCLUIDO/exec_<uuid>.log + stdout)
+logger = setup_logger("pipeline")
 
-# ✅ 1. Caminho base
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
-
-# ✅ 2. Pastas públicas
-CAMINHO_PUBLICO = os.path.join(BASE_DIR, 'static', 'arquivos')
-os.makedirs(CAMINHO_PUBLICO, exist_ok=True)
-
-# ✅ 3. Pasta de logs
-LOG_DIR = os.path.join(BASE_DIR, 'static', 'logs')
-os.makedirs(LOG_DIR, exist_ok=True)
-log_path = os.path.join(LOG_DIR, f"log_ANGULOAZ_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-
-
-# ✅ 4. Configura logger
-# Configuração do logger
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler(log_path, encoding='utf-8')
-console_handler = logging.StreamHandler(sys.stdout)
-
-formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
-
-
-# ✅ 5. Habilita UTF-8 no console
 try:
     sys.stdout.reconfigure(encoding='utf-8')
 except Exception:
-    pass  # Em alguns ambientes, reconfigure não está disponível
+    pass
+
+
+def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf, sentido_poligonal):
+    """
+    Orquestra o pipeline do ANGULO_AZ usando ID_EXECUCAO único (do Flask).
+    """
+    dir_conc = os.path.abspath(diretorio_saida) if diretorio_saida else DIR_CONC
+    cidade_fmt = (cidade or "").replace(" ", "_")
+
+    logger.info("🚀 Início ANGULO_AZ | ID=%s", ID_EXECUCAO)
+    logger.info("📁 Entradas: dir=%s | cidade=%s | excel=%s | dxf=%s | sentido=%s",
+                dir_conc, cidade, caminho_excel, caminho_dxf, sentido_poligonal)
+
+    # 1) Preparo (gera <uuid>_FECHADA_{TIPO}.xlsx em PREPARADO)
+    vars = preparar_arquivos(cidade, caminho_excel, caminho_dxf, BASE_DIR, ID_EXECUCAO)
+    if not isinstance(vars, dict) or not vars:
+        logger.error("❌ preparar_arquivos falhou.")
+        return 2
+
+    dir_prep = vars.get("diretorio_preparado", DIR_PREP)
+    dir_conc = vars.get("diretorio_concluido", DIR_CONC)
+    xls_in   = vars.get("arquivo_excel_recebido")
+    dxf_in   = vars.get("arquivo_dxf_recebido")
+    tpl      = vars.get("caminho_template") or os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
+
+    logger.info("✅ Preparo ok. PREPARADO=%s | CONCLUIDO=%s", dir_prep, dir_conc)
+
+    # 2) Poligonal fechada (gera <uuid>_FECHADA_{TIPO}_{MATR}.xlsx/.docx/.dxf em CONCLUIDO)
+    logger.info("🔷 Processamento Poligonal Fechada")
+    main_poligonal_fechada(
+        ID_EXECUCAO,
+        xls_in,
+        dxf_in,
+        dir_prep,
+        dir_conc,
+        tpl,
+        sentido_poligonal
+    )
+    logger.info("✅ Poligonal fechada concluída.")
+
+    # 3) Compactar (gera <uuid>_FECHADA_{TIPO}_{MATR}.zip em CONCLUIDO)
+    logger.info("📦 Compactação: %s", dir_conc)
+    main_compactar_arquivos(dir_conc, cidade_fmt, ID_EXECUCAO)
+    logger.info("✅ Compactação concluída.")
+
+    # 4) RUN.json (redundância segura)
+    try:
+        created = [f for f in os.listdir(dir_conc) if f.lower().endswith(".zip")]
+        run_json = os.path.join(dir_conc, "RUN.json")
+        with open(run_json, "w", encoding="utf-8") as f:
+            json.dump({"zip_files": created, "id_execucao": ID_EXECUCAO}, f, ensure_ascii=False)
+        logger.info("[RUN.json] %s", created)
+    except Exception as e:
+        logger.exception("Falha RUN.json: %s", e)
+
+    logger.info("✅ Processo geral concluído com sucesso!")
+    return 0
+
+
+def _parse_args():
+    """
+    Suporta:
+    - Modo novo (nomeado): --id-execucao --diretorio --cidade --excel --dxf --sentido
+    - Modo legado (posicional): main.py <cidade> <excel> <dxf> [sentido]
+    """
+    # Se NÃO há flags nomeadas e há 3-4 posicionais -> legado
+    argv = sys.argv[1:]
+    has_flags = any(a.startswith("--") for a in argv)
+    if not has_flags and len(argv) in (3, 4):
+        cidade, excel, dxf = argv[0], argv[1], argv[2]
+        sentido = argv[3] if len(argv) == 4 else "horario"
+        return argparse.Namespace(
+            diretorio=DIR_CONC, cidade=cidade, excel=excel, dxf=dxf, sentido=sentido, id_execucao=os.environ.get("ID_EXECUCAO")
+        )
+
+    parser = argparse.ArgumentParser(description="Executar ANGULO_AZ com contexto de execução único.")
+    parser.add_argument('--diretorio', help='Diretório CONCLUIDO (padrão: DIR_CONC do exec_ctx).')
+    parser.add_argument('--cidade', required=True, help='Cidade do memorial.')
+    parser.add_argument('--excel', required=True, help='Caminho do arquivo Excel.')
+    parser.add_argument('--dxf', required=True, help='Caminho do arquivo DXF.')
+    parser.add_argument('--sentido', choices=['horario', 'anti_horario'], default='horario', help='Sentido da poligonal.')
+    parser.add_argument('--id-execucao', help='ID único da execução (propagado pelo Flask).')
+    return parser.parse_args()
+
 
 def main():
-    if len(sys.argv) < 4 or len(sys.argv) > 5:
-        print("Uso: python main.py <cidade> <caminho_excel> <caminho_dxf> [sentido_poligonal]")
-        sys.exit(1)
+    args = _parse_args()
 
-    cidade = sys.argv[1]
-    uuid_str = str(uuid.uuid4())[:8]
-    cidade_formatada = cidade.replace(" ", "_")
-    caminho_excel = sys.argv[2]
-    caminho_dxf = sys.argv[3]
-    sentido_poligonal = sys.argv[4] if len(sys.argv) == 5 else 'horario'
-    logger.info(f"Sentido poligonal recebido no main.py: {sentido_poligonal}")
-    caminho_template = os.path.join(BASE_DIR, "templates_doc", "Memorial_modelo_padrao.docx")
+    # Compat: se passou --id-execucao, reforça no env (exec_ctx usa)
+    if getattr(args, "id_execucao", None):
+        os.environ["ID_EXECUCAO"] = args.id_execucao
 
+    diretorio = args.diretorio or DIR_CONC
+    cidade    = args.cidade
+    excel     = args.excel
+    dxf       = args.dxf
+    sentido   = args.sentido
 
+    # Validação mínima
+    missing = []
+    if not cidade: missing.append("--cidade")
+    if not excel:  missing.append("--excel")
+    if not dxf:    missing.append("--dxf")
+    if missing:
+        print("Uso incorreto. Faltando:", ", ".join(missing))
+        return 2
 
-    if not os.path.exists(caminho_template):
-        logger.error(f"Template não encontrado em '{caminho_template}'.")
-        sys.exit(1)
-
-    variaveis = preparar_arquivos(cidade, caminho_excel, caminho_dxf, BASE_DIR, uuid_str)
-
-    if not variaveis:
-        logger.error("Erro ao preparar arquivos. Encerrando execução.")
-        sys.exit(1)
-
-    logger.info("✅ Preparação dos arquivos concluída.")
-
-
-
-    main_poligonal_fechada(
-        uuid_str,
-        variaveis["arquivo_excel_recebido"],
-        variaveis["arquivo_dxf_recebido"],
-        variaveis["diretorio_preparado"],
-        variaveis["diretorio_concluido"],
-        caminho_template,
-        sentido_poligonal
-  
-    )
-
-    logger.info("✅ Processamento da poligonal fechada concluído.")
-    # Checkpoint: antes de compactar, confirme se existem artefatos para pelo menos um TIPO
-    tipos = ["ETE", "REM", "SER", "ACE"]
-    tem_algum = False
-    for _tipo in tipos:
-        pad_xlsx = os.path.join(variaveis["diretorio_concluido"], f"{uuid_str}_FECHADA_{_tipo}_*.xlsx")
-        if glob.glob(pad_xlsx):
-            tem_algum = True
-            break
-
-    if not tem_algum:
-        logger.error("❌ Nenhum XLSX FECHADA gerado em %s. Compactação não terá o que zipar.",
-                    variaveis["diretorio_concluido"])
-
-    main_compactar_arquivos(variaveis["diretorio_concluido"], cidade_formatada, uuid_str)
-
-    logger.info("✅ Compactação concluída com sucesso.")
-
-
-    # 🔁 Copiar ZIPs para static/arquivos e exibir debug
-    # ✅ Copiar todos os ZIPs que realmente existem
-    # 🔁 Copiar ZIPs para static/arquivos
-    try:
-        zips_copiados = 0
-        pasta_origem = variaveis["diretorio_concluido"]
-        pasta_destino = CAMINHO_PUBLICO
-        os.makedirs(pasta_destino, exist_ok=True)
-
-        for arquivo in os.listdir(pasta_origem):
-            if arquivo.lower().endswith(".zip"):
-                origem = os.path.join(pasta_origem, arquivo)
-                destino = os.path.join(pasta_destino, arquivo)
-                shutil.copy2(origem, destino)
-                logger.info(f"📦 ZIP copiado: {arquivo}")
-                zips_copiados += 1
-
-        if zips_copiados == 0:
-            logger.warning("⚠️ Nenhum ZIP encontrado para copiar.")
-    except Exception as e:
-        logger.error(f"❌ Erro ao copiar ZIPs: {e}")
-
-    # 🔎 Verificação final - ZIP mais recente
-    try:
-        arquivos_zip = [
-            f for f in os.listdir(pasta_destino)
-            if f.lower().endswith('.zip') and uuid_str in f
-        ]
-        if arquivos_zip:
-            arquivos_zip.sort(
-                key=lambda x: os.path.getmtime(os.path.join(pasta_destino, x)),
-                reverse=True
-            )
-            zip_download = arquivos_zip[0]
-            logger.info(f"🔗 ZIP disponível para download: {zip_download}")
-        else:
-            logger.warning("⚠️ Nenhum ZIP disponível para download.")
-    except Exception as e:
-        logger.error(f"⚠️ Não foi possível determinar o nome do ZIP: {e}")
-
-
-
+    rc = executar_programa(diretorio, cidade, excel, dxf, sentido)
+    sys.exit(rc)
 
 
 if __name__ == "__main__":
     main()
-#ATUALIZADO
