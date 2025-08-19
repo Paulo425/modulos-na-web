@@ -808,33 +808,40 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
     area = calculate_signed_area(simple_ordered_points)
 
-    def _flip_sequence(seq):
+    # === inversão no mesmo estilo dos demais módulos (direto) ===
+    def _reverse_seq(seq):
         seq.reverse()
         corr = []
-        for tipo, dados in seq:
-            s, e = dados['start_point'], dados['end_point']
+        for tipo, d in seq:
+            s, e = d['start_point'], d['end_point']
             if tipo == 'arc':
                 corr.append(('arc', {
+                    **{k: v for k, v in d.items() if k not in ('start_point', 'end_point', 'bulge')},
                     'start_point': e,
-                    'end_point': s,
-                    # alguns trechos não carregam center; mantenha só o que existe
-                    **{k: v for k, v in dados.items() if k not in ('start_point','end_point','bulge')},
-                    'bulge': -dados.get('bulge', 0)
+                    'end_point':   s,
+                    'bulge':      -d.get('bulge', 0),   # inverte bulge
                 }))
             else:
                 corr.append(('line', {'start_point': e, 'end_point': s}))
         return corr
 
-    if sentido_poligonal == "horario":
+    if sentido_poligonal == 'horario':
+        # horário = área negativa; se veio positiva (anti), inverta
         if area > 0:
-            sequencia_completa = _flip_sequence(sequencia_completa)
-            area = abs(area)
-            if log: log.write(f"[JL] Invertido para horário. Área={area:.4f}\n")
+            sequencia_completa = _reverse_seq(sequencia_completa)
+            area = abs(area) * -1    # fica negativa após inversão
+            if log: log.write(f"[JL] Invertida para HORÁRIO. área={area:.4f}\n")
+        else:
+            if log: log.write(f"[JL] Já estava em HORÁRIO. área={area:.4f}\n")
     else:  # anti_horario
+        # anti-horário = área positiva; se veio negativa (horário), inverta
         if area < 0:
-            sequencia_completa = _flip_sequence(sequencia_completa)
-            area = abs(area)
-            if log: log.write(f"[JL] Invertido para anti-horário. Área={area:.4f}\n")
+            sequencia_completa = _reverse_seq(sequencia_completa)
+            area = abs(area)         # fica positiva após inversão
+            if log: log.write(f"[JL] Invertida para ANTI-HORÁRIO. área={area:.4f}\n")
+        else:
+            if log: log.write(f"[JL] Já estava em ANTI-HORÁRIO. área={area:.4f}\n")
+    # === fim do bloco direto ===
 
 
         for tipo, dados in sequencia_completa:
