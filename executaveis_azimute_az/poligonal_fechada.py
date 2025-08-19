@@ -709,59 +709,59 @@ def add_az_marker_to_dxf(
     lbl = msp.add_text(az_label, dxfattribs={"height": text_height, "layer": layer})
     lbl.dxf.insert = label_pos
 
-    # ===== 5) GIRO ANGULAR Az–V1–V2 (pivot em V1) =====
-    # Requer v2 e sentido; desenha o arco certo independente da ordem dos vértices.
-    if draw_giro and (v2 is not None):
-        v1x, v1y = float(v1[0]), float(v1[1])
-        azx, azy  = float(ponto_az[0]), float(ponto_az[1])
-        v2x, v2y  = float(v2[0]), float(v2[1])
+    # # ===== 5) GIRO ANGULAR Az–V1–V2 (pivot em V1) =====
+    # # Requer v2 e sentido; desenha o arco certo independente da ordem dos vértices.
+    # if draw_giro and (v2 is not None):
+    #     v1x, v1y = float(v1[0]), float(v1[1])
+    #     azx, azy  = float(ponto_az[0]), float(ponto_az[1])
+    #     v2x, v2y  = float(v2[0]), float(v2[1])
 
-        # ângulos (0..360) das direções a partir de V1
-        a_az = math.degrees(math.atan2(azy - v1y, azx - v1x)) % 360.0
-        a_v2 = math.degrees(math.atan2(v2y - v1y, v2x - v1x)) % 360.0
+    #     # ângulos (0..360) das direções a partir de V1
+    #     a_az = math.degrees(math.atan2(azy - v1y, azx - v1x)) % 360.0
+    #     a_v2 = math.degrees(math.atan2(v2y - v1y, v2x - v1x)) % 360.0
 
-        # Giro HORÁRIO SEMPRE: de V1→Az para V1→V2
-        giro  = (a_az - a_v2) % 360.0          # valor do giro em graus (horário)
-        start = (a_az - giro) % 360.0          # add_arc é CCW ⇒ desenhe de (Az - giro) → Az
-        end   = a_az
+    #     # Giro HORÁRIO SEMPRE: de V1→Az para V1→V2
+    #     giro  = (a_az - a_v2) % 360.0          # valor do giro em graus (horário)
+    #     start = (a_az - giro) % 360.0          # add_arc é CCW ⇒ desenhe de (Az - giro) → Az
+    #     end   = a_az
 
-        # raio do arco do giro (use o mesmo arc_radius, ou ajuste se quiser)
-        giro_radius = arc_radius
+    #     # raio do arco do giro (use o mesmo arc_radius, ou ajuste se quiser)
+    #     giro_radius = arc_radius
 
-        # arco do giro em V1
-        msp.add_arc(
-            center=(v1x, v1y),
-            radius=giro_radius,
-            start_angle=start,
-            end_angle=end,
-            dxfattribs={"layer": layer}
-        )
+    #     # arco do giro em V1
+    #     msp.add_arc(
+    #         center=(v1x, v1y),
+    #         radius=giro_radius,
+    #         start_angle=start,
+    #         end_angle=end,
+    #         dxfattribs={"layer": layer}
+    #     )
 
-        # rótulo do giro — sempre horizontal
-        sweep = (end - start) % 360.0
-        mid   = (start + sweep/2.0) % 360.0
-        mid_r = math.radians(mid)
-        lbl_r = giro_radius + text_height*1.2
-        lbl_pt = (v1x + lbl_r*math.cos(mid_r), v1y + lbl_r*math.sin(mid_r))
+    #     # rótulo do giro — sempre horizontal
+    #     sweep = (end - start) % 360.0
+    #     mid   = (start + sweep/2.0) % 360.0
+    #     mid_r = math.radians(mid)
+    #     lbl_r = giro_radius + text_height*1.2
+    #     lbl_pt = (v1x + lbl_r*math.cos(mid_r), v1y + lbl_r*math.sin(mid_r))
 
-        # usa convert_to_dms se existir; senão, fallback no to_dms_string local
-        try:
-            giro_txt = f"Giro Angular: {convert_to_dms(giro)}"
-        except NameError:
-            giro_txt = f"Giro Angular: {to_dms_string(giro)}"
+    #     # usa convert_to_dms se existir; senão, fallback no to_dms_string local
+    #     try:
+    #         giro_txt = f"Giro Angular: {convert_to_dms(giro)}"
+    #     except NameError:
+    #         giro_txt = f"Giro Angular: {to_dms_string(giro)}"
 
-        t = msp.add_text(
-            giro_txt,
-            dxfattribs={"height": text_height, "layer": layer}
-        )
-        t.dxf.insert   = lbl_pt
-        t.dxf.rotation = 0  # horizontal
-        try:
-            t.dxf.halign      = 1  # CENTER
-            t.dxf.valign      = 2  # MIDDLE
-            t.dxf.align_point = lbl_pt
-        except Exception:
-            pass      
+    #     t = msp.add_text(
+    #         giro_txt,
+    #         dxfattribs={"height": text_height, "layer": layer}
+    #     )
+    #     t.dxf.insert   = lbl_pt
+    #     t.dxf.rotation = 0  # horizontal
+    #     try:
+    #         t.dxf.halign      = 1  # CENTER
+    #         t.dxf.valign      = 2  # MIDDLE
+    #         t.dxf.align_point = lbl_pt
+    #     except Exception:
+    #         pass      
 
 # ==== HELPERs necessários para AZIMUTE_AZ (portados de ANGULO_AZ) ====
 
@@ -1605,24 +1605,24 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
     else:
         logger.warning("Não foi possível reindexar a poligonal; mantendo ordem do DXF limpo.")
 
-    # # 7) Desenhar elementos de Az no DXF limpo
-    # try:
-    #     add_az_marker_to_dxf(
-    #         doc_dxf=doc,
-    #         ponto_az=ponto_az_dxf,
-    #         v1=v1,
-    #         azimute_deg=azimute_v1,
-    #         distancia_az_v1=distancia_az_v1,
-    #         v2=v2_for_arc,
-    #         sentido=sentido_poligonal,
-    #         layer="Az_Marker",
-    #         north_len=8.0,
-    #         text_height=0.6,
-    #         arc_radius=5.0,
-    #         draw_minor_arc=False,
-    #     )
-    # except Exception as e:
-    #     logger.exception(f"Erro ao desenhar marcador de Az: {e}")
+    # 7) Desenhar elementos de Az no DXF limpo
+    try:
+        add_az_marker_to_dxf(
+            doc_dxf=doc,
+            ponto_az=ponto_az_dxf,
+            v1=v1,
+            azimute_deg=azimute_v1,
+            distancia_az_v1=distancia_az_v1,
+            v2=v2_for_arc,
+            sentido=sentido_poligonal,
+            layer="Az_Marker",
+            north_len=8.0,
+            text_height=0.6,
+            arc_radius=5.0,
+            draw_minor_arc=False,
+        )
+    except Exception as e:
+        logger.exception(f"Erro ao desenhar marcador de Az: {e}")
 
 
 
