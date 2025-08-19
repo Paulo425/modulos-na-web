@@ -47,12 +47,13 @@ def preparar_planilhas(arquivo_recebido, diretorio_preparado):
 def main_preparo_arquivos(diretorio_saida, cidade, caminho_excel, caminho_dxf):
 
     # Pastas desta execução (isoladas por UUID)
-    DIR_CONC = os.path.abspath(diretorio_saida)             # .../tmp/<UUID>/CONCLUIDO
-    DIR_RUN  = os.path.dirname(DIR_CONC)                     # .../tmp/<UUID>
-    DIR_REC  = os.path.join(DIR_RUN, 'RECEBIDO')             # .../tmp/<UUID>/RECEBIDO
-    DIR_PREP = os.path.join(DIR_RUN, 'PREPARADO')            # .../tmp/<UUID>/PREPARADO
-    for d in (DIR_REC, DIR_PREP, DIR_CONC):
-        os.makedirs(d, exist_ok=True)
+    CONCLUIDO = os.path.abspath(diretorio_base)          # /.../tmp/<id_execucao>/CONCLUIDO (vem da rota)
+    RUN_DIR   = os.path.dirname(CONCLUIDO)               # /.../tmp/<id_execucao>
+    RECEBIDO  = os.path.join(RUN_DIR, 'RECEBIDO')        # /.../tmp/<id_execucao>/RECEBIDO
+    PREPARADO = os.path.join(RUN_DIR, 'PREPARADO')       # /.../tmp/<id_execucao>/PREPARADO
+
+    for pasta in (RECEBIDO, PREPARADO, CONCLUIDO):
+        os.makedirs(pasta, exist_ok=True)
 
  
 
@@ -112,8 +113,8 @@ def main_preparo_arquivos(diretorio_saida, cidade, caminho_excel, caminho_dxf):
     logger.info("Preparo concluído com sucesso")
 
     return {
-        "diretorio_preparado": DIR_PREP,
-        "diretorio_concluido": DIR_CONC,
+        "diretorio_preparado": PREPARADO,
+        "diretorio_concluido": CONCLUIDO,
         "arquivo_excel_recebido": destino_excel,
         "arquivo_dxf_recebido": destino_dxf,
         "caminho_template": os.path.join(BASE_DIR, 'templates_doc', 'MD_DECOPA_PADRAO.docx'),
