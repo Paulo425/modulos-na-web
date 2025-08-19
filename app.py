@@ -338,6 +338,10 @@ def download_zip_decopa(uuid, fname):
     abort(404, "ZIP não encontrado.")
 
 
+import os, sys, json, time, uuid
+from subprocess import Popen, PIPE, STDOUT
+from flask import request, session, redirect, url_for, render_template
+
 @app.route('/memoriais-descritivos', methods=['GET', 'POST'])
 def memoriais_descritivos():
     if 'usuario' not in session:
@@ -350,11 +354,21 @@ def memoriais_descritivos():
     id_execucao = None
 
     if request.method == 'POST':
+        # -------------------------------
+        # 1) Gerar UMA vez o ID da execução
+        # -------------------------------
         id_execucao = uuid.uuid4().hex[:8]
+
+        # -------------------------------
+        # 2) Estrutura /tmp/<id>/CONCLUIDO
+        # -------------------------------
         base_exec = os.path.join(BASE_DIR, 'tmp', id_execucao)
         diretorio = os.path.join(base_exec, 'CONCLUIDO')
         os.makedirs(diretorio, exist_ok=True)
 
+        # -------------------------------
+        # 3) Receber entradas do formulário
+        # -------------------------------
         cidade = request.form['cidade']
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
@@ -362,16 +376,22 @@ def memoriais_descritivos():
         caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
         caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
 
+        # -------------------------------
+        # 4) Log desta execução (dentro do CONCLUIDO)
+        # -------------------------------
         exec_log_path = os.path.join(diretorio, f"exec_{id_execucao}.log")
 
         try:
+            # -------------------------------
+            # 5) Chamar main.py propagando o ID por ENV e CLI
+            # -------------------------------
             env = os.environ.copy()
-            env["ID_EXECUCAO"] = id_execucao
+            env["ID_EXECUCAO"] = id_execucao  # <- fonte da verdade para exec_ctx/main
 
             cmd = [
                 sys.executable,
                 os.path.join(BASE_DIR, "executaveis", "main.py"),
-                "--id-execucao", id_execucao,
+                "--id-execucao", id_execucao,     # redundância segura
                 "--diretorio", diretorio,
                 "--cidade", cidade,
                 "--excel", caminho_excel,
@@ -380,6 +400,7 @@ def memoriais_descritivos():
 
             processo = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
 
+            # Captura de log streaming para o arquivo da execução
             log_lines = []
             with open(exec_log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
@@ -392,9 +413,14 @@ def memoriais_descritivos():
 
             app.logger.info(f"[DECOPA] listdir({diretorio}) -> {os.listdir(diretorio)}")
 
+            # -------------------------------
+            # 6) Descobrir ZIP(s) gerados
+            #    Preferir RUN.json; fallback: listar *.zip
+            # -------------------------------
             manifest_path = os.path.join(diretorio, "RUN.json")
             zip_files = []
 
+            # pequena espera (até 1s) para evitar corrida na escrita do RUN.json
             for _ in range(10):
                 if os.path.exists(manifest_path):
                     break
@@ -434,17 +460,30 @@ def memoriais_descritivos():
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
+        finally:
+            # Remover uploads temporários
+            for p in (caminho_excel, caminho_dxf):
+                try:
+                    if p and os.path.exists(p):
+                        os.remove(p)
+                except Exception:
+                    pass
 
-        # 🔻 LIMPEZA (equivalente ao 'finally:', mas sem riscos de indentação)
-        for p in (caminho_excel, caminho_dxf):
-            try:
-                if p and os.path.exists(p):
-                    os.remove(p)
-            except Exception:
-                pass
-
-        # link do log desta execução
+        # URL de download do log desta execução
         log_relativo = url_for("download_log_decopa", uuid=id_execucao)
+
+    return render_template(
+        "formulario_DECOPA.html",
+        resultado=resultado,
+        erro=erro_execucao,
+        success=success,
+        zip_url=zip_url,
+        zip_urls=zip_urls,
+        zip_download=zip_download,  # compat
+        log_path=log_relativo,
+        run_uuid=id_execucao,
+    )
+
 
 
 
