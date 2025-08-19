@@ -6,13 +6,15 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
     from datetime import datetime
 
     # Tenta importar o módulo de utilidades JL (suporta os dois nomes que você usa)
-    from memoriais_JL import (
+    from .memoriais_JL import (
         limpar_dxf_preservando_original,
         get_document_info_from_dxf,
         create_memorial_descritivo,
         create_memorial_document,
     )
+    #atualizado
 
+    print("[DEBUG] Início da execução do memorial")
 
     # BASE_DIR absoluto para resolver template corretamente
     BASE_DIR = Path(__file__).resolve().parents[1]
