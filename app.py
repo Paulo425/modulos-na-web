@@ -434,27 +434,18 @@ def memoriais_descritivos():
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
-        finally:
-            for p in (caminho_excel, caminho_dxf):
-                try:
-                    if p and os.path.exists(p):
-                        os.remove(p)
-                except Exception:
-                    pass
 
+        # 🔻 LIMPEZA (equivalente ao 'finally:', mas sem riscos de indentação)
+        for p in (caminho_excel, caminho_dxf):
+            try:
+                if p and os.path.exists(p):
+                    os.remove(p)
+            except Exception:
+                pass
+
+        # link do log desta execução
         log_relativo = url_for("download_log_decopa", uuid=id_execucao)
 
-    return render_template(
-        "formulario_DECOPA.html",
-        resultado=resultado,
-        erro=erro_execucao,
-        success=success,
-        zip_url=zip_url,
-        zip_urls=zip_urls,
-        zip_download=zip_download,
-        log_path=log_relativo,
-        run_uuid=id_execucao,
-    )
 
 
 #ATUALIZADO 
