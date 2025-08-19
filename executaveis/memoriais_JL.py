@@ -809,6 +809,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     area = calculate_signed_area(simple_ordered_points)
 
     # === inversão no mesmo estilo dos demais módulos (direto) ===
+    # === inversão no mesmo estilo dos demais módulos (direto) ===
     def _reverse_seq(seq):
         seq.reverse()
         corr = []
@@ -825,52 +826,29 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 corr.append(('line', {'start_point': e, 'end_point': s}))
         return corr
 
+    # Convenção: área < 0 => horário (CW) | área > 0 => anti-horário (CCW)
     if sentido_poligonal == 'horario':
-        # horário = área negativa; se veio positiva (anti), inverta
         if area > 0:
             sequencia_completa = _reverse_seq(sequencia_completa)
-            area = abs(area) * -1    # fica negativa após inversão
+            area = -abs(area)
             if log: log.write(f"[JL] Invertida para HORÁRIO. área={area:.4f}\n")
         else:
             if log: log.write(f"[JL] Já estava em HORÁRIO. área={area:.4f}\n")
     else:  # anti_horario
-        # anti-horário = área positiva; se veio negativa (horário), inverta
         if area < 0:
             sequencia_completa = _reverse_seq(sequencia_completa)
-            area = abs(area)         # fica positiva após inversão
+            area = abs(area)
             if log: log.write(f"[JL] Invertida para ANTI-HORÁRIO. área={area:.4f}\n")
         else:
             if log: log.write(f"[JL] Já estava em ANTI-HORÁRIO. área={area:.4f}\n")
+
+    print(f"Área da poligonal ajustada: {abs(area):.4f} m²")
+    if log:
+        log.write(f"Área da poligonal ajustada: {abs(area):.4f} m²\n")
     # === fim do bloco direto ===
 
 
-        for tipo, dados in sequencia_completa:
-            start, end = dados['start_point'], dados['end_point']  # ✅ Correção aqui!
-
-            if tipo == 'arc':
-                sequencia_corrigida.append(('arc', {
-                    'start_point': end,
-                    'end_point': start,
-                    'center': dados['center'],
-                    'radius': dados['radius'],
-                    'length': dados['length'],
-                    'bulge': -dados['bulge']  # ✅ Correção no sinal do bulge
-                }))
-            else:  # tipo == 'line'
-                sequencia_corrigida.append(('line', {
-                    'start_point': end,
-                    'end_point': start
-                }))
-
-        sequencia_completa = sequencia_corrigida
-        area = abs(area)
-
-
-    print(f"Área da poligonal ajustada: {area:.4f} m²")
-    if log:
-        log.write(f"Área da poligonal ajustada: {area:.4f} m²\n")
-
-       
+          
     # # Fecha corretamente adicionando o último ponto sem bulge
     # ultimo_ponto = sequencia_completa[-1][1]['end_point']
     # boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))

@@ -23,6 +23,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
 
     # BASE_DIR absoluto para resolver template corretamente
     BASE_DIR = Path(__file__).resolve().parents[1]
+    log.write(f"[JL] sentido_poligonal recebido: {sentido_poligonal}\n")
 
     try:
         Path(caminho_salvar).mkdir(parents=True, exist_ok=True)
