@@ -1537,12 +1537,16 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
         return
 
     # 🔹 Busca planilha FECHADA correta com uuid_str
-    padrao_busca = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}.xlsx")
-    arquivos_encontrados = glob.glob(padrao_busca)
-
+    # ✅ Busca planilha FECHADA correta no padrão NOVO: FECHADA_*_{tipo}.xlsx
+   
+    padrao_fechada = os.path.join(diretorio_preparado, f"{uuid_str}_FECHADA_{tipo}*.xlsx")
+    
+    arquivos_encontrados = sorted(glob.glob(padrao_busca), key=os.path.getmtime, reverse=True)
     if not arquivos_encontrados:
-        logger.error(f"❌ Planilha confrontantes FECHADA não encontrada: {padrao_busca}")
+        logger.error(f"❌ Planilha confrontantes FECHADA não encontrada (padrão): {padrao_busca}")
         return
+    fechada_path = arquivos_encontrados[0]
+    
     confrontantes = _carregar_confrontantes(uuid_str, tipo, diretorio_preparado)
 
     # 4) Ler geometria do DXF ORIGINAL
