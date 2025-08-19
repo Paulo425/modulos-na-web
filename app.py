@@ -762,77 +762,150 @@ def download_zip(filename):
     return send_from_directory(caminho, filename, as_attachment=True)
 
 
+@app.get("/download/memorial-jl/zip/<uuid>/<fname>")
+def download_zip_memorial_jl(uuid, fname):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    if Path(fname).name != fname:
+        abort(400, "Nome de arquivo inválido")
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    path = dir_conc / fname
+    if (not path.exists()) or (not path.is_file()) or (not path.name.lower().endswith(".zip")):
+        abort(404, "ZIP não encontrado.")
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="application/zip", conditional=True)
+
+
+@app.get("/download/memorial-jl/log/<uuid>")
+def download_log_memorial_jl(uuid):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    if not dir_conc.exists():
+        abort(404, "Execução não encontrada.")
+    pref = dir_conc / f"exec_{uuid}.log"
+    if pref.exists():
+        path = pref
+    else:
+        logs = sorted(dir_conc.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if not logs:
+            abort(404, "Log não encontrado.")
+        path = logs[0]
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="text/plain; charset=utf-8")
+
+
+
 @app.route('/memorial_azimute_jl', methods=['GET', 'POST'])
 def memorial_azimute_jl():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    resultado = erro_execucao = zip_download = log_relativo = None
+    resultado = erro_execucao = None
+    success = False
+    zip_url = None
+    zip_urls = []
+    zip_download = None
+    run_uuid = None
+    log_url = None
 
     if request.method == 'POST':
         try:
+            # 1) Inputs
+            proprietario = request.form['proprietario'].strip()
+            matricula    = request.form['matricula'].strip()
+            descricao    = request.form['descricao'].strip()
+            excel_file   = request.files['excel_file']
+            dxf_file     = request.files['dxf_file']
+
+            # 2) Execução isolada por UUID
+            run_uuid   = uuid.uuid4().hex[:8]
+            base_exec  = os.path.join(BASE_DIR, 'tmp', run_uuid)
+            dir_conc   = os.path.join(base_exec, 'CONCLUIDO')
+            os.makedirs(dir_conc, exist_ok=True)
+
+            # 3) Salvar uploads em temp (nome único)
+            caminho_excel = salvar_com_nome_unico(excel_file, app.config['UPLOAD_FOLDER'])
+            caminho_dxf   = salvar_com_nome_unico(dxf_file,   app.config['UPLOAD_FOLDER'])
+
+            # 4) Log por execução dentro do CONCLUIDO
+            exec_log_path = Path(dir_conc) / f"exec_{run_uuid}.log"
+
+            # 5) Executar pipeline JL (função interna ao projeto)
+            os.environ["ID_EXECUCAO"] = run_uuid  # coerência com os demais módulos
             from executaveis.executar_memorial_azimute_jl import executar_memorial_jl
-            import uuid, zipfile
 
-            # 1. Inputs do formulário
-            proprietario = request.form['proprietario']
-            matricula = request.form['matricula']
-            descricao = request.form['descricao']
-            excel_file = request.files['excel_file']
-            dxf_file = request.files['dxf_file']
+            # sanitização leve para nome de arquivo
+            mat_sanit = re.sub(r"[^\w.\-]+", "_", matricula).strip("_") or "MATRICULA"
 
-            # 2. Preparar diretórios
-            id_execucao = str(uuid.uuid4())[:8]
-            pasta_execucao = f'memorial_jl_{id_execucao}'
-            pasta_temp = os.path.join(BASE_DIR, 'static', 'arquivos', pasta_execucao)
-            os.makedirs(pasta_temp, exist_ok=True)
-
-            # 3. Salvar arquivos enviados
-            excel_path = os.path.join(pasta_temp, 'confrontantes.xlsx')
-            dxf_path = os.path.join(pasta_temp, 'original.dxf')
-            excel_file.save(excel_path)
-            dxf_file.save(dxf_path)
-
-            # 4. Criar caminho do LOG no mesmo padrão do DECOPA
-            log_filename = f"log_JL_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-            log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
-            os.makedirs(log_dir_absoluto, exist_ok=True)
-            log_path = os.path.join(log_dir_absoluto, log_filename)
-            log_relativo = f"logs/{log_filename}"
-
-            # 5. Executar processo principal
-            log_path_gerado, arquivos_gerados = executar_memorial_jl(
+            log_gerado, arquivos_gerados = executar_memorial_jl(
                 proprietario=proprietario,
                 matricula=matricula,
                 descricao=descricao,
-                caminho_salvar=pasta_temp,
-                dxf_path=dxf_path,
-                excel_path=excel_path,
-                log_path=log_path  # passa explicitamente
+                caminho_salvar=dir_conc,        # 👉 saída dentro de CONCLUIDO
+                dxf_path=caminho_dxf,
+                excel_path=caminho_excel,
+                log_path=str(exec_log_path),    # 👉 log por execução
             )
 
-            # 6. Gerar ZIP com os arquivos de saída (sem o LOG)
-            zip_name = f"memorial_{matricula}.zip"
-            zip_path = os.path.join(BASE_DIR, 'static', 'arquivos', zip_name)
-            
-            with zipfile.ZipFile(zip_path, 'w') as zipf:
-                for arquivo in arquivos_gerados:
+            # 6) Zipa a saída da execução (sem .log)
+            zip_name = f"{run_uuid}_JL_{mat_sanit}.zip"
+            zip_path = os.path.join(dir_conc, zip_name)
+            with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                for arq in (arquivos_gerados or []):
+                    if arq and os.path.exists(arq) and not str(arq).lower().endswith(".log"):
+                        zf.write(arq, arcname=os.path.basename(arq))
 
-                    if os.path.exists(arquivo) and not arquivo.endswith('.log'):
-                        zipf.write(arquivo, arcname=os.path.basename(arquivo))
+            # 7) Manifesto
+            with open(os.path.join(dir_conc, "RUN.json"), "w", encoding="utf-8") as f:
+                json.dump({"zip_files": [zip_name], "id_execucao": run_uuid}, f, ensure_ascii=False)
 
-
-            resultado = "✅ Processamento concluído com sucesso!"
+            # 8) Links
             zip_download = zip_name
+            zip_urls     = [url_for("download_zip_memorial_jl", uuid=run_uuid, fname=zip_name)]
+            zip_url      = zip_urls[0]
+            success      = True
+            resultado    = "✅ Processamento concluído com sucesso!"
 
         except Exception as e:
-            erro_execucao = f"❌ Erro na execução: {e}"
+            erro_execucao = f"❌ Erro na execução:<br><pre>{type(e).__name__}: {str(e)}</pre>"
 
-    return render_template("formulario_azimute_jl.html",
-                           resultado=resultado,
-                           erro=erro_execucao,
-                           zip_download=zip_download,
-                           log_path=log_relativo)
+        finally:
+            # limpar uploads temporários
+            for p in (locals().get("caminho_excel"), locals().get("caminho_dxf")):
+                try:
+                    if p and os.path.exists(p):
+                        os.remove(p)
+                except Exception:
+                    pass
+
+        # URL do log desta execução
+        if run_uuid:
+            log_url = url_for("download_log_memorial_jl", uuid=run_uuid)
+
+        return render_template(
+            "formulario_azimute_jl.html",
+            resultado=resultado,
+            erro=erro_execucao,
+            success=success,
+            zip_url=zip_url,
+            zip_urls=zip_urls,
+            zip_download=zip_download,
+            log_path=log_url,
+            run_uuid=run_uuid,
+        )
+
+    # GET
+    return render_template(
+        "formulario_azimute_jl.html",
+        resultado=None,
+        erro=None,
+        success=False,
+        zip_url=None,
+        zip_urls=[],
+        zip_download=None,
+        log_path=None,
+        run_uuid=None,
+    )
+
 
 
 @app.get("/download/angulo-az/log/<uuid>")
