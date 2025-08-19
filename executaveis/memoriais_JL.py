@@ -51,6 +51,16 @@ def obter_data_em_portugues():
     mes_pt = meses_pt.get(mes_en, mes_en)
     return f"{data.day:02d} de {mes_pt} de {data.year}"
 
+# 🔧 Garante que a variável log é segura para uso (fallback para DummyLog)
+def _ensure_log(log):
+    if log is None:
+        class DummyLog:
+            def write(self, msg): pass
+        return DummyLog()
+    return log
+
+
+
 
 def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
     log = _ensure_log(log)
@@ -542,6 +552,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     """
     log = _ensure_log(log)
     
+    assert hasattr(log, 'write'), "log não possui método write"
 
     if excel_file_path:
         try:
