@@ -81,13 +81,26 @@
     </div>
     {% endif %}
 
-    {% if zip_download %}
-<div class="text-center mt-4">
-    <a href="{{ url_for('static', filename='arquivos/' + zip_download) }}" class="btn btn-success" download>
+    {% if success and zip_urls %}
+    <div class="text-center mt-4">
+        {% if zip_urls|length == 1 %}
+        <a href="{{ zip_urls[0] }}" class="btn btn-success" download>📦 Baixar ZIP Gerado</a>
+        {% else %}
+        <div class="d-grid gap-2">
+            {% for z in zip_urls %}
+            <a href="{{ z }}" class="btn btn-success" download>📦 Baixar ZIP {{ loop.index }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% elif zip_download and run_uuid %}
+    <div class="text-center mt-4">
+        <a href="{{ url_for('download_zip_decopa', uuid=run_uuid, fname=zip_download) }}" class="btn btn-success" download>
         📦 Baixar ZIP Gerado
-    </a>
-</div>
-{% endif %}
+        </a>
+    </div>
+    {% endif %}
+
 
 
 </div>

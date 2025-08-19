@@ -26,9 +26,7 @@ from executaveis_avaliacao.main import homogeneizar_amostras
 import numpy as np
 import math
 from executaveis_avaliacao.utils_json import carregar_entrada_corrente_json, salvar_entrada_corrente_json
-
-
-
+import time
 
 
 # 🔧 Configuração do logger DEFINITIVA (completa e segura)
@@ -274,20 +272,99 @@ def excluir_usuario():
     return render_template('excluir_usuario.html', usuarios=usuarios, mensagem=mensagem, erro=erro)
 
 
+#ATUALIZADO
+
+@app.get("/download/decopa/log/<uuid>")
+def download_log_decopa(uuid):
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+
+    dir_conc = Path(BASE_DIR) / "tmp" / uuid / "CONCLUIDO"
+    if not dir_conc.exists():
+        abort(404, "Execução não encontrada.")
+
+    pref = dir_conc / f"exec_{uuid}.log"
+    if pref.exists():
+        path = pref
+    else:
+        logs = sorted(dir_conc.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if not logs:
+            abort(404, "Log não encontrado.")
+        path = logs[0]
+
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="text/plain; charset=utf-8")
+
+
+@app.get("/download/decopa/zip/<uuid>/<fname>")
+def download_zip_decopa(uuid, fname):
+    # validação básica
+    if not re.fullmatch(r"[0-9a-fA-F]{8}", uuid):
+        abort(400, "UUID inválido")
+    # evita path traversal
+    if Path(fname).name != fname:
+        abort(400, "Nome de arquivo inválido")
+    if not fname.lower().endswith(".zip"):
+        abort(400, "Arquivo não é ZIP")
+
+    base = Path(BASE_DIR)
+
+    # 1) ZIP na pasta da execução (/tmp/<uuid>/CONCLUIDO)
+    dir_conc = base / "tmp" / uuid / "CONCLUIDO"
+    path1 = dir_conc / fname
+    if path1.is_file():
+        return send_from_directory(
+            directory=str(dir_conc),
+            path=fname,
+            as_attachment=True,
+            download_name=fname,
+            mimetype="application/zip",
+            conditional=True,
+        )
+
+    # 2) Fallback: cópia pública feita pelo compactador (/static/arquivos/<uuid>_<fname>)
+    public_dir = base / "static" / "arquivos"
+    public_name = f"{uuid}_{fname}"
+    path2 = public_dir / public_name
+    if path2.is_file():
+        return send_from_directory(
+            directory=str(public_dir),
+            path=public_name,
+            as_attachment=True,
+            download_name=fname,  # baixa com o nome original
+            mimetype="application/zip",
+            conditional=True,
+        )
+
+    abort(404, "ZIP não encontrado.")
+
+
 @app.route('/memoriais-descritivos', methods=['GET', 'POST'])
 def memoriais_descritivos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
     resultado = erro_execucao = zip_download = log_relativo = None
+    success = False
+    zip_url = None
+    zip_urls = []
+    id_execucao = None
 
     if request.method == 'POST':
-        import uuid
+        # -------------------------------
+        # 1) Gerar UMA vez o ID da execução
+        # -------------------------------
+        id_execucao = uuid.uuid4().hex[:8]
 
-        id_execucao = str(uuid.uuid4())[:8]
-        diretorio = os.path.join(BASE_DIR, 'tmp', 'CONCLUIDO', id_execucao)
+        # -------------------------------
+        # 2) Estrutura /tmp/<id>/CONCLUIDO
+        # -------------------------------
+        base_exec = os.path.join(BASE_DIR, 'tmp', id_execucao)
+        diretorio = os.path.join(base_exec, 'CONCLUIDO')
         os.makedirs(diretorio, exist_ok=True)
 
+        # -------------------------------
+        # 3) Receber entradas do formulário
+        # -------------------------------
         cidade = request.form['cidade']
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
@@ -295,71 +372,116 @@ def memoriais_descritivos():
         caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
         caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
 
-        # Log
-        log_filename = datetime.now().strftime("log_%Y%m%d_%H%M%S.log")
-        log_dir_absoluto = os.path.join(BASE_DIR, "static", "logs")
-        os.makedirs(log_dir_absoluto, exist_ok=True)
-        log_path = os.path.join(log_dir_absoluto, log_filename)
-        log_relativo = f"static/logs/{log_filename}"
-        print(f"🧾 Salvando LOG em: {log_path}")
+        # -------------------------------
+        # 4) Log desta execução (dentro do CONCLUIDO)
+        # -------------------------------
+        exec_log_path = os.path.join(diretorio, f"exec_{id_execucao}.log")
 
         try:
-            processo = Popen(
-                ["python", os.path.join(BASE_DIR, "executaveis", "main.py"),
-                 "--diretorio", diretorio,
-                 "--cidade", cidade,
-                 "--excel", caminho_excel,
-                 "--dxf", caminho_dxf],
-                stdout=PIPE,
-                stderr=subprocess.STDOUT,
-                text=True
-            )
+            # -------------------------------
+            # 5) Chamar main.py propagando o ID por ENV e CLI
+            # -------------------------------
+            env = os.environ.copy()
+            env["ID_EXECUCAO"] = id_execucao  # <- fonte da verdade para exec_ctx/main
 
+            cmd = [
+                sys.executable,
+                os.path.join(BASE_DIR, "executaveis", "main.py"),
+                "--id-execucao", id_execucao,     # redundância segura
+                "--diretorio", diretorio,
+                "--cidade", cidade,
+                "--excel", caminho_excel,
+                "--dxf", caminho_dxf,
+            ]
+
+            processo = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
+
+            # Captura de log streaming para o arquivo da execução
             log_lines = []
-            with open(log_path, 'w', encoding='utf-8') as log_file:
+            with open(exec_log_path, 'w', encoding='utf-8') as log_file:
                 for linha in processo.stdout:
                     log_file.write(linha)
                     if len(log_lines) < 100:
                         log_lines.append(linha)
-                    print("🖨️", linha.strip())
 
             processo.wait()
+            proc_ok = (processo.returncode == 0)
 
-            if processo.returncode == 0:
+            app.logger.info(f"[DECOPA] listdir({diretorio}) -> {os.listdir(diretorio)}")
+
+            # -------------------------------
+            # 6) Descobrir ZIP(s) gerados
+            #    Preferir RUN.json; fallback: listar *.zip
+            # -------------------------------
+            manifest_path = os.path.join(diretorio, "RUN.json")
+            zip_files = []
+
+            # pequena espera (até 1s) para evitar corrida na escrita do RUN.json
+            for _ in range(10):
+                if os.path.exists(manifest_path):
+                    break
+                time.sleep(0.1)
+
+            try:
+                if os.path.exists(manifest_path):
+                    with open(manifest_path, "r", encoding="utf-8") as f:
+                        manifest = json.load(f)
+                    zip_files = [os.path.basename(z) for z in manifest.get("zip_files", []) if z]
+                    app.logger.info(f"[DECOPA] RUN.json lido: {zip_files}")
+            except Exception as e:
+                app.logger.warning(f"[DECOPA] RUN.json inválido: {e}")
+
+            if not zip_files:
+                try:
+                    contents = os.listdir(diretorio)
+                    app.logger.info(f"[DECOPA] listdir({diretorio}) -> {contents}")
+                    zip_files = sorted([f for f in contents if f.lower().endswith('.zip')])
+                except Exception as e:
+                    app.logger.error(f"[DECOPA] Falha ao listar {diretorio}: {e}")
+                    zip_files = []
+
+            zip_download = zip_files[0] if zip_files else None
+            zip_urls = [url_for("download_zip_decopa", uuid=id_execucao, fname=f) for f in zip_files] if zip_files else []
+            zip_url  = zip_urls[0] if zip_urls else None
+            success  = bool(zip_url)
+
+            app.logger.info(f"[DECOPA] run={id_execucao} success={success} zip_files={zip_files} zip_url={zip_url}")
+
+            if not proc_ok:
+                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+            elif success:
                 resultado = "✅ Processamento concluído com sucesso!"
             else:
-                erro_execucao = f"❌ Erro na execução:<br><pre>{''.join(log_lines)}</pre>"
+                erro_execucao = "⚠️ Processamento terminou, mas nenhum ZIP foi gerado. Baixe o log da execução para detalhes."
 
         except Exception as e:
             erro_execucao = f"❌ Erro inesperado:<br><pre>{type(e).__name__}: {str(e)}</pre>"
-
         finally:
-            os.remove(caminho_excel)
-            os.remove(caminho_dxf)
+            # Remover uploads temporários
+            for p in (caminho_excel, caminho_dxf):
+                try:
+                    if p and os.path.exists(p):
+                        os.remove(p)
+                except Exception:
+                    pass
 
-        # Verifica ZIP e copia para static/arquivos
-        try:
-            static_zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(static_zip_dir) if f.lower().endswith('.zip')]
+        # URL de download do log desta execução
+        log_relativo = url_for("download_log_decopa", uuid=id_execucao)
 
-            print("🧪 ZIPs encontrados:", arquivos_zip)
-            logging.info(f"🧪 ZIPs encontrados: {arquivos_zip}")
+    return render_template(
+        "formulario_DECOPA.html",
+        resultado=resultado,
+        erro=erro_execucao,
+        success=success,
+        zip_url=zip_url,
+        zip_urls=zip_urls,
+        zip_download=zip_download,  # compat
+        log_path=log_relativo,
+        run_uuid=id_execucao,
+    )
 
-            if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(static_zip_dir, x)), reverse=True)
-                zip_download = arquivos_zip[0]
-                print(f"✅ ZIP para download: {zip_download}")
-                logging.info(f"✅ ZIP para download: {zip_download}")
-        except Exception as e:
-            print(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
-            logging.error(f"⚠️ Erro ao localizar/copiar ZIP: {e}")
 
-    return render_template("formulario_DECOPA.html",
-                           resultado=resultado,
-                           erro=erro_execucao,
-                           zip_download=zip_download,
-                           log_path=log_relativo)
-#ATUALIZADO
+#ATUALIZADO 
 
 
 @app.route("/arquivos-gerados")
@@ -433,11 +555,11 @@ def alterar_senha():
     return render_template('alterar_senha.html', mensagem=mensagem, erro=erro)
 
 
-@app.route("/downloads")
-def listar_arquivos():
-    os.makedirs(arquivos_dir, exist_ok=True)
-    arquivos = os.listdir(arquivos_dir)
-    return render_template("listar_arquivos.html", arquivos=arquivos)
+# @app.route("/downloads")
+# def listar_arquivos():
+#     os.makedirs(arquivos_dir, exist_ok=True)
+#     arquivos = os.listdir(arquivos_dir)
+#     return render_template("listar_arquivos.html", arquivos=arquivos)
 
 # @app.route("/download/<nome_arquivo>")
 # def download_arquivo(nome_arquivo):
@@ -505,22 +627,103 @@ def gerar_memorial_azimute_az():
 
             logger.info(f"Comando enviado ao subprocess: {comando}")
 
-            processo = Popen(
-                comando,
-                stdout=PIPE, stderr=STDOUT, text=True
-            )
-
+            proc = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
             try:
-                saida, _ = processo.communicate(timeout=300)
-                logger.info(f"Saída do subprocess:\n{saida}")
+                saida, _ = proc.communicate(timeout=300)
             except TimeoutExpired:
-                processo.kill()
-                saida, _ = processo.communicate()
-                logger.error(f"Subprocess atingiu timeout. Saída parcial:\n{saida}")
+                proc.kill()
+                saida, _ = proc.communicate()
+                logger.error("Subprocess atingiu timeout.")
+
+            # Grave SEMPRE o output capturado no log da execução
+            exec_log_path.write_text(saida or "", encoding="utf-8", errors="ignore")
+            logger.info(f"Saída do subprocess gravada em: {exec_log_path}")
 
         except Exception as e:
-            logger.error(f"Erro fatal ao executar subprocess: {e}")
+            logger.exception(f"Erro fatal ao executar subprocess: {e}")
+            # registre algo no log da execução para o usuário baixar
+            try:
+                exec_log_path.write_text(f"Erro fatal: {e}", encoding="utf-8")
+            except Exception:
+                pass
 
+        finally:
+            # limpe os uploads temporários
+            try: os.remove(caminho_excel)
+            except Exception: pass
+            try: os.remove(caminho_dxf)
+            except Exception: pass
+
+        # 🎯 Validação de saída desta execução (somente dentro do /tmp/<uuid>/CONCLUIDO)
+        # Tente usar manifesto (se o main escrever RUN.json); senão procure *.zip diretamente.
+        # --- ler ZIPs dentro do CONCLUIDO (padrão) ---
+        manifest_path = dir_concluido / "RUN.json"
+        zip_files = []
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                zip_files = manifest.get("zip_files", [])
+                zip_files = [Path(z).name for z in zip_files if z]  # <- mudou aqui só para mudar usando só o nome do arquivo
+            except Exception as e:
+                logger.warning(f"RUN.json inválido: {e}")
+
+        if not zip_files:
+            zip_files = sorted([p.name for p in dir_concluido.glob("*.zip")])
+
+        zip_urls = []
+        zip_url = None
+        zip_download = None
+
+        if zip_files:
+            # ZIPs gerados dentro do tmp/<uuid>/CONCLUIDO (rota nova)
+            zip_urls = [url_for("download_zip_azimute_az", uuid=run_uuid, fname=f) for f in zip_files]
+            zip_url = zip_urls[0]
+            zip_download = zip_files[0]
+        else:
+            # --- FALLBACK: procurar no diretório público static/arquivos pelo prefixo do UUID ---
+            public_dir = Path(BASE_DIR) / "static" / "arquivos"
+            public_candidates = sorted(public_dir.glob(f"{run_uuid}_*.zip"), key=os.path.getmtime, reverse=True)
+            if public_candidates:
+                zip_urls = [url_for("download_zip", filename=p.name) for p in public_candidates]  # rota LEGADA /download/<filename>
+                zip_url = zip_urls[0]
+                zip_download = public_candidates[0].name
+
+        success = bool(zip_url)
+
+        log_url = url_for("download_log_azimute_az", uuid=run_uuid)
+
+        # mensagem amigável
+        resultado = "✅ Processamento concluído com sucesso!" if success else None
+        erro_execucao = None if success else (
+            "Houve um erro durante a execução. Baixe o log para verificar os detalhes (ponto de amarração ausente, DXF inválido, etc.)."
+        )
+        logger.info(f"[AZIMUTE_AZ] run={run_uuid} success={success} zip_url={zip_url} zip_files={zip_files}")
+
+        return render_template(
+            "formulario_AZIMUTE_AZ.html",
+            resultado=resultado,
+            erro=erro_execucao,
+            success=success,
+            zip_url=zip_url,
+            zip_urls=zip_urls,      # <— passe a lista também
+            zip_download=zip_download,
+            log_path=log_url,
+            run_uuid=run_uuid,
+        )
+
+
+    # GET
+    return render_template(
+        "formulario_AZIMUTE_AZ.html",
+        resultado=None,
+        erro=None,
+        zip_download=None,
+        zip_url=None,
+        log_path=None,
+        success=False,
+        run_uuid=None
+    )
+#ATUALIZADO
 
         finally:
             os.remove(caminho_excel)
@@ -701,9 +904,10 @@ def gerar_memorial_angulo_az():
         # 🔍 Verificação do ZIP após o processamento
         try:
             zip_dir = os.path.join(BASE_DIR, 'static', 'arquivos')
-            arquivos_zip = [f for f in os.listdir(zip_dir) if f.lower().endswith('.zip')]
+            arquivos_zip = [f for f in os.listdir(static_zip_dir)
+                if f.lower().endswith('.zip') and f.startswith(f"{id_execucao}_")]
             if arquivos_zip:
-                arquivos_zip.sort(key=lambda x: os.path.getmtime(os.path.join(zip_dir, x)), reverse=True)
+                arquivos_zip = [f for f in os.listdir(static_zip_dir) if f.lower().endswith('.zip')]
                 zip_download = arquivos_zip[0]
                 print(f"✅ ZIP disponível para download: {zip_download}")
             else:
@@ -711,6 +915,7 @@ def gerar_memorial_angulo_az():
         except Exception as e:
             print(f"❌ Erro ao verificar ZIP: {e}")
             zip_download = None
+            success = False
     return render_template("formulario_ANGULO_AZ.html",
                            resultado=resultado,
                            erro=erro_execucao,
@@ -771,9 +976,6 @@ def gerar_memorial_angulo_p1_p2():
 
         except Exception as e:
             logger.error(f"Erro fatal ao executar subprocess: {e}")
-
-
-
 
         finally:
             os.remove(caminho_excel)
