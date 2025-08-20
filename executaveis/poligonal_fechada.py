@@ -1038,6 +1038,8 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
         # logger.info(f"DXF limpo salvo em: {caminho_dxf_limpo}")
 
         # >>> PATCH: nome do DXF limpo com UUID + TIPO + matrícula
+
+        uuid_exec = os.path.basename(os.path.dirname(pasta_concluido))
         safe_uuid = sanitize_filename(uuid_exec)[:8]  # use a mesma variável que você loga em "[DEBUG] UUID recebido"
         safe_tipo = sanitize_filename(tipo)           # "ETE", "REM", etc.
         safe_mat  = sanitize_filename(matricula)
