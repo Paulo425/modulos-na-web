@@ -1031,11 +1031,36 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
         print(f"✅ Confrontante carregado: {excel_confrontantes}")
         logger.info(f"Planilha de confrontantes usada: {excel_confrontantes}")
 
-        nome_limpo_dxf = f"DXF_LIMPO_{sanitize_filename(matricula)}.dxf"
+        # nome_limpo_dxf = f"DXF_LIMPO_{sanitize_filename(matricula)}.dxf"
+        # caminho_dxf_limpo = os.path.join(pasta_concluido, nome_limpo_dxf)
+
+        # dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(caminho_dxf, caminho_dxf_limpo)
+        # logger.info(f"DXF limpo salvo em: {caminho_dxf_limpo}")
+
+        # >>> PATCH: nome do DXF limpo com UUID + TIPO + matrícula
+        safe_uuid = sanitize_filename(uuid_exec)[:8]  # use a mesma variável que você loga em "[DEBUG] UUID recebido"
+        safe_tipo = sanitize_filename(tipo)           # "ETE", "REM", etc.
+        safe_mat  = sanitize_filename(matricula)
+
+        nome_limpo_dxf   = f"{safe_uuid}_{safe_tipo}_{safe_mat}_LIMPO.dxf"
         caminho_dxf_limpo = os.path.join(pasta_concluido, nome_limpo_dxf)
 
         dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(caminho_dxf, caminho_dxf_limpo)
         logger.info(f"DXF limpo salvo em: {caminho_dxf_limpo}")
+
+        # (opcional) remover arquivo legado sem UUID
+        legado = os.path.join(pasta_concluido, f"DXF_LIMPO_{safe_mat}.dxf")
+        if os.path.exists(legado):
+            try:
+                os.remove(legado)
+                logger.info(f"DXF limpo legado removido: {legado}")
+            except Exception as e:
+                logger.warning(f"Não foi possível remover legado {legado}: {e}")
+        # <<< PATCH
+
+
+       
+
 
         if not ponto_az or not ponto_inicial:
             msg = "❌ Não foi possível identificar o ponto Az ou inicial."
