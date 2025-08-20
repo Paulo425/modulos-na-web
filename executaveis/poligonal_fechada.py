@@ -578,29 +578,52 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     # print(f"Área da poligonal ajustada: {abs(area_tmp):.4f} m²")
 
 
-    if sentido_poligonal == 'horario':
-        if area_tmp > 0:
-            ordered_points.reverse()
-            area_tmp = abs(area_temp)
-            # Inverte o sentido dos arcos (bulges), se existirem
-            for ponto in ordered_points:
-                if 'bulge' in ponto and ponto['bulge'] != 0:
-                    ponto['bulge'] *= -1
-            logger.info(f"Área da poligonal invertida para sentido horário com ajuste dos arcos: {area_tmp:.4f} m²")
-        else:
-            logger.info(f"Área da poligonal já no sentido horário: {abs(area_tmp):.4f} m²")
+    # Normaliza o valor vindo da rota/formulário
+    _sentido = (sentido_poligonal or "").strip().lower().replace("-", "_")
 
-    else:  # sentido_poligonal == 'anti_horario'
-        if area_tmp < 0:
-            ordered_points.reverse()
+    # Regra da área assinada: CCW (anti-horário) => área > 0 ; CW (horário) => área < 0
+    # Se o usuário pediu "horario" e a área veio > 0 (CCW), invertemos.
+    # Se pediu "anti_horario" e a área veio < 0 (CW), invertemos.
+
+    def _reverter_sequencia_completa(seq):
+        """Inverte a ordem dos segmentos e troca start/end.
+        Para arco: inverte também o sinal do bulge; raio permanece o mesmo."""
+        seq.reverse()
+        for i, (tipo_segmento, dados) in enumerate(seq):
+            if tipo_segmento == 'line':
+                start, end = dados  # ((x1,y1), (x2,y2))
+                seq[i] = ('line', (end, start))
+            elif tipo_segmento == 'arc':
+                # Esperado: (start, end, bulge, raio)
+                start, end, bulge, raio = dados
+                seq[i] = ('arc', (end, start, -bulge, raio))
+            else:
+                # Se houver outros tipos, apenas reverta endpoints se fizer sentido
+                try:
+                    start, end = dados[0], dados[1]
+                    novos_dados = list(dados)
+                    novos_dados[0], novos_dados[1] = end, start
+                    seq[i] = (tipo_segmento, tuple(novos_dados))
+                except Exception:
+                    # Mantém como está se não souber como tratar
+                    pass
+
+    if _sentido == 'horario':
+        if area_tmp > 0:
+            _reverter_sequencia_completa(sequencia_completa)
             area_tmp = abs(area_tmp)
-            # Inverte o sentido dos arcos (bulges), se existirem
-            for ponto in ordered_points:
-                if 'bulge' in ponto and ponto['bulge'] != 0:
-                    ponto['bulge'] *= -1
-            logger.info(f"Área da poligonal invertida para sentido anti-horário com ajuste dos arcos: {area_tmp:.4f} m²")
+            logger.info(f"Área invertida para sentido horário (CW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
         else:
-            logger.info(f"Área da poligonal já no sentido anti-horário: {abs(area_tmp):.4f} m²")
+            logger.info(f"Área já coerente com sentido horário (CW). |Área|={abs(area_tmp):.4f} m²")
+    else:  # trata como 'anti_horario'
+        if area_tmp < 0:
+            _reverter_sequencia_completa(sequencia_completa)
+            area_tmp = abs(area_tmp)
+            logger.info(f"Área invertida para sentido anti-horário (CCW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+        else:
+            logger.info(f"Área já coerente com sentido anti-horário (CCW). |Área|={abs(area_tmp):.4f} m²")
+
+
 
 
     # Continuação após inverter corretamente
