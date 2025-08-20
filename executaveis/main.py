@@ -179,7 +179,7 @@ if __name__ == "__main__":
     excel     = args.excel
     dxf       = args.dxf
     sentido_poligonal = args.sentido_poligonal or 'horario'
-    logger.info(f"Sentido poligonal recebido no main.py: {sentido_poligonal}")
+    
 
     # Se passou --id-execucao aqui, garante no ambiente (compatibilidade)
     if args.id_execucao:
