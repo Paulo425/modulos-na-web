@@ -752,8 +752,15 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             azimute_excel = convert_to_dms(azimuth)
             distancia_excel = f"{distance:.2f}".replace(".", ",")
         elif tipo_segmento == "arc":
-            radius = dados[2]
-            distance = dados[3]
+            bulge = dados[2]
+            radius = dados[3]
+
+            # Ângulo central do arco
+            theta = 4.0 * math.atan(abs(bulge))  # radianos
+
+            # Comprimento do arco
+            distance = radius * theta
+
             azimute_excel = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
