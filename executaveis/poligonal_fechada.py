@@ -490,7 +490,7 @@ def sanitize_filename(filename):
 
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, ponto_inicial_real=None, tipo=None, uuid_prefix=None, diretorio_concluido=None):
+                               azimute_az_v1=None, ponto_inicial_real=None, tipo=None, uuid_prefix=None, diretorio_concluido=None, sentido_poligonal='horario'):
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
