@@ -381,6 +381,8 @@ def memoriais_descritivos():
         caminho_excel = salvar_com_nome_unico(arquivo_excel, app.config['UPLOAD_FOLDER'])
         caminho_dxf   = salvar_com_nome_unico(arquivo_dxf, app.config['UPLOAD_FOLDER'])
 
+
+
         # -------------------------------
         # 4) Log desta execução (dentro do CONCLUIDO)
         # -------------------------------
@@ -401,6 +403,7 @@ def memoriais_descritivos():
                 "--cidade", cidade,
                 "--excel", caminho_excel,
                 "--dxf", caminho_dxf,
+                "--sentido-poligonal", sentido_poligonal,
             ]
 
             #processo = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
