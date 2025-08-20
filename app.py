@@ -292,7 +292,14 @@ def download_log_decopa(uuid):
             abort(404, "Log não encontrado.")
         path = logs[0]
 
-    return send_file(path, as_attachment=True, download_name=path.name, mimetype="text/plain; charset=utf-8")
+    return send_file(
+        str(path),                               # Path -> str (compat Flask/Werkzeug)
+        as_attachment=True,
+        download_name=path.name,
+        mimetype="text/plain; charset=utf-8",
+        conditional=True,                        # suporta HEAD/Range; evita leitura desnecessária
+        max_age=0                                # não cachear (log muda a cada execução)
+    )
 
 
 @app.get("/download/decopa/zip/<uuid>/<fname>")
@@ -319,6 +326,7 @@ def download_zip_decopa(uuid, fname):
             download_name=fname,
             mimetype="application/zip",
             conditional=True,
+            max_age=0,
         )
 
     # 2) Fallback: cópia pública feita pelo compactador (/static/arquivos/<uuid>_<fname>)
@@ -333,14 +341,13 @@ def download_zip_decopa(uuid, fname):
             download_name=fname,  # baixa com o nome original
             mimetype="application/zip",
             conditional=True,
+            max_age=0,
         )
 
     abort(404, "ZIP não encontrado.")
 
 
-import os, sys, json, time, uuid
-from subprocess import Popen, PIPE, STDOUT
-from flask import request, session, redirect, url_for, render_template
+
 
 @app.route('/memoriais-descritivos', methods=['GET', 'POST'])
 def memoriais_descritivos():
@@ -406,39 +413,53 @@ def memoriais_descritivos():
                 "--sentido-poligonal", sentido_poligonal,
             ]
 
-            #processo = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
+            import shlex, subprocess
 
+            logger.info(f"Comando enviado ao subprocess: {shlex.join(cmd)}")
 
             try:
-                logger.info(f"Comando enviado ao subprocess: {cmd}")
-
-                processo = Popen(
+                # Execução síncrona, capturando toda saída
+                cp = subprocess.run(
                     cmd,
-                    stdout=PIPE, stderr=STDOUT, text=True, env=env
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    timeout=600  # ajuste se precisar
                 )
+            except subprocess.TimeoutExpired as e:
+                # Gera log mesmo em timeout
+                with open(exec_log_path, 'w', encoding='utf-8') as log_file:
+                    log_file.write("### CMD\n" + shlex.join(cmd) + "\n\n")
+                    log_file.write(f"[TIMEOUT] Processo excedeu {e.timeout}s\n")
+                    if e.stdout:
+                        log_file.write("\n--- STDOUT (parcial) ---\n")
+                        log_file.write(e.stdout)
+                    if e.stderr:
+                        log_file.write("\n--- STDERR (parcial) ---\n")
+                        log_file.write(e.stderr)
+                logger.error(f"Subprocess atingiu timeout de {e.timeout}s.")
+                cp = None
 
-                try:
-                    saida, _ = processo.communicate(timeout=300)
-                    logger.info(f"Saída do subprocess:\n{saida}")
-                except TimeoutExpired:
-                    processo.kill()
-                    saida, _ = processo.communicate()
-                    logger.error(f"Subprocess atingiu timeout. Saída parcial:\n{saida}")
-
-            except Exception as e:
-                logger.error(f"Erro fatal ao executar subprocess: {e}")
-
-
-            # Captura de log streaming para o arquivo da execução
+            # Sempre grava o exec log quando cp existir
             log_lines = []
-            with open(exec_log_path, 'w', encoding='utf-8') as log_file:
-                for linha in processo.stdout:
-                    log_file.write(linha)
-                    if len(log_lines) < 100:
-                        log_lines.append(linha)
+            if cp is not None:
+                with open(exec_log_path, 'w', encoding='utf-8') as log_file:
+                    log_file.write("### CMD\n" + shlex.join(cmd) + "\n\n")
+                    if cp.stdout:
+                        log_file.write(cp.stdout)
+                        # guarda as primeiras 100 linhas para mostrar em erro_execucao
+                        log_lines = cp.stdout.splitlines(True)[:100]
+                    if cp.stderr:
+                        log_file.write("\n--- STDERR ---\n")
+                        log_file.write(cp.stderr)
 
-            processo.wait()
-            proc_ok = (processo.returncode == 0)
+                # Também registra no logger do app (útil para debug via Render)
+                if cp.stdout:
+                    logger.info(f"Saída do subprocess:\n{cp.stdout}")
+                if cp.stderr:
+                    logger.error(f"Erros do subprocess:\n{cp.stderr}")
+
+            proc_ok = (cp is not None and cp.returncode == 0)
 
             app.logger.info(f"[DECOPA] listdir({diretorio}) -> {os.listdir(diretorio)}")
 

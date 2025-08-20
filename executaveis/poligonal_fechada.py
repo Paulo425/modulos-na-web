@@ -204,6 +204,108 @@ def bulge_to_arc_length(start_point, end_point, bulge):
     return arc_length, radius, angle
 
 
+# def get_document_info_from_dxf(dxf_file_path):
+#     try:
+#         doc = ezdxf.readfile(dxf_file_path)
+#         msp = doc.modelspace()
+
+#         lines = []
+#         arcs = []
+#         perimeter_dxf = 0
+#         area_dxf = 0.0
+
+#         for entity in msp.query('LWPOLYLINE'):
+#             if entity.closed:  # ✅ correção (era is_closed)
+#                 polyline_points = entity.get_points('xyseb')
+#                 num_points = len(polyline_points)
+
+#                 boundary_points = []
+
+#                 for i in range(num_points):
+#                     x_start, y_start, _, _, bulge = polyline_points[i]
+#                     x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
+
+#                     start_point = (float(x_start), float(y_start))
+#                     end_point = (float(x_end), float(y_end))
+
+#                     if bulge != 0:
+#                         dx = end_point[0] - start_point[0]
+#                         dy = end_point[1] - start_point[1]
+#                         chord_length = math.hypot(dx, dy)
+#                         sagitta = (bulge * chord_length) / 2
+#                         radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
+#                         angle_span_rad = 4 * math.atan(abs(bulge))
+#                         arc_length = radius * angle_span_rad
+
+#                         mid_x = (start_point[0] + end_point[0]) / 2
+#                         mid_y = (start_point[1] + end_point[1]) / 2
+#                         chord_midpoint = (mid_x, mid_y)
+
+#                         offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
+#                         dx = float(end_point[0]) - float(start_point[0])
+#                         dy = float(end_point[1]) - float(start_point[1])
+
+#                         length = math.hypot(dx, dy)
+#                         perp_vector = (-dy / length, dx / length)
+
+#                         if bulge < 0:
+#                             perp_vector = (-perp_vector[0], -perp_vector[1])
+
+#                         center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
+#                         center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
+#                         center = (center_x, center_y)
+
+#                         start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
+#                         end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
+
+#                         arcs.append({
+#                             'start_point': (start_point[0], start_point[1]),
+#                             'end_point': (end_point[0], end_point[1]),
+#                             'center': (center[0], center[1]),
+#                             'radius': radius,
+#                             'start_angle': math.degrees(start_angle),
+#                             'end_angle': math.degrees(end_angle),
+#                             'length': arc_length
+#                         })
+
+#                         num_arc_points = 100
+#                         for t in range(num_arc_points):
+#                             angle = start_angle + (end_angle - start_angle) * t / num_arc_points
+#                             arc_x = center[0] + radius * math.cos(angle)
+#                             arc_y = center[1] + radius * math.sin(angle)
+#                             boundary_points.append((arc_x, arc_y))
+
+#                         segment_length = arc_length
+#                         perimeter_dxf += segment_length
+#                     else:
+#                         lines.append((start_point, end_point))
+#                         boundary_points.append((start_point[0], start_point[1]))
+#                         dx = end_point[0] - start_point[0]
+#                         dy = end_point[1] - start_point[1]
+#                         segment_length = math.hypot(dx, dy)
+#                         perimeter_dxf += segment_length
+
+#                 polygon = Polygon(boundary_points)
+#                 area_dxf = polygon.area  # área exata do desenho
+#                 break
+
+#         if not lines and not arcs:
+#             print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
+#             return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
+
+#         print(f"Linhas processadas: {len(lines)}")
+#         print(f"Arcos processados: {len(arcs)}")
+#         print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
+#         print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
+
+#         return doc, lines, arcs, perimeter_dxf, area_dxf
+
+#     except Exception as e:
+#         print(f"Erro ao obter informações do documento: {e}")
+#         traceback.print_exc()
+#         return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
+
+
 def get_document_info_from_dxf(dxf_file_path):
     try:
         doc = ezdxf.readfile(dxf_file_path)
@@ -265,7 +367,9 @@ def get_document_info_from_dxf(dxf_file_path):
                             'radius': radius,
                             'start_angle': math.degrees(start_angle),
                             'end_angle': math.degrees(end_angle),
-                            'length': arc_length
+                            'length': arc_length,
+                            'bulge': float(bulge),  # <-- ADICIONE ESTA LINHA
+                            'sweep_degrees': math.degrees(end_angle - start_angle)  # <-- (OPCIONAL, ajuda no debug)
                         })
 
                         num_arc_points = 100
@@ -304,6 +408,8 @@ def get_document_info_from_dxf(dxf_file_path):
         print(f"Erro ao obter informações do documento: {e}")
         traceback.print_exc()
         return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
+
+
 
 
 # 🔹 Função para definir a fonte padrão
@@ -494,6 +600,10 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+
     if excel_file_path:
         try:
             confrontantes_df = pd.read_excel(excel_file_path)
@@ -507,21 +617,21 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     else:
         confrontantes_dict = {}
 
-    if not lines:
-        print("Nenhuma linha disponível para criar o memorial descritivo.")
+    if (not lines) and (not arcs):
+        print("Nenhuma geometria (linhas ou arcos) disponível para criar o memorial descritivo.")
         return None
 
     # Criar uma única lista sequencial de pontos ordenados (linhas e arcos)
     elementos = []
-    for line in lines:
-        elementos.append(('line', (line[0], line[1])))
+    for p1, p2 in (lines or []):
+        elementos.append(('line', (p1, p2)))
 
-    if arcs:
-        for arc in arcs:
-            elementos.append(('arc', (arc['start_point'], arc['end_point'], arc['radius'], arc['length'])))
+    for arc in (arcs or []):
+        elementos.append(('arc', (arc['start_point'], arc['end_point'], arc['bulge'], arc['radius'])))
 
     # Sequenciar os segmentos corretamente
     sequencia_completa = []
+
     # 🔁 Reordena elementos para começar pelo ponto original do desenho
     if ponto_inicial_real:
         for i, elemento in enumerate(elementos):
@@ -548,7 +658,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 if tipo_segmento == 'line':
                     elementos[i] = ('line', (end_point, start_point))
                 else:
-                    elementos[i] = ('arc', (end_point, start_point, dados[2], dados[3]))
+                    elementos[i] = ('arc', (end_point, start_point, -dados[2], dados[3]))
                 sequencia_completa.append(elementos[i])
                 ponto_atual = start_point
                 elementos.pop(i)
@@ -593,10 +703,13 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             if tipo_segmento == 'line':
                 start, end = dados  # ((x1,y1), (x2,y2))
                 seq[i] = ('line', (end, start))
-            elif tipo_segmento == 'arc':
-                # Esperado: (start, end, bulge, raio)
-                start, end, bulge, raio = dados
-                seq[i] = ('arc', (end, start, -bulge, raio))
+            elif tipo_segmento == "arc":
+                bulge = dados[2]
+                radius = dados[3]
+                theta = 4.0 * math.atan(abs(bulge))        # rad
+                distance = radius * theta                   # comprimento do arco
+                azimute_excel = f"R={radius:.2f}".replace(".", ",")
+                distancia_excel = f"C={distance:.2f}".replace(".", ",")
             else:
                 # Se houver outros tipos, apenas reverta endpoints se fizer sentido
                 try:
