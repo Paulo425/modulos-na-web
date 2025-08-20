@@ -370,6 +370,11 @@ def memoriais_descritivos():
         # 3) Receber entradas do formulário
         # -------------------------------
         cidade = request.form['cidade']
+
+        sentido_poligonal = 'anti_horario' if 'sentidoPoligonal' in request.form else 'horario'
+        logger.info(f"Valor recebido do checkbox (sentidoPoligonal): {request.form.get('sentidoPoligonal')}")
+        logger.info(f"Sentido poligonal interpretado no Flask: {sentido_poligonal}")
+
         arquivo_excel = request.files['excel']
         arquivo_dxf = request.files['dxf']
 
@@ -398,7 +403,28 @@ def memoriais_descritivos():
                 "--dxf", caminho_dxf,
             ]
 
-            processo = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
+            #processo = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True, env=env)
+
+
+            try:
+                logger.info(f"Comando enviado ao subprocess: {cmd}")
+
+                processo = Popen(
+                    cmd,
+                    stdout=PIPE, stderr=STDOUT, text=True, env=env
+                )
+
+                try:
+                    saida, _ = processo.communicate(timeout=300)
+                    logger.info(f"Saída do subprocess:\n{saida}")
+                except TimeoutExpired:
+                    processo.kill()
+                    saida, _ = processo.communicate()
+                    logger.error(f"Subprocess atingiu timeout. Saída parcial:\n{saida}")
+
+            except Exception as e:
+                logger.error(f"Erro fatal ao executar subprocess: {e}")
+
 
             # Captura de log streaming para o arquivo da execução
             log_lines = []
@@ -811,10 +837,8 @@ def memorial_azimute_jl():
         try:
             # 1) Inputs
             proprietario = request.form['proprietario'].strip()
-            sentido_poligonal = 'anti_horario' if 'sentidoPoligonal' in request.form else 'horario'
-            logger.info(f"Valor recebido do checkbox (sentidoPoligonal): {request.form.get('sentidoPoligonal')}")
-            logger.info(f"Sentido poligonal interpretado no Flask: {sentido_poligonal}")
-
+            sentido_poligonal = 'anti_horario' if request.form.get('sentidoPoligonal') == 'anti_horario' else 'horario'
+            logger.info(f"[JL] sentidoPoligonal POST={request.form.get('sentidoPoligonal')} -> {sentido_poligonal}")
 
             matricula    = request.form['matricula'].strip()
             descricao    = request.form['descricao'].strip()
@@ -845,10 +869,11 @@ def memorial_azimute_jl():
                 proprietario=proprietario,
                 matricula=matricula,
                 descricao=descricao,
-                caminho_salvar=dir_conc,        # 👉 saída dentro de CONCLUIDO
+                caminho_salvar=dir_conc,
                 dxf_path=caminho_dxf,
                 excel_path=caminho_excel,
-                log_path=str(exec_log_path),    # 👉 log por execução
+                log_path=str(exec_log_path),
+                sentido_poligonal=sentido_poligonal,  # 👈 passa o sentido
             )
 
             # 6) Zipa a saída da execução (sem .log)

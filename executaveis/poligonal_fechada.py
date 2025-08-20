@@ -490,7 +490,7 @@ def sanitize_filename(filename):
 
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, ponto_inicial_real=None, tipo=None, uuid_prefix=None):
+                               azimute_az_v1=None, ponto_inicial_real=None, tipo=None, uuid_prefix=None, diretorio_concluido=None):
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
@@ -564,18 +564,44 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
     area_tmp = calculate_signed_area(simple_ordered_points)
 
-    # Ajuste de sentido (mantém área positiva para debug)
-    if area_tmp > 0:
-        sequencia_completa.reverse()
-        for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
-            start, end = dados[0], dados[1]
-            if tipo_segmento == 'line':
-                sequencia_completa[idx] = ('line', (end, start))
-            else:
-                sequencia_completa[idx] = ('arc', (end, start, dados[2], dados[3]))
-        area_tmp = abs(area_tmp)
+    # # Ajuste de sentido (mantém área positiva para debug)
+    # if area_tmp > 0:
+    #     sequencia_completa.reverse()
+    #     for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
+    #         start, end = dados[0], dados[1]
+    #         if tipo_segmento == 'line':
+    #             sequencia_completa[idx] = ('line', (end, start))
+    #         else:
+    #             sequencia_completa[idx] = ('arc', (end, start, dados[2], dados[3]))
+    #     area_tmp = abs(area_tmp)
 
-    print(f"Área da poligonal ajustada: {abs(area_tmp):.4f} m²")
+    # print(f"Área da poligonal ajustada: {abs(area_tmp):.4f} m²")
+
+
+    if sentido_poligonal == 'horario':
+        if area_tmp > 0:
+            ordered_points.reverse()
+            area_tmp = abs(area_temp)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido horário com ajuste dos arcos: {area_tmp:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido horário: {abs(area_tmp):.4f} m²")
+
+    else:  # sentido_poligonal == 'anti_horario'
+        if area_tmp < 0:
+            ordered_points.reverse()
+            area_tmp = abs(area_tmp)
+            # Inverte o sentido dos arcos (bulges), se existirem
+            for ponto in ordered_points:
+                if 'bulge' in ponto and ponto['bulge'] != 0:
+                    ponto['bulge'] *= -1
+            logger.info(f"Área da poligonal invertida para sentido anti-horário com ajuste dos arcos: {area_tmp:.4f} m²")
+        else:
+            logger.info(f"Área da poligonal já no sentido anti-horário: {abs(area_tmp):.4f} m²")
+
 
     # Continuação após inverter corretamente
     data = []
@@ -814,7 +840,7 @@ def create_memorial_document(
 
 
 # Função principal
-def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_concluido, caminho_template):
+def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_concluido, caminho_template, sentido_poligonal='horario'):
     print("\n🔹 Carregando dados do imóvel")
     logger.info("Iniciando processamento da poligonal fechada")
     uuid_prefix = os.path.basename(os.path.dirname(os.path.normpath(pasta_concluido)))
@@ -912,7 +938,8 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
             azimute_az_v1=azimute_az_v1,
             ponto_inicial_real=ponto_inicial,
             tipo=tipo,
-            uuid_prefix=uuid_prefix
+            uuid_prefix=uuid_prefix,
+            sentido_poligonal=sentido_poligonal
         )
 
         if excel_output:

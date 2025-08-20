@@ -89,7 +89,8 @@ except Exception:
     pass
 
 
-def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
+def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf, sentido_poligonal='horario'):
+
     """
     Mantido com a mesma assinatura e variáveis de uso.
     """
@@ -132,8 +133,10 @@ def executar_programa(diretorio_saida, cidade, caminho_excel, caminho_dxf):
         arquivo_dxf_recebido,
         diretorio_preparado,
         diretorio_concluido,
-        caminho_template
+        caminho_template,
+        sentido_poligonal
     )
+
 
     print(f"\n📦 [main.py] Chamando compactação no diretório: {diretorio_concluido}")
     logging.info(f"📦 Chamando compactação no diretório: {diretorio_concluido}")
@@ -167,6 +170,7 @@ if __name__ == "__main__":
     parser.add_argument('--excel', help='Caminho do arquivo Excel.')
     parser.add_argument('--dxf', help='Caminho do arquivo DXF.')
     parser.add_argument('--id-execucao', help='ID único da execução (propagado pela rota Flask).')
+    parser.add_argument('--sentido-poligonal', help='Sentido da poligonal (horario/antihorario).')
 
     args = parser.parse_args()
 
@@ -174,9 +178,12 @@ if __name__ == "__main__":
     cidade    = args.cidade
     excel     = args.excel
     dxf       = args.dxf
+    sentido_poligonal = args.sentido_poligonal or 'horario'
+    logger.info(f"Sentido poligonal recebido no main.py: {sentido_poligonal}")
 
     # Se passou --id-execucao aqui, garante no ambiente (compatibilidade)
     if args.id_execucao:
         os.environ["ID_EXECUCAO"] = args.id_execucao
 
-    executar_programa(diretorio, cidade, excel, dxf)
+    executar_programa(diretorio, cidade, excel, dxf, sentido_poligonal)
+
