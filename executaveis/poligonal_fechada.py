@@ -622,6 +622,30 @@ def _anotar_segmento(msp, start_point, end_point, label, distancia_m, is_arc=Fal
     except Exception as e:
         logger.warning(f"Falha ao anotar {label}: {e}")
 
+    # --- Fallback simples para anotar um segmento quando o método nativo falhar ---
+def _fallback_anotar_segmento(msp, start_point, end_point, label, distancia_m,
+                              H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False):
+    try:
+        # marcador de vértice (círculo sempre visível)
+        msp.add_circle(center=start_point, radius=R_CIRCLE,
+                       dxfattribs={"layer": "ANOTACOES_DECOPA"})
+        # rótulo do vértice
+        msp.add_text(str(label), dxfattribs={"height": H_TXT_VERT, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (start_point[0] + R_CIRCLE*1.2, start_point[1] + R_CIRCLE*1.2), align="LEFT"
+        )
+        # distância no meio da corda
+        mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
+        texto_dist = f"{distancia_m:.2f} m"
+        off_dx, off_dy = (R_CIRCLE*1.8, R_CIRCLE*1.8) if not is_arc else (R_CIRCLE*2.2, R_CIRCLE*2.2)
+        msp.add_text(texto_dist, dxfattribs={"height": H_TXT_DIST, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (mid[0] + off_dx, mid[1] + off_dy), align="LEFT"
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[fallback] Falha ao anotar {label}: {e}")
+        return False
+
+
 
 
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
@@ -783,7 +807,22 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
         label = f"V{idx + 1}"
         _is_arc = (tipo_segmento == "arc")
-        _anotar_segmento(msp, start_point, end_point, label, distance, is_arc=_is_arc)
+
+        # 1) TENTA o caminho original (que já funcionava no sentido horário)
+        ok_native = False
+        try:
+            add_label_and_distance(doc, msp, start_point, end_point, label, distance)
+            ok_native = True
+        except Exception as e:
+            logger.warning(f"[native] Falha ao anotar {label} com add_label_and_distance: {e}")
+
+        # 2) Se falhar, usa fallback robusto para ESTE segmento
+        if not ok_native:
+            _ = _fallback_anotar_segmento(
+                msp, start_point, end_point, label, distance,
+                H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=_is_arc
+            )
+
         anot_count += 1
 
 
