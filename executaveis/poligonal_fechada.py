@@ -1172,6 +1172,12 @@ def main_poligonal_fechada(caminho_excel, caminho_dxf, pasta_preparado, pasta_co
             uuid_prefix=uuid_prefix,
             sentido_poligonal=sentido_poligonal
         )
+        try:
+            if os.path.exists(caminho_dxf_limpo):
+                os.remove(caminho_dxf_limpo)
+                logger.info(f"DXF LIMPO removido após gerar DXF final: {caminho_dxf_limpo}")
+        except Exception as e:
+            logger.warning(f"Não foi possível remover DXF LIMPO: {e}")
 
         if excel_output:
             output_docx = os.path.join(pasta_concluido, f"{uuid_prefix}_{tipo}_{sanitize_filename(matricula)}.docx")
