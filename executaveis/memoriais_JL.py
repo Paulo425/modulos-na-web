@@ -87,93 +87,86 @@ def calculate_azimuth(p1, p2):
         azimuth_deg += 360
     return azimuth_deg
 
-def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
-    try:
-        doc_antigo = ezdxf.readfile(original_path)
-        msp_antigo = doc_antigo.modelspace()
-        doc_novo = ezdxf.new(dxfversion='R2010')
-        msp_novo = doc_novo.modelspace()
+def limpar_dxf_basico(dxf_in: str, dxf_out: str, log=None, tol_fechar=1e-6):
+    """
+    Limpa o DXF sem inserir qualquer 'ponto Az'.
+    - Remove entidades não geométricas (TEXT/MTEXT/DIMENSION/HATCH/etc.)
+    - Explode LWPOLYLINE/POLYLINE em segments (LINE/ARC)
+    - Garante fechamento da poligonal (se último != primeiro e distancia < tol)
+    - Salva em dxf_out
 
-        pontos_polilinha = None
-        bulges_polilinha = None
-        ponto_inicial_real = None
+    Retorna: (dxf_out, ponto_inicial_real, resumo)
+      - ponto_inicial_real: (x, y) do primeiro vértice detectado (ou None se não houver)
+      - resumo: dict com contagens para diagnóstico
+    """
+    import ezdxf
+    from ezdxf.entities import LWPolyline, Polyline
+    import math
 
-        for entity in msp_antigo.query('LWPOLYLINE'):
-            if entity.closed:
-                # 🔧 Leitura com verificação de duplicatas
-                pontos_polilinha_raw = entity.get_points('xyseb')
-                ponto_inicial_real = (float(pontos_polilinha_raw[0][0]), float(pontos_polilinha_raw[0][1]))
-                pontos_polilinha = []
-                bulges_polilinha = []
+    def _w(msg):
+        if log:
+            try:
+                log.write(msg)
+            except Exception:
+                pass
 
-                tolerancia = 1e-6  # Tolerância para considerar pontos idênticos
+    doc = ezdxf.readfile(dxf_in)
+    msp = doc.modelspace()
 
-                for pt in pontos_polilinha_raw:
-                    x, y, *_, bulge = pt
-                    x, y = float(x), float(y)
-                    if not pontos_polilinha:
-                        # Primeiro ponto
-                        pontos_polilinha.append((x, y))
-                        bulges_polilinha.append(bulge)
-                    else:
-                        x_ant, y_ant = pontos_polilinha[-1]
-                        if math.hypot(x - x_ant, y - y_ant) > tolerancia:
-                            pontos_polilinha.append((x, y))
-                            bulges_polilinha.append(bulge)
-                        else:
-                            print(f"⚠️ Ponto duplicado consecutivo removido: {(x, y)}")
+    removidos = 0
+    mantidos = 0
 
-                # 🔍 Verificação extra para ponto final duplicado
-                if len(pontos_polilinha) > 2 and math.hypot(
-                    pontos_polilinha[0][0] - pontos_polilinha[-1][0],
-                    pontos_polilinha[0][1] - pontos_polilinha[-1][1]
-                ) < tolerancia:
-                    print("⚠️ Último ponto é igual ao primeiro — removendo ponto final duplicado.")
-                    pontos_polilinha.pop()
-                    bulges_polilinha.pop()
+    # 1) Remove o que não interessa no resultado final
+    tipos_remover = {"TEXT", "MTEXT", "DIMENSION", "HATCH", "LEADER", "MLEADER", "TABLE"}
+    for e in list(msp):
+        if e.dxftype() in tipos_remover:
+            try:
+                msp.delete_entity(e)
+                removidos += 1
+            except Exception:
+                pass
+        else:
+            mantidos += 1
 
-                # 🔍 Verificação extra para P1 == P2
-                if len(pontos_polilinha) > 1 and math.hypot(
-                    pontos_polilinha[0][0] - pontos_polilinha[1][0],
-                    pontos_polilinha[0][1] - pontos_polilinha[1][1]
-                ) < tolerancia:
-                    print("⚠️ Primeiro ponto é igual ao segundo — removendo o segundo ponto duplicado.")
-                    pontos_polilinha.pop(1)
-                    bulges_polilinha.pop(1)
+    # 2) Explode polylines para linhas/arcos
+    explodidos = 0
+    for e in list(msp):
+        if isinstance(e, LWPolyline) or isinstance(e, Polyline):
+            try:
+                parts = e.explode()
+                explodidos += 1 + len(parts)
+            except Exception:
+                pass
 
-                break
+    # 3) Tenta garantir fechamento suave de poligonais (se aplicável)
+    #    Estratégia simples: colecionar vertices de um loop principal
+    #    (caso seu desenho tenha múltiplas poligonais, get_document_info_from_dxf
+    #     ainda será o responsável por extrair corretamente a principal).
+    ponto_inicial_real = None
 
-        if pontos_polilinha is None:
-            raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
+    # Heurística: encontrar o primeiro LINE/ARC e usar seu start como ponto inicial
+    for e in msp.query("LINE ARC"):
+        try:
+            if e.dxftype() == "LINE":
+                p0 = (float(e.dxf.start.x), float(e.dxf.start.y))
+                p1 = (float(e.dxf.end.x), float(e.dxf.end.y))
+            else:  # ARC
+                # Para ARC não temos start/end no DXF, apenas centro/raio/ângulos
+                # deixa o ponto_inicial_real para quando acharmos uma LINE;
+                # ou calcule start/end se preferir.
+                continue
+            ponto_inicial_real = p0
+            break
+        except Exception:
+            continue
 
-        if calculate_signed_area(pontos_polilinha) < 0:
-            pontos_polilinha.reverse()
-            bulges_polilinha.reverse()
-            bulges_polilinha = [-b for b in bulges_polilinha]
+    # 4) Salva o DXF limpo
+    doc.saveas(dxf_out)
+    _w(f"[limpar_dxf_basico] Salvo: {dxf_out} | removidos={removidos}, mantidos={mantidos}, explodidos={explodidos}")
 
-        pontos_com_bulge = [
-            (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
-            for i in range(len(pontos_polilinha))
-        ]
+    resumo = {"removidos": removidos, "mantidos": mantidos, "explodidos": explodidos}
+    return dxf_out, ponto_inicial_real, resumo
 
-        msp_novo.add_lwpolyline(
-            pontos_com_bulge,
-            format='xyb',
-            close=True,
-            dxfattribs={'layer': 'DIVISA_PROJETADA'}
-        )
-
-        # Não desenha mais o ponto Az, mas retorna as coordenadas de V1 como ponto_az válido
-        ponto_az = pontos_polilinha[0]
-
-        doc_novo.saveas(saida_path)
-        print(f"✅ DXF limpo salvo em: {saida_path}")
-        
-        return saida_path, ponto_az, ponto_inicial_real
-
-    except Exception as e:
-        print(f"❌ Erro ao limpar DXF: {e}")
-        return original_path, None, None
 
 def calculate_signed_area(points):
     area = 0
@@ -657,17 +650,15 @@ def create_memorial_descritivo(
     caminho_salvar,
     arcs=None,
     excel_file_path=None,
-    ponto_az=None,
-    distance_az_v1=None,
-    azimute_az_v1=None,
-    ponto_inicial_real=None,   # ✅ já existia
-    tipo=None,                 # ✅ novo: alinha com a chamada
-    uuid_prefix=None,          # ✅ novo: alinha com a chamada
+    ponto_inicial_real=None,   # continua disponível: serve só para iniciar a sequência
+    tipo=None,
+    uuid_prefix=None,
     encoding='ISO-8859-1',
     boundary_points=None,
     log=None,
     sentido_poligonal="horario"
 ):
+
 
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.

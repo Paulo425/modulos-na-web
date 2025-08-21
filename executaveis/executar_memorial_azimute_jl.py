@@ -4,43 +4,35 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
 
     import os, math, traceback, logging
     from pathlib import Path
-
-    # ✅ Imports das helpers que são usadas abaixo
     from .memoriais_JL import (
-        limpar_dxf_e_inserir_ponto_az,   # <-- use este nome (ajuste conforme seu arquivo)
+        limpar_dxf_basico,
         get_document_info_from_dxf,
         create_memorial_descritivo,
         create_memorial_document,
         sanitize_filename,
-        calculate_distance,
-        calculate_azimuth,
     )
 
     print("[DEBUG] Início da execução do memorial")
 
     BASE_DIR = Path(__file__).resolve().parents[1]
 
-    # ✅ Logger
+    # ✅ Logger com writer .write()
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
-    # ✅ Cria writer compatível com .write() (para passar como "log" às funções JL)
     class _LogWriter:
         def __init__(self, file_path):
             self.file_path = file_path
-            # abre o arquivo em append quando necessário
         def write(self, msg):
             try:
                 with open(self.file_path, "a", encoding="utf-8") as fh:
                     fh.write(msg if msg.endswith("\n") else msg + "\n")
             except Exception:
                 pass
-            # espelha também no logger
             logger.info(msg.strip())
 
     log = _LogWriter(log_path)
     log.write(f"[JL] sentido_poligonal recebido: {sentido_poligonal}")
-
 
     # 0) Deriva UUID e TIPO
     uuid_exec  = os.path.basename(os.path.dirname(os.path.normpath(caminho_salvar)))
@@ -53,31 +45,31 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
     safe_tipo = sanitize_filename(tipo)
     safe_mat  = sanitize_filename(matricula)
 
-    # 1) Gerar DXF LIMPO no padrão UUID_TIPO_MATRICULA_LIMPO.dxf (igual DECOPA)
+    # 1) Limpeza básica de DXF (sem Az)
     nome_limpo_dxf    = f"{safe_uuid}_{safe_tipo}_{safe_mat}_LIMPO.dxf"
     caminho_dxf_limpo = os.path.join(caminho_salvar, nome_limpo_dxf)
 
-    dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(dxf_path, caminho_dxf_limpo)
-    logger.info(f"[JL] DXF limpo salvo em: {caminho_dxf_limpo}")
-
-    if not ponto_az or not ponto_inicial:
-        logger.error("[JL] Não foi possível identificar o ponto Az ou ponto inicial.")
+    ret_clean = limpar_dxf_basico(dxf_path, caminho_dxf_limpo, log=log)
+    if not isinstance(ret_clean, tuple) or len(ret_clean) != 3:
+        logger.error(f"[JL] limpar_dxf_basico retornou {type(ret_clean)} -> {ret_clean!r}")
         return False
+    dxf_resultado, ponto_inicial_real, resumo_limpeza = ret_clean
+    logger.info(f"[JL] DXF limpo em: {dxf_resultado} | resumo={resumo_limpeza}")
 
-    # 2) Extrai linhas/arcos do LIMPO e calcula azimute/distância p/ V1 (mesmo miolo do DECOPA)
-    doc, linhas, arcos, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_resultado)
+    # 2) Extrai linhas/arcos do DXF limpo e perímetro/área
+    ret_info = get_document_info_from_dxf(dxf_resultado)
+    if not isinstance(ret_info, tuple) or len(ret_info) != 5:
+        logger.error(f"[JL] get_document_info_from_dxf retornou {type(ret_info)} -> {ret_info!r}")
+        return False
+    doc, linhas, arcos, perimeter_dxf, area_dxf = ret_info
+
     if not doc or not linhas:
-        logger.error("[JL] Documento DXF inválido ou vazio após limpeza.")
+        logger.error("[JL] Documento DXF inválido ou sem linhas após limpeza.")
         return False
 
     msp = doc.modelspace()
-    v1 = linhas[0][0]
-    distance_az_v1 = calculate_distance(ponto_az, v1)
-    azimute_az_v1  = calculate_azimuth(ponto_az, v1)
-    logger.info(f"[JL] Azimute: {azimute_az_v1:.2f}°, Distância Az-V1: {distance_az_v1:.2f}m")
 
-    # 3) Gera DXF final + XLSX + (opcional) DOCX no mesmo padrão do DECOPA
-    #    Aqui passamos excel_path diretamente (no DECOPA eu procurava FECHADA_*; no JL você já fornece)
+    # 3) Gera DXF final + XLSX
     excel_output = create_memorial_descritivo(
         doc=doc,
         msp=msp,
@@ -86,11 +78,8 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         proprietario=proprietario,
         matricula=matricula,
         caminho_salvar=caminho_salvar,
-        excel_file_path=excel_path,        # <— JL já fornece a planilha apropriada
-        ponto_az=ponto_az,
-        distance_az_v1=distance_az_v1,
-        azimute_az_v1=azimute_az_v1,
-        ponto_inicial_real=ponto_inicial,
+        excel_file_path=excel_path,           # JL já fornece a planilha apropriada
+        ponto_inicial_real=ponto_inicial_real,  # ✅ opcional, ajuda a fixar V1
         tipo=tipo,
         uuid_prefix=safe_uuid,
         sentido_poligonal=sentido_poligonal,
@@ -100,34 +89,26 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         logger.error("[JL] Falha ao gerar memorial descritivo (XLSX/DXF).")
         return False
 
-    # Se você tiver a função de DOCX no JL, mantenha o padrão do nome com UUID_TIPO_MAT
+    # 4) DOCX (sem campos de Az; assinatura já deve aceitar Az como opcional)
     try:
         output_docx = os.path.join(caminho_salvar, f"{safe_uuid}_{safe_tipo}_{safe_mat}.docx")
         create_memorial_document(
             proprietario=proprietario,
             matricula=matricula,
             descricao=descricao,
-            area_terreno="",           # se tiver no JL, passe aqui; senão deixe vazio
+            area_terreno="",                 # se houver, você preenche
             excel_file_path=excel_output,
-            template_path=CAMINHO_TEMPLATE_JL,  # defina sua constante no JL
+            template_path=CAMINHO_TEMPLATE_JL,  # sua constante
             output_path=output_docx,
             perimeter_dxf=perimeter_dxf,
             area_dxf=area_dxf,
-            desc_ponto_Az="",
-            Coorde_E_ponto_Az=ponto_az[0],
-            Coorde_N_ponto_Az=ponto_az[1],
-            azimuth=azimute_az_v1,
-            distance=distance_az_v1,
-            comarca="",                # preencha se tiver
-            RI="",                     # idem
-            rua="",                    # idem
-            uuid_prefix=safe_uuid
+            # todos os campos de Az removidos/None por padrão
         )
         logger.info(f"[JL] DOCX salvo em: {output_docx}")
     except Exception as e:
         logger.warning(f"[JL] DOCX não gerado ou opcional: {e}")
 
-    # 4) (Opcional) Remover o LIMPO para não confundir compactação
+    # 5) (Opcional) Remover *_LIMPO.dxf se quiser evitar confusão
     try:
         if os.path.exists(caminho_dxf_limpo):
             os.remove(caminho_dxf_limpo)
@@ -136,3 +117,4 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         logger.warning(f"[JL] Não foi possível remover DXF LIMPO: {e}")
 
     return True
+
