@@ -593,6 +593,41 @@ def sanitize_filename(filename):
     sanitized_filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
     return sanitized_filename
 
+def _anotar_segmento(msp, start_point, end_point, label, distancia_m, is_arc=False):
+    """
+    Anota o segmento no DXF de forma robusta (funciona para linhas e arcos),
+    sem depender de rotinas que assumem segmento retilíneo.
+    - Marca o vértice (start_point) com ponto e rótulo Vn
+    - Escreve o valor da distância próximo ao meio do segmento (meio da corda, para arco)
+    """
+    # 1) Marca o vértice
+    try:
+        msp.add_point(start_point)
+    except Exception:
+        pass
+
+    # rótulo do vértice (Vn) ligeiramente deslocado
+    off_vx, off_vy = 0.5, 0.5
+    try:
+        msp.add_text(str(label), dxfattribs={"height": 1.8}).set_pos(
+            (start_point[0] + off_vx, start_point[1] + off_vy), align="LEFT"
+        )
+    except Exception:
+        pass
+
+    # 2) Texto da distância no meio da corda
+    mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
+    texto_dist = f"{distancia_m:.2f} m"
+
+    # pequeno deslocamento para não colar na linha/arco
+    off_dx, off_dy = 0.7, 0.7 if not is_arc else 1.0, 1.0
+    try:
+        msp.add_text(texto_dist, dxfattribs={"height": 1.6}).set_pos(
+            (mid[0] + off_dx, mid[1] + off_dy), align="LEFT"
+        )
+    except Exception:
+        pass
+
 
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
                                excel_file_path=None, ponto_az=None, distance_az_v1=None,
@@ -709,6 +744,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 start, end, bulge, radius = dados
                 # Reverte endpoints e inverte o sinal do bulge para manter a mesma geometria (sentido oposto)
                 seq[i] = ('arc', (end, start, -bulge, radius))
+          
             else:
                 # fallback genérico: tenta apenas trocar start/end se houver
                 try:
@@ -741,7 +777,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     # Continuação após inverter corretamente
     data = []
     num_vertices = len(sequencia_completa)  # captura a quantidade correta antes do loop
-
+    anot_count = 0
     for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
         start_point = dados[0]
         end_point   = dados[1]
@@ -759,9 +795,15 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             azimute_excel   = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
+        # label = f"V{idx + 1}"
+        # # Usa a MESMA rotina de anotação para linhas e arcos (passando o comprimento correto)
+        # add_label_and_distance(doc, msp, start_point, end_point, label, distance)
+
         label = f"V{idx + 1}"
-        # Usa a MESMA rotina de anotação para linhas e arcos (passando o comprimento correto)
-        add_label_and_distance(doc, msp, start_point, end_point, label, distance)
+        _is_arc = (tipo_segmento == "arc")
+        _anotar_segmento(msp, start_point, end_point, label, distance, is_arc=_is_arc)
+        anot_count += 1
+
 
         confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
         divisa = f"V{idx + 1}_V{idx + 2}" if idx + 1 < num_vertices else f"V{idx + 1}_V1"
@@ -776,6 +818,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
+    logger.info(f"Anotações inseridas no DXF: {anot_count} segmentos (linhas+arcos)")
 
 
     # Deriva o UUID do caminho de saída se não vier preenchido
