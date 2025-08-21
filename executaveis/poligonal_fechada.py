@@ -696,30 +696,29 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     # Se pediu "anti_horario" e a área veio < 0 (CW), invertemos.
 
     def _reverter_sequencia_completa(seq):
-        """Inverte a ordem dos segmentos e troca start/end.
-        Para arco: inverte também o sinal do bulge; raio permanece o mesmo."""
+        """
+        Inverte a ordem dos segmentos e troca start/end.
+        Para arco: inverte também o sinal do bulge; raio permanece o mesmo.
+        """
         seq.reverse()
         for i, (tipo_segmento, dados) in enumerate(seq):
             if tipo_segmento == 'line':
                 start, end = dados  # ((x1,y1), (x2,y2))
                 seq[i] = ('line', (end, start))
-            elif tipo_segmento == "arc":
-                bulge = dados[2]
-                radius = dados[3]
-                theta = 4.0 * math.atan(abs(bulge))        # rad
-                distance = radius * theta                   # comprimento do arco
-                azimute_excel = f"R={radius:.2f}".replace(".", ",")
-                distancia_excel = f"C={distance:.2f}".replace(".", ",")
+            elif tipo_segmento == 'arc':
+                start, end, bulge, radius = dados
+                # Reverte endpoints e inverte o sinal do bulge para manter a mesma geometria (sentido oposto)
+                seq[i] = ('arc', (end, start, -bulge, radius))
             else:
-                # Se houver outros tipos, apenas reverta endpoints se fizer sentido
+                # fallback genérico: tenta apenas trocar start/end se houver
                 try:
                     start, end = dados[0], dados[1]
-                    novos_dados = list(dados)
-                    novos_dados[0], novos_dados[1] = end, start
-                    seq[i] = (tipo_segmento, tuple(novos_dados))
+                    novos = list(dados)
+                    novos[0], novos[1] = end, start
+                    seq[i] = (tipo_segmento, tuple(novos))
                 except Exception:
-                    # Mantém como está se não souber como tratar
                     pass
+
 
     if _sentido == 'horario':
         if area_tmp > 0:
@@ -745,26 +744,23 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
         start_point = dados[0]
-        end_point = dados[1]
+        end_point   = dados[1]
 
         if tipo_segmento == "line":
             azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
-            azimute_excel = convert_to_dms(azimuth)
-            distancia_excel = f"{distance:.2f}".replace(".", ",")
+            azimute_excel    = convert_to_dms(azimuth)
+            distancia_excel  = f"{distance:.2f}".replace(".", ",")
         elif tipo_segmento == "arc":
-            bulge = dados[2]
+            # dados = (start, end, bulge, radius)
+            bulge  = dados[2]
             radius = dados[3]
-
-            # Ângulo central do arco
-            theta = 4.0 * math.atan(abs(bulge))  # radianos
-
-            # Comprimento do arco
-            distance = radius * theta
-
-            azimute_excel = f"R={radius:.2f}".replace(".", ",")
+            theta  = 4.0 * math.atan(abs(bulge))  # ângulo central (rad)
+            distance = radius * theta             # comprimento do arco
+            azimute_excel   = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
         label = f"V{idx + 1}"
+        # Usa a MESMA rotina de anotação para linhas e arcos (passando o comprimento correto)
         add_label_and_distance(doc, msp, start_point, end_point, label, distance)
 
         confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
@@ -780,6 +776,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
+
 
     # Deriva o UUID do caminho de saída se não vier preenchido
     try:
