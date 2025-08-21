@@ -4,6 +4,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
     import os, math, traceback
     from pathlib import Path
     from datetime import datetime
+    import glob,logging
 
     # Tenta importar o módulo de utilidades JL (suporta os dois nomes que você usa)
     from .memoriais_JL import (
@@ -20,89 +21,99 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
     BASE_DIR = Path(__file__).resolve().parents[1]
     log.write(f"[JL] sentido_poligonal recebido: {sentido_poligonal}\n")
 
+   
+    logger = logging.getLogger(__name__)
+
+    # 0) Deriva UUID e TIPO
+    uuid_exec  = os.path.basename(os.path.dirname(os.path.normpath(caminho_salvar)))
+    tipo = next((t for t in ["ETE", "REM", "SER", "ACE"] if t in os.path.basename(dxf_path).upper()), None)
+    if not tipo:
+        logger.error("Tipo não identificado no nome do DXF (esperava conter ETE/REM/SER/ACE).")
+        return False
+
+    safe_uuid = sanitize_filename(uuid_exec)[:8]
+    safe_tipo = sanitize_filename(tipo)
+    safe_mat  = sanitize_filename(matricula)
+
+    # 1) Gerar DXF LIMPO no padrão UUID_TIPO_MATRICULA_LIMPO.dxf (igual DECOPA)
+    nome_limpo_dxf    = f"{safe_uuid}_{safe_tipo}_{safe_mat}_LIMPO.dxf"
+    caminho_dxf_limpo = os.path.join(caminho_salvar, nome_limpo_dxf)
+
+    dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(dxf_path, caminho_dxf_limpo)
+    logger.info(f"[JL] DXF limpo salvo em: {caminho_dxf_limpo}")
+
+    if not ponto_az or not ponto_inicial:
+        logger.error("[JL] Não foi possível identificar o ponto Az ou ponto inicial.")
+        return False
+
+    # 2) Extrai linhas/arcos do LIMPO e calcula azimute/distância p/ V1 (mesmo miolo do DECOPA)
+    doc, linhas, arcos, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_resultado)
+    if not doc or not linhas:
+        logger.error("[JL] Documento DXF inválido ou vazio após limpeza.")
+        return False
+
+    msp = doc.modelspace()
+    v1 = linhas[0][0]
+    distance_az_v1 = calculate_distance(ponto_az, v1)
+    azimute_az_v1  = calculate_azimuth(ponto_az, v1)
+    logger.info(f"[JL] Azimute: {azimute_az_v1:.2f}°, Distância Az-V1: {distance_az_v1:.2f}m")
+
+    # 3) Gera DXF final + XLSX + (opcional) DOCX no mesmo padrão do DECOPA
+    #    Aqui passamos excel_path diretamente (no DECOPA eu procurava FECHADA_*; no JL você já fornece)
+    excel_output = create_memorial_descritivo(
+        doc=doc,
+        msp=msp,
+        lines=linhas,
+        arcs=arcos,
+        proprietario=proprietario,
+        matricula=matricula,
+        caminho_salvar=caminho_salvar,
+        excel_file_path=excel_path,        # <— JL já fornece a planilha apropriada
+        ponto_az=ponto_az,
+        distance_az_v1=distance_az_v1,
+        azimute_az_v1=azimute_az_v1,
+        ponto_inicial_real=ponto_inicial,
+        tipo=tipo,
+        uuid_prefix=safe_uuid,
+        sentido_poligonal=sentido_poligonal
+    )
+    if not excel_output:
+        logger.error("[JL] Falha ao gerar memorial descritivo (XLSX/DXF).")
+        return False
+
+    # Se você tiver a função de DOCX no JL, mantenha o padrão do nome com UUID_TIPO_MAT
     try:
-        Path(caminho_salvar).mkdir(parents=True, exist_ok=True)
+        output_docx = os.path.join(caminho_salvar, f"{safe_uuid}_{safe_tipo}_{safe_mat}.docx")
+        create_memorial_document(
+            proprietario=proprietario,
+            matricula=matricula,
+            descricao=descricao,
+            area_terreno="",           # se tiver no JL, passe aqui; senão deixe vazio
+            excel_file_path=excel_output,
+            template_path=CAMINHO_TEMPLATE_JL,  # defina sua constante no JL
+            output_path=output_docx,
+            perimeter_dxf=perimeter_dxf,
+            area_dxf=area_dxf,
+            desc_ponto_Az="",
+            Coorde_E_ponto_Az=ponto_az[0],
+            Coorde_N_ponto_Az=ponto_az[1],
+            azimuth=azimute_az_v1,
+            distance=distance_az_v1,
+            comarca="",                # preencha se tiver
+            RI="",                     # idem
+            rua="",                    # idem
+            uuid_prefix=safe_uuid
+        )
+        logger.info(f"[JL] DOCX salvo em: {output_docx}")
+    except Exception as e:
+        logger.warning(f"[JL] DOCX não gerado ou opcional: {e}")
 
-        with open(log_path, 'w', encoding='utf-8') as log:
-            log.write(f"🟢 LOG iniciado em: {datetime.now()}\n")
+    # 4) (Opcional) Remover o LIMPO para não confundir compactação
+    try:
+        if os.path.exists(caminho_dxf_limpo):
+            os.remove(caminho_dxf_limpo)
+            logger.info(f"[JL] DXF LIMPO removido: {caminho_dxf_limpo}")
+    except Exception as e:
+        logger.warning(f"[JL] Não foi possível remover DXF LIMPO: {e}")
 
-            try:
-                # 1) DXF limpo dentro do CONCLUIDO
-                dxf_limpo_path = os.path.join(caminho_salvar, f"DXF_LIMPO_{matricula}.dxf")
-                dxf_limpo_path, ponto_az, ponto_inicial_real = limpar_dxf_preservando_original(
-                    dxf_path, dxf_limpo_path, log=log
-                )
-
-                # 2) Info do DXF limpo
-                doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points = get_document_info_from_dxf(
-                    dxf_limpo_path, log=log
-                )
-                if not doc or not lines:
-                    raise ValueError("Erro ao processar o DXF: polilinha fechada não encontrada.")
-
-                if ponto_az is None:
-                    ponto_az = (0.0, 0.0)
-
-                v1 = lines[0][0]
-                distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
-                azimuth = math.degrees(math.atan2(v1[0] - ponto_az[0], v1[1] - ponto_az[1]))
-                if azimuth < 0:
-                    azimuth += 360
-
-                msp = doc.modelspace()
-
-                # 3) Excel + DXF final (ambos em CONCLUIDO)
-                excel_output = create_memorial_descritivo(
-                    doc=doc,
-                    msp=msp,
-                    lines=lines,
-                    arcs=arcs,
-                    proprietario=proprietario,
-                    matricula=matricula,
-                    caminho_salvar=caminho_salvar,   # <- CONCLUIDO
-                    excel_file_path=excel_path,       # planilha de confrontantes enviada
-                    ponto_az=ponto_az,
-                    distance_az_v1=distance,
-                    azimute_az_v1=azimuth,
-                    ponto_inicial_real=ponto_inicial_real,
-                    boundary_points=boundary_points,
-                    log=log,
-                    sentido_poligonal=sentido_poligonal,
-                )
-
-                # 4) DOCX final em CONCLUIDO, com template ABSOLUTO
-                docx_path = os.path.join(caminho_salvar, f"Memorial_MAT_{matricula}.docx")
-                template_path = str(BASE_DIR / "templates_doc" / "MODELO_TEMPLATE_DOC_JL_CORRETO.docx")
-
-                create_memorial_document(
-                    proprietario,
-                    matricula,
-                    descricao,
-                    excel_file_path=excel_output,
-                    template_path=template_path,
-                    output_path=docx_path,
-                    perimeter_dxf=perimeter_dxf,
-                    area_dxf=area_dxf,
-                    Coorde_E_ponto_Az=ponto_az[0],
-                    Coorde_N_ponto_Az=ponto_az[1],
-                    azimuth=azimuth,
-                    distance=distance,
-                    log=log,
-                )
-
-                final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
-
-                log.write("✅ Processamento finalizado com sucesso.\n")
-                return log_path, [excel_output, final_dxf_path, docx_path]
-
-            except Exception as e:
-                traceback.print_exc(file=log)
-                log.write(f"\n❌ Erro durante execução: {e}\n")
-                return log_path, []
-
-    except Exception as e_fora:
-        # fallback caso o 'with open' falhe
-        with open(log_path, 'a', encoding='utf-8') as log_fallback:
-            log_fallback.write(f"\n❌ ERRO GRAVE antes do log principal: {e_fora}\n")
-            traceback.print_exc(file=log_fallback)
-        return log_path, []
+    return True

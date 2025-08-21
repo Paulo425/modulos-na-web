@@ -524,20 +524,32 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance,log
 
 
 
-
-
-
-
-
-
-
-
 def sanitize_filename(filename):
     # Substitui os caracteres inválidos por um caractere válido (ex: espaço ou underline)
     sanitized_filename = re.sub(r'[\\/*?:"<>|]', "_", filename)  # Substitui caracteres inválidos por "_"
     return sanitized_filename
         
-        
+def _fallback_anotar_segmento(msp, start_point, end_point, label, distancia_m,
+                              H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False):
+    try:
+        # marcador de vértice (círculo sempre visível)
+        msp.add_circle(center=start_point, radius=R_CIRCLE,
+                       dxfattribs={"layer": "ANOTACOES_DECOPA"})
+        # rótulo do vértice
+        msp.add_text(str(label), dxfattribs={"height": H_TXT_VERT, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (start_point[0] + R_CIRCLE*1.2, start_point[1] + R_CIRCLE*1.2), align="LEFT"
+        )
+        # distância no meio da corda
+        mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
+        texto_dist = f"{distancia_m:.2f} m"
+        off_dx, off_dy = (R_CIRCLE*1.8, R_CIRCLE*1.8) if not is_arc else (R_CIRCLE*2.2, R_CIRCLE*2.2)
+        msp.add_text(texto_dist, dxfattribs={"height": H_TXT_DIST, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (mid[0] + off_dx, mid[1] + off_dy), align="LEFT"
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[fallback] Falha ao anotar {label}: {e}")
+        return False      
 
 
 # Função para criar memorial descritivo
@@ -566,242 +578,197 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     else:
         confrontantes_dict = {}
 
-    if not lines:
-        print("Nenhuma linha disponível para criar o memorial descritivo.")
-        
-        log.write("Nenhuma linha disponível para criar o memorial descritivo.\n")
+   if (not lines) and (not arcs):
+        print("Nenhuma geometria (linhas ou arcos) disponível para criar o memorial descritivo.")
         return None
 
-    
-
-    
-    # Função adicional para verificar sentido horário do arco:
-    def is_arc_clockwise(start_pt, end_pt, center):
-        start_angle = math.atan2(start_pt[1] - center[1], start_pt[0] - center[0])
-        end_angle = math.atan2(end_pt[1] - center[1], end_pt[0] - center[0])
-        angle_diff = (end_angle - start_angle) % (2 * math.pi)
-        return angle_diff > math.pi
-      
-    # Sequenciar corretamente os segmentos mantendo coerência geométrica
-    # Ao criar elementos, armazene também o bulge original:
+    # Criar uma única lista sequencial de pontos ordenados (linhas e arcos)
     elementos = []
+    for p1, p2 in (lines or []):
+        elementos.append(('line', (p1, p2)))
 
-    for line in lines:
-        elementos.append(('line', {
-            'start_point': line[0],
-            'end_point': line[1],
-            'bulge': 0
-        }))
+    for arc in (arcs or []):
+        elementos.append(('arc', (arc['start_point'], arc['end_point'], arc['bulge'], arc['radius'])))
 
-    if arcs:
-        for arc in arcs:
-            start_point = arc['start_point']
-            end_point = arc['end_point']
-            bulge = arc['bulge']
+    # Sequenciar os segmentos corretamente
+    sequencia_completa = []
 
-            dx, dy = end_point[0] - start_point[0], end_point[1] - start_point[1]
-            chord_length = math.hypot(dx, dy)
-            sagitta = (bulge * chord_length) / 2
-            radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-            angle_span_rad = 4 * math.atan(abs(bulge))
-            arc_length = radius * angle_span_rad
-
-            elementos.append(('arc', {
-                'start_point': start_point,
-                'end_point': end_point,
-                'bulge': bulge,          # ✅ Usado APENAS para o DXF
-                'radius': radius,        # ✅ Usado APENAS para o Excel
-                'length': arc_length     # ✅ Usado APENAS para o Excel
-            }))
-
-
-
-
-
-    # Ajuste definitivo para ordenar corretamente elementos pelo ponto inicial real:
+    # 🔁 Reordena elementos para começar pelo ponto original do desenho
     if ponto_inicial_real:
-        index_inicio = None
         for i, elemento in enumerate(elementos):
-            pt = elemento[1]['start_point']  # ✅ acesso correto!
-            if math.hypot(pt[0] - ponto_inicial_real[0], pt[1] - ponto_inicial_real[1]) < 1e-6:
-                index_inicio = i
+            if math.hypot(elemento[1][0][0] - ponto_inicial_real[0], elemento[1][0][1] - ponto_inicial_real[1]) < 1e-6:
+                elementos = [elementos[i]] + elementos[:i] + elementos[i+1:]
                 break
 
-        if index_inicio is not None:
-            elementos = elementos[index_inicio:] + elementos[:index_inicio]
-
-    boundary_points_com_bulge = []  # <-- ✅ ADICIONAR ESTA LINHA AQUI
-    # Sequenciar corretamente os segmentos mantendo coerência geométrica
-    sequencia_completa = []
-    ponto_atual = elementos[0][1]['start_point']  # ✅ Corrigido aqui!
-
+    ponto_atual = elementos[0][1][0]  # Primeiro ponto do primeiro segmento
     while elementos:
         for i, elemento in enumerate(elementos):
-            tipo, dados = elemento
-            start_point, end_point = dados['start_point'], dados['end_point']  # ✅ Corrigido aqui!
+            tipo_segmento, dados = elemento
+            start_point, end_point = dados[0], dados[1]
 
-            if ponto_atual == start_point:
+            def _eq_pt(a, b, tol=1e-6):
+                return abs(a[0]-b[0]) < tol and abs(a[1]-b[1]) < tol
+
+            if _eq_pt(ponto_atual, start_point):
                 sequencia_completa.append(elemento)
                 ponto_atual = end_point
                 elementos.pop(i)
                 break
-            elif ponto_atual == end_point:
-                # Inverter direção e ajustar bulge corretamente
-                if tipo == 'line':
-                    elementos[i] = ('line', {
-                        'start_point': end_point,
-                        'end_point': start_point
-                    })
-                else:  # tipo == 'arc'
-                    elementos[i] = ('arc', {
-                        'start_point': end_point,
-                        'end_point': start_point,
-                        'center': dados['center'],
-                        'radius': dados['radius'],
-                        'length': dados['length'],
-                        'bulge': -dados['bulge']  # Inverte o sinal do bulge corretamente
-                    })
+            elif _eq_pt(ponto_atual, end_point):
+                # Inverte a direção do segmento para manter continuidade
+                if tipo_segmento == 'line':
+                    elementos[i] = ('line', (end_point, start_point))
+                else:
+                    elementos[i] = ('arc', (end_point, start_point, -dados[2], dados[3]))
                 sequencia_completa.append(elementos[i])
                 ponto_atual = start_point
                 elementos.pop(i)
                 break
-
         else:
             if elementos:
-                ponto_atual = elementos[0][1]['start_point']
+                ponto_atual = elementos[0][1][0]
 
-    # ✅ ADICIONAR ESTE BLOCO COMPLETO LOGO APÓS O LOOP ACIMA TERMINAR
-    for idx, (tipo, dados) in enumerate(sequencia_completa):
-        bulge = dados['bulge'] if tipo == 'arc' else 0
-        boundary_points_com_bulge.append((dados['start_point'][0], dados['start_point'][1], bulge))
-
-    ultimo_ponto = sequencia_completa[-1][1]['end_point']
-    boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
-    
-
-    # Calcula a área da poligonal para verificar se precisa inverter
-    pontos_para_area = [seg[1]['start_point'] for seg in sequencia_completa]
-    pontos_para_area.append(sequencia_completa[-1][1]['end_point'])  # Fecha o polígono corretamente
+    # Lista de pontos sequenciais simples para área (garante polígono fechado)
+    pontos_para_area = [seg[1][0] for seg in sequencia_completa]
+    pontos_para_area.append(sequencia_completa[-1][1][1])  # Fecha o polígono
 
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
-    area = calculate_signed_area(simple_ordered_points)
+    area_tmp = calculate_signed_area(simple_ordered_points)
 
-    # === inversão no mesmo estilo dos demais módulos (direto) ===
-    # === inversão no mesmo estilo dos demais módulos (direto) ===
-    def _reverse_seq(seq):
+
+    # Normaliza o valor vindo da rota/formulário
+    _sentido = (sentido_poligonal or "").strip().lower().replace("-", "_")
+
+    # Regra da área assinada: CCW (anti-horário) => área > 0 ; CW (horário) => área < 0
+    # Se o usuário pediu "horario" e a área veio > 0 (CCW), invertemos.
+    # Se pediu "anti_horario" e a área veio < 0 (CW), invertemos.
+
+    def _reverter_sequencia_completa(seq):
+        """
+        Inverte a ordem dos segmentos e troca start/end.
+        Para arco: inverte também o sinal do bulge; raio permanece o mesmo.
+        """
         seq.reverse()
-        corr = []
-        for tipo, d in seq:
-            s, e = d['start_point'], d['end_point']
-            if tipo == 'arc':
-                corr.append(('arc', {
-                    **{k: v for k, v in d.items() if k not in ('start_point', 'end_point', 'bulge')},
-                    'start_point': e,
-                    'end_point':   s,
-                    'bulge':      -d.get('bulge', 0),   # inverte bulge
-                }))
-            else:
-                corr.append(('line', {'start_point': e, 'end_point': s}))
-        return corr
-
-    # Convenção: área < 0 => horário (CW) | área > 0 => anti-horário (CCW)
-    if sentido_poligonal == 'horario':
-        if area > 0:
-            sequencia_completa = _reverse_seq(sequencia_completa)
-            area = -abs(area)
-            log.write(f"[JL] Invertida para HORÁRIO. área={area:.4f}\n")
-        else:
-            log.write(f"[JL] Já estava em HORÁRIO. área={area:.4f}\n")
-    else:  # anti_horario
-        if area < 0:
-            sequencia_completa = _reverse_seq(sequencia_completa)
-            area = abs(area)
-            log.write(f"[JL] Invertida para ANTI-HORÁRIO. área={area:.4f}\n")
-        else:
-            log.write(f"[JL] Já estava em ANTI-HORÁRIO. área={area:.4f}\n")
-
-    print(f"Área da poligonal ajustada: {abs(area):.4f} m²")
-    
-    log.write(f"Área da poligonal ajustada: {abs(area):.4f} m²\n")
-    # === fim do bloco direto ===
-
-
+        for i, (tipo_segmento, dados) in enumerate(seq):
+            if tipo_segmento == 'line':
+                start, end = dados  # ((x1,y1), (x2,y2))
+                seq[i] = ('line', (end, start))
+            elif tipo_segmento == 'arc':
+                start, end, bulge, radius = dados
+                # Reverte endpoints e inverte o sinal do bulge para manter a mesma geometria (sentido oposto)
+                seq[i] = ('arc', (end, start, -bulge, radius))
           
-    # # Fecha corretamente adicionando o último ponto sem bulge
-    # ultimo_ponto = sequencia_completa[-1][1]['end_point']
-    # boundary_points_com_bulge.append((ultimo_ponto[0], ultimo_ponto[1], 0))
+            else:
+                # fallback genérico: tenta apenas trocar start/end se houver
+                try:
+                    start, end = dados[0], dados[1]
+                    novos = list(dados)
+                    novos[0], novos[1] = end, start
+                    seq[i] = (tipo_segmento, tuple(novos))
+                except Exception:
+                    pass
 
 
-    # ✅ BLOCO DIRETO E CORRIGIDO PARA SUBSTITUIÇÃO
+    if _sentido == 'horario':
+        if area_tmp > 0:
+            _reverter_sequencia_completa(sequencia_completa)
+            area_tmp = abs(area_tmp)
+            logger.info(f"Área invertida para sentido horário (CW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+        else:
+            logger.info(f"Área já coerente com sentido horário (CW). |Área|={abs(area_tmp):.4f} m²")
+    else:  # trata como 'anti_horario'
+        if area_tmp < 0:
+            _reverter_sequencia_completa(sequencia_completa)
+            area_tmp = abs(area_tmp)
+            logger.info(f"Área invertida para sentido anti-horário (CCW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+        else:
+            logger.info(f"Área já coerente com sentido anti-horário (CCW). |Área|={abs(area_tmp):.4f} m²")
 
-    # Exclui polilinhas antigas no DXF antes de inserir a nova
-    for entity in msp.query('LWPOLYLINE[layer=="LAYOUT_MEMORIAL"]'):
-        msp.delete_entity(entity)
 
-    # Cria dados para Excel usando sequencia_completa (correto e definitivo)
-    dados = []
-    num_vertices = len(sequencia_completa)
 
-    boundary_points_com_bulge = []
 
-    for idx, (tipo, dados_seg) in enumerate(sequencia_completa):
-        start_point = dados_seg['start_point']
-        end_point = dados_seg['end_point']
+    # Continuação após inverter corretamente
+    data = []
+    num_vertices = len(sequencia_completa)  # captura a quantidade correta antes do loop
+    anot_count = 0
+    for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
+        start_point = dados[0]
+        end_point   = dados[1]
 
-        if tipo == "line":
+        if tipo_segmento == "line":
             azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
-            azimute_excel = convert_to_dms(azimuth)
-            distancia_excel = f"{distance:.2f}".replace(".", ",")
-            bulge = 0
+            azimute_excel    = convert_to_dms(azimuth)
+            distancia_excel  = f"{distance:.2f}".replace(".", ",")
+        elif tipo_segmento == "arc":
+            # dados = (start, end, bulge, radius)
+            bulge  = dados[2]
+            radius = dados[3]
+            theta  = 4.0 * math.atan(abs(bulge))  # ângulo central (rad)
+            distance = radius * theta             # comprimento do arco
+            azimute_excel   = f"R={radius:.2f}".replace(".", ",")
+            distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
-        elif tipo == "arc":
-            radius = dados_seg['radius']
-            distance = dados_seg['length']
-            azimute_excel = f"R={radius:.3f}".replace(".", ",")
-            distancia_excel = f"C={distance:.3f}".replace(".", ",")
-            bulge = dados_seg['bulge']
+        # label = f"V{idx + 1}"
+        # # Usa a MESMA rotina de anotação para linhas e arcos (passando o comprimento correto)
+        # add_label_and_distance(doc, msp, start_point, end_point, label, distance)
 
-        label = f"P{idx + 1}"
-        divisa = f"P{idx + 1}_P{idx + 2}" if idx + 1 < num_vertices else f"P{idx + 1}_P1"
+        label = f"V{idx + 1}"
+        _is_arc = (tipo_segmento == "arc")
+
+        # 1) TENTA o caminho original (que já funcionava no sentido horário)
+        ok_native = False
+        try:
+            add_label_and_distance(doc, msp, start_point, end_point, label, distance)
+            ok_native = True
+        except Exception as e:
+            logger.warning(f"[native] Falha ao anotar {label} com add_label_and_distance: {e}")
+
+        # 2) Se falhar, usa fallback robusto para ESTE segmento
+        if not ok_native:
+            _ = _fallback_anotar_segmento(
+                msp, start_point, end_point, label, distance,
+                H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=_is_arc
+            )
+
+        anot_count += 1
+
+
         confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
+        divisa = f"V{idx + 1}_V{idx + 2}" if idx + 1 < num_vertices else f"V{idx + 1}_V1"
 
-        dados.append({
+        data.append({
             "V": label,
             "E": f"{start_point[0]:.3f}".replace('.', ','),
             "N": f"{start_point[1]:.3f}".replace('.', ','),
-            "Z": "0,000",
+            "Z": "0.000",
             "Divisa": divisa,
             "Azimute": azimute_excel,
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
+    logger.info(f"Anotações inseridas no DXF: {anot_count} segmentos (linhas+arcos)")
 
-        boundary_points_com_bulge.append((float(start_point[0]), float(start_point[1]), float(bulge)))
 
-    # Adiciona o último ponto para fechar corretamente a poligonal
-    ultimo_ponto = sequencia_completa[-1][1]['end_point']
-    boundary_points_com_bulge.append((float(ultimo_ponto[0]), float(ultimo_ponto[1]), 0))
+    # Deriva o UUID do caminho de saída se não vier preenchido
+    try:
+        _uuid_from_path = os.path.basename(os.path.dirname(caminho_salvar))
+        if not uuid_prefix or len(_uuid_from_path) == 8:
+            uuid_prefix = _uuid_from_path
+    except Exception:
+        pass
 
-    # Inserção definitiva da polilinha com arcos no DXF
-    msp.add_lwpolyline(
-        boundary_points_com_bulge,
-        format='xyb',
-        close=True,
-        dxfattribs={"layer": "LAYOUT_MEMORIAL"}
-    )
+    # Tenta deduzir o tipo (ETE/REM/SER/ACE) se não vier
+    if not tipo and excel_file_path:
+        base_x = os.path.basename(excel_file_path).upper()
+        for _t in ("ETE", "REM", "SER", "ACE"):
+            if _t in base_x:
+                tipo = _t
+                break
 
-    # Inserção dos rótulos corretamente no DXF
-    for idx, (tipo, dados_seg) in enumerate(sequencia_completa):
-        start_point = dados_seg['start_point']
-        end_point = dados_seg['end_point']
-        distance = dados_seg['length'] if tipo == 'arc' else calculate_azimuth_and_distance(start_point, end_point)[1]
-        label = f"P{idx + 1}"
+    df = pd.DataFrame(data, dtype=str)
 
-        add_label_and_distance(doc, msp, start_point, end_point, label, distance, log=log)
-
-    # Agora salva Excel normalmente
-    df = pd.DataFrame(dados, dtype=str)
-    excel_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.xlsx")
+    matricula_sanit = sanitize_filename(matricula) if isinstance(matricula, str) else str(matricula)
+    excel_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.xlsx")
     df.to_excel(excel_output_path, index=False)
 
     wb = openpyxl.load_workbook(excel_output_path)
@@ -823,28 +790,14 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
     wb.save(excel_output_path)
-
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
-    
-    log.write(f"Arquivo Excel salvo e formatado em: {excel_output_path}\n")
 
-
-    # Agora salva o arquivo DXF final com os dados atualizados
     try:
-        dxf_output_path = os.path.join(caminho_salvar, f"Memorial_{matricula}.dxf")
-        
-        log.write("Boundary points com bulge (final para DXF):\n")
-        for idx, pt in enumerate(boundary_points_com_bulge, 1):
-            log.write(f"{idx}: Coordenadas={pt[:2]}, Bulge={pt[2]}\n")
+        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.dxf")
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
-        
-        log.write(f"Arquivo DXF salvo em: {dxf_output_path}\n")
     except Exception as e:
-        erro_msg = f"Erro ao salvar DXF: {e}"
-        print(erro_msg)
-        
-        log.write(erro_msg + "\n")
+        print(f"Erro ao salvar DXF: {e}")
 
     return excel_output_path
 
