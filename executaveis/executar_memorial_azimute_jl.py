@@ -1,28 +1,46 @@
 # executaveis/executar_memorial_azimute_jl.py
-def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf_path, excel_path, log_path, sentido_poligonal="horario"):
+def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
+                         dxf_path, excel_path, log_path, sentido_poligonal="horario"):
 
-    import os, math, traceback
+    import os, math, traceback, logging
     from pathlib import Path
-    from datetime import datetime
-    import glob,logging
 
-    # Tenta importar o módulo de utilidades JL (suporta os dois nomes que você usa)
+    # ✅ Imports das helpers que são usadas abaixo
     from .memoriais_JL import (
-        limpar_dxf_preservando_original,
+        limpar_dxf_e_inserir_ponto_az,   # <-- use este nome (ajuste conforme seu arquivo)
         get_document_info_from_dxf,
         create_memorial_descritivo,
         create_memorial_document,
+        sanitize_filename,
+        calculate_distance,
+        calculate_azimuth,
     )
-    #atualizado
 
     print("[DEBUG] Início da execução do memorial")
 
-    # BASE_DIR absoluto para resolver template corretamente
     BASE_DIR = Path(__file__).resolve().parents[1]
-    log.write(f"[JL] sentido_poligonal recebido: {sentido_poligonal}\n")
 
-   
+    # ✅ Logger
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    # ✅ Cria writer compatível com .write() (para passar como "log" às funções JL)
+    class _LogWriter:
+        def __init__(self, file_path):
+            self.file_path = file_path
+            # abre o arquivo em append quando necessário
+        def write(self, msg):
+            try:
+                with open(self.file_path, "a", encoding="utf-8") as fh:
+                    fh.write(msg if msg.endswith("\n") else msg + "\n")
+            except Exception:
+                pass
+            # espelha também no logger
+            logger.info(msg.strip())
+
+    log = _LogWriter(log_path)
+    log.write(f"[JL] sentido_poligonal recebido: {sentido_poligonal}")
+
 
     # 0) Deriva UUID e TIPO
     uuid_exec  = os.path.basename(os.path.dirname(os.path.normpath(caminho_salvar)))
@@ -75,7 +93,8 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar, dxf
         ponto_inicial_real=ponto_inicial,
         tipo=tipo,
         uuid_prefix=safe_uuid,
-        sentido_poligonal=sentido_poligonal
+        sentido_poligonal=sentido_poligonal,
+        log=log
     )
     if not excel_output:
         logger.error("[JL] Falha ao gerar memorial descritivo (XLSX/DXF).")

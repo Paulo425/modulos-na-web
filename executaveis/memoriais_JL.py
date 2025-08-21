@@ -60,39 +60,120 @@ def _ensure_log(log):
     return log
 
 
+def sanitize_filename(filename):
+    sanitized_filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
+    return sanitized_filename
 
+def calculate_distance(point1, point2):
+    dx = point2[0] - point1[0]
+    dy = point2[1] - point1[1]
+    return math.sqrt(dx**2 + dy**2)
 
-def limpar_dxf_preservando_original(dxf_original, dxf_saida, log=None):
-    log = _ensure_log(log)
-    doc = ezdxf.readfile(dxf_original)
-    msp = doc.modelspace()
+def calculate_azimuth_and_distance(start_point, end_point):
+    dx = end_point[0] - start_point[0]
+    dy = end_point[1] - start_point[1]
+    distance = math.hypot(dx, dy)
+    azimuth = math.degrees(math.atan2(dx, dy))
+    if azimuth < 0:
+        azimuth += 360
+    return azimuth, distance
 
-    novo_doc = ezdxf.new(dxfversion='R2010')
-    novo_msp = novo_doc.modelspace()
+def calculate_azimuth(p1, p2):
+    delta_x = p2[0] - p1[0]
+    delta_y = p2[1] - p1[1]
+    azimuth_rad = math.atan2(delta_x, delta_y)
+    azimuth_deg = math.degrees(azimuth_rad)
+    if azimuth_deg < 0:
+        azimuth_deg += 360
+    return azimuth_deg
 
-    ponto_inicial_real = None
+def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
+    try:
+        doc_antigo = ezdxf.readfile(original_path)
+        msp_antigo = doc_antigo.modelspace()
+        doc_novo = ezdxf.new(dxfversion='R2010')
+        msp_novo = doc_novo.modelspace()
 
-    for entity in msp.query('LWPOLYLINE'):
-        if entity.closed:  # ✅ (era is_closed em algumas variantes)
-            pontos_bulge = [(p[0], p[1], p[4]) for p in entity.get_points('xyseb')]
-            ponto_inicial_real = (pontos_bulge[0][0], pontos_bulge[0][1])
+        pontos_polilinha = None
+        bulges_polilinha = None
+        ponto_inicial_real = None
 
-            novo_msp.add_lwpolyline(
-                pontos_bulge,
-                format='xyb',
-                close=True,
-                dxfattribs={'layer': 'LAYOUT_MEMORIAL'}
-            )
-            
-            log.write("✅ Polilinha original preservada com bulges.\n")
-            log.write(f"✅ Ponto inicial capturado: {ponto_inicial_real}\n")
-            break
+        for entity in msp_antigo.query('LWPOLYLINE'):
+            if entity.closed:
+                # 🔧 Leitura com verificação de duplicatas
+                pontos_polilinha_raw = entity.get_points('xyseb')
+                ponto_inicial_real = (float(pontos_polilinha_raw[0][0]), float(pontos_polilinha_raw[0][1]))
+                pontos_polilinha = []
+                bulges_polilinha = []
 
-    novo_doc.saveas(dxf_saida)
-    
-    log.write(f"✅ DXF salvo: {dxf_saida}\n")
+                tolerancia = 1e-6  # Tolerância para considerar pontos idênticos
 
-    return dxf_saida, ponto_inicial_real, ponto_inicial_real
+                for pt in pontos_polilinha_raw:
+                    x, y, *_, bulge = pt
+                    x, y = float(x), float(y)
+                    if not pontos_polilinha:
+                        # Primeiro ponto
+                        pontos_polilinha.append((x, y))
+                        bulges_polilinha.append(bulge)
+                    else:
+                        x_ant, y_ant = pontos_polilinha[-1]
+                        if math.hypot(x - x_ant, y - y_ant) > tolerancia:
+                            pontos_polilinha.append((x, y))
+                            bulges_polilinha.append(bulge)
+                        else:
+                            print(f"⚠️ Ponto duplicado consecutivo removido: {(x, y)}")
+
+                # 🔍 Verificação extra para ponto final duplicado
+                if len(pontos_polilinha) > 2 and math.hypot(
+                    pontos_polilinha[0][0] - pontos_polilinha[-1][0],
+                    pontos_polilinha[0][1] - pontos_polilinha[-1][1]
+                ) < tolerancia:
+                    print("⚠️ Último ponto é igual ao primeiro — removendo ponto final duplicado.")
+                    pontos_polilinha.pop()
+                    bulges_polilinha.pop()
+
+                # 🔍 Verificação extra para P1 == P2
+                if len(pontos_polilinha) > 1 and math.hypot(
+                    pontos_polilinha[0][0] - pontos_polilinha[1][0],
+                    pontos_polilinha[0][1] - pontos_polilinha[1][1]
+                ) < tolerancia:
+                    print("⚠️ Primeiro ponto é igual ao segundo — removendo o segundo ponto duplicado.")
+                    pontos_polilinha.pop(1)
+                    bulges_polilinha.pop(1)
+
+                break
+
+        if pontos_polilinha is None:
+            raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
+
+        if calculate_signed_area(pontos_polilinha) < 0:
+            pontos_polilinha.reverse()
+            bulges_polilinha.reverse()
+            bulges_polilinha = [-b for b in bulges_polilinha]
+
+        pontos_com_bulge = [
+            (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
+            for i in range(len(pontos_polilinha))
+        ]
+
+        msp_novo.add_lwpolyline(
+            pontos_com_bulge,
+            format='xyb',
+            close=True,
+            dxfattribs={'layer': 'DIVISA_PROJETADA'}
+        )
+
+        # Não desenha mais o ponto Az, mas retorna as coordenadas de V1 como ponto_az válido
+        ponto_az = pontos_polilinha[0]
+
+        doc_novo.saveas(saida_path)
+        print(f"✅ DXF limpo salvo em: {saida_path}")
+        
+        return saida_path, ponto_az, ponto_inicial_real
+
+    except Exception as e:
+        print(f"❌ Erro ao limpar DXF: {e}")
+        return original_path, None, None
 
 def calculate_signed_area(points):
     area = 0
@@ -102,29 +183,29 @@ def calculate_signed_area(points):
         area += (x1 * y2) - (x2 * y1)
     return area / 2
 
-def get_document_info_from_dxf(dxf_file_path, log=None):
-    log = _ensure_log(log)
+def get_document_info_from_dxf(dxf_file_path):
     try:
-       
-
         doc = ezdxf.readfile(dxf_file_path)
         msp = doc.modelspace()
 
-        lines, arcs = [], []
-        perimeter_dxf = 0.0
-        boundary_points = []
+        lines = []
+        arcs = []
+        perimeter_dxf = 0
+        area_dxf = 0.0
 
         for entity in msp.query('LWPOLYLINE'):
-            if entity.closed:  # ✅ (era is_closed)
+            if entity.closed:  # ✅ correção (era is_closed)
                 polyline_points = entity.get_points('xyseb')
                 num_points = len(polyline_points)
 
+                boundary_points = []
+
                 for i in range(num_points):
                     x_start, y_start, _, _, bulge = polyline_points[i]
-                    x_end, y_end,   _, _, _     = polyline_points[(i + 1) % num_points]
+                    x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
 
                     start_point = (float(x_start), float(y_start))
-                    end_point   = (float(x_end),   float(y_end))
+                    end_point = (float(x_end), float(y_end))
 
                     if bulge != 0:
                         dx = end_point[0] - start_point[0]
@@ -139,57 +220,71 @@ def get_document_info_from_dxf(dxf_file_path, log=None):
                         mid_y = (start_point[1] + end_point[1]) / 2
                         chord_midpoint = (mid_x, mid_y)
 
-                        length = math.hypot(dx, dy)
-                        perp = (-dy / length, dx / length)
-                        if bulge < 0:
-                            perp = (-perp[0], -perp[1])
+                        offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
+                        dx = float(end_point[0]) - float(start_point[0])
+                        dy = float(end_point[1]) - float(start_point[1])
 
-                        # centro do arco
-                        offset_dist = math.sqrt(max(radius**2 - (chord_length / 2)**2, 0.0))
-                        center = (chord_midpoint[0] + perp[0] * offset_dist,
-                                  chord_midpoint[1] + perp[1] * offset_dist)
+                        length = math.hypot(dx, dy)
+                        perp_vector = (-dy / length, dx / length)
+
+                        if bulge < 0:
+                            perp_vector = (-perp_vector[0], -perp_vector[1])
+
+                        center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
+                        center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
+                        center = (center_x, center_y)
 
                         start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
-                        end_angle   = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
+                        end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
 
                         arcs.append({
-                            'start_point': start_point,
-                            'end_point': end_point,
+                            'start_point': (start_point[0], start_point[1]),
+                            'end_point': (end_point[0], end_point[1]),
+                            'center': (center[0], center[1]),
+                            'radius': radius,
                             'start_angle': math.degrees(start_angle),
-                            'end_angle':   math.degrees(end_angle),
+                            'end_angle': math.degrees(end_angle),
                             'length': arc_length,
-                            'bulge': bulge
+                            'bulge': float(bulge),  # <-- ADICIONE ESTA LINHA
+                            'sweep_degrees': math.degrees(end_angle - start_angle)  # <-- (OPCIONAL, ajuda no debug)
                         })
 
-                        # discretiza arco para área
-                        N = 100
-                        for t in range(N):
-                            angle = start_angle + (end_angle - start_angle) * t / N
-                            ax = center[0] + radius * math.cos(angle)
-                            ay = center[1] + radius * math.sin(angle)
-                            boundary_points.append((ax, ay))
+                        num_arc_points = 100
+                        for t in range(num_arc_points):
+                            angle = start_angle + (end_angle - start_angle) * t / num_arc_points
+                            arc_x = center[0] + radius * math.cos(angle)
+                            arc_y = center[1] + radius * math.sin(angle)
+                            boundary_points.append((arc_x, arc_y))
 
-                        perimeter_dxf += arc_length
+                        segment_length = arc_length
+                        perimeter_dxf += segment_length
                     else:
                         lines.append((start_point, end_point))
                         boundary_points.append((start_point[0], start_point[1]))
-                        perimeter_dxf += math.hypot(end_point[0] - start_point[0], end_point[1] - start_point[1])
+                        dx = end_point[0] - start_point[0]
+                        dy = end_point[1] - start_point[1]
+                        segment_length = math.hypot(dx, dy)
+                        perimeter_dxf += segment_length
 
                 polygon = Polygon(boundary_points)
-                area_dxf = polygon.area
+                area_dxf = polygon.area  # área exata do desenho
                 break
 
         if not lines and not arcs:
-            log.write("Nenhuma polilinha fechada encontrada no DXF.\n")
-            return None, [], [], 0.0, 0.0, None
+            print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
+            return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
 
-        return doc, lines, arcs, perimeter_dxf, area_dxf, boundary_points
+        print(f"Linhas processadas: {len(lines)}")
+        print(f"Arcos processados: {len(arcs)}")
+        print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
+        print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
+
+        return doc, lines, arcs, perimeter_dxf, area_dxf
 
     except Exception as e:
-        
-        log.write(f"Erro ao obter informações do DXF: {e}\n")
+        print(f"Erro ao obter informações do documento: {e}")
         traceback.print_exc()
-        return None, [], [], 0.0, 0.0, None
+        return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
 
 
 def calculate_area_with_arcs(points, arcs):
@@ -530,7 +625,7 @@ def sanitize_filename(filename):
     return sanitized_filename
         
 def _fallback_anotar_segmento(msp, start_point, end_point, label, distancia_m,
-                              H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False):
+                              H_TXT_VERT, H_TXT_DIST, R_CIRCLE, log, is_arc=False):
     try:
         # marcador de vértice (círculo sempre visível)
         msp.add_circle(center=start_point, radius=R_CIRCLE,
@@ -548,7 +643,7 @@ def _fallback_anotar_segmento(msp, start_point, end_point, label, distancia_m,
         )
         return True
     except Exception as e:
-        logger.warning(f"[fallback] Falha ao anotar {label}: {e}")
+        log.write(f"[fallback] Falha ao anotar {label}: {e}")
         return False      
 
 
@@ -673,16 +768,16 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         if area_tmp > 0:
             _reverter_sequencia_completa(sequencia_completa)
             area_tmp = abs(area_tmp)
-            logger.info(f"Área invertida para sentido horário (CW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+            log.write(f"Área invertida para sentido horário (CW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
         else:
-            logger.info(f"Área já coerente com sentido horário (CW). |Área|={abs(area_tmp):.4f} m²")
+            log.write(f"Área já coerente com sentido horário (CW). |Área|={abs(area_tmp):.4f} m²")
     else:  # trata como 'anti_horario'
         if area_tmp < 0:
             _reverter_sequencia_completa(sequencia_completa)
             area_tmp = abs(area_tmp)
-            logger.info(f"Área invertida para sentido anti-horário (CCW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+            log.write(f"Área invertida para sentido anti-horário (CCW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
         else:
-            logger.info(f"Área já coerente com sentido anti-horário (CCW). |Área|={abs(area_tmp):.4f} m²")
+            log.write(f"Área já coerente com sentido anti-horário (CCW). |Área|={abs(area_tmp):.4f} m²")
 
 
 
@@ -721,13 +816,13 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             add_label_and_distance(doc, msp, start_point, end_point, label, distance)
             ok_native = True
         except Exception as e:
-            logger.warning(f"[native] Falha ao anotar {label} com add_label_and_distance: {e}")
+            log.write(f"[native] Falha ao anotar {label} com add_label_and_distance: {e}")
 
         # 2) Se falhar, usa fallback robusto para ESTE segmento
         if not ok_native:
             _ = _fallback_anotar_segmento(
                 msp, start_point, end_point, label, distance,
-                H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=_is_arc
+                H_TXT_VERT, H_TXT_DIST, R_CIRCLE, log, is_arc=_is_arc
             )
 
         anot_count += 1
@@ -746,7 +841,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
-    logger.info(f"Anotações inseridas no DXF: {anot_count} segmentos (linhas+arcos)")
+    log.write(f"Anotações inseridas no DXF: {anot_count} segmentos (linhas+arcos)")
 
 
     # Deriva o UUID do caminho de saída se não vier preenchido
