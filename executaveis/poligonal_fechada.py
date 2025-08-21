@@ -595,10 +595,9 @@ def sanitize_filename(filename):
 
 def _anotar_segmento(msp, start_point, end_point, label, distancia_m, is_arc=False):
     """
-    Anota o segmento no DXF de forma robusta (funciona para linhas e arcos),
-    sem depender de rotinas que assumem segmento retilíneo.
+    Anota o segmento no DXF de forma robusta (linhas e arcos).
     - Marca o vértice (start_point) com ponto e rótulo Vn
-    - Escreve o valor da distância próximo ao meio do segmento (meio da corda, para arco)
+    - Escreve o valor da distância próximo ao meio da corda
     """
     # 1) Marca o vértice
     try:
@@ -607,10 +606,9 @@ def _anotar_segmento(msp, start_point, end_point, label, distancia_m, is_arc=Fal
         pass
 
     # rótulo do vértice (Vn) ligeiramente deslocado
-    off_vx, off_vy = 0.5, 0.5
     try:
         msp.add_text(str(label), dxfattribs={"height": 1.8}).set_pos(
-            (start_point[0] + off_vx, start_point[1] + off_vy), align="LEFT"
+            (start_point[0] + 0.5, start_point[1] + 0.5), align="LEFT"
         )
     except Exception:
         pass
@@ -619,14 +617,16 @@ def _anotar_segmento(msp, start_point, end_point, label, distancia_m, is_arc=Fal
     mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
     texto_dist = f"{distancia_m:.2f} m"
 
-    # pequeno deslocamento para não colar na linha/arco
-    off_dx, off_dy = 0.7, 0.7 if not is_arc else 1.0, 1.0
+    # ✅ CORREÇÃO: usar tupla no ternário
+    off_dx, off_dy = (0.7, 0.7) if not is_arc else (1.0, 1.0)
+
     try:
         msp.add_text(texto_dist, dxfattribs={"height": 1.6}).set_pos(
             (mid[0] + off_dx, mid[1] + off_dy), align="LEFT"
         )
     except Exception:
         pass
+
 
 
 def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
