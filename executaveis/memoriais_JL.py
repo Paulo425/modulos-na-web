@@ -664,6 +664,60 @@ def create_memorial_descritivo(
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
     log = _ensure_log(log)
+
+
+    # ========== SANITY CHECKS ==========
+    # 'lines' precisa ser lista de pares ((x1,y1),(x2,y2))
+    if lines is None:
+        log.write("[ERRO] 'lines' veio None.")
+        return None
+    if isinstance(lines, bool):
+        log.write("[ERRO] 'lines' veio como bool (retorno inválido de get_document_info_from_dxf).")
+        return None
+
+    # 'arcs' pode ser None; se vier bool, descarte
+    if isinstance(arcs, bool):
+        log.write("[WARN] 'arcs' veio como bool; ignorando arcos.")
+        arcs = []
+
+    # Normaliza e valida 'lines' ANTES de iterar 'for p1, p2 in lines'
+    linhas_ok = []
+    try:
+        for i, seg in enumerate(lines or []):
+            if not isinstance(seg, (list, tuple)) or len(seg) != 2:
+                raise TypeError(f"lines[{i}] inválido: {type(seg)} -> {seg!r}")
+            p1, p2 = seg
+            if (not isinstance(p1, (list, tuple)) or len(p1) != 2 or
+                not isinstance(p2, (list, tuple)) or len(p2) != 2):
+                raise TypeError(f"lines[{i}] contém pontos inválidos: {seg!r}")
+            linhas_ok.append(((float(p1[0]), float(p1[1])), (float(p2[0]), float(p2[1]))))
+    except TypeError as e:
+        log.write(f"[ERRO] Estrutura de 'lines' inválida: {e}")
+        return None
+
+    lines = linhas_ok  # daqui pra frente usamos a versão validada/normalizada
+
+    # Wrapper seguro para azimute e distância
+    def _calc_azimuth_and_distance_safe(a, b):
+        # Tenta usar a função do projeto, se existir e for correta
+        try:
+            res = calculate_azimuth_and_distance(a, b)  # pode não existir ou retornar bool
+            if isinstance(res, tuple) and len(res) == 2:
+                return res
+        except NameError:
+            pass
+        except Exception as e:
+            log.write(f"[WARN] calculate_azimuth_and_distance falhou: {e}")
+
+        # Fallback robusto: azimute geodésico (0°=N, sentido horário)
+        import math
+        dx = float(b[0]) - float(a[0])
+        dy = float(b[1]) - float(a[1])
+        distance = math.hypot(dx, dy)
+        azimuth = (math.degrees(math.atan2(dx, dy)) + 360.0) % 360.0
+        return azimuth, distance
+    # ========== FIM SANITY CHECKS ==========
+
     
     assert hasattr(log, 'write'), "log não possui método write"
 
@@ -797,7 +851,7 @@ def create_memorial_descritivo(
         end_point   = dados[1]
 
         if tipo_segmento == "line":
-            azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
+            azimuth, distance = _calc_azimuth_and_distance_safe(start_point, end_point)
             azimute_excel    = convert_to_dms(azimuth)
             distancia_excel  = f"{distance:.2f}".replace(".", ",")
         elif tipo_segmento == "arc":

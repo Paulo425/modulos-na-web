@@ -61,7 +61,30 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
     if not isinstance(ret_info, tuple) or len(ret_info) != 5:
         logger.error(f"[JL] get_document_info_from_dxf retornou {type(ret_info)} -> {ret_info!r}")
         return False
+    
+    
+    
+    # 1) Limpeza básica de DXF (sem Az)
+    ret_clean = limpar_dxf_basico(dxf_path, caminho_dxf_limpo, log=log)
+
+    # 🔒 Guard: evita 'cannot unpack non-iterable bool object'
+    if not isinstance(ret_clean, tuple) or len(ret_clean) != 3:
+        logger.error(f"[JL] limpar_dxf_basico retornou {type(ret_clean)} -> {ret_clean!r}")
+        return False
+
+    dxf_resultado, ponto_inicial_real, resumo_limpeza = ret_clean
+    logger.info(f"[JL] DXF limpo em: {dxf_resultado} | resumo={resumo_limpeza}")
+
+    # 2) Extrai linhas/arcos do DXF limpo e perímetro/área
+    ret_info = get_document_info_from_dxf(dxf_resultado)
+
+    # 🔒 Guard: evita 'cannot unpack non-iterable bool object'
+    if not isinstance(ret_info, tuple) or len(ret_info) != 5:
+        logger.error(f"[JL] get_document_info_from_dxf retornou {type(ret_info)} -> {ret_info!r}")
+        return False
+
     doc, linhas, arcos, perimeter_dxf, area_dxf = ret_info
+
 
     if not doc or not linhas:
         logger.error("[JL] Documento DXF inválido ou sem linhas após limpeza.")
