@@ -705,46 +705,6 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     area_tmp = calculate_signed_area(simple_ordered_points)
 
 
-    # --- Escala dinâmica de anotação (altura de texto e raio dos marcadores) ---
-    # Coleta todos os pontos da sequência para medir extents
-    all_pts = []
-    for _tipo, _dados in sequencia_completa:
-        all_pts.append(_dados[0])
-        all_pts.append(_dados[1])
-
-    min_x = min(p[0] for p in all_pts)
-    max_x = max(p[0] for p in all_pts)
-    min_y = min(p[1] for p in all_pts)
-    max_y = max(p[1] for p in all_pts)
-
-    span = max(max_x - min_x, max_y - min_y) or 1.0  # evita zero
-    # Alturas/raios proporcionais ao tamanho da poligonal
-    H_TXT_VERT = max(span * 0.015, 1.2)   # rótulo Vn
-    H_TXT_DIST = max(span * 0.012, 1.0)   # texto de distância
-    R_CIRCLE   = max(span * 0.004, 0.25)  # marcador de vértice
-
-    # --- Layer de anotações (evita layer 0) ---
-    try:
-        if "ANOTACOES_DECOPA" not in doc.layers:
-            doc.layers.new(name="ANOTACOES_DECOPA")
-    except Exception:
-        pass
-
-
-    # # Ajuste de sentido (mantém área positiva para debug)
-    # if area_tmp > 0:
-    #     sequencia_completa.reverse()
-    #     for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
-    #         start, end = dados[0], dados[1]
-    #         if tipo_segmento == 'line':
-    #             sequencia_completa[idx] = ('line', (end, start))
-    #         else:
-    #             sequencia_completa[idx] = ('arc', (end, start, dados[2], dados[3]))
-    #     area_tmp = abs(area_tmp)
-
-    # print(f"Área da poligonal ajustada: {abs(area_tmp):.4f} m²")
-
-
     # Normaliza o valor vindo da rota/formulário
     _sentido = (sentido_poligonal or "").strip().lower().replace("-", "_")
 
@@ -888,12 +848,6 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.dxf")
-        try:
-            # Ajusta limites do desenho (HEADER vars) para ajudar o CAD a abrir com extents adequados
-            doc.header['$EXTMIN'] = (min_x, min_y, 0.0)
-            doc.header['$EXTMAX'] = (max_x, max_y, 0.0)
-        except Exception:
-            pass
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
     except Exception as e:
