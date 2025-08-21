@@ -578,7 +578,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     else:
         confrontantes_dict = {}
 
-   if (not lines) and (not arcs):
+    if (not lines) and (not arcs):
         print("Nenhuma geometria (linhas ou arcos) disponível para criar o memorial descritivo.")
         return None
 
