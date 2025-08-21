@@ -648,11 +648,26 @@ def _fallback_anotar_segmento(msp, start_point, end_point, label, distancia_m,
 
 
 # Função para criar memorial descritivo
-def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
-                               excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, ponto_inicial_real=None,  # ✅ Adicionado aqui
-                               encoding='ISO-8859-1', boundary_points=None, log=None,
-                               sentido_poligonal="horario"):
+def create_memorial_descritivo(
+    doc,
+    msp,
+    lines,
+    proprietario,
+    matricula,
+    caminho_salvar,
+    arcs=None,
+    excel_file_path=None,
+    ponto_az=None,
+    distance_az_v1=None,
+    azimute_az_v1=None,
+    ponto_inicial_real=None,   # ✅ já existia
+    tipo=None,                 # ✅ novo: alinha com a chamada
+    uuid_prefix=None,          # ✅ novo: alinha com a chamada
+    encoding='ISO-8859-1',
+    boundary_points=None,
+    log=None,
+    sentido_poligonal="horario"
+):
 
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
