@@ -595,37 +595,32 @@ def sanitize_filename(filename):
 
 def _anotar_segmento(msp, start_point, end_point, label, distancia_m, is_arc=False):
     """
-    Anota o segmento no DXF de forma robusta (linhas e arcos).
-    - Marca o vértice (start_point) com ponto e rótulo Vn
-    - Escreve o valor da distância próximo ao meio da corda
+    Anota o segmento no DXF (robusto para linhas e arcos).
+    - Marca o vértice com círculo
+    - Escreve Vn próximo ao vértice
+    - Escreve a distância no meio da corda (para arco também)
+    Usa alturas/raios calculados a partir do span do desenho.
     """
-    # 1) Marca o vértice
     try:
-        msp.add_point(start_point)
-    except Exception:
-        pass
+        # marcador de vértice (círculo sempre visível, diferente de POINT)
+        msp.add_circle(center=start_point, radius=R_CIRCLE,
+                       dxfattribs={"layer": "ANOTACOES_DECOPA"})
 
-    # rótulo do vértice (Vn) ligeiramente deslocado
-    try:
-        msp.add_text(str(label), dxfattribs={"height": 1.8}).set_pos(
-            (start_point[0] + 0.5, start_point[1] + 0.5), align="LEFT"
+        # rótulo do vértice Vn
+        msp.add_text(str(label), dxfattribs={"height": H_TXT_VERT, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (start_point[0] + R_CIRCLE*1.2, start_point[1] + R_CIRCLE*1.2), align="LEFT"
         )
-    except Exception:
-        pass
 
-    # 2) Texto da distância no meio da corda
-    mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
-    texto_dist = f"{distancia_m:.2f} m"
+        # texto da distância
+        mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
+        texto_dist = f"{distancia_m:.2f} m"
+        off_dx, off_dy = (R_CIRCLE*1.8, R_CIRCLE*1.8) if not is_arc else (R_CIRCLE*2.2, R_CIRCLE*2.2)
 
-    # ✅ CORREÇÃO: usar tupla no ternário
-    off_dx, off_dy = (0.7, 0.7) if not is_arc else (1.0, 1.0)
-
-    try:
-        msp.add_text(texto_dist, dxfattribs={"height": 1.6}).set_pos(
+        msp.add_text(texto_dist, dxfattribs={"height": H_TXT_DIST, "layer": "ANOTACOES_DECOPA"}).set_pos(
             (mid[0] + off_dx, mid[1] + off_dy), align="LEFT"
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Falha ao anotar {label}: {e}")
 
 
 
@@ -708,6 +703,33 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
     area_tmp = calculate_signed_area(simple_ordered_points)
+
+
+    # --- Escala dinâmica de anotação (altura de texto e raio dos marcadores) ---
+    # Coleta todos os pontos da sequência para medir extents
+    all_pts = []
+    for _tipo, _dados in sequencia_completa:
+        all_pts.append(_dados[0])
+        all_pts.append(_dados[1])
+
+    min_x = min(p[0] for p in all_pts)
+    max_x = max(p[0] for p in all_pts)
+    min_y = min(p[1] for p in all_pts)
+    max_y = max(p[1] for p in all_pts)
+
+    span = max(max_x - min_x, max_y - min_y) or 1.0  # evita zero
+    # Alturas/raios proporcionais ao tamanho da poligonal
+    H_TXT_VERT = max(span * 0.015, 1.2)   # rótulo Vn
+    H_TXT_DIST = max(span * 0.012, 1.0)   # texto de distância
+    R_CIRCLE   = max(span * 0.004, 0.25)  # marcador de vértice
+
+    # --- Layer de anotações (evita layer 0) ---
+    try:
+        if "ANOTACOES_DECOPA" not in doc.layers:
+            doc.layers.new(name="ANOTACOES_DECOPA")
+    except Exception:
+        pass
+
 
     # # Ajuste de sentido (mantém área positiva para debug)
     # if area_tmp > 0:
@@ -866,6 +888,12 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.dxf")
+        try:
+            # Ajusta limites do desenho (HEADER vars) para ajudar o CAD a abrir com extents adequados
+            doc.header['$EXTMIN'] = (min_x, min_y, 0.0)
+            doc.header['$EXTMAX'] = (max_x, max_y, 0.0)
+        except Exception:
+            pass
         doc.saveas(dxf_output_path)
         print(f"Arquivo DXF salvo em: {dxf_output_path}")
     except Exception as e:
