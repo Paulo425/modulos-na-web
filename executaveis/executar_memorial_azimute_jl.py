@@ -7,6 +7,9 @@ import traceback
 import re
 from pathlib import Path
 
+
+
+
 # fallback simples caso sanitize_filename não exista no módulo
 def _sanitize_filename(s):
     return re.sub(r'[^0-9A-Za-z._-]+', '_', str(s)).strip('_')
@@ -42,20 +45,9 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         get_document_info_from_dxf,
         create_memorial_descritivo,
         create_memorial_document,
+        limpar_dxf_e_inserir_ponto_az,   # ← exatamente como no DECOPA
     )
-    # Tenta usar a limpeza original do JL; se não houver, usa a do DECOPA
-    try:
-        from .memoriais_JL import limpar_dxf_preservando_original as _clean_dxf
-        _clean_kind = "preservando_original"
-    except Exception:
-        from .memoriais_JL import limpar_dxf_e_inserir_ponto_az as _clean_dxf
-        _clean_kind = "inserir_ponto_az"
 
-    # Tenta achar um template definido no módulo; se não houver, usa o padrão local
-    try:
-        from .memoriais_JL import CAMINHO_TEMPLATE_JL as _TEMPLATE_JL
-    except Exception:
-        _TEMPLATE_JL = os.path.join("templates_doc", "MODELO_TEMPLATE_DOC_JL_CORRETO.docx")
 
     # ===== logger + writer simples (grava e também manda pro logger do módulo) =====
     logger = logging.getLogger(__name__)
@@ -98,18 +90,19 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         caminho_dxf_limpo = os.path.join(caminho_salvar, nome_limpo_dxf)
 
         # === limpeza do DXF (aceita as duas variantes) ===
-        log.write(f"[JL] Limpando DXF com modo: {_clean_kind}")
-        if _clean_kind == "preservando_original":
-            res = _clean_dxf(dxf_path, caminho_dxf_limpo, log=None)  # JL local costuma passar log=None
-        else:
-            res = _clean_dxf(dxf_path, caminho_dxf_limpo)
+        # === limpeza do DXF — padrão DECOPA ===
+        log.write("[JL] Limpando DXF com: limpar_dxf_e_inserir_ponto_az")
+        res = limpar_dxf_e_inserir_ponto_az(dxf_path, caminho_dxf_limpo)
 
         # Blindagem do retorno (evita 'cannot unpack non-iterable bool object')
         if not isinstance(res, tuple) or len(res) != 3:
-            log.write(f"[JL][ERRO] Limpeza retornou {type(res).__name__}: {res!r}")
+            log.write(f"[ERRO] limpar_dxf_e_inserir_ponto_az retornou {type(res).__name__}: {res!r}")
             return False
 
-        dxf_resultado, ponto_az, ponto_inicial_real = res
+        dxf_resultado, ponto_az, ponto_inicial = res
+        # manter compatibilidade com o restante do código
+        ponto_inicial_real = ponto_inicial
+
 
         # Se não houver ponto_az, define neutro (queremos manter assinatura da create)
         if not ponto_az:
@@ -172,6 +165,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             return False
 
         # === DOCX no padrão JL (mantendo seus parâmetros existentes) ===
+        template_path = os.path.join("templates_doc", "MODELO_TEMPLATE_DOC_JL_CORRETO.docx")
         docx_path = os.path.join(caminho_salvar, f"Memorial_MAT_{safe_mat}.docx")
         try:
             create_memorial_document(
@@ -179,7 +173,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                 matricula,
                 descricao,
                 excel_file_path=excel_output,
-                template_path=_TEMPLATE_JL,
+                template_path=template_path,
                 output_path=docx_path,
                 perimeter_dxf=perimeter_dxf,
                 area_dxf=area_dxf,
