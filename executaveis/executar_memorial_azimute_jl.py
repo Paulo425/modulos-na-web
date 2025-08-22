@@ -4,6 +4,7 @@ import math
 import traceback
 import re
 from pathlib import Path
+import time
 
 # fallback simples caso sanitize_filename não exista no módulo
 def _sanitize_filename(s):
@@ -151,6 +152,9 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         distance = distance_az_v1     # para o DOCX JL
         azimuth  = azimute_az_v1      # para o DOCX JL
 
+        
+        t0 = time.time()
+
         # === create_memorial_descritivo — MESMA assinatura do DECOPA ===
         excel_output = create_memorial_descritivo(
             doc=doc,
@@ -170,7 +174,6 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             sentido_poligonal=sentido_poligonal,
         )
 
-        # Remover DXF LIMPO após gerar o DXF final ANOTADO (mesma ideia do DECOPA)
         from glob import glob
         import shutil, time
 
@@ -204,6 +207,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         except Exception as e:
             _log_file(f"[JL] Aviso: não foi possível copiar DXF anotado ({e}); usando {annotated_dxf}")
             final_dxf_path = annotated_dxf
+
 
         
         
