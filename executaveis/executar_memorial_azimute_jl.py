@@ -1,6 +1,6 @@
 def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                          dxf_path, excel_path, log_path, sentido_poligonal="horario"):
-    import os, logging
+    import os, logging, glob
     from pathlib import Path
     from .memoriais_JL import (
         limpar_dxf_e_inserir_ponto_az,
