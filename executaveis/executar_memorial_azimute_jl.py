@@ -39,7 +39,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
     logger.info(f"Tipo identificado: {tipo}")
 
     # Novo padrão correto
-    padrao = os.path.join(pasta_preparado, f"FECHADA_*_{tipo}.xlsx")
+    padrao = os.path.join(diretorio_concluido, f"FECHADA_*_{tipo}.xlsx")
     lista_encontrada = glob.glob(padrao)
 
     if not lista_encontrada:
