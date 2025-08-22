@@ -170,6 +170,27 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             sentido_poligonal=sentido_poligonal,
         )
 
+        # === Escolhe o DXF ANOTADO gerado após a create_memorial_descritivo ===
+        from glob import glob
+        cand = [p for p in glob(os.path.join(caminho_salvar, "*.dxf"))]
+
+        # remove o LIMPO (pré-anotação)
+        cand = [p for p in cand if os.path.basename(p) != os.path.basename(caminho_dxf_limpo)]
+
+        # se houver mais de um DXF, pegue o mais recente (provável anotado)
+        annotated_dxf = max(cand, key=lambda p: os.stat(p).st_mtime) if cand else dxf_resultado
+
+        final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{safe_mat}.dxf")
+        try:
+            shutil.copyfile(annotated_dxf, final_dxf_path)
+            _log_file(f"[JL] DXF final (ANOTADO) copiado de {os.path.basename(annotated_dxf)} para: {final_dxf_path}")
+        except Exception as e:
+            _log_file(f"[JL] Aviso: não foi possível copiar DXF anotado ({e}); usando {annotated_dxf}")
+            final_dxf_path = annotated_dxf
+
+        
+        
+        
         if not excel_output:
             _log_file("[ERRO] Falha ao gerar memorial descritivo (XLSX/DXF).")
             return log_path, []
