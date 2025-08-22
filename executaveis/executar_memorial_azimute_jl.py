@@ -3,13 +3,14 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
     import os, logging
     from pathlib import Path
     from .memoriais_JL import (
-        limpar_dxf_basico,
+        limpar_dxf_e_inserir_ponto_az,
         get_document_info_from_dxf,
         create_memorial_descritivo,
         create_memorial_document,   # se não usar DOCX, pode remover
         sanitize_filename,
     )
-
+    diretorio_concluido=caminho_salva
+    uuid_prefix = os.path.basename(os.path.dirname(os.path.normpath(diretorio_concluido)))
     # logger + writer com .write(), igual DECOPA
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
@@ -25,49 +26,101 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
     log = _LogWriter(log_path)
     log.write(f"[JL] sentido_poligonal: {sentido_poligonal}")
 
+    nome_dxf = os.path.basename(dxf_path).upper()
+    tipo = next((t for t in ["ETE", "REM", "SER", "ACE"] if t in nome_dxf), None)
+
+    if not tipo:
+        msg = "❌ Tipo do projeto não identificado no nome do DXF."
+        print(msg)
+        logger.warning(msg)
+        return
+
+    print(f"📁 Tipo identificado: {tipo}")
+    logger.info(f"Tipo identificado: {tipo}")
+
+    # Novo padrão correto
+    padrao = os.path.join(pasta_preparado, f"FECHADA_*_{tipo}.xlsx")
+    lista_encontrada = glob.glob(padrao)
+
+    if not lista_encontrada:
+        print(f"❌ Arquivo de confrontantes esperado não encontrado para tipo {tipo}")
+        logger.warning(f"Nenhuma planilha FECHADA_*_{tipo}.xlsx encontrada.")
+        return
+
+    excel_confrontantes = lista_encontrada[0]
+    print(f"✅ Confrontante carregado: {excel_confrontantes}")
+    logger.info(f"Planilha de confrontantes usada: {excel_confrontantes}")    
+
     # === Inputs & nomes base (como no DECOPA) ===
-    uuid_exec = os.path.basename(os.path.dirname(os.path.normpath(caminho_salvar)))
-    safe_uuid = sanitize_filename(uuid_exec)[:8]
-    # tipo via nome do DXF (opcional; a create pode deduzir do Excel se quiser)
-    tipo = next((t for t in ["ETE", "REM", "SER", "ACE"] if t in os.path.basename(dxf_path).upper()), None)
-    safe_tipo = sanitize_filename(tipo) if tipo else "TIPO"
+    uuid_exec = os.path.basename(os.path.dirname(diretorio_concluido))
+    safe_uuid = sanitize_filename(uuid_exec)[:8]  # use a mesma variável que você loga em "[DEBUG] UUID recebido"
+    safe_tipo = sanitize_filename(tipo)           # "ETE", "REM", etc.
     safe_mat  = sanitize_filename(matricula)
 
-    # === DXF original + DXF limpo (sem Az) ===
-    nome_dxf_limpo    = f"{safe_uuid}_{safe_tipo}_{safe_mat}_LIMPO.dxf"
-    caminho_dxf_limpo = os.path.join(caminho_salvar, nome_dxf_limpo)
-    ret_clean = limpar_dxf_basico(dxf_path, caminho_dxf_limpo, log=log)
-    if not (isinstance(ret_clean, tuple) and len(ret_clean) == 3):
-        log.write(f"[ERRO] limpar_dxf_basico retornou {type(ret_clean)} -> {ret_clean!r}")
-        return False
-    dxf_resultado, ponto_inicial_real, _resumo = ret_clean
+    nome_limpo_dxf   = f"{safe_uuid}_{safe_tipo}_{safe_mat}_LIMPO.dxf"
+    caminho_dxf_limpo = os.path.join(diretorio_concluido, nome_limpo_dxf)
 
-    # === Parse do DXF limpo, igual DECOPA ===
-    ret_info = get_document_info_from_dxf(dxf_resultado)
-    if not (isinstance(ret_info, tuple) and len(ret_info) == 5):
-        log.write(f"[ERRO] get_document_info_from_dxf retornou {type(ret_info)} -> {ret_info!r}")
-        return False
-    doc, linhas, arcos, perimeter_dxf, area_dxf = ret_info
+    dxf_resultado, ponto_az, ponto_inicial = limpar_dxf_e_inserir_ponto_az(dxf_path, caminho_dxf_limpo)
+    logger.info(f"DXF limpo salvo em: {caminho_dxf_limpo}")
+
+    # (opcional) remover arquivo legado sem UUID
+    legado = os.path.join(pasta_concluido, f"DXF_LIMPO_{safe_mat}.dxf")
+    if os.path.exists(legado):
+        try:
+            os.remove(legado)
+            logger.info(f"DXF limpo legado removido: {legado}")
+        except Exception as e:
+            logger.warning(f"Não foi possível remover legado {legado}: {e}")
+    # <<< PATCH
+ 
+    if not ponto_az or not ponto_inicial:
+        msg = "❌ Não foi possível identificar o ponto Az ou inicial."
+        print(msg)
+        logger.error(msg)
+        return
+
+    doc, linhas, arcos, perimeter_dxf, area_dxf = get_document_info_from_dxf(dxf_resultado)
     if not doc or not linhas:
-        log.write("[ERRO] DXF inválido ou sem linhas após limpeza.")
-        return False
+        msg = "❌ Documento DXF inválido ou vazio."
+        print(msg)
+        logger.error(msg)
+        return
+
     msp = doc.modelspace()
+    v1 = linhas[0][0]
+    distance_az_v1 = calculate_distance(ponto_az, v1)
+    azimute_az_v1 = calculate_azimuth(ponto_az, v1)
+    azimuth = calculate_azimuth(ponto_az, v1)
+    distance = math.hypot(v1[0] - ponto_az[0], v1[1] - ponto_az[1])
 
     # === Chamada idêntica ao DECOPA (sem Az) ===
     excel_output = create_memorial_descritivo(
         doc=doc,
         msp=msp,
         lines=linhas,
-        arcs=arcos,
         proprietario=proprietario,
         matricula=matricula,
         caminho_salvar=caminho_salvar,
-        excel_file_path=excel_path,        # DECOPA também passa a planilha
+        arcs=arcos, 
+        excel_file_path=excel_path,
+        ponto_az=None,
+        distance_az_v1=distance_az_v1,
+        azimute_az_v1=azimute_az_v1,        # DECOPA também passa a planilha
         ponto_inicial_real=ponto_inicial_real,
-        log=log,
+        tipo=tipo,
+        uuid_prefix=uuid_prefix,
+        diretorio_concluido=diretorio_concluido,
         sentido_poligonal=sentido_poligonal
         # OBS: não passamos 'tipo' nem 'uuid_prefix' aqui; sua create pode deduzir.
     )
+
+    try:
+        if os.path.exists(caminho_dxf_limpo):
+            os.remove(caminho_dxf_limpo)
+            logger.info(f"DXF LIMPO removido após gerar DXF final: {caminho_dxf_limpo}")
+    except Exception as e:
+        logger.warning(f"Não foi possível remover DXF LIMPO: {e}")
+
     if not excel_output:
         log.write("[ERRO] Falha ao gerar memorial descritivo (XLSX/DXF).")
         return False
