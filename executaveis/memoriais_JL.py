@@ -87,85 +87,93 @@ def calculate_azimuth(p1, p2):
         azimuth_deg += 360
     return azimuth_deg
 
-def limpar_dxf_basico(dxf_in: str, dxf_out: str, log=None, tol_fechar=1e-6):
-    """
-    Limpa o DXF sem inserir qualquer 'ponto Az'.
-    - Remove entidades não geométricas (TEXT/MTEXT/DIMENSION/HATCH/etc.)
-    - Explode LWPOLYLINE/POLYLINE em segments (LINE/ARC)
-    - Garante fechamento da poligonal (se último != primeiro e distancia < tol)
-    - Salva em dxf_out
+def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
+    try:
+        doc_antigo = ezdxf.readfile(original_path)
+        msp_antigo = doc_antigo.modelspace()
+        doc_novo = ezdxf.new(dxfversion='R2010')
+        msp_novo = doc_novo.modelspace()
 
-    Retorna: (dxf_out, ponto_inicial_real, resumo)
-      - ponto_inicial_real: (x, y) do primeiro vértice detectado (ou None se não houver)
-      - resumo: dict com contagens para diagnóstico
-    """
-    import ezdxf
-    from ezdxf.entities import LWPolyline, Polyline
-    import math
+        pontos_polilinha = None
+        bulges_polilinha = None
+        ponto_inicial_real = None
 
-    def _w(msg):
-        if log:
-            try:
-                log.write(msg)
-            except Exception:
-                pass
+        for entity in msp_antigo.query('LWPOLYLINE'):
+            if entity.closed:
+                # 🔧 Leitura com verificação de duplicatas
+                pontos_polilinha_raw = entity.get_points('xyseb')
+                ponto_inicial_real = (float(pontos_polilinha_raw[0][0]), float(pontos_polilinha_raw[0][1]))
+                pontos_polilinha = []
+                bulges_polilinha = []
 
-    doc = ezdxf.readfile(dxf_in)
-    msp = doc.modelspace()
+                tolerancia = 1e-6  # Tolerância para considerar pontos idênticos
 
-    removidos = 0
-    mantidos = 0
+                for pt in pontos_polilinha_raw:
+                    x, y, *_, bulge = pt
+                    x, y = float(x), float(y)
+                    if not pontos_polilinha:
+                        # Primeiro ponto
+                        pontos_polilinha.append((x, y))
+                        bulges_polilinha.append(bulge)
+                    else:
+                        x_ant, y_ant = pontos_polilinha[-1]
+                        if math.hypot(x - x_ant, y - y_ant) > tolerancia:
+                            pontos_polilinha.append((x, y))
+                            bulges_polilinha.append(bulge)
+                        else:
+                            print(f"⚠️ Ponto duplicado consecutivo removido: {(x, y)}")
 
-    # 1) Remove o que não interessa no resultado final
-    tipos_remover = {"TEXT", "MTEXT", "DIMENSION", "HATCH", "LEADER", "MLEADER", "TABLE"}
-    for e in list(msp):
-        if e.dxftype() in tipos_remover:
-            try:
-                msp.delete_entity(e)
-                removidos += 1
-            except Exception:
-                pass
-        else:
-            mantidos += 1
+                # 🔍 Verificação extra para ponto final duplicado
+                if len(pontos_polilinha) > 2 and math.hypot(
+                    pontos_polilinha[0][0] - pontos_polilinha[-1][0],
+                    pontos_polilinha[0][1] - pontos_polilinha[-1][1]
+                ) < tolerancia:
+                    print("⚠️ Último ponto é igual ao primeiro — removendo ponto final duplicado.")
+                    pontos_polilinha.pop()
+                    bulges_polilinha.pop()
 
-    # 2) Explode polylines para linhas/arcos
-    explodidos = 0
-    for e in list(msp):
-        if isinstance(e, LWPolyline) or isinstance(e, Polyline):
-            try:
-                parts = e.explode()
-                explodidos += 1 + len(parts)
-            except Exception:
-                pass
+                # 🔍 Verificação extra para P1 == P2
+                if len(pontos_polilinha) > 1 and math.hypot(
+                    pontos_polilinha[0][0] - pontos_polilinha[1][0],
+                    pontos_polilinha[0][1] - pontos_polilinha[1][1]
+                ) < tolerancia:
+                    print("⚠️ Primeiro ponto é igual ao segundo — removendo o segundo ponto duplicado.")
+                    pontos_polilinha.pop(1)
+                    bulges_polilinha.pop(1)
 
-    # 3) Tenta garantir fechamento suave de poligonais (se aplicável)
-    #    Estratégia simples: colecionar vertices de um loop principal
-    #    (caso seu desenho tenha múltiplas poligonais, get_document_info_from_dxf
-    #     ainda será o responsável por extrair corretamente a principal).
-    ponto_inicial_real = None
+                break
 
-    # Heurística: encontrar o primeiro LINE/ARC e usar seu start como ponto inicial
-    for e in msp.query("LINE ARC"):
-        try:
-            if e.dxftype() == "LINE":
-                p0 = (float(e.dxf.start.x), float(e.dxf.start.y))
-                p1 = (float(e.dxf.end.x), float(e.dxf.end.y))
-            else:  # ARC
-                # Para ARC não temos start/end no DXF, apenas centro/raio/ângulos
-                # deixa o ponto_inicial_real para quando acharmos uma LINE;
-                # ou calcule start/end se preferir.
-                continue
-            ponto_inicial_real = p0
-            break
-        except Exception:
-            continue
+        if pontos_polilinha is None:
+            raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
 
-    # 4) Salva o DXF limpo
-    doc.saveas(dxf_out)
-    _w(f"[limpar_dxf_basico] Salvo: {dxf_out} | removidos={removidos}, mantidos={mantidos}, explodidos={explodidos}")
+        if calculate_signed_area(pontos_polilinha) < 0:
+            pontos_polilinha.reverse()
+            bulges_polilinha.reverse()
+            bulges_polilinha = [-b for b in bulges_polilinha]
 
-    resumo = {"removidos": removidos, "mantidos": mantidos, "explodidos": explodidos}
-    return dxf_out, ponto_inicial_real, resumo
+        pontos_com_bulge = [
+            (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
+            for i in range(len(pontos_polilinha))
+        ]
+
+        msp_novo.add_lwpolyline(
+            pontos_com_bulge,
+            format='xyb',
+            close=True,
+            dxfattribs={'layer': 'DIVISA_PROJETADA'}
+        )
+
+        # Não desenha mais o ponto Az, mas retorna as coordenadas de V1 como ponto_az válido
+        ponto_az = pontos_polilinha[0]
+
+        doc_novo.saveas(saida_path)
+        print(f"✅ DXF limpo salvo em: {saida_path}")
+        
+        return saida_path, ponto_az, ponto_inicial_real
+
+    except Exception as e:
+        print(f"❌ Erro ao limpar DXF: {e}")
+        return original_path, None, None
 
 
 def calculate_signed_area(points):
@@ -641,94 +649,80 @@ def _fallback_anotar_segmento(msp, start_point, end_point, label, distancia_m,
 
 
 # Função para criar memorial descritivo
-def create_memorial_descritivo(
-    doc,
-    msp,
-    lines,
-    proprietario,
-    matricula,
-    caminho_salvar,
-    arcs=None,
-    excel_file_path=None,
-    ponto_inicial_real=None,   # continua disponível: serve só para iniciar a sequência
-    tipo=None,
-    uuid_prefix=None,
-    encoding='ISO-8859-1',
-    boundary_points=None,
-    log=None,
-    sentido_poligonal="horario"
-):
+def _anotar_segmento(msp, start_point, end_point, label, distancia_m, is_arc=False):
+    """
+    Anota o segmento no DXF (robusto para linhas e arcos).
+    - Marca o vértice com círculo
+    - Escreve Vn próximo ao vértice
+    - Escreve a distância no meio da corda (para arco também)
+    Usa alturas/raios calculados a partir do span do desenho.
+    """
+    try:
+        # marcador de vértice (círculo sempre visível, diferente de POINT)
+        msp.add_circle(center=start_point, radius=R_CIRCLE,
+                       dxfattribs={"layer": "ANOTACOES_DECOPA"})
+
+        # rótulo do vértice Vn
+        msp.add_text(str(label), dxfattribs={"height": H_TXT_VERT, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (start_point[0] + R_CIRCLE*1.2, start_point[1] + R_CIRCLE*1.2), align="LEFT"
+        )
+
+        # texto da distância
+        mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
+        texto_dist = f"{distancia_m:.2f} m"
+        off_dx, off_dy = (R_CIRCLE*1.8, R_CIRCLE*1.8) if not is_arc else (R_CIRCLE*2.2, R_CIRCLE*2.2)
+
+        msp.add_text(texto_dist, dxfattribs={"height": H_TXT_DIST, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (mid[0] + off_dx, mid[1] + off_dy), align="LEFT"
+        )
+    except Exception as e:
+        logger.warning(f"Falha ao anotar {label}: {e}")
+
+    # --- Fallback simples para anotar um segmento quando o método nativo falhar ---
+def _fallback_anotar_segmento(msp, start_point, end_point, label, distancia_m,
+                              H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False):
+    try:
+        # marcador de vértice (círculo sempre visível)
+        msp.add_circle(center=start_point, radius=R_CIRCLE,
+                       dxfattribs={"layer": "ANOTACOES_DECOPA"})
+        # rótulo do vértice
+        msp.add_text(str(label), dxfattribs={"height": H_TXT_VERT, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (start_point[0] + R_CIRCLE*1.2, start_point[1] + R_CIRCLE*1.2), align="LEFT"
+        )
+        # distância no meio da corda
+        mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
+        texto_dist = f"{distancia_m:.2f} m"
+        off_dx, off_dy = (R_CIRCLE*1.8, R_CIRCLE*1.8) if not is_arc else (R_CIRCLE*2.2, R_CIRCLE*2.2)
+        msp.add_text(texto_dist, dxfattribs={"height": H_TXT_DIST, "layer": "ANOTACOES_DECOPA"}).set_pos(
+            (mid[0] + off_dx, mid[1] + off_dy), align="LEFT"
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"[fallback] Falha ao anotar {label}: {e}")
+        return False
 
 
+
+
+def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
+                               excel_file_path=None, ponto_az=None, distance_az_v1=None,
+                               azimute_az_v1=None, ponto_inicial_real=None, tipo=None, uuid_prefix=None, diretorio_concluido=None, sentido_poligonal='horario'):
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
     """
-    log = _ensure_log(log)
+    import logging
+    logger = logging.getLogger(__name__)
 
-
-    # ========== SANITY CHECKS ==========
-    # 'lines' precisa ser lista de pares ((x1,y1),(x2,y2))
-    if lines is None:
-        log.write("[ERRO] 'lines' veio None.")
-        return None
-    if isinstance(lines, bool):
-        log.write("[ERRO] 'lines' veio como bool (retorno inválido de get_document_info_from_dxf).")
-        return None
-
-    # 'arcs' pode ser None; se vier bool, descarte
-    if isinstance(arcs, bool):
-        log.write("[WARN] 'arcs' veio como bool; ignorando arcos.")
-        arcs = []
-
-    # Normaliza e valida 'lines' ANTES de iterar 'for p1, p2 in lines'
-    linhas_ok = []
-    try:
-        for i, seg in enumerate(lines or []):
-            if not isinstance(seg, (list, tuple)) or len(seg) != 2:
-                raise TypeError(f"lines[{i}] inválido: {type(seg)} -> {seg!r}")
-            p1, p2 = seg
-            if (not isinstance(p1, (list, tuple)) or len(p1) != 2 or
-                not isinstance(p2, (list, tuple)) or len(p2) != 2):
-                raise TypeError(f"lines[{i}] contém pontos inválidos: {seg!r}")
-            linhas_ok.append(((float(p1[0]), float(p1[1])), (float(p2[0]), float(p2[1]))))
-    except TypeError as e:
-        log.write(f"[ERRO] Estrutura de 'lines' inválida: {e}")
-        return None
-
-    lines = linhas_ok  # daqui pra frente usamos a versão validada/normalizada
-
-    # Wrapper seguro para azimute e distância
-    def _calc_azimuth_and_distance_safe(a, b):
-        # Tenta usar a função do projeto, se existir e for correta
-        try:
-            res = calculate_azimuth_and_distance(a, b)  # pode não existir ou retornar bool
-            if isinstance(res, tuple) and len(res) == 2:
-                return res
-        except NameError:
-            pass
-        except Exception as e:
-            log.write(f"[WARN] calculate_azimuth_and_distance falhou: {e}")
-
-        # Fallback robusto: azimute geodésico (0°=N, sentido horário)
-        import math
-        dx = float(b[0]) - float(a[0])
-        dy = float(b[1]) - float(a[1])
-        distance = math.hypot(dx, dy)
-        azimuth = (math.degrees(math.atan2(dx, dy)) + 360.0) % 360.0
-        return azimuth, distance
-    # ========== FIM SANITY CHECKS ==========
-
-    
-    assert hasattr(log, 'write'), "log não possui método write"
 
     if excel_file_path:
         try:
             confrontantes_df = pd.read_excel(excel_file_path)
-            confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
+            if "Código" in confrontantes_df.columns and "Confrontante" in confrontantes_df.columns:
+                confrontantes_dict = dict(zip(confrontantes_df['Código'], confrontantes_df['Confrontante']))
+            else:
+                confrontantes_dict = {}
         except Exception as e:
             print(f"Erro ao carregar arquivo de confrontantes: {e}")
-            
-            log.write(f"Erro ao carregar arquivo de confrontantes: {e}\n")
             confrontantes_dict = {}
     else:
         confrontantes_dict = {}
@@ -793,6 +787,168 @@ def create_memorial_descritivo(
 
     # Normaliza o valor vindo da rota/formulário
     _sentido = (sentido_poligonal or "").strip().lower().replace("-", "_")
+
+    # Regra da área assinada: CCW (anti-horário) => área > 0 ; CW (horário) => área < 0
+    # Se o usuário pediu "horario" e a área veio > 0 (CCW), invertemos.
+    # Se pediu "anti_horario" e a área veio < 0 (CW), invertemos.
+
+    def _reverter_sequencia_completa(seq):
+        """
+        Inverte a ordem dos segmentos e troca start/end.
+        Para arco: inverte também o sinal do bulge; raio permanece o mesmo.
+        """
+        seq.reverse()
+        for i, (tipo_segmento, dados) in enumerate(seq):
+            if tipo_segmento == 'line':
+                start, end = dados  # ((x1,y1), (x2,y2))
+                seq[i] = ('line', (end, start))
+            elif tipo_segmento == 'arc':
+                start, end, bulge, radius = dados
+                # Reverte endpoints e inverte o sinal do bulge para manter a mesma geometria (sentido oposto)
+                seq[i] = ('arc', (end, start, -bulge, radius))
+          
+            else:
+                # fallback genérico: tenta apenas trocar start/end se houver
+                try:
+                    start, end = dados[0], dados[1]
+                    novos = list(dados)
+                    novos[0], novos[1] = end, start
+                    seq[i] = (tipo_segmento, tuple(novos))
+                except Exception:
+                    pass
+
+
+    if _sentido == 'horario':
+        if area_tmp > 0:
+            _reverter_sequencia_completa(sequencia_completa)
+            area_tmp = abs(area_tmp)
+            logger.info(f"Área invertida para sentido horário (CW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+        else:
+            logger.info(f"Área já coerente com sentido horário (CW). |Área|={abs(area_tmp):.4f} m²")
+    else:  # trata como 'anti_horario'
+        if area_tmp < 0:
+            _reverter_sequencia_completa(sequencia_completa)
+            area_tmp = abs(area_tmp)
+            logger.info(f"Área invertida para sentido anti-horário (CCW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+        else:
+            logger.info(f"Área já coerente com sentido anti-horário (CCW). |Área|={abs(area_tmp):.4f} m²")
+
+
+
+
+    # Continuação após inverter corretamente
+    data = []
+    num_vertices = len(sequencia_completa)  # captura a quantidade correta antes do loop
+    anot_count = 0
+    for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
+        start_point = dados[0]
+        end_point   = dados[1]
+
+        if tipo_segmento == "line":
+            azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
+            azimute_excel    = convert_to_dms(azimuth)
+            distancia_excel  = f"{distance:.2f}".replace(".", ",")
+        elif tipo_segmento == "arc":
+            # dados = (start, end, bulge, radius)
+            bulge  = dados[2]
+            radius = dados[3]
+            theta  = 4.0 * math.atan(abs(bulge))  # ângulo central (rad)
+            distance = radius * theta             # comprimento do arco
+            azimute_excel   = f"R={radius:.2f}".replace(".", ",")
+            distancia_excel = f"C={distance:.2f}".replace(".", ",")
+
+        # label = f"V{idx + 1}"
+        # # Usa a MESMA rotina de anotação para linhas e arcos (passando o comprimento correto)
+        # add_label_and_distance(doc, msp, start_point, end_point, label, distance)
+
+        label = f"V{idx + 1}"
+        _is_arc = (tipo_segmento == "arc")
+
+        # 1) TENTA o caminho original (que já funcionava no sentido horário)
+        ok_native = False
+        try:
+            add_label_and_distance(doc, msp, start_point, end_point, label, distance)
+            ok_native = True
+        except Exception as e:
+            logger.warning(f"[native] Falha ao anotar {label} com add_label_and_distance: {e}")
+
+        # 2) Se falhar, usa fallback robusto para ESTE segmento
+        if not ok_native:
+            _ = _fallback_anotar_segmento(
+                msp, start_point, end_point, label, distance,
+                H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=_is_arc
+            )
+
+        anot_count += 1
+
+
+        confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
+        divisa = f"V{idx + 1}_V{idx + 2}" if idx + 1 < num_vertices else f"V{idx + 1}_V1"
+
+        data.append({
+            "V": label,
+            "E": f"{start_point[0]:.3f}".replace('.', ','),
+            "N": f"{start_point[1]:.3f}".replace('.', ','),
+            "Z": "0.000",
+            "Divisa": divisa,
+            "Azimute": azimute_excel,
+            "Distancia(m)": distancia_excel,
+            "Confrontante": confrontante,
+        })
+    logger.info(f"Anotações inseridas no DXF: {anot_count} segmentos (linhas+arcos)")
+
+
+    # Deriva o UUID do caminho de saída se não vier preenchido
+    try:
+        _uuid_from_path = os.path.basename(os.path.dirname(caminho_salvar))
+        if not uuid_prefix or len(_uuid_from_path) == 8:
+            uuid_prefix = _uuid_from_path
+    except Exception:
+        pass
+
+    # Tenta deduzir o tipo (ETE/REM/SER/ACE) se não vier
+    if not tipo and excel_file_path:
+        base_x = os.path.basename(excel_file_path).upper()
+        for _t in ("ETE", "REM", "SER", "ACE"):
+            if _t in base_x:
+                tipo = _t
+                break
+
+    df = pd.DataFrame(data, dtype=str)
+
+    matricula_sanit = sanitize_filename(matricula) if isinstance(matricula, str) else str(matricula)
+    excel_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.xlsx")
+    df.to_excel(excel_output_path, index=False)
+
+    wb = openpyxl.load_workbook(excel_output_path)
+    ws = wb.active
+
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    column_widths = {
+        "A": 8, "B": 15, "C": 15, "D": 10, "E": 20, "F": 15,
+        "G": 15, "H": 30, "I": 20, "J": 20, "K": 15, "L": 15
+    }
+    for col, width in column_widths.items():
+        ws.column_dimensions[col].width = width
+
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for cell in row:
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    wb.save(excel_output_path)
+    print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
+
+    try:
+        dxf_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.dxf")
+        doc.saveas(dxf_output_path)
+        print(f"Arquivo DXF salvo em: {dxf_output_path}")
+    except Exception as e:
+        print(f"Erro ao salvar DXF: {e}")
+
+    return excel_output_path
 
     # Regra da área assinada: CCW (anti-horário) => área > 0 ; CW (horário) => área < 0
     # Se o usuário pediu "horario" e a área veio > 0 (CCW), invertemos.
