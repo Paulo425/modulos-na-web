@@ -199,18 +199,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                 logger.warning(f"Não foi possível remover DXF LIMPO: {e}")
                 _log_file(f"[JL] Aviso: não foi possível remover DXF LIMPO: {e}")
 
-        # 3) Consolidar o DXF final
-        final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{safe_mat}.dxf")
-        try:
-            if os.path.abspath(annotated_dxf) != os.path.abspath(final_dxf_path):
-                shutil.copyfile(annotated_dxf, final_dxf_path)
-            _log_file(f"[JL] DXF final (ANOTADO): {final_dxf_path} (origem: {annotated_dxf})")
-        except Exception as e:
-            _log_file(f"[JL] Aviso: não foi possível copiar DXF anotado ({e}); usando {annotated_dxf}")
-            final_dxf_path = annotated_dxf
-
-
-        
+               
         
         
         if not excel_output:
@@ -240,19 +229,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         except Exception as e:
             _log_file(f"[JL] DOCX opcional não gerado: {e}")
 
-        # === DXF final no padrão antigo (copia do dxf_resultado) ===
-        final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{safe_mat}.dxf")
-        try:
-            shutil.copyfile(dxf_resultado, final_dxf_path)
-            _log_file(f"[JL] DXF final copiado para: {final_dxf_path}")
-        except Exception as e:
-            _log_file(f"[JL] Aviso: não foi possível copiar DXF final ({e}); retornando dxf_resultado")
-            final_dxf_path = dxf_resultado
-
-        _log_file("✅ Processamento finalizado com sucesso.")
-        # <<< RETORNO NO PADRÃO ANTIGO >>>
-        return log_path, [excel_output, final_dxf_path, docx_path]
-
+       
     except Exception:
         tb = traceback.format_exc()
         _log_file("❌ ERRO inesperado em executar_memorial_jl:")
