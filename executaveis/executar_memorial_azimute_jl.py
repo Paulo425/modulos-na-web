@@ -156,6 +156,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         azimuth  = azimute_az_v1      # para o DOCX JL
 
         
+                # === Marco temporal para identificar arquivos salvos após a create ===
         t0 = time.time()
 
         # === create_memorial_descritivo — MESMA assinatura do DECOPA ===
@@ -177,16 +178,39 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             sentido_poligonal=sentido_poligonal,
         )
 
-        
+        if not excel_output:
+            _log_file("[ERRO] Falha ao gerar memorial descritivo (XLSX/DXF).")
+            return log_path, []
 
-       # === Seleciona o DXF ANOTADO e consolida o final ===
-        
+        # === DOCX no padrão JL (define docx_path ANTES de montar a lista de arquivos) ===
+        template_path = os.path.join("templates_doc", "MODELO_TEMPLATE_DOC_JL_CORRETO.docx")
+        docx_path = os.path.join(caminho_salvar, f"Memorial_MAT_{safe_mat}.docx")
+        try:
+            create_memorial_document(
+                proprietario,
+                matricula,
+                descricao,
+                excel_file_path=excel_output,
+                template_path=template_path,
+                output_path=docx_path,
+                perimeter_dxf=perimeter_dxf,
+                area_dxf=area_dxf,
+                Coorde_E_ponto_Az=ponto_az[0],
+                Coorde_N_ponto_Az=ponto_az[1],
+                azimuth=azimuth,
+                distance=distance,
+                log=_LogWriter(log_path),  # aceita .write(...)
+            )
+            _log_file(f"[JL] DOCX salvo em: {docx_path}")
+        except Exception as e:
+            _log_file(f"[JL] DOCX opcional não gerado: {e}")
+            docx_path = None  # segue sem DOCX se falhar
 
-        # Lista de DXFs no CONCLUIDO
+        # === Seleciona o DXF ANOTADO e consolida o final ===
         dxfs = glob(os.path.join(caminho_salvar, "*.dxf"))
         _log_file(f"[JL] DXFs no CONCLUIDO: {len(dxfs)} -> {[os.path.basename(p) for p in dxfs]}")
 
-        # Preferir DXFs escritos após a create (se t0 existir)
+        # Preferir DXFs salvos/alterados após a create (se t0 existir)
         if dxfs:
             try:
                 base_list = [p for p in dxfs if os.path.getmtime(p) >= t0 - 0.5] if 't0' in locals() else dxfs
@@ -194,14 +218,13 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                 annotated_dxf = max(base_list, key=lambda p: os.path.getmtime(p))
             except Exception as e:
                 _log_file(f"[JL] Aviso: falha ao escolher DXF anotado por mtime: {e}")
-                annotated_dxf = dxfs[-1]  # qualquer um como fallback
+                annotated_dxf = dxfs[-1]  # fallback
         else:
-            # último recurso
             annotated_dxf = dxf_resultado if os.path.exists(dxf_resultado) else None
 
-        # Remove o LIMPO só se ele não for o anotado
+        # Remove o LIMPO só se NÃO for o anotado
         if annotated_dxf and os.path.exists(caminho_dxf_limpo) and \
-        os.path.abspath(annotated_dxf) != os.path.abspath(caminho_dxf_limpo):
+           os.path.abspath(annotated_dxf) != os.path.abspath(caminho_dxf_limpo):
             try:
                 os.remove(caminho_dxf_limpo)
                 _log_file(f"[JL] DXF LIMPO removido: {caminho_dxf_limpo}")
@@ -229,35 +252,6 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         _log_file("✅ Processamento finalizado com sucesso.")
         return log_path, arquivos
 
-               
-        
-        
-        if not excel_output:
-            _log_file("[ERRO] Falha ao gerar memorial descritivo (XLSX/DXF).")
-            return log_path, []
-
-        # === DOCX no padrão JL (mantendo seus parâmetros existentes) ===
-        template_path = os.path.join("templates_doc", "MODELO_TEMPLATE_DOC_JL_CORRETO.docx")
-        docx_path = os.path.join(caminho_salvar, f"Memorial_MAT_{safe_mat}.docx")
-        try:
-            create_memorial_document(
-                proprietario,
-                matricula,
-                descricao,
-                excel_file_path=excel_output,
-                template_path=template_path,
-                output_path=docx_path,
-                perimeter_dxf=perimeter_dxf,
-                area_dxf=area_dxf,
-                Coorde_E_ponto_Az=ponto_az[0],
-                Coorde_N_ponto_Az=ponto_az[1],
-                azimuth=azimuth,
-                distance=distance,
-                log=_LogWriter(log_path),  # aceita .write(...)
-            )
-            _log_file(f"[JL] DOCX salvo em: {docx_path}")
-        except Exception as e:
-            _log_file(f"[JL] DOCX opcional não gerado: {e}")
 
        
     except Exception:
