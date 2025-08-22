@@ -8,6 +8,7 @@ import time
 from glob import glob
 import shutil
 
+
 # fallback simples caso sanitize_filename não exista no módulo
 def _sanitize_filename(s):
     return re.sub(r'[^0-9A-Za-z._-]+', '_', str(s)).strip('_')
@@ -178,26 +179,55 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
 
         
 
-        # 1) Escolher o DXF ANOTADO
+       # === Seleciona o DXF ANOTADO e consolida o final ===
+        
+
+        # Lista de DXFs no CONCLUIDO
         dxfs = glob(os.path.join(caminho_salvar, "*.dxf"))
+        _log_file(f"[JL] DXFs no CONCLUIDO: {len(dxfs)} -> {[os.path.basename(p) for p in dxfs]}")
 
-        # Preferir DXFs com mtime >= t0 (gerados/alterados após a create)
-        candidatos = [p for p in dxfs if os.path.getmtime(p) >= t0 - 0.5]  # margem de 0,5s
-        if candidatos:
-            annotated_dxf = max(candidatos, key=lambda p: os.path.getmtime(p))
+        # Preferir DXFs escritos após a create (se t0 existir)
+        if dxfs:
+            try:
+                base_list = [p for p in dxfs if os.path.getmtime(p) >= t0 - 0.5] if 't0' in locals() else dxfs
+                base_list = base_list or dxfs  # fallback se filtro ficar vazio
+                annotated_dxf = max(base_list, key=lambda p: os.path.getmtime(p))
+            except Exception as e:
+                _log_file(f"[JL] Aviso: falha ao escolher DXF anotado por mtime: {e}")
+                annotated_dxf = dxfs[-1]  # qualquer um como fallback
         else:
-            # Fallback: pode ter sobrescrito o próprio LIMPO
-            annotated_dxf = caminho_dxf_limpo if os.path.exists(caminho_dxf_limpo) else dxf_resultado
+            # último recurso
+            annotated_dxf = dxf_resultado if os.path.exists(dxf_resultado) else None
 
-        # 2) Remover o DXF LIMPO **apenas se** ele NÃO for o anotado
-        if os.path.exists(caminho_dxf_limpo) and os.path.abspath(annotated_dxf) != os.path.abspath(caminho_dxf_limpo):
+        # Remove o LIMPO só se ele não for o anotado
+        if annotated_dxf and os.path.exists(caminho_dxf_limpo) and \
+        os.path.abspath(annotated_dxf) != os.path.abspath(caminho_dxf_limpo):
             try:
                 os.remove(caminho_dxf_limpo)
-                logger.info(f"DXF LIMPO removido após gerar DXF final: {caminho_dxf_limpo}")
                 _log_file(f"[JL] DXF LIMPO removido: {caminho_dxf_limpo}")
             except Exception as e:
-                logger.warning(f"Não foi possível remover DXF LIMPO: {e}")
                 _log_file(f"[JL] Aviso: não foi possível remover DXF LIMPO: {e}")
+
+        # Copia para nome final
+        final_dxf_path = None
+        if annotated_dxf and os.path.exists(annotated_dxf):
+            final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{safe_mat}.dxf")
+            try:
+                if os.path.abspath(annotated_dxf) != os.path.abspath(final_dxf_path):
+                    shutil.copyfile(annotated_dxf, final_dxf_path)
+                _log_file(f"[JL] DXF final (ANOTADO): {final_dxf_path} (origem: {annotated_dxf})")
+            except Exception as e:
+                _log_file(f"[JL] Aviso: cópia do DXF anotado falhou ({e}); usando {annotated_dxf}")
+                final_dxf_path = annotated_dxf
+
+        # === Retorno no formato que a rota espera ===
+        arquivos = [p for p in [excel_output, final_dxf_path, docx_path] if p and os.path.exists(p)]
+        if not arquivos:
+            _log_file("[ERRO] Nenhum arquivo encontrado para retorno.")
+            return log_path, []
+
+        _log_file("✅ Processamento finalizado com sucesso.")
+        return log_path, arquivos
 
                
         
