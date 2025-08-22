@@ -1,6 +1,23 @@
+
+
+def calculate_azimuth(p1, p2):
+    delta_x = p2[0] - p1[0]
+    delta_y = p2[1] - p1[1]
+    azimuth_rad = math.atan2(delta_x, delta_y)
+    azimuth_deg = math.degrees(azimuth_rad)
+    if azimuth_deg < 0:
+        azimuth_deg += 360
+    return azimuth_deg
+
+
+def calculate_distance(point1, point2):
+    dx = point2[0] - point1[0]
+    dy = point2[1] - point1[1]
+    return math.sqrt(dx**2 + dy**2)
+
 def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                          dxf_path, excel_path, log_path, sentido_poligonal="horario"):
-    import os, logging, glob
+    import os, logging, glob, math
     from pathlib import Path
     from .memoriais_JL import (
         limpar_dxf_e_inserir_ponto_az,
@@ -64,7 +81,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
     logger.info(f"DXF limpo salvo em: {caminho_dxf_limpo}")
 
     # (opcional) remover arquivo legado sem UUID
-    legado = os.path.join(pasta_concluido, f"DXF_LIMPO_{safe_mat}.dxf")
+    legado = os.path.join(diretorio_concluido, f"DXF_LIMPO_{safe_mat}.dxf")
     if os.path.exists(legado):
         try:
             os.remove(legado)
@@ -106,7 +123,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         ponto_az=None,
         distance_az_v1=distance_az_v1,
         azimute_az_v1=azimute_az_v1,        # DECOPA também passa a planilha
-        ponto_inicial_real=ponto_inicial_real,
+        ponto_inicial_real=ponto_inicial,
         tipo=tipo,
         uuid_prefix=uuid_prefix,
         diretorio_concluido=diretorio_concluido,
