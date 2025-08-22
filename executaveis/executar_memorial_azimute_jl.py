@@ -9,7 +9,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         create_memorial_document,   # se não usar DOCX, pode remover
         sanitize_filename,
     )
-    diretorio_concluido=caminho_salva
+    diretorio_concluido=caminho_salvar
     uuid_prefix = os.path.basename(os.path.dirname(os.path.normpath(diretorio_concluido)))
     # logger + writer com .write(), igual DECOPA
     logger = logging.getLogger(__name__)
