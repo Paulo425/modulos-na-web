@@ -5,6 +5,8 @@ import traceback
 import re
 from pathlib import Path
 import time
+from glob import glob
+import shutil
 
 # fallback simples caso sanitize_filename não exista no módulo
 def _sanitize_filename(s):
@@ -174,8 +176,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             sentido_poligonal=sentido_poligonal,
         )
 
-        from glob import glob
-        import shutil, time
+        
 
         # 1) Escolher o DXF ANOTADO
         dxfs = glob(os.path.join(caminho_salvar, "*.dxf"))
