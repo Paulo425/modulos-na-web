@@ -10,7 +10,6 @@ def _sanitize_filename(s):
     return re.sub(r'[^0-9A-Za-z._-]+', '_', str(s)).strip('_')
 
 try:
-    # se existir no seu módulo, usa o oficial
     from .memoriais_JL import sanitize_filename as _sanitize_filename
 except Exception:
     pass
@@ -34,7 +33,7 @@ def calculate_distance(p1, p2):
 
 def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                          dxf_path, excel_path, log_path, sentido_poligonal="horario"):
-    import logging
+    import logging, shutil
     from .memoriais_JL import (
         limpar_dxf_e_inserir_ponto_az,   # ← EXATAMENTE como no DECOPA
         get_document_info_from_dxf,
@@ -57,7 +56,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
-    # ===== Cabeçalho do arquivo de log desta execução =====
+    # ===== Cabeçalho do arquivo de log =====
     try:
         with open(log_path, "w", encoding="utf-8") as fh:
             fh.write("🟢 LOG JL iniciado\n")
@@ -77,7 +76,6 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         except Exception:
             pass
 
-    # Classe compatível com 'log=...' nas funções downstream
     class _LogWriter:
         def __init__(self, file_path):
             self.file_path = file_path
@@ -105,13 +103,12 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             tb = traceback.format_exc()
             _log_file("❌ EXCEÇÃO em limpar_dxf_e_inserir_ponto_az:")
             _log_file(tb)
-            return False
+            return log_path, []   # <<< RETORNO PADRÃO (log, lista vazia)
 
-        # Log do retorno (antes do unpack)
         _log_file(f"[JL] retorno limpar_dxf_e_inserir_ponto_az: tipo={type(res).__name__} valor={repr(res)[:300]}")
         if not isinstance(res, tuple) or len(res) != 3:
             _log_file(f"[ERRO] Esperava tupla(dxf_resultado, ponto_az, ponto_inicial); recebi {type(res).__name__}")
-            return False
+            return log_path, []
 
         dxf_resultado, ponto_az, ponto_inicial = res
         ponto_inicial_real = ponto_inicial  # compatibilidade
@@ -122,18 +119,17 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         try:
             res_info = get_document_info_from_dxf(dxf_resultado)
         except TypeError:
-            # Algumas versões aceitam log=...
             res_info = get_document_info_from_dxf(dxf_resultado, log=None)
         except Exception:
             tb = traceback.format_exc()
             _log_file("❌ EXCEÇÃO em get_document_info_from_dxf:")
             _log_file(tb)
-            return False
+            return log_path, []
 
         _log_file(f"[JL] retorno get_document_info_from_dxf: tipo={type(res_info).__name__} valor={repr(res_info)[:300]}")
         if not isinstance(res_info, tuple):
             _log_file(f"[ERRO] Esperava tupla(doc, lines, arcs, perimeter_dxf, area_dxf[, boundary]); recebi {type(res_info).__name__}")
-            return False
+            return log_path, []
 
         if len(res_info) == 6:
             doc, lines, arcs, perimeter_dxf, area_dxf, _boundary_points = res_info
@@ -142,11 +138,11 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             _boundary_points = None
         else:
             _log_file(f"[ERRO] Tamanho inesperado da tupla de retorno: len={len(res_info)}")
-            return False
+            return log_path, []
 
         if not doc or not lines:
             _log_file("❌ Documento DXF inválido ou sem entidades de linha.")
-            return False
+            return log_path, []
 
         msp = doc.modelspace()
         v1 = lines[0][0]
@@ -160,7 +156,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             doc=doc,
             msp=msp,
             lines=lines,
-            arcs=arcs,
+            arcs=arcos,
             proprietario=proprietario,
             matricula=matricula,
             caminho_salvar=caminho_salvar,       # CONCLUIDO
@@ -176,7 +172,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
 
         if not excel_output:
             _log_file("[ERRO] Falha ao gerar memorial descritivo (XLSX/DXF).")
-            return False
+            return log_path, []
 
         # === DOCX no padrão JL (mantendo seus parâmetros existentes) ===
         template_path = os.path.join("templates_doc", "MODELO_TEMPLATE_DOC_JL_CORRETO.docx")
@@ -195,18 +191,29 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                 Coorde_N_ponto_Az=ponto_az[1],
                 azimuth=azimuth,
                 distance=distance,
-                log=log,  # aceita .write(...)
+                log=_LogWriter(log_path),  # aceita .write(...)
             )
             _log_file(f"[JL] DOCX salvo em: {docx_path}")
         except Exception as e:
             _log_file(f"[JL] DOCX opcional não gerado: {e}")
 
+        # === DXF final no padrão antigo (copia do dxf_resultado) ===
+        final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{safe_mat}.dxf")
+        try:
+            shutil.copyfile(dxf_resultado, final_dxf_path)
+            _log_file(f"[JL] DXF final copiado para: {final_dxf_path}")
+        except Exception as e:
+            _log_file(f"[JL] Aviso: não foi possível copiar DXF final ({e}); retornando dxf_resultado")
+            final_dxf_path = dxf_resultado
+
         _log_file("✅ Processamento finalizado com sucesso.")
-        return True
+        # <<< RETORNO NO PADRÃO ANTIGO >>>
+        return log_path, [excel_output, final_dxf_path, docx_path]
 
     except Exception:
         tb = traceback.format_exc()
         _log_file("❌ ERRO inesperado em executar_memorial_jl:")
         _log_file(tb)
         logger.exception("Erro inesperado em executar_memorial_jl")
-        return False
+        # <<< RETORNO NO PADRÃO ANTIGO >>>
+        return log_path, []
