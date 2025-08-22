@@ -882,6 +882,7 @@ def memorial_azimute_jl():
             # 4) Log por execução dentro do CONCLUIDO
             exec_log_path = Path(dir_conc) / f"exec_{run_uuid}.log"
 
+            
             # 5) Executar pipeline JL (função interna ao projeto)
             os.environ["ID_EXECUCAO"] = run_uuid  # coerência com os demais módulos
             from executaveis.executar_memorial_azimute_jl import executar_memorial_jl
@@ -889,7 +890,7 @@ def memorial_azimute_jl():
             # sanitização leve para nome de arquivo
             mat_sanit = re.sub(r"[^\w.\-]+", "_", matricula).strip("_") or "MATRICULA"
 
-            log_gerado, arquivos_gerados = executar_memorial_jl(
+            ret = executar_memorial_jl(
                 proprietario=proprietario,
                 matricula=matricula,
                 descricao=descricao,
@@ -900,9 +901,28 @@ def memorial_azimute_jl():
                 sentido_poligonal=sentido_poligonal,  # 👈 passa o sentido
             )
 
+            # Aceita tanto o retorno correto (tupla) quanto o antigo (bool)
+            if isinstance(ret, tuple) and len(ret) == 2:
+                log_gerado, arquivos_gerados = ret
+            else:
+                if ret is True:
+                    log_gerado = str(exec_log_path)
+                    pdir = Path(dir_conc)
+                    # coleta tudo que interessa para o ZIP
+                    arquivos_gerados  = [str(p) for p in pdir.glob("*.xlsx")]
+                    arquivos_gerados += [str(p) for p in pdir.glob("*.dxf")]
+                    arquivos_gerados += [str(p) for p in pdir.glob("*.docx")]
+                else:
+                    raise TypeError(f"executar_memorial_jl retornou {type(ret).__name__}: {ret!r}")
+
+
             # 6) Zipa a saída da execução (sem .log)
             zip_name = f"{run_uuid}_JL_{mat_sanit}.zip"
             zip_path = os.path.join(dir_conc, zip_name)
+            # 5.5) Não permita gerar ZIP vazio
+            if not arquivos_gerados:
+                raise RuntimeError("Nenhum arquivo foi gerado pelo pipeline MEMORIAIS_JL. Verifique o log desta execução.")
+
             with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
                 for arq in (arquivos_gerados or []):
                     if arq and os.path.exists(arq) and not str(arq).lower().endswith(".log"):

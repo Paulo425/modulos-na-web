@@ -156,7 +156,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             doc=doc,
             msp=msp,
             lines=lines,
-            arcs=arcos,
+            arcs=arcs,
             proprietario=proprietario,
             matricula=matricula,
             caminho_salvar=caminho_salvar,       # CONCLUIDO
