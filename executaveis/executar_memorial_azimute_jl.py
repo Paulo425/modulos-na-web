@@ -171,14 +171,39 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         )
 
         # Remover DXF LIMPO após gerar o DXF final ANOTADO (mesma ideia do DECOPA)
-        try:
-            if os.path.exists(caminho_dxf_limpo):
+        from glob import glob
+        import shutil, time
+
+        # 1) Escolher o DXF ANOTADO
+        dxfs = glob(os.path.join(caminho_salvar, "*.dxf"))
+
+        # Preferir DXFs com mtime >= t0 (gerados/alterados após a create)
+        candidatos = [p for p in dxfs if os.path.getmtime(p) >= t0 - 0.5]  # margem de 0,5s
+        if candidatos:
+            annotated_dxf = max(candidatos, key=lambda p: os.path.getmtime(p))
+        else:
+            # Fallback: pode ter sobrescrito o próprio LIMPO
+            annotated_dxf = caminho_dxf_limpo if os.path.exists(caminho_dxf_limpo) else dxf_resultado
+
+        # 2) Remover o DXF LIMPO **apenas se** ele NÃO for o anotado
+        if os.path.exists(caminho_dxf_limpo) and os.path.abspath(annotated_dxf) != os.path.abspath(caminho_dxf_limpo):
+            try:
                 os.remove(caminho_dxf_limpo)
                 logger.info(f"DXF LIMPO removido após gerar DXF final: {caminho_dxf_limpo}")
                 _log_file(f"[JL] DXF LIMPO removido: {caminho_dxf_limpo}")
+            except Exception as e:
+                logger.warning(f"Não foi possível remover DXF LIMPO: {e}")
+                _log_file(f"[JL] Aviso: não foi possível remover DXF LIMPO: {e}")
+
+        # 3) Consolidar o DXF final
+        final_dxf_path = os.path.join(caminho_salvar, f"Memorial_{safe_mat}.dxf")
+        try:
+            if os.path.abspath(annotated_dxf) != os.path.abspath(final_dxf_path):
+                shutil.copyfile(annotated_dxf, final_dxf_path)
+            _log_file(f"[JL] DXF final (ANOTADO): {final_dxf_path} (origem: {annotated_dxf})")
         except Exception as e:
-            logger.warning(f"Não foi possível remover DXF LIMPO: {e}")
-            _log_file(f"[JL] Aviso: não foi possível remover DXF LIMPO: {e}")
+            _log_file(f"[JL] Aviso: não foi possível copiar DXF anotado ({e}); usando {annotated_dxf}")
+            final_dxf_path = annotated_dxf
 
         
         
