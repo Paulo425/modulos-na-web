@@ -1,14 +1,9 @@
-
-
 # --- IMPORTS DE MÓDULO (fora da função; necessários para helpers e cálculos) ---
 import os
 import math
 import traceback
 import re
 from pathlib import Path
-
-
-
 
 # fallback simples caso sanitize_filename não exista no módulo
 def _sanitize_filename(s):
@@ -40,47 +35,60 @@ def calculate_distance(p1, p2):
 def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                          dxf_path, excel_path, log_path, sentido_poligonal="horario"):
     import logging
-    # Importa utilitários do seu módulo JL
     from .memoriais_JL import (
+        limpar_dxf_e_inserir_ponto_az,   # ← EXATAMENTE como no DECOPA
         get_document_info_from_dxf,
         create_memorial_descritivo,
         create_memorial_document,
-        limpar_dxf_e_inserir_ponto_az,   # ← exatamente como no DECOPA
     )
 
+    # ===== Preparação de pastas =====
+    Path(caminho_salvar).mkdir(parents=True, exist_ok=True)
+    Path(Path(log_path).parent).mkdir(parents=True, exist_ok=True)
 
-    # ===== logger + writer simples (grava e também manda pro logger do módulo) =====
+    # ===== Logging no console (Render) se ainda não houver handler =====
+    root = logging.getLogger()
+    if not root.handlers:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s [%(name)s] %(message)s"
+        )
+
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
+    # ===== Cabeçalho do arquivo de log desta execução =====
+    try:
+        with open(log_path, "w", encoding="utf-8") as fh:
+            fh.write("🟢 LOG JL iniciado\n")
+            fh.write(f"[JL] sentido_poligonal={sentido_poligonal}\n")
+    except Exception:
+        logger.warning(f"[JL] Falha ao iniciar o log: {log_path}")
+
+    # Writer simples p/ arquivo + espelho no console
+    def _log_file(msg: str):
+        try:
+            with open(log_path, "a", encoding="utf-8") as fh:
+                fh.write(msg if msg.endswith("\n") else msg + "\n")
+        except Exception:
+            logger.warning(f"[JL] Falha ao escrever no log: {log_path}")
+        try:
+            logger.info(str(msg).strip())
+        except Exception:
+            pass
+
+    # Classe compatível com 'log=...' nas funções downstream
     class _LogWriter:
         def __init__(self, file_path):
             self.file_path = file_path
-            # abre o log zerando no início p/ facilitar o diagnóstico da execução corrente
-            try:
-                with open(self.file_path, "w", encoding="utf-8") as fh:
-                    fh.write(f"🟢 LOG iniciado\n")
-            except Exception:
-                pass
-
         def write(self, msg):
-            try:
-                with open(self.file_path, "a", encoding="utf-8") as fh:
-                    fh.write(msg if str(msg).endswith("\n") else str(msg) + "\n")
-            except Exception:
-                pass
-            try:
-                logger.info(str(msg).strip())
-            except Exception:
-                pass
+            _log_file(str(msg))
 
     log = _LogWriter(log_path)
-    log.write(f"[JL] Iniciando executar_memorial_jl | sentido_poligonal={sentido_poligonal}")
+    _log_file(f"[JL] log_path: {log_path}")
+    _log_file(f"[JL] Iniciando executar_memorial_jl | sentido_poligonal={sentido_poligonal}")
 
     try:
-        # === garante que a pasta CONCLUIDO exista ===
-        Path(caminho_salvar).mkdir(parents=True, exist_ok=True)
-
         # === UUID prefix (basename do pai da pasta CONCLUIDO) ===
         uuid_prefix = os.path.basename(os.path.dirname(os.path.normpath(caminho_salvar))) or "JL"
         safe_mat = _sanitize_filename(matricula)
@@ -89,34 +97,42 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         nome_limpo_dxf = f"{uuid_prefix}_JL_{safe_mat}_LIMPO.dxf"
         caminho_dxf_limpo = os.path.join(caminho_salvar, nome_limpo_dxf)
 
-        # === limpeza do DXF (aceita as duas variantes) ===
         # === limpeza do DXF — padrão DECOPA ===
-        log.write("[JL] Limpando DXF com: limpar_dxf_e_inserir_ponto_az")
-        res = limpar_dxf_e_inserir_ponto_az(dxf_path, caminho_dxf_limpo)
+        _log_file("[JL] Limpando DXF com: limpar_dxf_e_inserir_ponto_az")
+        try:
+            res = limpar_dxf_e_inserir_ponto_az(dxf_path, caminho_dxf_limpo)
+        except Exception:
+            tb = traceback.format_exc()
+            _log_file("❌ EXCEÇÃO em limpar_dxf_e_inserir_ponto_az:")
+            _log_file(tb)
+            return False
 
-        # Blindagem do retorno (evita 'cannot unpack non-iterable bool object')
+        # Log do retorno (antes do unpack)
+        _log_file(f"[JL] retorno limpar_dxf_e_inserir_ponto_az: tipo={type(res).__name__} valor={repr(res)[:300]}")
         if not isinstance(res, tuple) or len(res) != 3:
-            log.write(f"[ERRO] limpar_dxf_e_inserir_ponto_az retornou {type(res).__name__}: {res!r}")
+            _log_file(f"[ERRO] Esperava tupla(dxf_resultado, ponto_az, ponto_inicial); recebi {type(res).__name__}")
             return False
 
         dxf_resultado, ponto_az, ponto_inicial = res
-        # manter compatibilidade com o restante do código
-        ponto_inicial_real = ponto_inicial
-
-
-        # Se não houver ponto_az, define neutro (queremos manter assinatura da create)
+        ponto_inicial_real = ponto_inicial  # compatibilidade
         if not ponto_az:
-            ponto_az = (0.0, 0.0)
+            ponto_az = (0.0, 0.0)  # neutro só para manter assinatura
 
         # === leitura das entidades do DXF ===
         try:
             res_info = get_document_info_from_dxf(dxf_resultado)
         except TypeError:
-            # Algumas versões aceitam log=..., tenta novamente
+            # Algumas versões aceitam log=...
             res_info = get_document_info_from_dxf(dxf_resultado, log=None)
+        except Exception:
+            tb = traceback.format_exc()
+            _log_file("❌ EXCEÇÃO em get_document_info_from_dxf:")
+            _log_file(tb)
+            return False
 
+        _log_file(f"[JL] retorno get_document_info_from_dxf: tipo={type(res_info).__name__} valor={repr(res_info)[:300]}")
         if not isinstance(res_info, tuple):
-            log.write(f"[JL][ERRO] get_document_info_from_dxf retornou {type(res_info).__name__}: {res_info!r}")
+            _log_file(f"[ERRO] Esperava tupla(doc, lines, arcs, perimeter_dxf, area_dxf[, boundary]); recebi {type(res_info).__name__}")
             return False
 
         if len(res_info) == 6:
@@ -125,23 +141,21 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             doc, lines, arcs, perimeter_dxf, area_dxf = res_info
             _boundary_points = None
         else:
-            log.write(f"[JL][ERRO] get_document_info_from_dxf retornou tupla de tamanho inesperado: len={len(res_info)}")
+            _log_file(f"[ERRO] Tamanho inesperado da tupla de retorno: len={len(res_info)}")
             return False
 
         if not doc or not lines:
-            log.write("❌ Documento DXF inválido ou sem linhas.")
+            _log_file("❌ Documento DXF inválido ou sem entidades de linha.")
             return False
 
         msp = doc.modelspace()
         v1 = lines[0][0]
         distance_az_v1 = calculate_distance(ponto_az, v1)
         azimute_az_v1  = calculate_azimuth(ponto_az, v1)
-        # Para o seu create_memorial_document do JL
-        distance = distance_az_v1
-        azimuth  = azimute_az_v1
+        distance = distance_az_v1     # para o DOCX JL
+        azimuth  = azimute_az_v1      # para o DOCX JL
 
-        # === chama a create_memorial_descritivo com a MESMA assinatura do DECOPA ===
-        # Observação: usamos tipo="JL" só para manter o parâmetro.
+        # === create_memorial_descritivo — MESMA assinatura do DECOPA ===
         excel_output = create_memorial_descritivo(
             doc=doc,
             msp=msp,
@@ -150,8 +164,8 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
             proprietario=proprietario,
             matricula=matricula,
             caminho_salvar=caminho_salvar,       # CONCLUIDO
-            excel_file_path=excel_path,          # sua planilha de uma aba ("Confrontantes")
-            ponto_az=ponto_az,                   # mesmo não sendo usado, mantemos a assinatura
+            excel_file_path=excel_path,          # Excel com aba "Confrontantes"
+            ponto_az=ponto_az,
             distance_az_v1=distance_az_v1,
             azimute_az_v1=azimute_az_v1,
             ponto_inicial_real=ponto_inicial_real,
@@ -161,7 +175,7 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
         )
 
         if not excel_output:
-            log.write("[ERRO] Falha ao gerar memorial descritivo (XLSX/DXF).")
+            _log_file("[ERRO] Falha ao gerar memorial descritivo (XLSX/DXF).")
             return False
 
         # === DOCX no padrão JL (mantendo seus parâmetros existentes) ===
@@ -181,23 +195,18 @@ def executar_memorial_jl(proprietario, matricula, descricao, caminho_salvar,
                 Coorde_N_ponto_Az=ponto_az[1],
                 azimuth=azimuth,
                 distance=distance,
-                log=log,  # seu JL aceita log
+                log=log,  # aceita .write(...)
             )
-            log.write(f"[JL] DOCX salvo em: {docx_path}")
+            _log_file(f"[JL] DOCX salvo em: {docx_path}")
         except Exception as e:
-            log.write(f"[JL] DOCX opcional não gerado: {e}")
+            _log_file(f"[JL] DOCX opcional não gerado: {e}")
 
-        log.write("✅ Processamento finalizado com sucesso.")
+        _log_file("✅ Processamento finalizado com sucesso.")
         return True
 
-    except Exception as e:
+    except Exception:
         tb = traceback.format_exc()
-        try:
-            with open(log_path, "a", encoding="utf-8") as fh:
-                fh.write(f"\n❌ ERRO inesperado em executar_memorial_jl:\n{tb}\n")
-        except Exception:
-            pass
+        _log_file("❌ ERRO inesperado em executar_memorial_jl:")
+        _log_file(tb)
         logger.exception("Erro inesperado em executar_memorial_jl")
         return False
-
-
