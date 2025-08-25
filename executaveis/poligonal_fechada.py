@@ -44,6 +44,18 @@ except locale.Error:
 # Exemplo da data:
 data_atual = datetime.now().strftime("%d de %B de %Y")
 
+def obter_data_em_portugues():
+    meses_pt = {
+        "January": "janeiro", "February": "fevereiro", "March": "março",
+        "April": "abril", "May": "maio", "June": "junho",
+        "July": "julho", "August": "agosto", "September": "setembro",
+        "October": "outubro", "November": "novembro", "December": "dezembro"
+    }
+    data = datetime.now()
+    mes_en = data.strftime("%B")
+    mes_pt = meses_pt.get(mes_en, mes_en)
+    return f"{data.day:02d} de {mes_pt} de {data.year}"
+
 # Configuração de logger adicional
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -1019,9 +1031,11 @@ def create_memorial_document(
         doc_word.add_paragraph("")
         doc_word.add_paragraph("")
 
-        data_atual = datetime.now().strftime("%d de %B de %Y")
-        paragrafo_data = doc_word.add_paragraph(f"Porto Alegre,RS, {data_atual}.", style='Normal')
-        paragrafo_data.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+        data_atual = obter_data_em_portugues()
+        # Centralizar data
+        paragrafo_data = doc_word.add_paragraph(f"Paraná, {data_atual}.", style='Normal')
+        paragrafo_data.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
         doc_word.add_paragraph("")
         doc_word.add_paragraph("")
 
