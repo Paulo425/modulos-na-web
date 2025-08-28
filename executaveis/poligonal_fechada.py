@@ -732,23 +732,32 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         # # Usa a MESMA rotina de anotação para linhas e arcos (passando o comprimento correto)
         # add_label_and_distance(doc, msp, start_point, end_point, label, distance)
 
-        label = f"V{idx + 1}"
+        label   = f"V{idx + 1}"
         _is_arc = (tipo_segmento == "arc")
 
-        # 1) TENTA o caminho original (que já funcionava no sentido horário)
-        ok_native = False
-        try:
-            add_label_and_distance(doc, msp, start_point, end_point, label, distance)
-            ok_native = True
-        except Exception as e:
-            logger.warning(f"[native] Falha ao anotar {label} com add_label_and_distance: {e}")
+        if _is_arc:
+            # Para arco: use sempre o FALLBACK para não desenhar a corda
+            try:
+                _ = _fallback_anotar_segmento(
+                    msp, start_point, end_point, label, distance,
+                    H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=True
+                )
+            except Exception as e:
+                logger.warning(f"[fallback-arc] Falha ao anotar {label}: {e}")
+        else:
+            # Para linha: tente o nativo; se falhar, cai no fallback
+            ok_native = False
+            try:
+                add_label_and_distance(doc, msp, start_point, end_point, label, distance)
+                ok_native = True
+            except Exception as e:
+                logger.warning(f"[native-line] Falha ao anotar {label}: {e}")
+            if not ok_native:
+                _ = _fallback_anotar_segmento(
+                    msp, start_point, end_point, label, distance,
+                    H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False
+                )
 
-        # 2) Se falhar, usa fallback robusto para ESTE segmento
-        if not ok_native:
-            _ = _fallback_anotar_segmento(
-                msp, start_point, end_point, label, distance,
-                H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=_is_arc
-            )
 
         anot_count += 1
 
