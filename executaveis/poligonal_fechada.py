@@ -817,13 +817,28 @@ def create_memorial_descritivo(
         seq.reverse()
         for i, (tipo_segmento, dados) in enumerate(seq):
             if tipo_segmento == 'line':
+                # dados = (start, end)
                 start, end = dados
                 seq[i] = ('line', (end, start))
+
             elif tipo_segmento == 'arc':
-                # dados = (start, end, radius, length, bulge)
-                start, end, radius, length, bulge = dados
-                seq[i] = ('arc', (end, start, radius, length, -bulge))
+                # esperado: (start, end, radius, length, bulge)
+                if len(dados) >= 5:
+                    start, end, radius, length, bulge = dados
+                    seq[i] = ('arc', (end, start, radius, length, -bulge))  # inverte bulge!
+                elif len(dados) == 4:
+                    # sem bulge (fallback, mantém raio/comprimento)
+                    start, end, radius, length = dados
+                    seq[i] = ('arc', (end, start, radius, length))
+                else:
+                    # fallback genérico (evita crash se vier algo inesperado)
+                    start, end = dados[0], dados[1]
+                    novos = list(dados)
+                    novos[0], novos[1] = end, start
+                    seq[i] = ('arc', tuple(novos))
+
             else:
+                # outros tipos: tenta só trocar start/end
                 try:
                     start, end = dados[0], dados[1]
                     novos = list(dados)
@@ -831,6 +846,7 @@ def create_memorial_descritivo(
                     seq[i] = (tipo_segmento, tuple(novos))
                 except Exception:
                     pass
+
 
     if _sentido == 'horario':
         if area_tmp > 0:  # CCW -> precisa virar CW
@@ -851,25 +867,62 @@ def create_memorial_descritivo(
     # --- GEOMETRIA OFICIAL: recria a LWPOLYLINE preservando os arcos (bulge) ---
     # Formato esperado por ezdxf: [(x, y, bulge), ...], onde o bulge do vértice i
     # define a curvatura do segmento i -> i+1. Não precisa repetir o último ponto.
+    # --- GEOMETRIA OFICIAL: recria a LWPOLYLINE preservando os arcos (bulge) ---
     xyb_points = []
     for tipo_segmento, dados in sequencia_completa:
         x, y = float(dados[0][0]), float(dados[0][1])
-        if tipo_segmento == 'line':
-            b = 0.0
-        else:
-            # dados = (start, end, radius, length, bulge)
-            b = float(dados[4])
+        b = 0.0 if tipo_segmento == 'line' else float(dados[4])
         xyb_points.append((x, y, b))
 
-    # desenha a poligonal em uma camada própria
     try:
         pl = msp.add_lwpolyline(xyb_points, format='xyb', close=True)
         pl.dxf.layer = "POLIGONAL_MEMORIAL"
-        # cor opcional (ciano = 4, verde = 3 etc.)
         pl.dxf.color = 4
     except Exception as e:
         logger.warning(f"Falha ao criar LWPOLYLINE com bulge: {e}")
-    
+
+    # >>> COLE O MINI-CHECK AQUI <<<
+    def _area_seq_densificada(seq, n=64):
+        import math
+        pts = []
+        for tipo, d in seq:
+            a, b = d[0], d[1]
+            if tipo == 'line':
+                pts.append(a)
+            else:
+                radius, bulge = float(d[2]), float(d[4])
+                dx, dy = b[0]-a[0], b[1]-a[1]
+                c = math.hypot(dx, dy)
+                if c < 1e-12 or abs(bulge) < 1e-12:
+                    pts.append(a); continue
+                theta = 4.0*math.atan(abs(bulge))
+                nx, ny = -dy/c, dx/c
+                if bulge < 0: nx, ny = -nx, -ny
+                offset = math.sqrt(max(0.0, radius*radius - (c/2)*(c/2)))
+                midx, midy = (a[0]+b[0])/2.0, (a[1]+b[1])/2.0
+                cx, cy = midx + nx*offset, midy + ny*offset
+                ang0 = math.atan2(a[1]-cy, a[0]-cx)
+                sentido = 1.0 if bulge > 0 else -1.0
+                for k in range(n):
+                    t = k/(n-1)
+                    ang = ang0 + sentido*theta*t
+                    px, py = cx + radius*math.cos(ang), cy + radius*math.sin(ang)
+                    pts.append((px, py))
+        if pts and pts[0] != pts[-1]:
+            pts.append(pts[0])
+        area2 = 0.0
+        for i in range(len(pts)-1):
+            x1,y1 = pts[i]; x2,y2 = pts[i+1]
+            area2 += x1*y2 - x2*y1
+        return abs(area2)/2.0
+
+    try:
+        area_curva = _area_seq_densificada(sequencia_completa, n=64)
+        logger.info(f"Área densificada (arcos reais): {area_curva:.4f} m²")
+    except Exception as e:
+        logger.warning(f"Falha no cálculo de área densificada: {e}")
+
+    # --- rótulos + planilha ---------------------------------------------------
     data = []
     num_vertices = len(sequencia_completa)
     anot_count = 0
