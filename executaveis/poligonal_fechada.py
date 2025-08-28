@@ -221,110 +221,185 @@ def bulge_to_arc_length(start_point, end_point, bulge):
 
 
 def get_document_info_from_dxf(dxf_file_path):
+    """
+    Lê a primeira LWPOLYLINE FECHADA do DXF e retorna:
+      - doc (ezdxf document)
+      - lines: list[ (start_xy, end_xy) ]
+      - arcs:  list[ {start_point, end_point, center, radius, start_angle, end_angle, length, bulge} ]
+      - perimeter_dxf (float)
+      - area_dxf (float)
+    """
     try:
+        import ezdxf
+        import math
+        import traceback
+        from shapely.geometry import Polygon
+
         doc = ezdxf.readfile(dxf_file_path)
         msp = doc.modelspace()
 
         lines = []
         arcs = []
-        perimeter_dxf = 0
+        perimeter_dxf = 0.0
         area_dxf = 0.0
 
+        found = False
+
         for entity in msp.query('LWPOLYLINE'):
-            if entity.closed:  # ✅ correção (era is_closed)
-                polyline_points = entity.get_points('xyseb')
-                num_points = len(polyline_points)
+            # Aceita apenas a primeira polilinha FECHADA (comportamento original)
+            if not getattr(entity, "closed", False):
+                continue
 
-                boundary_points = []
+            # Tenta obter pontos detalhados; se não der, cai para 'xyb'
+            try:
+                polyline_points = entity.get_points('xyseb')  # x, y, start_width, end_width, bulge
+            except TypeError:
+                polyline_points = entity.get_points('xyb')    # x, y, bulge
 
-                for i in range(num_points):
-                    x_start, y_start, _, _, bulge = polyline_points[i]
-                    x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
+            num_points = len(polyline_points)
+            if num_points < 2:
+                continue
 
-                    # ⬇️ ADICIONE ESTA LINHA AQUI
-                    bulge = float(bulge or 0.0)
+            boundary_points = []
 
-                    start_point = (float(x_start), float(y_start))
-                    end_point = (float(x_end), float(y_end))
+            for i in range(num_points):
+                # Desempacota ponta A
+                ptA = polyline_points[i]
+                if len(ptA) == 5:
+                    x_start, y_start, _sA, _eA, bA = ptA
+                elif len(ptA) == 3:
+                    x_start, y_start, bA = ptA
+                else:
+                    # formato inesperado
+                    continue
 
-                    if bulge != 0:
-                        dx = end_point[0] - start_point[0]
-                        dy = end_point[1] - start_point[1]
-                        chord_length = math.hypot(dx, dy)
-                        sagitta = (bulge * chord_length) / 2
-                        radius = ((chord_length / 2)**2 + sagitta**2) / (2 * abs(sagitta))
-                        angle_span_rad = 4 * math.atan(abs(bulge))
-                        arc_length = radius * angle_span_rad
+                # Desempacota ponta B (i+1, módulo num_points)
+                ptB = polyline_points[(i + 1) % num_points]
+                if len(ptB) == 5:
+                    x_end, y_end, _sB, _eB, _bB_unused = ptB
+                elif len(ptB) == 3:
+                    x_end, y_end, _bB_unused = ptB
+                else:
+                    continue
 
-                        mid_x = (start_point[0] + end_point[0]) / 2
-                        mid_y = (start_point[1] + end_point[1]) / 2
-                        chord_midpoint = (mid_x, mid_y)
+                # Normaliza bulge
+                try:
+                    bulge = float(bA or 0.0)
+                except Exception:
+                    bulge = 0.0
 
-                        offset_dist = math.sqrt(radius**2 - (chord_length / 2)**2)
-                        dx = float(end_point[0]) - float(start_point[0])
-                        dy = float(end_point[1]) - float(start_point[1])
+                start_point = (float(x_start), float(y_start))
+                end_point   = (float(x_end),   float(y_end))
 
-                        length = math.hypot(dx, dy)
-                        perp_vector = (-dy / length, dx / length)
+                dx = end_point[0] - start_point[0]
+                dy = end_point[1] - start_point[1]
+                chord_length = math.hypot(dx, dy)
 
-                        if bulge < 0:
-                            perp_vector = (-perp_vector[0], -perp_vector[1])
+                # Ignora segmento degenerado (corda ~0), mas preserva contorno
+                if chord_length < 1e-9:
+                    boundary_points.append((start_point[0], start_point[1]))
+                    continue
 
-                        center_x = chord_midpoint[0] + perp_vector[0] * offset_dist
-                        center_y = chord_midpoint[1] + perp_vector[1] * offset_dist
-                        center = (center_x, center_y)
+                if abs(bulge) > 1e-12:
+                    # Relação bulge ↔ ângulo central: bulge = tan(delta/4)
+                    delta = 4.0 * math.atan(bulge)
+                    sin_half = math.sin(delta / 2.0)
 
-                        start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
-                        end_angle = start_angle + (angle_span_rad if bulge > 0 else -angle_span_rad)
-
-                        arcs.append({
-                            'start_point': (start_point[0], start_point[1]),
-                            'end_point':   (end_point[0],   end_point[1]),
-                            'center':      (center[0],      center[1]),
-                            'radius': radius,
-                            'start_angle': math.degrees(start_angle),
-                            'end_angle':   math.degrees(end_angle),
-                            'length': arc_length,
-                            'bulge': float(bulge),  # vírgula aqui é ok mesmo sendo o último item
-                        })
-
-
-                        num_arc_points = 100
-                        for t in range(num_arc_points):
-                            angle = start_angle + (end_angle - start_angle) * t / num_arc_points
-                            arc_x = center[0] + radius * math.cos(angle)
-                            arc_y = center[1] + radius * math.sin(angle)
-                            boundary_points.append((arc_x, arc_y))
-
-                        segment_length = arc_length
-                        perimeter_dxf += segment_length
-                    else:
+                    # Se ângulo muito pequeno, trata como linha
+                    if abs(sin_half) < 1e-12:
                         lines.append((start_point, end_point))
                         boundary_points.append((start_point[0], start_point[1]))
-                        dx = end_point[0] - start_point[0]
-                        dy = end_point[1] - start_point[1]
-                        segment_length = math.hypot(dx, dy)
-                        perimeter_dxf += segment_length
+                        perimeter_dxf += chord_length
+                        continue
 
+                    # Raio do arco
+                    radius = chord_length / (2.0 * abs(sin_half))
+                    arc_length = abs(radius * delta)
+
+                    # Distância do centro ao meio da corda: d = sqrt(R^2 - (c/2)^2)
+                    half_c = chord_length / 2.0
+                    sq = radius * radius - half_c * half_c
+                    if sq < 0.0:
+                        sq = 0.0  # estabiliza numérico
+                    offset_dist = math.sqrt(sq)
+
+                    # Vetor perpendicular normalizado à corda
+                    nx, ny = -dy / chord_length, dx / chord_length
+                    # Direção do centro conforme sinal do bulge
+                    if bulge < 0:
+                        nx, ny = -nx, -ny
+
+                    # Centro do círculo
+                    midx = (start_point[0] + end_point[0]) / 2.0
+                    midy = (start_point[1] + end_point[1]) / 2.0
+                    cx = midx + nx * offset_dist
+                    cy = midy + ny * offset_dist
+
+                    # Ângulos
+                    start_angle = math.atan2(start_point[1] - cy, start_point[0] - cx)
+                    end_angle   = start_angle + delta
+
+                    # Armazena arco
+                    arcs.append({
+                        'start_point': (start_point[0], start_point[1]),
+                        'end_point':   (end_point[0],   end_point[1]),
+                        'center':      (cx, cy),
+                        'radius':      radius,
+                        'start_angle': math.degrees(start_angle),
+                        'end_angle':   math.degrees(end_angle),
+                        'length':      arc_length,
+                        'bulge':       bulge,
+                    })
+
+                    # Densifica contorno para perímetro/área
+                    num_arc_points = 64
+                    for t in range(num_arc_points):
+                        # t ∈ [0,1) para evitar repetir endpoint; o próximo segmento entra com seu ponto inicial
+                        frac = t / float(num_arc_points)
+                        ang = start_angle + delta * frac
+                        px = cx + radius * math.cos(ang)
+                        py = cy + radius * math.sin(ang)
+                        boundary_points.append((px, py))
+
+                    perimeter_dxf += arc_length
+
+                else:
+                    # Linha reta
+                    lines.append((start_point, end_point))
+                    boundary_points.append((start_point[0], start_point[1]))
+                    perimeter_dxf += chord_length
+
+            # (Opcional) fecha o contorno explicitamente
+            if boundary_points and boundary_points[0] != boundary_points[-1]:
+                boundary_points.append(boundary_points[0])
+
+            # Área exata do desenho
+            if len(boundary_points) >= 3:
                 polygon = Polygon(boundary_points)
-                area_dxf = polygon.area  # área exata do desenho
-                break
+                area_dxf = polygon.area
+            else:
+                area_dxf = 0.0
 
-        if not lines and not arcs:
+            found = True
+            break  # mantém comportamento original: processa a primeira polilinha fechada
+
+        if not found and not lines and not arcs:
             print("Nenhuma polilinha fechada encontrada no arquivo DXF.")
-            return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
+            return None, [], [], 0, 0
 
         print(f"Linhas processadas: {len(lines)}")
-        print(f"Arcos processados: {len(arcs)}")
-        print(f"Perímetro do DXF: {perimeter_dxf:.2f} metros")
-        print(f"Área do DXF: {area_dxf:.2f} metros quadrados")
+        print(f"Arcos processados:  {len(arcs)}")
+        print(f"Perímetro do DXF:   {perimeter_dxf:.2f} m")
+        print(f"Área do DXF:        {area_dxf:.2f} m²")
 
         return doc, lines, arcs, perimeter_dxf, area_dxf
 
     except Exception as e:
         print(f"Erro ao obter informações do documento: {e}")
+        import traceback
         traceback.print_exc()
-        return None, [], [], 0, 0  # ✅ retorna sempre 5 itens
+        return None, [], [], 0, 0
+
 
 
 
@@ -598,20 +673,24 @@ def create_memorial_descritivo(
     diretorio_concluido=None, sentido_poligonal='horario'
 ):
     """
-    Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
-    Espera segmentos no formato:
-      - linhas: ('line', (start, end))
-      - arcos : ('arc',  (start, end, radius, length, bulge))
+    Cria o memorial descritivo no DXF e salva planilha Excel.
+    Segmentos esperados:
+      - lines: list[ (p1, p2) ]
+      - arcs : list[ {'start_point','end_point','radius','length','bulge'} ]
     """
-    import logging, os
+    import os, math, logging
+    import pandas as pd
+    import openpyxl
+    from openpyxl.styles import Font, Alignment
+
     logger = logging.getLogger(__name__)
 
-    # ⇩⇩ ADICIONE AQUI (defaults caso não existam globais) ⇩⇩
+    # Defaults
     H_TXT_VERT = globals().get('H_TXT_VERT', 1.20)
     H_TXT_DIST = globals().get('H_TXT_DIST', 1.20)
     R_CIRCLE   = globals().get('R_CIRCLE', 0.60)
 
-    # --- confrontantes -------------------------------------------------------
+    # --- Confrontantes -------------------------------------------------------
     if excel_file_path:
         try:
             confrontantes_df = pd.read_excel(excel_file_path)
@@ -620,31 +699,36 @@ def create_memorial_descritivo(
             else:
                 confrontantes_dict = {}
         except Exception as e:
-            print(f"Erro ao carregar arquivo de confrontantes: {e}")
+            logger.warning(f"Erro ao carregar confrontantes: {e}")
             confrontantes_dict = {}
     else:
         confrontantes_dict = {}
 
     if (not lines) and (not arcs):
-        print("Nenhuma geometria (linhas ou arcos) disponível para criar o memorial descritivo.")
+        logger.warning("Nenhuma geometria (linhas/arcos) disponível.")
         return None
 
-    # --- monta lista de elementos (linhas + arcos) ---------------------------
+    # --- Monta elementos unificados -----------------------------------------
     elementos = []
     for p1, p2 in (lines or []):
         elementos.append(('line', (p1, p2)))
 
-    if arcs:
-        for arc in arcs:
-            elementos.append((
-                'arc',
-                (arc['start_point'], arc['end_point'], arc['radius'], arc['length'], arc['bulge'])
-            ))
+    for arc in (arcs or []):
+        bulge = float(arc.get('bulge', 0.0) or 0.0)
+        elementos.append((
+            'arc',
+            (arc['start_point'], arc['end_point'], float(arc['radius']), float(arc['length']), bulge)
+        ))
 
-    # --- encadeia os elementos em sequência contínua -------------------------
-    sequencia_completa = []
+    if not elementos:
+        logger.warning("Não foi possível montar a lista de elementos.")
+        return None
 
-    # Reordena para começar num ponto específico, se informado
+    # --- Sequenciamento contínuo --------------------------------------------
+    def same_pt(a, b, tol=1e-6):
+        return abs(a[0]-b[0]) <= tol and abs(a[1]-b[1]) <= tol
+
+    # Se pedir ponto inicial, tenta começar por ele (start OR end)
     if ponto_inicial_real:
         for i, elemento in enumerate(elementos):
             a, b = elemento[1][0], elemento[1][1]
@@ -652,16 +736,8 @@ def create_memorial_descritivo(
                 elementos = [elementos[i]] + elementos[:i] + elementos[i+1:]
                 break
 
-
-    # segurança
-    if not elementos:
-        print("Não foi possível montar a lista de elementos.")
-        return None
-
-    ponto_atual = elementos[0][1][0]  # primeiro start
-
-    def same_pt(a, b, tol=1e-6):
-        return abs(a[0] - b[0]) <= tol and abs(a[1] - b[1]) <= tol
+    sequencia_completa = []
+    ponto_atual = elementos[0][1][0]
 
     while elementos:
         for i, elemento in enumerate(elementos):
@@ -669,109 +745,63 @@ def create_memorial_descritivo(
             start_point, end_point = dados[0], dados[1]
 
             if same_pt(ponto_atual, start_point):
-                # segmento já no sentido certo
                 sequencia_completa.append(elemento)
                 ponto_atual = end_point
                 elementos.pop(i)
                 break
-
             elif same_pt(ponto_atual, end_point):
-                # precisa inverter o sentido do segmento
+                # Inverte sentido do segmento
                 if tipo_segmento == 'line':
                     elementos[i] = ('line', (end_point, start_point))
                 else:
-                    # dados de arco: (start, end, radius, length, bulge?) -> inverter bulge se existir
-                    if len(dados) >= 5:
-                        radius, length, bulge = dados[2], dados[3], dados[4]
-                        elementos[i] = ('arc', (end_point, start_point, radius, length, -bulge))
-                    else:
-                        # fallback (tuple sem bulge)
-                        radius, length = dados[2], dados[3]
-                        elementos[i] = ('arc', (end_point, start_point, radius, length))
-
+                    # (start, end, radius, length, bulge) -> invertendo bulge
+                    radius, length, bulge = float(dados[2]), float(dados[3]), float(dados[4] or 0.0)
+                    elementos[i] = ('arc', (end_point, start_point, radius, length, -bulge))
                 sequencia_completa.append(elementos[i])
                 ponto_atual = start_point
                 elementos.pop(i)
                 break
         else:
-                # não encontrou ponto coincidente: força encaixe com próximo segmento
-                seg = elementos.pop(0)          # tira a primeira peça restante
-                sequencia_completa.append(seg)  # adiciona à sequência
-                ponto_atual = seg[1][1]         # atualiza para o end desse segmento
+            # Fallback: consome a próxima peça para evitar loop infinito
+            seg = elementos.pop(0)
+            sequencia_completa.append(seg)
+            ponto_atual = seg[1][1]
 
-    # --- orientação (CW/CCW) -------------------------------------------------
-    # área assinada usando somente os vértices (aprox. suficiente p/ sinal)
+    # --- Orientação (CW/CCW) ------------------------------------------------
+    # área assinada simples (suficiente p/ sinal)
     pontos_para_area = [seg[1][0] for seg in sequencia_completa]
-    pontos_para_area.append(sequencia_completa[-1][1][1])  # Fecha polígono
+    pontos_para_area.append(sequencia_completa[-1][1][1])
 
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
     area_tmp = calculate_signed_area(simple_ordered_points)
 
     _sentido = (sentido_poligonal or "").strip().lower().replace("-", "_")
-
-    def _reverter_sequencia_completa(seq):
-        """
-        Inverte a ordem dos segmentos e troca start/end.
-        Para arco: inverte também o sinal do bulge; raio/comprimento permanecem.
-        """
+    def _reverter_seq(seq):
         seq.reverse()
-        for i, (tipo_segmento, dados) in enumerate(seq):
-            if tipo_segmento == 'line':
-                # dados = (start, end)
-                start, end = dados
-                seq[i] = ('line', (end, start))
+        for i, (t, d) in enumerate(seq):
+            if t == 'line':
+                a, b = d
+                seq[i] = ('line', (b, a))
+            elif t == 'arc':
+                a, b, r, L, bu = d
+                seq[i] = ('arc', (b, a, float(r), float(L), -float(bu or 0.0)))
 
-            elif tipo_segmento == 'arc':
-                # esperado: (start, end, radius, length, bulge)
-                if len(dados) >= 5:
-                    start, end, radius, length, bulge = dados
-                    seq[i] = ('arc', (end, start, radius, length, -bulge))  # inverte bulge!
-                elif len(dados) == 4:
-                    # sem bulge (fallback, mantém raio/comprimento)
-                    start, end, radius, length = dados
-                    seq[i] = ('arc', (end, start, radius, length))
-                else:
-                    # fallback genérico (evita crash se vier algo inesperado)
-                    start, end = dados[0], dados[1]
-                    novos = list(dados)
-                    novos[0], novos[1] = end, start
-                    seq[i] = ('arc', tuple(novos))
-
-            else:
-                # outros tipos: tenta só trocar start/end
-                try:
-                    start, end = dados[0], dados[1]
-                    novos = list(dados)
-                    novos[0], novos[1] = end, start
-                    seq[i] = (tipo_segmento, tuple(novos))
-                except Exception:
-                    pass
-
-
-    if _sentido == 'horario':
-        if area_tmp > 0:  # CCW -> precisa virar CW
-            _reverter_sequencia_completa(sequencia_completa)
+    if _sentido == 'horario':  # CW
+        if area_tmp > 0:
+            _reverter_seq(sequencia_completa)
             area_tmp = abs(area_tmp)
-            logger.info(f"Área invertida para sentido horário (CW); |Área|={area_tmp:.4f} m²")
-        else:
-            logger.info(f"Área já coerente com sentido horário (CW). |Área|={abs(area_tmp):.4f} m²")
-    else:  # anti_horario
-        if area_tmp < 0:  # CW -> precisa virar CCW
-            _reverter_sequencia_completa(sequencia_completa)
+            logger.info("Sentido ajustado para horário (CW).")
+    else:  # anti_horario (CCW)
+        if area_tmp < 0:
+            _reverter_seq(sequencia_completa)
             area_tmp = abs(area_tmp)
-            logger.info(f"Área invertida para sentido anti-horário (CCW); |Área|={area_tmp:.4f} m²")
-        else:
-            logger.info(f"Área já coerente com sentido anti-horário (CCW). |Área|={abs(area_tmp):.4f} m²")
+            logger.info("Sentido ajustado para anti-horário (CCW).")
 
-    # --- rótulos + planilha ---------------------------------------------------
-    # --- GEOMETRIA OFICIAL: recria a LWPOLYLINE preservando os arcos (bulge) ---
-    # Formato esperado por ezdxf: [(x, y, bulge), ...], onde o bulge do vértice i
-    # define a curvatura do segmento i -> i+1. Não precisa repetir o último ponto.
-    # --- GEOMETRIA OFICIAL: recria a LWPOLYLINE preservando os arcos (bulge) ---
+    # --- Geometria oficial: cria UMA LWPOLYLINE (xyb) ------------------------
     xyb_points = []
     for tipo_segmento, dados in sequencia_completa:
         x, y = float(dados[0][0]), float(dados[0][1])
-        b = 0.0 if tipo_segmento == 'line' else float(dados[4])
+        b = 0.0 if tipo_segmento == 'line' else float(dados[4] or 0.0)
         xyb_points.append((x, y, b))
 
     try:
@@ -781,32 +811,31 @@ def create_memorial_descritivo(
     except Exception as e:
         logger.warning(f"Falha ao criar LWPOLYLINE com bulge: {e}")
 
-    # >>> COLE O MINI-CHECK AQUI <<<
+    # --- (Opcional) área densificada respeitando arcos reais -----------------
     def _area_seq_densificada(seq, n=64):
-        import math
         pts = []
         for tipo, d in seq:
             a, b = d[0], d[1]
             if tipo == 'line':
                 pts.append(a)
             else:
-                radius, bulge = float(d[2]), float(d[4])
+                r, bu = float(d[2]), float(d[4] or 0.0)
                 dx, dy = b[0]-a[0], b[1]-a[1]
                 c = math.hypot(dx, dy)
-                if c < 1e-12 or abs(bulge) < 1e-12:
+                if c < 1e-12 or abs(bu) < 1e-12:
                     pts.append(a); continue
-                theta = 4.0*math.atan(abs(bulge))
+                theta = 4.0*math.atan(bu)
                 nx, ny = -dy/c, dx/c
-                if bulge < 0: nx, ny = -nx, -ny
-                offset = math.sqrt(max(0.0, radius*radius - (c/2)*(c/2)))
+                if bu < 0: nx, ny = -nx, -ny
+                # distância do centro ao meio da corda
+                offset = max(0.0, r*r - (c/2.0)*(c/2.0)) ** 0.5
                 midx, midy = (a[0]+b[0])/2.0, (a[1]+b[1])/2.0
                 cx, cy = midx + nx*offset, midy + ny*offset
                 ang0 = math.atan2(a[1]-cy, a[0]-cx)
-                sentido = 1.0 if bulge > 0 else -1.0
                 for k in range(n):
                     t = k/(n-1)
-                    ang = ang0 + sentido*theta*t
-                    px, py = cx + radius*math.cos(ang), cy + radius*math.sin(ang)
+                    ang = ang0 + theta*t
+                    px, py = cx + r*math.cos(ang), cy + r*math.sin(ang)
                     pts.append((px, py))
         if pts and pts[0] != pts[-1]:
             pts.append(pts[0])
@@ -818,17 +847,16 @@ def create_memorial_descritivo(
 
     try:
         area_curva = _area_seq_densificada(sequencia_completa, n=64)
-        logger.info(f"Área densificada (arcos reais): {area_curva:.4f} m²")
+        logger.info(f"Área densificada (arcos): {area_curva:.4f} m²")
     except Exception as e:
-        logger.warning(f"Falha no cálculo de área densificada: {e}")
+        logger.warning(f"Falha área densificada: {e}")
 
-    # --- rótulos + planilha ---------------------------------------------------
+    # --- Rótulos + Planilha ---------------------------------------------------
     data = []
     num_vertices = len(sequencia_completa)
-    anot_count = 0
 
     for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
-        label = f"V{idx + 1}"                 # <-- SEMPRE defina o rótulo aqui
+        label = f"V{idx + 1}"
         start_point = dados[0]
         end_point   = dados[1]
 
@@ -836,26 +864,17 @@ def create_memorial_descritivo(
             azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
             azimute_excel   = convert_to_dms(azimuth)
             distancia_excel = f"{distance:.2f}".replace(".", ",")
-
-            ok_native = False
             try:
                 add_label_and_distance(doc, msp, start_point, end_point, label, distance)
-                ok_native = True
             except Exception as e:
                 logger.warning(f"[native-line] Falha ao anotar {label}: {e}")
-            if not ok_native:
                 _fallback_anotar_segmento(
                     msp, start_point, end_point, label, distance,
                     H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False
                 )
-
-        else:  # ARCOS
-            # dados = (start, end, radius, length, bulge)
-            radius = dados[2]
-            length = dados[3]
-            bulge  = dados[4]
-            distance = length  # comprimento do arco
-
+        else:
+            radius = float(dados[2]); length = float(dados[3]); bulge = float(dados[4] or 0.0)
+            distance = length
             try:
                 _fallback_anotar_segmento(
                     msp, start_point, end_point, label, distance,
@@ -864,20 +883,12 @@ def create_memorial_descritivo(
                 )
             except Exception as e:
                 logger.warning(f"[fallback-arc] Falha ao anotar {label}: {e}")
-
             azimute_excel   = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
-        # --- linha da planilha ---
         next_label = f"V{(idx + 2) if (idx + 1) < num_vertices else 1}"
-        
-        anot_count += 1
-
-
-
         confrontante = confrontantes_dict.get(label, "Desconhecido")
-
-        divisa = f"V{idx + 1}_V{idx + 2}" if idx + 1 < num_vertices else f"V{idx + 1}_V1"
+        divisa = f"{label}_{next_label}"
 
         data.append({
             "V": label,
@@ -890,9 +901,9 @@ def create_memorial_descritivo(
             "Confrontante": confrontante,
         })
 
-    logger.info(f"Anotações inseridas no DXF: {anot_count} segmentos (linhas+arcos)")
+    logger.info(f"Anotações inseridas no DXF: {len(sequencia_completa)} segmentos.")
 
-    # --- nomes de arquivo -----------------------------------------------------
+    # --- Nomes/arquivos -------------------------------------------------------
     try:
         _uuid_from_path = os.path.basename(os.path.dirname(caminho_salvar))
         if not uuid_prefix or len(_uuid_from_path) == 8:
@@ -906,9 +917,11 @@ def create_memorial_descritivo(
             if _t in base_x:
                 tipo = _t
                 break
+    if not tipo:
+        tipo = "MEM"
 
+    # Excel
     df = pd.DataFrame(data, dtype=str)
-
     matricula_sanit = sanitize_filename(matricula) if isinstance(matricula, str) else str(matricula)
     excel_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.xlsx")
     df.to_excel(excel_output_path, index=False)
@@ -918,9 +931,7 @@ def create_memorial_descritivo(
     for cell in ws[1]:
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center", vertical="center")
-
     for col, width in {"A":8,"B":15,"C":15,"D":10,"E":20,"F":15,"G":15,"H":30}.items():
-
         ws.column_dimensions[col].width = width
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
         for cell in row:
@@ -928,6 +939,7 @@ def create_memorial_descritivo(
     wb.save(excel_output_path)
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
 
+    # DXF
     try:
         dxf_output_path = os.path.join(caminho_salvar, f"{uuid_prefix}_{tipo}_{matricula_sanit}.dxf")
         doc.saveas(dxf_output_path)
@@ -936,6 +948,7 @@ def create_memorial_descritivo(
         print(f"Erro ao salvar DXF: {e}")
 
     return excel_output_path
+
 
 
 def create_memorial_document(
