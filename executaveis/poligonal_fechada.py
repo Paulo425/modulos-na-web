@@ -507,152 +507,14 @@ def add_label_and_distance(doc, msp, start_point, end_point, label, distance):
         print(f"❌ ERRO GRAVE ao adicionar rótulo '{label}' e distância: {e}")
 
 
-# def _fallback_anotar_segmento(
-#     msp, start_point, end_point, label, distance,
-#     H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False,
-#     arc_radius=None, arc_bulge=None
-# ):
-#     """
-#     Anota um segmento. Para linha: similar ao nativo.
-#     Para arco: calcula o CENTRO via bulge, pega o PONTO MÉDIO do ARCO e rotaciona o texto pela TANGENTE.
-#     """
-#     import math
 
-#     try:
-#         start = (float(start_point[0]), float(start_point[1]))
-#         end   = (float(end_point[0]),   float(end_point[1]))
-
-#         # Camadas
-#         for layer_name, color in (("LAYOUT_VERTICES", 2), ("LAYOUT_DISTANCIAS", 4)):
-#             if layer_name not in msp.doc.layers:
-#                 msp.doc.layers.new(name=layer_name, dxfattribs={"color": color})
-
-#         # Círculo + rótulo V# no início
-#         msp.add_circle(center=start, radius=R_CIRCLE, dxfattribs={'layer': 'LAYOUT_VERTICES'})
-#         msp.add_text(
-#             label,
-#             dxfattribs={
-#                 'height': H_TXT_VERT,
-#                 'layer': 'LAYOUT_VERTICES',
-#                 'insert': (start[0] + H_TXT_VERT, start[1] + H_TXT_VERT),
-#             }
-#         )
-
-#         # Se for linha, comportamento padrão (pela corda)
-#         dx, dy = end[0] - start[0], end[1] - start[1]
-#         c = math.hypot(dx, dy)
-#         if not is_arc or not arc_bulge or abs(arc_bulge) < 1e-12:
-#             if c == 0:
-#                 return
-#             angle = math.degrees(math.atan2(dy, dx))
-#             if angle < -90 or angle > 90:
-#                 angle += 180
-#             # desloca levemente a partir do meio da corda
-#             mid = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
-#             perp = (-dy / c * H_TXT_DIST, dx / c * H_TXT_DIST)
-#             pos  = (mid[0] + perp[0], mid[1] + perp[1])
-#             dist_txt = f"{distance:.2f} ".replace('.', ',')
-#             msp.add_text(dist_txt, dxfattribs={
-#                 'height': H_TXT_DIST, 'layer': 'LAYOUT_DISTANCIAS',
-#                 'rotation': angle, 'insert': pos
-#             })
-#             return
-
-#         # --- ARCO: centro, ponto médio do arco e tangente ---
-#         b = float(arc_bulge)
-#         # Ângulo central
-#         theta = 4.0 * math.atan(abs(b))  # rad
-#         # Raio (use o parâmetro se vier coerente; senão derive da corda + bulge)
-#         if arc_radius and arc_radius > 0:
-#             R = float(arc_radius)
-#         else:
-#             # R = (c/2) / sin(theta/2)
-#             R = (c / 2.0) / max(1e-12, math.sin(theta / 2.0))
-
-#         # Vetor normal unitário à corda
-#         nx, ny = -dy / c, dx / c
-#         if b < 0:  # bulge negativo vira para o outro lado
-#             nx, ny = -nx, -ny
-
-#         # Distância do centro até o meio da corda
-#         # offset = sqrt(R^2 - (c/2)^2)
-#         offset = math.sqrt(max(0.0, R * R - (c / 2.0) * (c / 2.0)))
-
-#         # Meio da corda
-#         mid_chord = ((start[0] + end[0]) / 2.0, (start[1] + end[1]) / 2.0)
-
-#         # Centro do arco
-#         cx, cy = mid_chord[0] + nx * offset, mid_chord[1] + ny * offset
-
-#         # Ângulos de start e end (em relação ao centro)
-#         ang_start = math.atan2(start[1] - cy, start[0] - cx)
-
-#         # Sentido do arco: b>0 anti-horário; b<0 horário (convenção do bulge)
-#         sentido = 1.0 if b > 0 else -1.0
-
-#         # Ângulo médio no ARCO
-#         ang_mid = ang_start + sentido * (theta / 2.0)
-
-#         # Ponto médio do ARCO
-#         px = cx + R * math.cos(ang_mid)
-#         py = cy + R * math.sin(ang_mid)
-
-#         # Tangente no ponto médio é perpendicular ao raio
-#         ang_tan = ang_mid + sentido * (math.pi / 2.0)
-#         ang_deg = math.degrees(ang_tan)
-
-#         # Mantém texto "em pé"
-#         if ang_deg < -90 or ang_deg > 90:
-#             ang_deg += 180
-
-#         # Texto de distância
-#         dist_txt = f"{distance:.2f} ".replace('.', ',')
-#         msp.add_text(dist_txt, dxfattribs={
-#             'height': H_TXT_DIST,
-#             'layer': 'LAYOUT_DISTANCIAS',
-#             'rotation': ang_deg,
-#             'insert': (px, py)
-#         })
-
-#     except Exception as e:
-#         if logger:
-#             logger.warning(f"[fallback] Falha ao anotar segmento: {e}")
-#         else:
-#             print(f"[fallback] Falha ao anotar segmento: {e}")
 
 
 def sanitize_filename(filename):
     sanitized_filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
     return sanitized_filename
 
-# def _anotar_segmento(msp, start_point, end_point, label, distancia_m, is_arc=False):
-#     """
-#     Anota o segmento no DXF (robusto para linhas e arcos).
-#     - Marca o vértice com círculo
-#     - Escreve Vn próximo ao vértice
-#     - Escreve a distância no meio da corda (para arco também)
-#     Usa alturas/raios calculados a partir do span do desenho.
-#     """
-#     try:
-#         # marcador de vértice (círculo sempre visível, diferente de POINT)
-#         msp.add_circle(center=start_point, radius=R_CIRCLE,
-#                        dxfattribs={"layer": "ANOTACOES_DECOPA"})
 
-#         # rótulo do vértice Vn
-#         msp.add_text(str(label), dxfattribs={"height": H_TXT_VERT, "layer": "ANOTACOES_DECOPA"}).set_pos(
-#             (start_point[0] + R_CIRCLE*1.2, start_point[1] + R_CIRCLE*1.2), align="LEFT"
-#         )
-
-#         # texto da distância
-#         mid = ((start_point[0] + end_point[0]) / 2.0, (start_point[1] + end_point[1]) / 2.0)
-#         texto_dist = f"{distancia_m:.2f} m"
-#         off_dx, off_dy = (R_CIRCLE*1.8, R_CIRCLE*1.8) if not is_arc else (R_CIRCLE*2.2, R_CIRCLE*2.2)
-
-#         msp.add_text(texto_dist, dxfattribs={"height": H_TXT_DIST, "layer": "ANOTACOES_DECOPA"}).set_pos(
-#             (mid[0] + off_dx, mid[1] + off_dy), align="LEFT"
-#         )
-#     except Exception as e:
-#         logger.warning(f"Falha ao anotar {label}: {e}")
 
     # --- Fallback simples para anotar um segmento quando o método nativo falhar ---
 def _fallback_anotar_segmento(
@@ -973,6 +835,7 @@ def create_memorial_descritivo(
     anot_count = 0
 
     for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
+        label = f"V{idx + 1}"                 # <-- SEMPRE defina o rótulo aqui
         start_point = dados[0]
         end_point   = dados[1]
 
@@ -981,16 +844,15 @@ def create_memorial_descritivo(
             azimute_excel   = convert_to_dms(azimuth)
             distancia_excel = f"{distance:.2f}".replace(".", ",")
 
-            # anota LINHA com a função nativa; se falhar, cai no fallback
             ok_native = False
             try:
-                add_label_and_distance(doc, msp, start_point, end_point, f"V{idx+1}", distance)
+                add_label_and_distance(doc, msp, start_point, end_point, label, distance)
                 ok_native = True
             except Exception as e:
-                logger.warning(f"[native-line] Falha ao anotar V{idx+1}: {e}")
+                logger.warning(f"[native-line] Falha ao anotar {label}: {e}")
             if not ok_native:
                 _fallback_anotar_segmento(
-                    msp, start_point, end_point, f"V{idx+1}", distance,
+                    msp, start_point, end_point, label, distance,
                     H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False
                 )
 
@@ -1001,25 +863,25 @@ def create_memorial_descritivo(
             bulge  = dados[4]
             distance = length  # comprimento do arco
 
-            # anota ARCO no MEIO DO ARCO (tangente), usando fallback
             try:
                 _fallback_anotar_segmento(
-                    msp, start_point, end_point, f"V{idx+1}", distance,
+                    msp, start_point, end_point, label, distance,
                     H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger,
                     is_arc=True, arc_radius=radius, arc_bulge=bulge
                 )
             except Exception as e:
-                logger.warning(f"[fallback-arc] Falha ao anotar V{idx+1}: {e}")
+                logger.warning(f"[fallback-arc] Falha ao anotar {label}: {e}")
 
             azimute_excel   = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
-        # planilha
-        confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
-        divisa = f"V{idx + 1}_V{idx + 2}" if idx + 1 < num_vertices else f"V{idx + 1}_V1"
+        # --- linha da planilha ---
+        next_label = f"V{(idx + 2) if (idx + 1) < num_vertices else 1}"
+        confrontante = confrontantes_dict.get(label, "Desconhecido")
+        divisa = f"{label}_{next_label}"
 
         data.append({
-            "V": f"V{idx + 1}",
+            "V": label,
             "E": f"{start_point[0]:.3f}".replace('.', ','),
             "N": f"{start_point[1]:.3f}".replace('.', ','),
             "Z": "0.000",
@@ -1029,6 +891,7 @@ def create_memorial_descritivo(
             "Confrontante": confrontante,
         })
         anot_count += 1
+
 
 
         confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
