@@ -283,6 +283,7 @@ def get_document_info_from_dxf(dxf_file_path):
                             'length': arc_length,
                             'bulge': float(bulge),  # <-- ADICIONE ESTA LINHA
                             'sweep_degrees': math.degrees(end_angle - start_angle)  # <-- (OPCIONAL, ajuda no debug)
+                            'bulge': float(bulge)
                         })
 
                         num_arc_points = 100
@@ -634,6 +635,12 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                         radius, length, bulge = dados[2], dados[3], dados[4]
                         elementos[i] = ('arc', (end_point, start_point, radius, length, -bulge))  # bulge invertido!
                     else:
+                    # dados de arco: (start, end, radius, length, bulge?)  -> inverter bulge!
+                    if len(dados) >= 5:
+                        radius, length, bulge = dados[2], dados[3], dados[4]
+                        elementos[i] = ('arc', (end_point, start_point, radius, length, -bulge))
+                    else:
+                        # fallback (se ainda não tem bulge no tuple)
                         radius, length = dados[2], dados[3]
                         elementos[i] = ('arc', (end_point, start_point, radius, length))
                 sequencia_completa.append(elementos[i])
@@ -642,6 +649,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 break
         else:
             # não encontrou ponto coincidente: força novo início
+            # não encontrou ponto coincidente: força novo início (evita loop travado)
             if elementos:
                 ponto_atual = elementos[0][1][0]
 
