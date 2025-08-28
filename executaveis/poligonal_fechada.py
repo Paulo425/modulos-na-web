@@ -275,16 +275,15 @@ def get_document_info_from_dxf(dxf_file_path):
 
                         arcs.append({
                             'start_point': (start_point[0], start_point[1]),
-                            'end_point': (end_point[0], end_point[1]),
-                            'center': (center[0], center[1]),
+                            'end_point':   (end_point[0],   end_point[1]),
+                            'center':      (center[0],      center[1]),
                             'radius': radius,
                             'start_angle': math.degrees(start_angle),
-                            'end_angle': math.degrees(end_angle),
+                            'end_angle':   math.degrees(end_angle),
                             'length': arc_length,
-                            'bulge': float(bulge),  # <-- ADICIONE ESTA LINHA
-                            'sweep_degrees': math.degrees(end_angle - start_angle)  # <-- (OPCIONAL, ajuda no debug)
-                            'bulge': float(bulge)
+                            'bulge': float(bulge),  # vírgula aqui é ok mesmo sendo o último item
                         })
+
 
                         num_arc_points = 100
                         for t in range(num_arc_points):
@@ -562,16 +561,22 @@ def _fallback_anotar_segmento(msp, start_point, end_point, label, distancia_m,
 
 
 
-def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
-                               excel_file_path=None, ponto_az=None, distance_az_v1=None,
-                               azimute_az_v1=None, ponto_inicial_real=None, tipo=None, uuid_prefix=None, diretorio_concluido=None, sentido_poligonal='horario'):
+def create_memorial_descritivo(
+    doc, msp, lines, proprietario, matricula, caminho_salvar, arcs=None,
+    excel_file_path=None, ponto_az=None, distance_az_v1=None,
+    azimute_az_v1=None, ponto_inicial_real=None, tipo=None, uuid_prefix=None,
+    diretorio_concluido=None, sentido_poligonal='horario'
+):
     """
     Cria o memorial descritivo diretamente no arquivo DXF e salva os dados em uma planilha Excel.
+    Espera segmentos no formato:
+      - linhas: ('line', (start, end))
+      - arcos : ('arc',  (start, end, radius, length, bulge))
     """
-    import logging
+    import logging, os
     logger = logging.getLogger(__name__)
 
-
+    # --- confrontantes -------------------------------------------------------
     if excel_file_path:
         try:
             confrontantes_df = pd.read_excel(excel_file_path)
@@ -589,27 +594,35 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
         print("Nenhuma geometria (linhas ou arcos) disponível para criar o memorial descritivo.")
         return None
 
-    # Criar uma única lista sequencial de pontos ordenados (linhas e arcos)
+    # --- monta lista de elementos (linhas + arcos) ---------------------------
     elementos = []
     for p1, p2 in (lines or []):
         elementos.append(('line', (p1, p2)))
 
     if arcs:
         for arc in arcs:
-            elementos.append(('arc', (arc['start_point'], arc['end_point'], arc['radius'], arc['length'], arc['bulge'])))
+            elementos.append((
+                'arc',
+                (arc['start_point'], arc['end_point'], arc['radius'], arc['length'], arc['bulge'])
+            ))
 
-    # Sequenciar os segmentos corretamente
+    # --- encadeia os elementos em sequência contínua -------------------------
     sequencia_completa = []
 
-    # 🔁 Reordena elementos para começar pelo ponto original do desenho
+    # Reordena para começar num ponto específico, se informado
     if ponto_inicial_real:
         for i, elemento in enumerate(elementos):
             if math.hypot(elemento[1][0][0] - ponto_inicial_real[0], elemento[1][0][1] - ponto_inicial_real[1]) < 1e-6:
                 elementos = [elementos[i]] + elementos[:i] + elementos[i+1:]
                 break
 
-    ponto_atual = elementos[0][1][0]  # Primeiro ponto do primeiro segmento
-    
+    # segurança
+    if not elementos:
+        print("Não foi possível montar a lista de elementos.")
+        return None
+
+    ponto_atual = elementos[0][1][0]  # primeiro start
+
     def same_pt(a, b, tol=1e-6):
         return abs(a[0] - b[0]) <= tol and abs(a[1] - b[1]) <= tol
 
@@ -619,74 +632,60 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             start_point, end_point = dados[0], dados[1]
 
             if same_pt(ponto_atual, start_point):
-                # segmento já está no sentido certo
+                # segmento já no sentido certo
                 sequencia_completa.append(elemento)
                 ponto_atual = end_point
                 elementos.pop(i)
                 break
 
             elif same_pt(ponto_atual, end_point):
-                # precisamos inverter o sentido do segmento para manter continuidade
+                # precisa inverter o sentido do segmento
                 if tipo_segmento == 'line':
                     elementos[i] = ('line', (end_point, start_point))
                 else:
-                    # dados de arco: (start, end, radius, length, bulge?)
-                    if len(dados) >= 5:
-                        radius, length, bulge = dados[2], dados[3], dados[4]
-                        elementos[i] = ('arc', (end_point, start_point, radius, length, -bulge))  # bulge invertido!
-                    else:
-                    # dados de arco: (start, end, radius, length, bulge?)  -> inverter bulge!
+                    # dados de arco: (start, end, radius, length, bulge?) -> inverter bulge se existir
                     if len(dados) >= 5:
                         radius, length, bulge = dados[2], dados[3], dados[4]
                         elementos[i] = ('arc', (end_point, start_point, radius, length, -bulge))
                     else:
-                        # fallback (se ainda não tem bulge no tuple)
+                        # fallback (tuple sem bulge)
                         radius, length = dados[2], dados[3]
                         elementos[i] = ('arc', (end_point, start_point, radius, length))
+
                 sequencia_completa.append(elementos[i])
                 ponto_atual = start_point
                 elementos.pop(i)
                 break
         else:
-            # não encontrou ponto coincidente: força novo início
-            # não encontrou ponto coincidente: força novo início (evita loop travado)
+            # não encontrou ponto coincidente: reinicia pela próxima peça (evita travar)
             if elementos:
                 ponto_atual = elementos[0][1][0]
 
-
-
-    # Lista de pontos sequenciais simples para área (garante polígono fechado)
+    # --- orientação (CW/CCW) -------------------------------------------------
+    # área assinada usando somente os vértices (aprox. suficiente p/ sinal)
     pontos_para_area = [seg[1][0] for seg in sequencia_completa]
-    pontos_para_area.append(sequencia_completa[-1][1][1])  # Fecha o polígono
+    pontos_para_area.append(sequencia_completa[-1][1][1])  # Fecha polígono
 
     simple_ordered_points = [(float(pt[0]), float(pt[1])) for pt in pontos_para_area]
     area_tmp = calculate_signed_area(simple_ordered_points)
 
-
-    # Normaliza o valor vindo da rota/formulário
     _sentido = (sentido_poligonal or "").strip().lower().replace("-", "_")
-
-    # Regra da área assinada: CCW (anti-horário) => área > 0 ; CW (horário) => área < 0
-    # Se o usuário pediu "horario" e a área veio > 0 (CCW), invertemos.
-    # Se pediu "anti_horario" e a área veio < 0 (CW), invertemos.
 
     def _reverter_sequencia_completa(seq):
         """
         Inverte a ordem dos segmentos e troca start/end.
-        Para arco: inverte também o sinal do bulge; raio permanece o mesmo.
+        Para arco: inverte também o sinal do bulge; raio/comprimento permanecem.
         """
         seq.reverse()
         for i, (tipo_segmento, dados) in enumerate(seq):
             if tipo_segmento == 'line':
-                start, end = dados  # ((x1,y1), (x2,y2))
+                start, end = dados
                 seq[i] = ('line', (end, start))
             elif tipo_segmento == 'arc':
+                # dados = (start, end, radius, length, bulge)
                 start, end, radius, length, bulge = dados
-                # Reverte endpoints e inverte o bulge; raio e comprimento permanecem
                 seq[i] = ('arc', (end, start, radius, length, -bulge))
-          
             else:
-                # fallback genérico: tenta apenas trocar start/end se houver
                 try:
                     start, end = dados[0], dados[1]
                     novos = list(dados)
@@ -695,56 +694,48 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 except Exception:
                     pass
 
-
     if _sentido == 'horario':
-        if area_tmp > 0:
+        if area_tmp > 0:  # CCW -> precisa virar CW
             _reverter_sequencia_completa(sequencia_completa)
             area_tmp = abs(area_tmp)
-            logger.info(f"Área invertida para sentido horário (CW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+            logger.info(f"Área invertida para sentido horário (CW); |Área|={area_tmp:.4f} m²")
         else:
             logger.info(f"Área já coerente com sentido horário (CW). |Área|={abs(area_tmp):.4f} m²")
-    else:  # trata como 'anti_horario'
-        if area_tmp < 0:
+    else:  # anti_horario
+        if area_tmp < 0:  # CW -> precisa virar CCW
             _reverter_sequencia_completa(sequencia_completa)
             area_tmp = abs(area_tmp)
-            logger.info(f"Área invertida para sentido anti-horário (CCW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
+            logger.info(f"Área invertida para sentido anti-horário (CCW); |Área|={area_tmp:.4f} m²")
         else:
             logger.info(f"Área já coerente com sentido anti-horário (CCW). |Área|={abs(area_tmp):.4f} m²")
 
-
-
-
-    # Continuação após inverter corretamente
+    # --- rótulos + planilha ---------------------------------------------------
     data = []
-    num_vertices = len(sequencia_completa)  # captura a quantidade correta antes do loop
+    num_vertices = len(sequencia_completa)
     anot_count = 0
+
     for idx, (tipo_segmento, dados) in enumerate(sequencia_completa):
         start_point = dados[0]
         end_point   = dados[1]
 
         if tipo_segmento == "line":
             azimuth, distance = calculate_azimuth_and_distance(start_point, end_point)
-            azimute_excel    = convert_to_dms(azimuth)
-            distancia_excel  = f"{distance:.2f}".replace(".", ",")
-        elif tipo_segmento == "arc":
-            # dados = (start, end, bulge, radius)
+            azimute_excel   = convert_to_dms(azimuth)
+            distancia_excel = f"{distance:.2f}".replace(".", ",")
+        else:  # arc
+            # dados = (start, end, radius, length, bulge)
             radius = dados[2]
             length = dados[3]
             bulge  = dados[4]
-            #theta  = 4.0 * math.atan(abs(bulge))  # ângulo central (rad)
-            distance = length             # comprimento do arco
+            distance = length  # já temos o comprimento do arco
             azimute_excel   = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
-
-        # label = f"V{idx + 1}"
-        # # Usa a MESMA rotina de anotação para linhas e arcos (passando o comprimento correto)
-        # add_label_and_distance(doc, msp, start_point, end_point, label, distance)
 
         label   = f"V{idx + 1}"
         _is_arc = (tipo_segmento == "arc")
 
+        # Anotação: para linhas tenta nativo; para arcos usa fallback (não virar corda)
         if _is_arc:
-            # Para arco: use sempre o FALLBACK para não desenhar a corda
             try:
                 _ = _fallback_anotar_segmento(
                     msp, start_point, end_point, label, distance,
@@ -753,7 +744,6 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             except Exception as e:
                 logger.warning(f"[fallback-arc] Falha ao anotar {label}: {e}")
         else:
-            # Para linha: tente o nativo; se falhar, cai no fallback
             ok_native = False
             try:
                 add_label_and_distance(doc, msp, start_point, end_point, label, distance)
@@ -766,9 +756,7 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                     H_TXT_VERT, H_TXT_DIST, R_CIRCLE, logger, is_arc=False
                 )
 
-
         anot_count += 1
-
 
         confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
         divisa = f"V{idx + 1}_V{idx + 2}" if idx + 1 < num_vertices else f"V{idx + 1}_V1"
@@ -783,10 +771,10 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             "Distancia(m)": distancia_excel,
             "Confrontante": confrontante,
         })
+
     logger.info(f"Anotações inseridas no DXF: {anot_count} segmentos (linhas+arcos)")
 
-
-    # Deriva o UUID do caminho de saída se não vier preenchido
+    # --- nomes de arquivo -----------------------------------------------------
     try:
         _uuid_from_path = os.path.basename(os.path.dirname(caminho_salvar))
         if not uuid_prefix or len(_uuid_from_path) == 8:
@@ -794,7 +782,6 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     except Exception:
         pass
 
-    # Tenta deduzir o tipo (ETE/REM/SER/ACE) se não vier
     if not tipo and excel_file_path:
         base_x = os.path.basename(excel_file_path).upper()
         for _t in ("ETE", "REM", "SER", "ACE"):
@@ -810,22 +797,14 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
 
     wb = openpyxl.load_workbook(excel_output_path)
     ws = wb.active
-
     for cell in ws[1]:
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    column_widths = {
-        "A": 8, "B": 15, "C": 15, "D": 10, "E": 20, "F": 15,
-        "G": 15, "H": 30, "I": 20, "J": 20, "K": 15, "L": 15
-    }
-    for col, width in column_widths.items():
+    for col, width in {"A":8,"B":15,"C":15,"D":10,"E":20,"F":15,"G":15,"H":30,"I":20,"J":20,"K":15,"L":15}.items():
         ws.column_dimensions[col].width = width
-
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
         for cell in row:
             cell.alignment = Alignment(horizontal="center", vertical="center")
-
     wb.save(excel_output_path)
     print(f"Arquivo Excel salvo e formatado em: {excel_output_path}")
 
