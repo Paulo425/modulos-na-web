@@ -23,6 +23,7 @@ import sys
 import time
 import uuid
 
+
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 try:
@@ -126,10 +127,10 @@ def limpar_dxf_e_inserir_ponto_az(original_path, saida_path):
         if pontos_polilinha is None:
             raise ValueError("Nenhuma polilinha fechada encontrada no DXF original.")
 
-        if calculate_signed_area(pontos_polilinha) < 0:
-            pontos_polilinha.reverse()
-            bulges_polilinha.reverse()
-            bulges_polilinha = [-b for b in bulges_polilinha]
+        # if calculate_signed_area(pontos_polilinha) < 0:
+        #     pontos_polilinha.reverse()
+        #     bulges_polilinha.reverse()
+        #     bulges_polilinha = [-b for b in bulges_polilinha]
 
         pontos_com_bulge = [
             (pontos_polilinha[i][0], pontos_polilinha[i][1], bulges_polilinha[i])
@@ -239,6 +240,9 @@ def get_document_info_from_dxf(dxf_file_path):
                 for i in range(num_points):
                     x_start, y_start, _, _, bulge = polyline_points[i]
                     x_end, y_end, _, _, _ = polyline_points[(i + 1) % num_points]
+
+                    # ⬇️ ADICIONE ESTA LINHA AQUI
+                    bulge = float(bulge or 0.0)
 
                     start_point = (float(x_start), float(y_start))
                     end_point = (float(x_end), float(y_end))
@@ -643,9 +647,11 @@ def create_memorial_descritivo(
     # Reordena para começar num ponto específico, se informado
     if ponto_inicial_real:
         for i, elemento in enumerate(elementos):
-            if math.hypot(elemento[1][0][0] - ponto_inicial_real[0], elemento[1][0][1] - ponto_inicial_real[1]) < 1e-6:
+            a, b = elemento[1][0], elemento[1][1]
+            if same_pt(a, ponto_inicial_real) or same_pt(b, ponto_inicial_real):
                 elementos = [elementos[i]] + elementos[:i] + elementos[i+1:]
                 break
+
 
     # segurança
     if not elementos:
@@ -688,9 +694,10 @@ def create_memorial_descritivo(
                 elementos.pop(i)
                 break
         else:
-            # não encontrou ponto coincidente: reinicia pela próxima peça (evita travar)
-            if elementos:
-                ponto_atual = elementos[0][1][0]
+                # não encontrou ponto coincidente: força encaixe com próximo segmento
+                seg = elementos.pop(0)          # tira a primeira peça restante
+                sequencia_completa.append(seg)  # adiciona à sequência
+                ponto_atual = seg[1][1]         # atualiza para o end desse segmento
 
     # --- orientação (CW/CCW) -------------------------------------------------
     # área assinada usando somente os vértices (aprox. suficiente p/ sinal)
@@ -701,20 +708,6 @@ def create_memorial_descritivo(
     area_tmp = calculate_signed_area(simple_ordered_points)
 
     _sentido = (sentido_poligonal or "").strip().lower().replace("-", "_")
-
-    xyb_points = []
-    for tipo_segmento, dados in sequencia_completa:
-        x, y = float(dados[0][0]), float(dados[0][1])
-        b = 0.0 if tipo_segmento == 'line' else float(dados[4])
-        xyb_points.append((x, y, b))
-
-    try:
-        pl = msp.add_lwpolyline(xyb_points, format='xyb', close=True)
-        pl.dxf.layer = "POLIGONAL_MEMORIAL"
-        pl.dxf.color = 4  # opcional
-    except Exception as e:
-        logger.warning(f"Falha ao criar LWPOLYLINE com bulge: {e}")
-
 
     def _reverter_sequencia_completa(seq):
         """
@@ -877,24 +870,13 @@ def create_memorial_descritivo(
 
         # --- linha da planilha ---
         next_label = f"V{(idx + 2) if (idx + 1) < num_vertices else 1}"
-        confrontante = confrontantes_dict.get(label, "Desconhecido")
-        divisa = f"{label}_{next_label}"
-
-        data.append({
-            "V": label,
-            "E": f"{start_point[0]:.3f}".replace('.', ','),
-            "N": f"{start_point[1]:.3f}".replace('.', ','),
-            "Z": "0.000",
-            "Divisa": divisa,
-            "Azimute": azimute_excel,
-            "Distancia(m)": distancia_excel,
-            "Confrontante": confrontante,
-        })
+        
         anot_count += 1
 
 
 
-        confrontante = confrontantes_dict.get(f"V{idx + 1}", "Desconhecido")
+        confrontante = confrontantes_dict.get(label, "Desconhecido")
+
         divisa = f"V{idx + 1}_V{idx + 2}" if idx + 1 < num_vertices else f"V{idx + 1}_V1"
 
         data.append({
@@ -936,7 +918,9 @@ def create_memorial_descritivo(
     for cell in ws[1]:
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center", vertical="center")
-    for col, width in {"A":8,"B":15,"C":15,"D":10,"E":20,"F":15,"G":15,"H":30,"I":20,"J":20,"K":15,"L":15}.items():
+
+    for col, width in {"A":8,"B":15,"C":15,"D":10,"E":20,"F":15,"G":15,"H":30}.items():
+
         ws.column_dimensions[col].width = width
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
         for cell in row:
