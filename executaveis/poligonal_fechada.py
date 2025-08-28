@@ -696,14 +696,9 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
     for p1, p2 in (lines or []):
         elementos.append(('line', (p1, p2)))
 
-<<<<<<< Updated upstream
-    for arc in (arcs or []):
-        elementos.append(('arc', (arc['start_point'], arc['end_point'], arc['bulge'], arc['radius'])))
-=======
     if arcs:
         for arc in arcs:
             elementos.append(('arc', (arc['start_point'], arc['end_point'], arc['radius'], arc['length'], arc['bulge'])))
->>>>>>> Stashed changes
 
     # Sequenciar os segmentos corretamente
     sequencia_completa = []
@@ -716,64 +711,45 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 break
 
     ponto_atual = elementos[0][1][0]  # Primeiro ponto do primeiro segmento
+    
+    def same_pt(a, b, tol=1e-6):
+        return abs(a[0] - b[0]) <= tol and abs(a[1] - b[1]) <= tol
+
     while elementos:
         for i, elemento in enumerate(elementos):
             tipo_segmento, dados = elemento
             start_point, end_point = dados[0], dados[1]
 
-<<<<<<< Updated upstream
-            def _eq_pt(a, b, tol=1e-6):
-                return abs(a[0]-b[0]) < tol and abs(a[1]-b[1]) < tol
-
-            if _eq_pt(ponto_atual, start_point):
-=======
             if same_pt(ponto_atual, start_point):
                 # segmento já está no sentido certo
->>>>>>> Stashed changes
                 sequencia_completa.append(elemento)
                 ponto_atual = end_point
                 elementos.pop(i)
                 break
-<<<<<<< Updated upstream
-            elif _eq_pt(ponto_atual, end_point):
-                # Inverte a direção do segmento para manter continuidade
-                if tipo_segmento == 'line':
-                    elementos[i] = ('line', (end_point, start_point))
-                else:
-                    elementos[i] = ('arc', (end_point, start_point, -dados[2], dados[3]))
-=======
 
             elif same_pt(ponto_atual, end_point):
                 # precisamos inverter o sentido do segmento para manter continuidade
                 if tipo_segmento == 'line':
                     elementos[i] = ('line', (end_point, start_point))
                 else:
-                    # dados de arco: (start, end, radius, length, bulge?)  -> inverter bulge!
+                    # dados de arco: (start, end, radius, length, bulge?)
                     if len(dados) >= 5:
                         radius, length, bulge = dados[2], dados[3], dados[4]
-                        elementos[i] = ('arc', (end_point, start_point, radius, length, -bulge))
+                        elementos[i] = ('arc', (end_point, start_point, radius, length, -bulge))  # bulge invertido!
                     else:
-                        # fallback (se ainda não tem bulge no tuple)
                         radius, length = dados[2], dados[3]
                         elementos[i] = ('arc', (end_point, start_point, radius, length))
->>>>>>> Stashed changes
                 sequencia_completa.append(elementos[i])
                 ponto_atual = start_point
                 elementos.pop(i)
                 break
         else:
-<<<<<<< Updated upstream
-            if elementos:
-                ponto_atual = elementos[0][1][0]
-
-=======
-            # não encontrou ponto coincidente: força novo início (evita loop travado)
+            # não encontrou ponto coincidente: força novo início
             if elementos:
                 ponto_atual = elementos[0][1][0]
 
 
 
->>>>>>> Stashed changes
     # Lista de pontos sequenciais simples para área (garante polígono fechado)
     pontos_para_area = [seg[1][0] for seg in sequencia_completa]
     pontos_para_area.append(sequencia_completa[-1][1][1])  # Fecha o polígono
@@ -800,12 +776,11 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
                 start, end = dados  # ((x1,y1), (x2,y2))
                 seq[i] = ('line', (end, start))
             elif tipo_segmento == 'arc':
-                start, end, bulge, radius = dados
-                # Reverte endpoints e inverte o sinal do bulge para manter a mesma geometria (sentido oposto)
-                seq[i] = ('arc', (end, start, -bulge, radius))
+                start, end, radius, length, bulge = dados
+                # Reverte endpoints e inverte o bulge; raio e comprimento permanecem
+                seq[i] = ('arc', (end, start, radius, length, -bulge))
           
             else:
-<<<<<<< Updated upstream
                 # fallback genérico: tenta apenas trocar start/end se houver
                 try:
                     start, end = dados[0], dados[1]
@@ -830,11 +805,6 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             logger.info(f"Área invertida para sentido anti-horário (CCW); linhas/arcos ajustados. |Área|={area_tmp:.4f} m²")
         else:
             logger.info(f"Área já coerente com sentido anti-horário (CCW). |Área|={abs(area_tmp):.4f} m²")
-=======
-                radius, length, bulge = dados[2], dados[3], dados[4]
-                sequencia_completa[idx] = ('arc', (end, start, radius, length, -bulge))  # <-- bulge invertido
-        area = abs(area)
->>>>>>> Stashed changes
 
 
 
@@ -853,10 +823,11 @@ def create_memorial_descritivo(doc, msp, lines, proprietario, matricula, caminho
             distancia_excel  = f"{distance:.2f}".replace(".", ",")
         elif tipo_segmento == "arc":
             # dados = (start, end, bulge, radius)
-            bulge  = dados[2]
-            radius = dados[3]
-            theta  = 4.0 * math.atan(abs(bulge))  # ângulo central (rad)
-            distance = radius * theta             # comprimento do arco
+            radius = dados[2]
+            length = dados[3]
+            bulge  = dados[4]
+            #theta  = 4.0 * math.atan(abs(bulge))  # ângulo central (rad)
+            distance = length             # comprimento do arco
             azimute_excel   = f"R={radius:.2f}".replace(".", ",")
             distancia_excel = f"C={distance:.2f}".replace(".", ",")
 
