@@ -1374,8 +1374,8 @@ def create_memorial_document(
         p = doc_word.add_paragraph(style='Normal')
         p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
         p.add_run("Objetivo: ").bold = True
-        p.add_run(f"Área da matrícula{matricula} destinada a {descricao} de {cidade}/RS.")
-        # houve mudança na linha de cima
+        p.add_run(f"Área destinada à servidão de passagem para execução de coletor de fundo pertencente à rede coletora de esgoto de {cidade}/RS.")
+        # o problema é aqui
         doc_word.add_paragraph(f"Matrícula Número: {matricula_texto} - {rgi}", style='Normal')
         doc_word.add_paragraph(f"Área Total do Terreno: {str(area_total).replace('.', ',')}", style='Normal')
         doc_word.add_paragraph(f"Proprietário: {proprietario} ", style='Normal')
