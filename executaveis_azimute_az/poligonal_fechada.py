@@ -1388,6 +1388,7 @@ def create_memorial_document(
         doc_word.add_paragraph(f"Matrícula: Número - {matricula} do {rgi} de {comarca}", style="Normal")
         doc_word.add_paragraph(f"Proprietário: {proprietario}", style="Normal")
         doc_word.add_paragraph(f"Local: {rua} - {cidade}", style="Normal")
+        doc_word.add_paragraph(f"Comarca: {comarca}", style="Normal")
         doc_word.add_paragraph(f"Área: {area_dxf:,.2f} m²".replace(",", "X").replace(".", ",").replace("X", "."), style="Normal")
         doc_word.add_paragraph(f"Perímetro: {perimeter_dxf:,.2f} m".replace(",", "X").replace(".", ",").replace("X", "."), style="Normal")
         doc_word.add_paragraph()
