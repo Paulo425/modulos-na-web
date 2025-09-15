@@ -1343,6 +1343,7 @@ def create_memorial_document(
     distancia_amarracao_v1,
     rua,
     cidade,
+    descricao,
     confrontantes,
     area_dxf,
     desc_ponto_amarracao,
@@ -1374,7 +1375,7 @@ def create_memorial_document(
         p = doc_word.add_paragraph(style='Normal')
         p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
         p.add_run("Objetivo: ").bold = True
-        p.add_run(f"Área destinada à servidão de passagem para execução de coletor de fundo pertencente à rede coletora de esgoto de {cidade}/RS.")
+        p.add_run(f"Área da matricula {matricula} destinada a {descricao} de {cidade}.")
         # o problema é aqui
         doc_word.add_paragraph(f"Matrícula Número: {matricula_texto} - {rgi}", style='Normal')
         doc_word.add_paragraph(f"Área Total do Terreno: {str(area_total).replace('.', ',')}", style='Normal')
@@ -1606,6 +1607,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
                 distancia_amarracao_v1=distancia_az_v1,
                 rua=rua,
                 cidade=cidade,
+                descricao=descricao,
                 confrontantes=confrontantes,
                 area_dxf=area_dxf,
                 desc_ponto_amarracao=desc_ponto_Az,
