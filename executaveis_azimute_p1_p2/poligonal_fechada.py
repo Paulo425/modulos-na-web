@@ -1380,7 +1380,7 @@ def create_memorial_document(
         p.add_run(f"Área da matricula {matricula} destinada a {descricao} de {cidade}.")
         # o problema é aqui
         doc_word.add_paragraph(f"Matrícula Número: {matricula_texto} - {rgi}", style='Normal')
-        doc_word.add_paragraph(f"Área Total do Terreno: {f'{float(str(area_total).replace('.', '').replace(',', '.')):,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')}", style='Normal')
+        doc_word.add_paragraph(f"Área Total do Terreno: {area_total}", style='Normal')
 
 
         doc_word.add_paragraph(f"Proprietário: {proprietario} ", style='Normal')
