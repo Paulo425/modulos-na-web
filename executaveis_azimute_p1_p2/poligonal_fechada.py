@@ -1342,6 +1342,7 @@ def create_memorial_document(
     azimute,
     distancia_amarracao_v1,
     rua,
+    comarca,
     cidade,
     descricao,
     confrontantes,
@@ -1369,7 +1370,8 @@ def create_memorial_document(
         distancia_str = f"{distancia_amarracao_v1:.2f}".replace(".", ",")
         azimute_dms = convert_to_dms(azimute)
 
-        doc_word.add_paragraph(style='Normal').add_run("MEMORIAL DESCRITIVO").bold = True
+        p = doc_word.add_paragraph(style='Normal'); p.add_run("MEMORIAL DESCRITIVO").bold = True; p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
 
         doc_word.add_paragraph()
         p = doc_word.add_paragraph(style='Normal')
@@ -1378,18 +1380,20 @@ def create_memorial_document(
         p.add_run(f"Área da matricula {matricula} destinada a {descricao} de {cidade}.")
         # o problema é aqui
         doc_word.add_paragraph(f"Matrícula Número: {matricula_texto} - {rgi}", style='Normal')
-        doc_word.add_paragraph(f"Área Total do Terreno: {str(area_total).replace('.', ',')}", style='Normal')
+        doc_word.add_paragraph(f"Área Total do Terreno: {f'{float(area_total):,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')}", style='Normal')
+
         doc_word.add_paragraph(f"Proprietário: {proprietario} ", style='Normal')
+        doc_word.add_paragraph(f"Comarca: {comarca} ", style='Normal')
 
         p = doc_word.add_paragraph(style='Normal')
-        p.add_run("Área de Servidão de Passagem: ").bold = True
-        run1 = p.add_run(f"{area_dxf_formatada} m"); run1.font.name = 'Arial'; run1.font.size = Pt(12)
-        run2 = p.add_run("2"); run2.font.name = 'Arial'; run2.font.size = Pt(12); run2.font.superscript = True
+        p.add_run("Área: ").bold = True
+        run1 = p.add_run(f"{area_dxf_formatada} m²"); run1.font.name = 'Arial'; run1.font.size = Pt(12)
+        #run2 = p.add_run("2"); run2.font.name = 'Arial'; run2.font.size = Pt(12); run2.font.superscript = True
 
         doc_word.add_paragraph()
         p = doc_word.add_paragraph(style='Normal')
         p.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-        p.add_run(f"Área com {area_dxf_formatada} m² localizada na {rua}, município de {cidade}, com a finalidade de servidão de passagem com a seguinte descrição e confrontações, onde os azimutes foram medidos no sentido horário.").font.name = 'Arial'
+        p.add_run(f"Área com {area_dxf_formatada} m² localizada na {rua}, município de {cidade}, com a seguinte descrição e confrontações, onde os azimutes foram medidos no sentido horário.").font.name = 'Arial'
 
         doc_word.add_paragraph()
         doc_word.add_paragraph("Pontos definidos pelas Coordenadas Planas no Sistema U.T.M. – SIRGAS 2000.", style='Normal')
@@ -1606,6 +1610,7 @@ def main_poligonal_fechada(uuid_str, excel_path, dxf_path, diretorio_preparado, 
                 azimute=azimute_v1,
                 distancia_amarracao_v1=distancia_az_v1,
                 rua=rua,
+                comarca=comarca,
                 cidade=cidade,
                 descricao=descricao,
                 confrontantes=confrontantes,
